@@ -51,18 +51,20 @@ def load_gejue(core_only=False):
 # Maps query keywords → likely category for routing
 
 _QUERY_CLASSIFIER = {
-    '婚姻': '婚姻断诀','结婚':'婚姻断诀','离婚':'婚姻断诀','夫妻':'婚姻断诀',
-    '配偶':'婚姻断诀','克夫':'婚姻断诀','嫁':'婚姻断诀','娶':'婚姻断诀',
-    '桃花':'婚姻断诀','感情':'婚姻断诀',
+    '婚姻': '婚姻','结婚':'婚姻','离婚':'婚姻','夫妻':'婚姻',
+    '配偶':'婚姻','克夫':'婚姻','嫁':'婚姻','娶':'婚姻',
+    '桃花':'婚姻','感情':'婚姻','二婚':'婚姻','再婚':'婚姻',
     '财运':'财运','发财':'财运','破财':'财运','求财':'财运',
-    '赚钱':'财运','投资':'财运','存钱':'财运','富':'财运','穷':'财运',
+    '赚钱':'财运','投资':'财运','存钱':'财运','富':'财运','穷':'财运','做生意':'财运',
     '升职':'官运','升迁':'官运','仕途':'官运','当官':'官运',
-    '公务员':'官运','退休':'官运','创业':'官运','事业':'官运',
-    '疾病':'寿元疾厄诀','健康':'寿元疾厄诀','病':'寿元疾厄诀',
-    '身体':'寿元疾厄诀','寿命':'寿元疾厄诀','死':'寿元疾厄诀',
-    '血光':'寿元疾厄诀','手术':'寿元疾厄诀',
-    '流年':'大运流年诀','今年':'大运流年诀','明年':'大运流年诀',
-    '运势':'大运流年诀','大运':'大运流年诀',
+    '公务员':'官运','退休':'官运','创业':'官运','事业':'官运','适合当':'官运',
+    '疾病':'疾病','健康':'疾病','病':'疾病',
+    '肝胆':'疾病','失眠':'疾病','心脏':'疾病',
+    '身体':'疾病','寿命':'疾病','死':'疾病',
+    '血光':'疾病','手术':'疾病',
+    '流年':'流年','今年':'流年','明年':'流年',
+    '运势':'流年','大运':'流年',
+    '犯太岁':'流年','本命年':'流年','换工作':'流年',
     '小孩':'小儿关煞','儿童':'小儿关煞','宝宝':'小儿关煞',
     '小儿':'小儿关煞','童子':'小儿关煞',
     '排盘':'万年桩','八字排':'万年桩','五虎遁':'万年桩',
@@ -97,23 +99,24 @@ def _classify_query(query):
     """
     # Priority 1: Specific category keywords (high weight)
     priority1 = {
-        '婚姻断诀':['婚姻','结婚','离婚','夫妻','配偶','克夫','嫁','娶','桃花运','感情'],
-        '财运':['财运','发财','破财','求财','赚钱','投资','存钱','富','穷','财','有钱'],
-        '寿元疾厄诀':['疾病','健康','生病','身体','寿命','血光','手术','死'],
-        '官运':['升职','升迁','仕途','当官','公务员','退休','创业','事业'],
+        '婚姻':['婚姻','结婚','离婚','夫妻','配偶','克夫','嫁','娶','桃花运','感情','二婚','再婚','女命','合婚'],
+        '财运':['财运','发财','破财','求财','赚钱','投资','存钱','富','穷','财','有钱','做生意'],
+        '疾病':['疾病','健康','生病','身体','寿命','血光','手术','死','肝胆','失眠','心脏'],
+        '官运':['升职','升迁','仕途','当官','公务员','退休','创业','事业','适合当','官灾'],
         '小儿关煞':['小孩','儿童','宝宝','小儿','童子'],
-        '大运流年诀':['流年运势','今年运势','明年运势','本命年'],
+        '流年':['流年运势','今年运势','明年运势','本命年','犯太岁','换工作'],
+        '万年桩':['排盘','排八字','怎么排','藏干','五虎遁','节气','怎么记'],
     }
     # Priority 2: Generic/time keywords (low weight, only if P1 doesn't match)
     priority2 = {
         '应期直断':['什么时候','何时','几时'],
         '病药直断':['病药','找药','药到'],
         '铁口直断':['甲午','丁亥','戊子','壬午','癸巳','庚寅','辛卯','己亥','乙巳','丙申'],
-        '大运流年诀':['流年','今年','明年','运势','大运'],
+        '流年':['流年','今年','明年','运势','大运'],
         '十神赋文':['十神','正官','七杀','正财','偏财','正印','偏印','食神','伤官'],
         '格局歌诀':['格局','成格','破格','从格'],
         '神煞断诀':['神煞','贵人','文昌','驿马','华盖','羊刃'],
-        '干支象意诀':['干支','天干','地支'],
+        '干支象意诀':['干支','天干'],
         '纳音断诀':['纳音'],
         '综合':['理象','心法','总结'],
     }
@@ -141,53 +144,74 @@ def _classify_query(query):
     return None
 
 
+def _char_coverage(query, text):
+    """Fraction of query CJK characters that appear in the text.
+    Works well for short queries where bigram Jaccard fails.
+    """
+    qc = set(re.sub(r'[^一-鿿]', '', query))
+    tc = set(re.sub(r'[^一-鿿]', '', text))
+    if not qc:
+        return 0.0
+    return len(qc & tc) / len(qc)
+
+
+# Category aliases: classified name → all equivalent data category names
+_CATEGORY_ALIASES = {
+    '婚姻': ['婚姻', '婚姻断诀'],
+    '疾病': ['疾病', '寿元疾厄诀'],
+    '流年': ['流年', '大运流年诀'],
+}
+
+
+def _category_boost(entry_cat, query_cat):
+    """Boost factor for category match (1.0 = exact, 0.7 = alias, 0.0 = unrelated)."""
+    if not query_cat:
+        return 0.0
+    if entry_cat == query_cat:
+        return 1.0
+    aliases = _CATEGORY_ALIASES.get(query_cat, [])
+    if entry_cat in aliases:
+        return 0.7
+    return 0.0
+
+
 def search(query, category=None, tags=None, top_k=5):
     """Semantic search with query pre-classification for category routing.
-    Falls back to bigram Jaccard if vector DB unavailable.
+    Uses hybrid scoring: character coverage (60%) + bigram Jaccard (40%)
+    with tag and category bonuses. No hard category filter — related
+    categories get a scoring boost instead.
     """
-    # Auto-detect category from query if not specified
     if not category:
         category = _classify_query(query)
 
-    # Bigram Jaccard — use FULL gejue for open search (best recall)
-    # For known-category agent calls: use gejue_core.json directly
     entries, _ = load_gejue(core_only=False)
     query_bi = set(_bigrams(query))
+    query_text = query
 
     scored = []
     for entry in entries:
-        if category and entry['category'] != category:
-            continue
         if tags and not all(t in entry.get('tags', []) for t in tags):
             continue
 
-        # Base score: bigram on text+tags
-        text_bi = set(_bigrams(entry['text'] + ' ' + ' '.join(entry.get('tags', []))))
-        sim = _jaccard(query_bi, text_bi)
+        entry_text = entry['text'] + ' ' + ' '.join(entry.get('tags', []))
+        text_bi = set(_bigrams(entry_text))
 
+        # Hybrid score: char coverage + bigram Jaccard
+        cov = _char_coverage(query_text, entry_text)
+        jac = _jaccard(query_bi, text_bi)
+        sim = 0.6 * cov + 0.4 * jac
 
-        # Tag bonus
+        # Category boost — soft, not a hard filter
+        sim += _category_boost(entry.get('category', ''), category) * 0.40
+
+        # Tag bonus — strong signal for short queries
         for t in entry.get('tags', []):
-            if t in query: sim += 0.10
-        if entry.get('category', '') in query: sim += 0.05
+            if t in query_text:
+                sim += 0.15
+        if entry.get('category', '') in query_text:
+            sim += 0.05
 
-        if sim > 0.01:
-            scored.append((sim, entry))
-
-    if len(scored) < top_k and category:
-        # Fall back to full gejue
-        full_entries, _ = load_gejue(core_only=False)
-        for entry in full_entries:
-            if entry['category'] == category: continue
-            if tags and not all(t in entry.get('tags', []) for t in tags): continue
-            text_bi = set(_bigrams(entry['text']))
-            sim = _jaccard(query_bi, text_bi) * 0.3  # stronger penalty
-            for t in entry.get('tags', []):
-                if t in query: sim += 0.05
-            for t in entry.get('tags', []):
-                if t in query: sim += 0.05
-            if sim > 0.01:
-                scored.append((sim, entry))
+        scored.append((sim, entry))
 
     scored.sort(key=lambda x: -x[0])
     return [entry for _, entry in scored[:top_k]]

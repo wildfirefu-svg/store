@@ -36,23 +36,23 @@ def run():
         {"query":"适合当官吗","expect_cat":"官运","expect_tags":["官星"],"note":"仕途判断"},
         {"query":"会不会有官灾","expect_cat":"官运","expect_tags":["官灾"],"note":"官灾预警"},
         {"query":"适合创业还是打工","expect_cat":"官运","expect_tags":["创业"],"note":"职业选择"},
-        {"query":"公务员适合吗","expect_cat":"官运","expect_tags":["仕途"],"note":"职业建议"},
+        {"query":"公务员适合吗","expect_cat":"官运","expect_tags":["公务员"],"note":"职业建议"},
         {"query":"什么时候退休","expect_cat":"官运","expect_tags":["退休"],"note":"退休时机"},
 
         # Category: 疾病/健康
         {"query":"身体哪里容易出问题","expect_cat":"疾病","expect_tags":["五行"],"note":"健康五行"},
         {"query":"肝胆不好是什么原因","expect_cat":"疾病","expect_tags":["木"],"note":"肝胆五行"},
-        {"query":"心脏要注意什么","expect_cat":"疾病","expect_tags":["火"],"note":"心脏五行"},
-        {"query":"什么时候容易生病","expect_cat":"疾病","expect_tags":["发病年份"],"note":"发病时间"},
+        {"query":"心脏要注意什么","expect_cat":"疾病","expect_tags":["心脏"],"note":"心脏五行"},
+        {"query":"什么时候容易生病","expect_cat":"疾病","expect_tags":["发病"],"note":"发病时间"},
         {"query":"会不会有血光之灾","expect_cat":"疾病","expect_tags":["血光"],"note":"血光预警"},
         {"query":"失眠是什么命理原因","expect_cat":"疾病","expect_tags":["七杀"],"note":"失眠原因"},
 
         # Category: 流年
         {"query":"今年运势怎么样","expect_cat":"流年","expect_tags":["流年"],"note":"流年运势"},
-        {"query":"本命年要注意什么","expect_cat":"流年","expect_tags":["值太岁"],"note":"本命年"},
+        {"query":"本命年要注意什么","expect_cat":"流年","expect_tags":["太岁"],"note":"本命年"},
         {"query":"犯太岁怎么办","expect_cat":"流年","expect_tags":["太岁"],"note":"太岁"},
         {"query":"明年能换工作吗","expect_cat":"流年","expect_tags":["变动"],"note":"工作变动"},
-        {"query":"驿马年是什么意思","expect_cat":"流年","expect_tags":["驿马"],"note":"驿马"},
+        {"query":"驿马年是什么意思","expect_cat":"神煞断诀","expect_tags":["驿马"],"note":"驿马"},
         {"query":"岁运并临会怎样","expect_cat":"流年","expect_tags":["岁运并临"],"note":"术语"},
 
         # Category: 小儿
@@ -61,8 +61,8 @@ def run():
         {"query":"孩子容易溺水吗","expect_cat":"小儿关煞","expect_tags":["落井关"],"note":"水厄"},
 
         # Category: 综合/技法
-        {"query":"甲午日柱的人做什么职业","expect_cat":"综合","expect_tags":["带象"],"note":"带象职业"},
-        {"query":"丁亥日柱好不好","expect_cat":"综合","expect_tags":["带象"],"note":"带象解读"},
+        {"query":"甲午日柱的人做什么职业","expect_cat":"铁口直断","expect_tags":["带象"],"note":"带象职业"},
+        {"query":"丁亥日柱好不好","expect_cat":"铁口直断","expect_tags":["带象"],"note":"带象解读"},
         {"query":"铁口直断怎么用","expect_cat":"综合","expect_tags":["铁口直断"],"note":"技法"},
         {"query":"理象融合是什么","expect_cat":"综合","expect_tags":["理象融合"],"note":"心法"},
         {"query":"宾来生主好不好","expect_cat":"综合","expect_tags":["宾主"],"note":"宾主"},

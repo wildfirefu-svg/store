@@ -1,18 +1,16 @@
 {
-  "report": "tests/bad_rpt.md",
-  "chart": "tests/tc.json",
+  "report": "tests/rpt_bad.md",
+  "chart": "tests/tc_bad.json",
   "errors": [
-    "非法格局名: 飞天禄马格"
+    "年柱错误: 报告=甲子, 实际=癸酉",
+    "非法纳音: 幽冥金 (不在30组纳音中)"
   ],
-  "warnings": [
-    "神煞不在已知列表中: 神煞",
-    "神煞不在已知列表中: 贵人"
-  ],
+  "warnings": [],
   "stats": {
-    "total_checks": 14,
-    "passed": 11,
-    "failed": 3
+    "total_checks": 3,
+    "passed": 1,
+    "failed": 2
   },
-  "hallucination_rate": 21.43,
+  "hallucination_rate": 66.67,
   "pass": false
 }

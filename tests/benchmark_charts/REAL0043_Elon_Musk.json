@@ -1,0 +1,648 @@
+{
+  "status": "success",
+  "four_pillars": {
+    "year": {
+      "gan": "辛",
+      "zhi": "亥",
+      "gan_wuxing": "金",
+      "zhi_wuxing": "水",
+      "shi_shen_gan": "正官",
+      "shi_shen_zhi_main": "偏印",
+      "cang_gan": [
+        "壬",
+        "甲"
+      ],
+      "cang_gan_shi_shen": [
+        "偏印",
+        "比肩"
+      ],
+      "nayin": "钗钏金",
+      "kong_wang": false
+    },
+    "month": {
+      "gan": "甲",
+      "zhi": "午",
+      "gan_wuxing": "木",
+      "zhi_wuxing": "火",
+      "shi_shen_gan": "比肩",
+      "shi_shen_zhi_main": "伤官",
+      "cang_gan": [
+        "丁",
+        "己"
+      ],
+      "cang_gan_shi_shen": [
+        "伤官",
+        "正财"
+      ],
+      "nayin": "砂石金",
+      "kong_wang": false
+    },
+    "day": {
+      "gan": "甲",
+      "zhi": "申",
+      "gan_wuxing": "木",
+      "zhi_wuxing": "金",
+      "shi_shen_gan": "比肩",
+      "shi_shen_zhi_main": "七杀",
+      "cang_gan": [
+        "庚",
+        "壬",
+        "戊"
+      ],
+      "cang_gan_shi_shen": [
+        "七杀",
+        "偏印",
+        "偏财"
+      ],
+      "nayin": "泉中水",
+      "kong_wang": false
+    },
+    "hour": {
+      "gan": "戊",
+      "zhi": "辰",
+      "gan_wuxing": "土",
+      "zhi_wuxing": "土",
+      "shi_shen_gan": "偏财",
+      "shi_shen_zhi_main": "偏财",
+      "cang_gan": [
+        "戊",
+        "乙",
+        "癸"
+      ],
+      "cang_gan_shi_shen": [
+        "偏财",
+        "劫财",
+        "正印"
+      ],
+      "nayin": "大林木",
+      "kong_wang": false
+    }
+  },
+  "dayun_summary": {
+    "direction": "逆排",
+    "starting_age": 6.7,
+    "current_pillar": null
+  },
+  "day_master": {
+    "gan": "甲",
+    "wuxing": "木",
+    "yinyang": "阳",
+    "shier_changsheng": "冠带"
+  },
+  "wuxing_stats": {
+    "jin": 2,
+    "mu": 2,
+    "shui": 1,
+    "huo": 1,
+    "tu": 2,
+    "missing": [],
+    "strongest": "金",
+    "weakest": "火"
+  },
+  "shishen_stats": {
+    "counts": {
+      "比肩": 3,
+      "劫财": 1,
+      "食神": 0,
+      "伤官": 1,
+      "偏财": 3,
+      "正财": 1,
+      "正官": 1,
+      "七杀": 1,
+      "偏印": 2,
+      "正印": 1
+    },
+    "missing": [
+      "食神"
+    ],
+    "missing_human": {
+      "偏财": false,
+      "正财": false,
+      "正官": false,
+      "七杀": false,
+      "正印": false,
+      "偏印": false,
+      "食神": true,
+      "伤官": false,
+      "比肩": false,
+      "劫财": false
+    },
+    "strongest": "比肩",
+    "most_frequent_count": 3
+  },
+  "shensha": [
+    {
+      "name": "学堂",
+      "position": "year_zhi",
+      "meaning": ""
+    },
+    {
+      "name": "龙德",
+      "position": "year_zhi",
+      "meaning": ""
+    },
+    {
+      "name": "太极贵人",
+      "position": "month_zhi",
+      "meaning": ""
+    },
+    {
+      "name": "红艳煞",
+      "position": "month_zhi",
+      "meaning": ""
+    },
+    {
+      "name": "将星",
+      "position": "month_zhi",
+      "meaning": ""
+    },
+    {
+      "name": "悬针",
+      "position": "month_zhi",
+      "meaning": ""
+    },
+    {
+      "name": "天赦",
+      "position": "month_zhi",
+      "meaning": ""
+    },
+    {
+      "name": "金舆",
+      "position": "hour_zhi",
+      "meaning": ""
+    },
+    {
+      "name": "华盖",
+      "position": "hour_zhi",
+      "meaning": "聪明孤独，有宗教艺术天赋"
+    },
+    {
+      "name": "红鸾",
+      "position": "hour_zhi",
+      "meaning": ""
+    },
+    {
+      "name": "地网",
+      "position": "hour_zhi",
+      "meaning": ""
+    }
+  ],
+  "tai_yuan": {
+    "gan": "癸",
+    "zhi": "酉",
+    "nayin": "剑锋金"
+  },
+  "ming_gong": {
+    "gan": "庚",
+    "zhi": "寅",
+    "nayin": "松柏木"
+  },
+  "shen_gong": {
+    "gan": "戊",
+    "zhi": "戌",
+    "nayin": "平地木"
+  },
+  "da_yun": [
+    {
+      "index": 1,
+      "gan": "癸",
+      "zhi": "巳",
+      "start_age": 6,
+      "end_age": 15,
+      "shi_shen_gan": "正印",
+      "shi_shen_zhi": "食神",
+      "is_current": null
+    },
+    {
+      "index": 2,
+      "gan": "壬",
+      "zhi": "辰",
+      "start_age": 16,
+      "end_age": 25,
+      "shi_shen_gan": "偏印",
+      "shi_shen_zhi": "偏财",
+      "is_current": null
+    },
+    {
+      "index": 3,
+      "gan": "辛",
+      "zhi": "卯",
+      "start_age": 26,
+      "end_age": 35,
+      "shi_shen_gan": "正官",
+      "shi_shen_zhi": "劫财",
+      "is_current": null
+    },
+    {
+      "index": 4,
+      "gan": "庚",
+      "zhi": "寅",
+      "start_age": 36,
+      "end_age": 45,
+      "shi_shen_gan": "七杀",
+      "shi_shen_zhi": "比肩",
+      "is_current": null
+    },
+    {
+      "index": 5,
+      "gan": "己",
+      "zhi": "丑",
+      "start_age": 46,
+      "end_age": 55,
+      "shi_shen_gan": "正财",
+      "shi_shen_zhi": "正财",
+      "is_current": null
+    },
+    {
+      "index": 6,
+      "gan": "戊",
+      "zhi": "子",
+      "start_age": 56,
+      "end_age": 65,
+      "shi_shen_gan": "偏财",
+      "shi_shen_zhi": "正印",
+      "is_current": null
+    },
+    {
+      "index": 7,
+      "gan": "丁",
+      "zhi": "亥",
+      "start_age": 66,
+      "end_age": 75,
+      "shi_shen_gan": "伤官",
+      "shi_shen_zhi": "偏印",
+      "is_current": null
+    },
+    {
+      "index": 8,
+      "gan": "丙",
+      "zhi": "戌",
+      "start_age": 76,
+      "end_age": 85,
+      "shi_shen_gan": "食神",
+      "shi_shen_zhi": "偏财",
+      "is_current": null
+    },
+    {
+      "index": 9,
+      "gan": "乙",
+      "zhi": "酉",
+      "start_age": 86,
+      "end_age": 95,
+      "shi_shen_gan": "劫财",
+      "shi_shen_zhi": "正官",
+      "is_current": null
+    },
+    {
+      "index": 10,
+      "gan": "甲",
+      "zhi": "申",
+      "start_age": 96,
+      "end_age": 105,
+      "shi_shen_gan": "比肩",
+      "shi_shen_zhi": "七杀",
+      "is_current": null
+    }
+  ],
+  "liu_nian": [],
+  "ziwei": {
+    "basic_info": {
+      "ming_gong_gan_zhi": "辛卯",
+      "shen_gong_position": "亥",
+      "wu_xing_ju": "松柏木→木三局",
+      "ming_zhu": "文曲",
+      "shen_zhu": "天机"
+    },
+    "twelve_palaces": [
+      {
+        "name": "命宫",
+        "position": "卯",
+        "tian_gan": "辛",
+        "main_stars": [
+          {
+            "name": "天府",
+            "brightness": "庙"
+          }
+        ],
+        "auxiliary_stars": [
+          {
+            "name": "地劫",
+            "brightness": ""
+          }
+        ],
+        "daxian": "3-12",
+        "is_shengong": false
+      },
+      {
+        "name": "兄弟",
+        "position": "寅",
+        "tian_gan": "庚",
+        "main_stars": [],
+        "auxiliary_stars": [
+          {
+            "name": "火星",
+            "brightness": ""
+          },
+          {
+            "name": "铃星",
+            "brightness": ""
+          },
+          {
+            "name": "天钺",
+            "brightness": ""
+          }
+        ],
+        "daxian": "13-22",
+        "is_shengong": false
+      },
+      {
+        "name": "夫妻",
+        "position": "丑",
+        "tian_gan": "辛",
+        "main_stars": [
+          {
+            "name": "紫微",
+            "brightness": "庙"
+          },
+          {
+            "name": "破军",
+            "brightness": "旺"
+          }
+        ],
+        "auxiliary_stars": [],
+        "daxian": "23-32",
+        "is_shengong": false
+      },
+      {
+        "name": "子女",
+        "position": "子",
+        "tian_gan": "庚",
+        "main_stars": [
+          {
+            "name": "天机",
+            "brightness": "庙"
+          }
+        ],
+        "auxiliary_stars": [],
+        "daxian": "33-42",
+        "is_shengong": false
+      },
+      {
+        "name": "财帛",
+        "position": "亥",
+        "tian_gan": "己",
+        "main_stars": [],
+        "auxiliary_stars": [],
+        "daxian": "43-52",
+        "is_shengong": true
+      },
+      {
+        "name": "疾厄",
+        "position": "戌",
+        "tian_gan": "戊",
+        "main_stars": [
+          {
+            "name": "太阳",
+            "brightness": "陷"
+          }
+        ],
+        "auxiliary_stars": [
+          {
+            "name": "擎羊",
+            "brightness": ""
+          },
+          {
+            "name": "天喜",
+            "brightness": ""
+          }
+        ],
+        "daxian": "53-62",
+        "is_shengong": false
+      },
+      {
+        "name": "迁移",
+        "position": "酉",
+        "tian_gan": "丁",
+        "main_stars": [
+          {
+            "name": "武曲",
+            "brightness": "得"
+          },
+          {
+            "name": "七杀",
+            "brightness": "旺"
+          }
+        ],
+        "auxiliary_stars": [
+          {
+            "name": "左辅",
+            "brightness": ""
+          },
+          {
+            "name": "禄存",
+            "brightness": ""
+          }
+        ],
+        "daxian": "63-72",
+        "is_shengong": false
+      },
+      {
+        "name": "仆役",
+        "position": "申",
+        "tian_gan": "丙",
+        "main_stars": [
+          {
+            "name": "天同",
+            "brightness": "旺"
+          },
+          {
+            "name": "天梁",
+            "brightness": "陷"
+          }
+        ],
+        "auxiliary_stars": [
+          {
+            "name": "文曲",
+            "brightness": ""
+          },
+          {
+            "name": "陀罗",
+            "brightness": ""
+          }
+        ],
+        "daxian": "73-82",
+        "is_shengong": false
+      },
+      {
+        "name": "官禄",
+        "position": "未",
+        "tian_gan": "乙",
+        "main_stars": [
+          {
+            "name": "天相",
+            "brightness": "得"
+          }
+        ],
+        "auxiliary_stars": [
+          {
+            "name": "天空",
+            "brightness": ""
+          }
+        ],
+        "daxian": "83-92",
+        "is_shengong": false
+      },
+      {
+        "name": "田宅",
+        "position": "午",
+        "tian_gan": "甲",
+        "main_stars": [
+          {
+            "name": "巨门",
+            "brightness": "旺"
+          }
+        ],
+        "auxiliary_stars": [
+          {
+            "name": "文昌",
+            "brightness": ""
+          },
+          {
+            "name": "天姚",
+            "brightness": ""
+          },
+          {
+            "name": "天魁",
+            "brightness": ""
+          }
+        ],
+        "daxian": "93-102",
+        "is_shengong": false
+      },
+      {
+        "name": "福德",
+        "position": "巳",
+        "tian_gan": "癸",
+        "main_stars": [
+          {
+            "name": "廉贞",
+            "brightness": "陷"
+          },
+          {
+            "name": "贪狼",
+            "brightness": "陷"
+          }
+        ],
+        "auxiliary_stars": [
+          {
+            "name": "右弼",
+            "brightness": ""
+          },
+          {
+            "name": "天马",
+            "brightness": ""
+          }
+        ],
+        "daxian": "103-112",
+        "is_shengong": false
+      },
+      {
+        "name": "父母",
+        "position": "辰",
+        "tian_gan": "壬",
+        "main_stars": [
+          {
+            "name": "太阴",
+            "brightness": "陷"
+          }
+        ],
+        "auxiliary_stars": [
+          {
+            "name": "红鸾",
+            "brightness": ""
+          }
+        ],
+        "daxian": "113-122",
+        "is_shengong": false
+      }
+    ],
+    "si_hua": {
+      "化禄": {
+        "star": "巨门",
+        "palace_idx": 6
+      },
+      "化权": {
+        "star": "太阳",
+        "palace_idx": 10
+      },
+      "化科": {
+        "star": "文曲",
+        "palace_idx": 8,
+        "type": "aux"
+      },
+      "化忌": {
+        "star": "文昌",
+        "palace_idx": 6,
+        "type": "aux"
+      }
+    }
+  },
+  "wuyun_liuqi": {
+    "五运": "水运",
+    "主事脏腑": "肾/膀胱",
+    "体质倾向": "肾气先天偏盛/偏虚",
+    "六气": "厥阴风木",
+    "外邪倾向": "风邪犯肝",
+    "易感季节": "春季"
+  },
+  "branch_relations": [
+    {
+      "type": "三刑",
+      "pillars": "month-year",
+      "detail": "午亥刑"
+    },
+    {
+      "type": "六害",
+      "pillars": "day-year",
+      "detail": "申亥害"
+    },
+    {
+      "type": "三刑",
+      "pillars": "hour-year",
+      "detail": "辰亥刑"
+    },
+    {
+      "type": "三刑",
+      "pillars": "hour-month",
+      "detail": "辰午刑"
+    },
+    {
+      "type": "三合",
+      "pillars": "day-hour",
+      "detail": "申辰合局"
+    }
+  ],
+  "rizhu_zihe": {
+    "is_zihe": false
+  },
+  "nayin_wuxing": {
+    "year": "金",
+    "month": "金",
+    "day": "水",
+    "hour": "木"
+  },
+  "changsheng": {
+    "year": "绝",
+    "month": "帝旺",
+    "day": "冠带",
+    "hour": "胎",
+    "day_master": "冠带"
+  },
+  "precision_note": "",
+  "solar_time": {
+    "original_time": "1971-06-28T07:30:00",
+    "adjusted_time": "1971-06-28T07:23:00",
+    "adjustment_minutes": -6,
+    "method": "longitude_correction"
+  }
+}

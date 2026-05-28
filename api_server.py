@@ -11,8 +11,9 @@ Usage:
 
 import json, os, sys, hashlib, importlib.util
 from datetime import date
+from collections import defaultdict
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -38,6 +39,66 @@ app = FastAPI(
     version="1.0.0",
 )
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# ============================================================
+# RATE LIMITER — per-IP sliding window
+# ============================================================
+
+# Limits: (max_requests, window_seconds)
+_RATE_LIMITS = {
+    "default": (60, 60),         # 60 req/min
+    "/api/chat/stream": (5, 60), # 5 req/min (expensive AI call)
+    "/api/analyze/pdf": (10, 60),# 10 req/min (PDF generation)
+}
+_hits = defaultdict(list)  # ip -> [timestamps]
+_CLEAN_INTERVAL = 300  # clean stale entries every 5 min
+_last_clean = time.time()
+
+
+def _clean_old_hits(now):
+    global _last_clean
+    if now - _last_clean < _CLEAN_INTERVAL:
+        return
+    _last_clean = now
+    stale = []
+    for ip, timestamps in _hits.items():
+        timestamps[:] = [t for t in timestamps if now - t < 120]
+        if not timestamps:
+            stale.append(ip)
+    for ip in stale:
+        del _hits[ip]
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    now = time.time()
+    _clean_old_hits(now)
+
+    # Determine limit for this path
+    path = request.url.path
+    max_req, window = _RATE_LIMITS.get("default")
+    for prefix, limit in _RATE_LIMITS.items():
+        if prefix != "default" and path.startswith(prefix):
+            max_req, window = limit
+            break
+
+    # Client IP
+    ip = request.client.host if request.client else "unknown"
+    timestamps = _hits[ip]
+    timestamps[:] = [t for t in timestamps if now - t < window]
+
+    if len(timestamps) >= max_req:
+        retry_after = int(window - (now - timestamps[0]))
+        raise HTTPException(
+            status_code=429,
+            detail=f"请求过于频繁，请 {retry_after} 秒后重试",
+            headers={"Retry-After": str(retry_after), "X-RateLimit-Limit": str(max_req)},
+        )
+
+    timestamps.append(now)
+    response = await call_next(request)
+    return response
+
 
 # Static files and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
