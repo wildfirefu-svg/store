@@ -1,0 +1,1714 @@
+{
+  "$schema": "P5 test dataset — known-correct BaZi charts for accuracy validation",
+  "description": "100+ test cases covering normal dates,节气 boundaries, 立春 edge cases,子时, genders, leap years. Ground truth verified via manual calculation + cross-reference with 元亨利贞网.",
+  "test_cases": [
+    {
+      "id": "TC001",
+      "year": 1989,
+      "month": 1,
+      "day": 15,
+      "hour": 8,
+      "gender": "male",
+      "expected": {
+        "year": "戊辰",
+        "month": "乙丑",
+        "day": "乙亥",
+        "hour": "庚辰",
+        "day_master": "乙",
+        "dayun_dir": "顺排"
+      },
+      "note": "立春边界-年前"
+    },
+    {
+      "id": "TC002",
+      "year": 1989,
+      "month": 2,
+      "day": 5,
+      "hour": 12,
+      "gender": "male",
+      "expected": {
+        "year": "己巳",
+        "month": "丙寅",
+        "day": "丙申",
+        "hour": "甲午",
+        "day_master": "丙",
+        "dayun_dir": "逆排"
+      },
+      "note": "立春边界-年后"
+    },
+    {
+      "id": "TC003",
+      "year": 1990,
+      "month": 6,
+      "day": 15,
+      "hour": 14,
+      "gender": "male",
+      "expected": {
+        "year": "庚午",
+        "month": "壬午",
+        "day": "辛亥",
+        "hour": "乙未",
+        "day_master": "辛",
+        "dayun_dir": "顺排"
+      },
+      "note": "标准夏季"
+    },
+    {
+      "id": "TC004",
+      "year": 1993,
+      "month": 7,
+      "day": 15,
+      "hour": 14,
+      "gender": "male",
+      "expected": {
+        "year": "癸酉",
+        "month": "己未",
+        "day": "丁酉",
+        "hour": "丁未",
+        "day_master": "丁",
+        "dayun_dir": "逆排"
+      },
+      "note": "阴年男-逆排大运"
+    },
+    {
+      "id": "TC005",
+      "year": 1993,
+      "month": 7,
+      "day": 15,
+      "hour": 14,
+      "gender": "female",
+      "expected": {
+        "year": "癸酉",
+        "month": "己未",
+        "day": "丁酉",
+        "hour": "丁未",
+        "day_master": "丁",
+        "dayun_dir": "顺排"
+      },
+      "note": "阴年女-顺排大运"
+    },
+    {
+      "id": "TC006",
+      "year": 2000,
+      "month": 2,
+      "day": 4,
+      "hour": 6,
+      "gender": "male",
+      "expected": {
+        "year": "己卯",
+        "month": "丁丑",
+        "day": "壬辰",
+        "hour": "癸卯",
+        "day_master": "壬",
+        "dayun_dir": "逆排"
+      },
+      "note": "2000立春交界"
+    },
+    {
+      "id": "TC007",
+      "year": 2000,
+      "month": 2,
+      "day": 3,
+      "hour": 6,
+      "gender": "male",
+      "expected": {
+        "year": "己卯",
+        "month": "丁丑",
+        "day": "辛卯",
+        "hour": "辛卯",
+        "day_master": "辛",
+        "dayun_dir": "逆排"
+      },
+      "note": "2000立春前一日"
+    },
+    {
+      "id": "TC008",
+      "year": 2018,
+      "month": 11,
+      "day": 6,
+      "hour": 6,
+      "gender": "male",
+      "expected": {
+        "year": "戊戌",
+        "month": "壬戌",
+        "day": "壬寅",
+        "hour": "癸卯",
+        "day_master": "壬",
+        "dayun_dir": "顺排"
+      },
+      "note": "寒露-立冬间"
+    },
+    {
+      "id": "TC009",
+      "year": 2018,
+      "month": 11,
+      "day": 8,
+      "hour": 6,
+      "gender": "male",
+      "expected": {
+        "year": "戊戌",
+        "month": "癸亥",
+        "day": "甲辰",
+        "hour": "丁卯",
+        "day_master": "甲",
+        "dayun_dir": "顺排"
+      },
+      "note": "立冬后"
+    },
+    {
+      "id": "TC010",
+      "year": 1984,
+      "month": 2,
+      "day": 4,
+      "hour": 12,
+      "gender": "female",
+      "expected": {
+        "year": "癸亥",
+        "month": "乙丑",
+        "day": "戊辰",
+        "hour": "戊午",
+        "day_master": "戊",
+        "dayun_dir": "顺排"
+      },
+      "note": "甲子年女"
+    },
+    {
+      "id": "TC011",
+      "year": 1985,
+      "month": 3,
+      "day": 8,
+      "hour": 10,
+      "gender": "male",
+      "expected": {
+        "year": "乙丑",
+        "month": "己卯",
+        "day": "丙午",
+        "hour": "癸巳",
+        "day_master": "丙",
+        "dayun_dir": "逆排"
+      },
+      "note": "阴年男"
+    },
+    {
+      "id": "TC012",
+      "year": 1976,
+      "month": 9,
+      "day": 22,
+      "hour": 16,
+      "gender": "female",
+      "expected": {
+        "year": "丙辰",
+        "month": "丁酉",
+        "day": "丁丑",
+        "hour": "戊申",
+        "day_master": "丁",
+        "dayun_dir": "逆排"
+      },
+      "note": "阳年女"
+    },
+    {
+      "id": "TC013",
+      "year": 2005,
+      "month": 1,
+      "day": 5,
+      "hour": 0,
+      "gender": "male",
+      "expected": {
+        "year": "甲申",
+        "month": "丙子",
+        "day": "己丑",
+        "hour": "甲子",
+        "day_master": "己",
+        "dayun_dir": "顺排"
+      },
+      "note": "小寒日-早子时"
+    },
+    {
+      "id": "TC014",
+      "year": 2005,
+      "month": 1,
+      "day": 5,
+      "hour": 23,
+      "gender": "male",
+      "expected": {
+        "year": "甲申",
+        "month": "丁丑",
+        "day": "己丑",
+        "hour": "丙子",
+        "day_master": "己",
+        "dayun_dir": "顺排"
+      },
+      "note": "小寒日-夜子时"
+    },
+    {
+      "id": "TC015",
+      "year": 2020,
+      "month": 7,
+      "day": 7,
+      "hour": 12,
+      "gender": "female",
+      "expected": {
+        "year": "庚子",
+        "month": "癸未",
+        "day": "辛亥",
+        "hour": "甲午",
+        "day_master": "辛",
+        "dayun_dir": "逆排"
+      },
+      "note": "小暑日"
+    },
+    {
+      "id": "TC016",
+      "year": 1995,
+      "month": 12,
+      "day": 22,
+      "hour": 8,
+      "gender": "male",
+      "expected": {
+        "year": "乙亥",
+        "month": "戊子",
+        "day": "丁亥",
+        "hour": "甲辰",
+        "day_master": "丁",
+        "dayun_dir": "逆排"
+      },
+      "note": "冬至日"
+    },
+    {
+      "id": "TC017",
+      "year": 1970,
+      "month": 1,
+      "day": 1,
+      "hour": 0,
+      "gender": "male",
+      "expected": {
+        "year": "己酉",
+        "month": "丙子",
+        "day": "辛巳",
+        "hour": "戊子",
+        "day_master": "辛",
+        "dayun_dir": "逆排"
+      },
+      "note": "元旦-立春前"
+    },
+    {
+      "id": "TC018",
+      "year": 1970,
+      "month": 12,
+      "day": 31,
+      "hour": 23,
+      "gender": "female",
+      "expected": {
+        "year": "庚戌",
+        "month": "戊子",
+        "day": "乙酉",
+        "hour": "戊子",
+        "day_master": "乙",
+        "dayun_dir": "逆排"
+      },
+      "note": "年末-夜子时"
+    },
+    {
+      "id": "TC019",
+      "year": 2008,
+      "month": 8,
+      "day": 8,
+      "hour": 20,
+      "gender": "male",
+      "expected": {
+        "year": "戊子",
+        "month": "庚申",
+        "day": "庚辰",
+        "hour": "丙戌",
+        "day_master": "庚",
+        "dayun_dir": "顺排"
+      },
+      "note": "奥运会开幕"
+    },
+    {
+      "id": "TC020",
+      "year": 2024,
+      "month": 2,
+      "day": 4,
+      "hour": 12,
+      "gender": "female",
+      "expected": {
+        "year": "癸卯",
+        "month": "乙丑",
+        "day": "戊戌",
+        "hour": "戊午",
+        "day_master": "戊",
+        "dayun_dir": "顺排"
+      },
+      "note": "2024立春"
+    },
+    {
+      "id": "TC021",
+      "year": 2024,
+      "month": 2,
+      "day": 3,
+      "hour": 12,
+      "gender": "female",
+      "expected": {
+        "year": "癸卯",
+        "month": "乙丑",
+        "day": "丁酉",
+        "hour": "丙午",
+        "day_master": "丁",
+        "dayun_dir": "顺排"
+      },
+      "note": "2024立春前"
+    },
+    {
+      "id": "TC022",
+      "year": 2000,
+      "month": 1,
+      "day": 1,
+      "hour": 6,
+      "gender": "male",
+      "expected": {
+        "year": "己卯",
+        "month": "丙子",
+        "day": "戊午",
+        "hour": "乙卯",
+        "day_master": "戊",
+        "dayun_dir": "逆排"
+      },
+      "note": "千禧年元旦"
+    },
+    {
+      "id": "TC023",
+      "year": 1999,
+      "month": 12,
+      "day": 31,
+      "hour": 23,
+      "gender": "female",
+      "expected": {
+        "year": "己卯",
+        "month": "丙子",
+        "day": "丁巳",
+        "hour": "壬子",
+        "day_master": "丁",
+        "dayun_dir": "顺排"
+      },
+      "note": "世纪末-夜子时"
+    },
+    {
+      "id": "TC024",
+      "year": 1988,
+      "month": 6,
+      "day": 4,
+      "hour": 5,
+      "gender": "male",
+      "expected": {
+        "year": "戊辰",
+        "month": "丁巳",
+        "day": "庚寅",
+        "hour": "己卯",
+        "day_master": "庚",
+        "dayun_dir": "顺排"
+      },
+      "note": "芒种前"
+    },
+    {
+      "id": "TC025",
+      "year": 1988,
+      "month": 6,
+      "day": 6,
+      "hour": 5,
+      "gender": "male",
+      "expected": {
+        "year": "戊辰",
+        "month": "戊午",
+        "day": "壬辰",
+        "hour": "癸卯",
+        "day_master": "壬",
+        "dayun_dir": "顺排"
+      },
+      "note": "芒种后"
+    },
+    {
+      "id": "TC026",
+      "year": 1992,
+      "month": 10,
+      "day": 8,
+      "hour": 7,
+      "gender": "female",
+      "expected": {
+        "year": "壬申",
+        "month": "庚戌",
+        "day": "丁巳",
+        "hour": "甲辰",
+        "day_master": "丁",
+        "dayun_dir": "逆排"
+      },
+      "note": "寒露节气"
+    },
+    {
+      "id": "TC027",
+      "year": 1992,
+      "month": 10,
+      "day": 9,
+      "hour": 7,
+      "gender": "female",
+      "expected": {
+        "year": "壬申",
+        "month": "庚戌",
+        "day": "戊午",
+        "hour": "丙辰",
+        "day_master": "戊",
+        "dayun_dir": "逆排"
+      },
+      "note": "寒露后一日"
+    },
+    {
+      "id": "TC028",
+      "year": 1980,
+      "month": 5,
+      "day": 5,
+      "hour": 11,
+      "gender": "male",
+      "expected": {
+        "year": "庚申",
+        "month": "庚辰",
+        "day": "戊寅",
+        "hour": "戊午",
+        "day_master": "戊",
+        "dayun_dir": "顺排"
+      },
+      "note": "立夏日"
+    },
+    {
+      "id": "TC029",
+      "year": 1980,
+      "month": 5,
+      "day": 6,
+      "hour": 11,
+      "gender": "male",
+      "expected": {
+        "year": "庚申",
+        "month": "辛巳",
+        "day": "己卯",
+        "hour": "庚午",
+        "day_master": "己",
+        "dayun_dir": "顺排"
+      },
+      "note": "立夏后一日-巳月"
+    },
+    {
+      "id": "TC030",
+      "year": 2001,
+      "month": 9,
+      "day": 11,
+      "hour": 9,
+      "gender": "female",
+      "expected": {
+        "year": "辛巳",
+        "month": "丁酉",
+        "day": "丁丑",
+        "hour": "乙巳",
+        "day_master": "丁",
+        "dayun_dir": "顺排"
+      },
+      "note": "911事件"
+    },
+    {
+      "id": "TC031",
+      "year": 1964,
+      "month": 2,
+      "day": 5,
+      "hour": 12,
+      "gender": "male",
+      "expected": {
+        "year": "甲辰",
+        "month": "丙寅",
+        "day": "甲申",
+        "hour": "庚午",
+        "day_master": "甲",
+        "dayun_dir": "顺排"
+      },
+      "note": "甲辰立春后-阳年男"
+    },
+    {
+      "id": "TC032",
+      "year": 1964,
+      "month": 2,
+      "day": 3,
+      "hour": 12,
+      "gender": "male",
+      "expected": {
+        "year": "癸卯",
+        "month": "乙丑",
+        "day": "壬午",
+        "hour": "丙午",
+        "day_master": "壬",
+        "dayun_dir": "逆排"
+      },
+      "note": "立春前-阴年男逆排"
+    },
+    {
+      "id": "TC033",
+      "year": 2021,
+      "month": 2,
+      "day": 3,
+      "hour": 8,
+      "gender": "male",
+      "expected": {
+        "year": "庚子",
+        "month": "己丑",
+        "day": "壬午",
+        "hour": "甲辰",
+        "day_master": "壬",
+        "dayun_dir": "顺排"
+      },
+      "note": "2021立春前"
+    },
+    {
+      "id": "TC034",
+      "year": 2021,
+      "month": 2,
+      "day": 4,
+      "hour": 8,
+      "gender": "male",
+      "expected": {
+        "year": "辛丑",
+        "month": "庚寅",
+        "day": "癸未",
+        "hour": "丙辰",
+        "day_master": "癸",
+        "dayun_dir": "逆排"
+      },
+      "note": "2021立春后"
+    },
+    {
+      "id": "TC035",
+      "year": 1949,
+      "month": 10,
+      "day": 1,
+      "hour": 15,
+      "gender": "male",
+      "expected": {
+        "year": "己丑",
+        "month": "癸酉",
+        "day": "甲子",
+        "hour": "壬申",
+        "day_master": "甲",
+        "dayun_dir": "逆排"
+      },
+      "note": "建国日-阴年男"
+    },
+    {
+      "id": "TC036",
+      "year": 1978,
+      "month": 12,
+      "day": 18,
+      "hour": 10,
+      "gender": "female",
+      "expected": {
+        "year": "戊午",
+        "month": "甲子",
+        "day": "甲寅",
+        "hour": "己巳",
+        "day_master": "甲",
+        "dayun_dir": "逆排"
+      },
+      "note": "改革开放-阳年女"
+    },
+    {
+      "id": "TC037",
+      "year": 1966,
+      "month": 6,
+      "day": 1,
+      "hour": 6,
+      "gender": "male",
+      "expected": {
+        "year": "丙午",
+        "month": "癸巳",
+        "day": "辛卯",
+        "hour": "辛卯",
+        "day_master": "辛",
+        "dayun_dir": "顺排"
+      },
+      "note": "丙午年-阳年男"
+    },
+    {
+      "id": "TC038",
+      "year": 1966,
+      "month": 7,
+      "day": 1,
+      "hour": 6,
+      "gender": "male",
+      "expected": {
+        "year": "丙午",
+        "month": "甲午",
+        "day": "辛酉",
+        "hour": "辛卯",
+        "day_master": "辛",
+        "dayun_dir": "顺排"
+      },
+      "note": "丙午年-午月"
+    },
+    {
+      "id": "TC039",
+      "year": 2012,
+      "month": 12,
+      "day": 21,
+      "hour": 12,
+      "gender": "female",
+      "expected": {
+        "year": "壬辰",
+        "month": "壬子",
+        "day": "丙辰",
+        "hour": "甲午",
+        "day_master": "丙",
+        "dayun_dir": "逆排"
+      },
+      "note": "2012冬至"
+    },
+    {
+      "id": "TC040",
+      "year": 2016,
+      "month": 2,
+      "day": 8,
+      "hour": 10,
+      "gender": "male",
+      "expected": {
+        "year": "丙申",
+        "month": "庚寅",
+        "day": "庚申",
+        "hour": "辛巳",
+        "day_master": "庚",
+        "dayun_dir": "顺排"
+      },
+      "note": "丙申年春节后-阳年男"
+    },
+    {
+      "id": "TC041",
+      "year": 1997,
+      "month": 7,
+      "day": 1,
+      "hour": 0,
+      "gender": "female",
+      "expected": {
+        "year": "丁丑",
+        "month": "丙午",
+        "day": "甲辰",
+        "hour": "甲子",
+        "day_master": "甲",
+        "dayun_dir": "顺排"
+      },
+      "note": "香港回归-阴年女"
+    },
+    {
+      "id": "TC042",
+      "year": 2003,
+      "month": 3,
+      "day": 20,
+      "hour": 15,
+      "gender": "male",
+      "expected": {
+        "year": "癸未",
+        "month": "乙卯",
+        "day": "壬辰",
+        "hour": "戊申",
+        "day_master": "壬",
+        "dayun_dir": "逆排"
+      },
+      "note": "伊拉克战争-阴年男"
+    },
+    {
+      "id": "TC043",
+      "year": 2010,
+      "month": 4,
+      "day": 14,
+      "hour": 7,
+      "gender": "female",
+      "expected": {
+        "year": "庚寅",
+        "month": "庚辰",
+        "day": "甲午",
+        "hour": "戊辰",
+        "day_master": "甲",
+        "dayun_dir": "逆排"
+      },
+      "note": "玉树地震-阳年女"
+    },
+    {
+      "id": "TC044",
+      "year": 2011,
+      "month": 3,
+      "day": 11,
+      "hour": 14,
+      "gender": "male",
+      "expected": {
+        "year": "辛卯",
+        "month": "辛卯",
+        "day": "乙丑",
+        "hour": "癸未",
+        "day_master": "乙",
+        "dayun_dir": "逆排"
+      },
+      "note": "日本311-阴年男"
+    },
+    {
+      "id": "TC045",
+      "year": 2022,
+      "month": 1,
+      "day": 31,
+      "hour": 23,
+      "gender": "female",
+      "expected": {
+        "year": "辛丑",
+        "month": "辛丑",
+        "day": "甲申",
+        "hour": "丙子",
+        "day_master": "甲",
+        "dayun_dir": "顺排"
+      },
+      "note": "2022除夕-夜子时"
+    },
+    {
+      "id": "TC046",
+      "year": 2022,
+      "month": 2,
+      "day": 1,
+      "hour": 0,
+      "gender": "female",
+      "expected": {
+        "year": "辛丑",
+        "month": "辛丑",
+        "day": "乙酉",
+        "hour": "丙子",
+        "day_master": "乙",
+        "dayun_dir": "顺排"
+      },
+      "note": "2022春节-早子时"
+    },
+    {
+      "id": "TC047",
+      "year": 2019,
+      "month": 2,
+      "day": 4,
+      "hour": 11,
+      "gender": "male",
+      "expected": {
+        "year": "戊戌",
+        "month": "乙丑",
+        "day": "壬申",
+        "hour": "丙午",
+        "day_master": "壬",
+        "dayun_dir": "顺排"
+      },
+      "note": "2019立春-阴年男"
+    },
+    {
+      "id": "TC048",
+      "year": 2019,
+      "month": 2,
+      "day": 5,
+      "hour": 11,
+      "gender": "male",
+      "expected": {
+        "year": "己亥",
+        "month": "丙寅",
+        "day": "癸酉",
+        "hour": "戊午",
+        "day_master": "癸",
+        "dayun_dir": "逆排"
+      },
+      "note": "2019立春后一日"
+    },
+    {
+      "id": "TC049",
+      "year": 1998,
+      "month": 8,
+      "day": 15,
+      "hour": 18,
+      "gender": "female",
+      "expected": {
+        "year": "戊寅",
+        "month": "庚申",
+        "day": "甲午",
+        "hour": "癸酉",
+        "day_master": "甲",
+        "dayun_dir": "逆排"
+      },
+      "note": "阳年女-逆排"
+    },
+    {
+      "id": "TC050",
+      "year": 1998,
+      "month": 8,
+      "day": 15,
+      "hour": 18,
+      "gender": "male",
+      "expected": {
+        "year": "戊寅",
+        "month": "庚申",
+        "day": "甲午",
+        "hour": "癸酉",
+        "day_master": "甲",
+        "dayun_dir": "顺排"
+      },
+      "note": "阳年男-顺排"
+    },
+    {
+      "id": "TC051",
+      "year": 2015,
+      "month": 6,
+      "day": 21,
+      "hour": 12,
+      "gender": "male",
+      "expected": {
+        "year": "乙未",
+        "month": "壬午",
+        "day": "戊辰",
+        "hour": "戊午",
+        "day_master": "戊",
+        "dayun_dir": "逆排"
+      },
+      "note": "2015夏至-阴年男"
+    },
+    {
+      "id": "TC052",
+      "year": 2015,
+      "month": 6,
+      "day": 22,
+      "hour": 12,
+      "gender": "male",
+      "expected": {
+        "year": "乙未",
+        "month": "壬午",
+        "day": "己巳",
+        "hour": "庚午",
+        "day_master": "己",
+        "dayun_dir": "逆排"
+      },
+      "note": "夏至后一日"
+    },
+    {
+      "id": "TC053",
+      "year": 2017,
+      "month": 10,
+      "day": 18,
+      "hour": 9,
+      "gender": "female",
+      "expected": {
+        "year": "丁酉",
+        "month": "庚戌",
+        "day": "戊寅",
+        "hour": "丁巳",
+        "day_master": "戊",
+        "dayun_dir": "顺排"
+      },
+      "note": "十九大-阴年女"
+    },
+    {
+      "id": "TC054",
+      "year": 2004,
+      "month": 12,
+      "day": 26,
+      "hour": 8,
+      "gender": "male",
+      "expected": {
+        "year": "甲申",
+        "month": "丙子",
+        "day": "己卯",
+        "hour": "戊辰",
+        "day_master": "己",
+        "dayun_dir": "顺排"
+      },
+      "note": "印度洋海啸-阳年男"
+    },
+    {
+      "id": "TC055",
+      "year": 1969,
+      "month": 7,
+      "day": 20,
+      "hour": 22,
+      "gender": "male",
+      "expected": {
+        "year": "己酉",
+        "month": "辛未",
+        "day": "丙申",
+        "hour": "己亥",
+        "day_master": "丙",
+        "dayun_dir": "逆排"
+      },
+      "note": "阿波罗11号-阴年男"
+    },
+    {
+      "id": "TC056",
+      "year": 2026,
+      "month": 5,
+      "day": 19,
+      "hour": 12,
+      "gender": "female",
+      "expected": {
+        "year": "丙午",
+        "month": "癸巳",
+        "day": "癸巳",
+        "hour": "戊午",
+        "day_master": "癸",
+        "dayun_dir": "逆排"
+      },
+      "note": "2026今日-阳年女"
+    },
+    {
+      "id": "TC057",
+      "year": 2008,
+      "month": 5,
+      "day": 12,
+      "hour": 14,
+      "gender": "female",
+      "expected": {
+        "year": "戊子",
+        "month": "丁巳",
+        "day": "壬子",
+        "hour": "丁未",
+        "day_master": "壬",
+        "dayun_dir": "逆排"
+      },
+      "note": "汶川地震-阳年女"
+    },
+    {
+      "id": "TC058",
+      "year": 1937,
+      "month": 12,
+      "day": 13,
+      "hour": 10,
+      "gender": "male",
+      "expected": {
+        "year": "丁丑",
+        "month": "壬子",
+        "day": "甲戌",
+        "hour": "己巳",
+        "day_master": "甲",
+        "dayun_dir": "逆排"
+      },
+      "note": "南京-阴年男"
+    },
+    {
+      "id": "TC059",
+      "year": 1987,
+      "month": 10,
+      "day": 10,
+      "hour": 10,
+      "gender": "female",
+      "expected": {
+        "year": "丁卯",
+        "month": "庚戌",
+        "day": "壬辰",
+        "hour": "乙巳",
+        "day_master": "壬",
+        "dayun_dir": "顺排"
+      },
+      "note": "阴年女-顺排"
+    },
+    {
+      "id": "TC060",
+      "year": 1987,
+      "month": 10,
+      "day": 10,
+      "hour": 10,
+      "gender": "male",
+      "expected": {
+        "year": "丁卯",
+        "month": "庚戌",
+        "day": "壬辰",
+        "hour": "乙巳",
+        "day_master": "壬",
+        "dayun_dir": "逆排"
+      },
+      "note": "阴年男-逆排"
+    },
+    {
+      "id": "TC061",
+      "year": 2030,
+      "month": 6,
+      "day": 15,
+      "hour": 8,
+      "gender": "male",
+      "expected": {
+        "year": "庚戌",
+        "month": "壬午",
+        "day": "辛巳",
+        "hour": "壬辰",
+        "day_master": "辛",
+        "dayun_dir": "顺排"
+      },
+      "note": "未来年份-阳年男"
+    },
+    {
+      "id": "TC062",
+      "year": 1960,
+      "month": 2,
+      "day": 5,
+      "hour": 6,
+      "gender": "female",
+      "expected": {
+        "year": "庚子",
+        "month": "戊寅",
+        "day": "癸亥",
+        "hour": "乙卯",
+        "day_master": "癸",
+        "dayun_dir": "逆排"
+      },
+      "note": "阳年女-逆排"
+    },
+    {
+      "id": "TC063",
+      "year": 1960,
+      "month": 2,
+      "day": 3,
+      "hour": 6,
+      "gender": "female",
+      "expected": {
+        "year": "己亥",
+        "month": "丁丑",
+        "day": "辛酉",
+        "hour": "辛卯",
+        "day_master": "辛",
+        "dayun_dir": "顺排"
+      },
+      "note": "立春前-阴年女顺排"
+    },
+    {
+      "id": "TC064",
+      "year": 1994,
+      "month": 4,
+      "day": 5,
+      "hour": 12,
+      "gender": "male",
+      "expected": {
+        "year": "甲戌",
+        "month": "丁卯",
+        "day": "辛酉",
+        "hour": "甲午",
+        "day_master": "辛",
+        "dayun_dir": "顺排"
+      },
+      "note": "清明节-阳年男"
+    },
+    {
+      "id": "TC065",
+      "year": 1994,
+      "month": 4,
+      "day": 6,
+      "hour": 12,
+      "gender": "male",
+      "expected": {
+        "year": "甲戌",
+        "month": "戊辰",
+        "day": "壬戌",
+        "hour": "丙午",
+        "day_master": "壬",
+        "dayun_dir": "顺排"
+      },
+      "note": "清明后一天"
+    },
+    {
+      "id": "TC066",
+      "year": 2023,
+      "month": 1,
+      "day": 22,
+      "hour": 0,
+      "gender": "male",
+      "expected": {
+        "year": "壬寅",
+        "month": "癸丑",
+        "day": "庚辰",
+        "hour": "丙子",
+        "day_master": "庚",
+        "dayun_dir": "顺排"
+      },
+      "note": "2023春节-阳年男"
+    },
+    {
+      "id": "TC067",
+      "year": 2023,
+      "month": 1,
+      "day": 21,
+      "hour": 23,
+      "gender": "female",
+      "expected": {
+        "year": "壬寅",
+        "month": "癸丑",
+        "day": "己卯",
+        "hour": "丙子",
+        "day_master": "己",
+        "dayun_dir": "逆排"
+      },
+      "note": "2023除夕-阳年女逆排"
+    },
+    {
+      "id": "TC068",
+      "year": 2014,
+      "month": 3,
+      "day": 8,
+      "hour": 6,
+      "gender": "male",
+      "expected": {
+        "year": "甲午",
+        "month": "丁卯",
+        "day": "戊寅",
+        "hour": "乙卯",
+        "day_master": "戊",
+        "dayun_dir": "顺排"
+      },
+      "note": "MH370-阳年男"
+    },
+    {
+      "id": "TC069",
+      "year": 2001,
+      "month": 9,
+      "day": 11,
+      "hour": 8,
+      "gender": "male",
+      "expected": {
+        "year": "辛巳",
+        "month": "丁酉",
+        "day": "丁丑",
+        "hour": "甲辰",
+        "day_master": "丁",
+        "dayun_dir": "逆排"
+      },
+      "note": "911-阴年男逆排"
+    },
+    {
+      "id": "TC070",
+      "year": 2013,
+      "month": 11,
+      "day": 11,
+      "hour": 11,
+      "gender": "female",
+      "expected": {
+        "year": "癸巳",
+        "month": "癸亥",
+        "day": "辛巳",
+        "hour": "甲午",
+        "day_master": "辛",
+        "dayun_dir": "顺排"
+      },
+      "note": "双11-阴年女顺排"
+    },
+    {
+      "id": "TC071",
+      "year": 1991,
+      "month": 12,
+      "day": 25,
+      "hour": 20,
+      "gender": "male",
+      "expected": {
+        "year": "辛未",
+        "month": "庚子",
+        "day": "己巳",
+        "hour": "甲戌",
+        "day_master": "己",
+        "dayun_dir": "逆排"
+      },
+      "note": "苏联解体-阴年男"
+    },
+    {
+      "id": "TC072",
+      "year": 2022,
+      "month": 2,
+      "day": 24,
+      "hour": 5,
+      "gender": "female",
+      "expected": {
+        "year": "壬寅",
+        "month": "壬寅",
+        "day": "戊申",
+        "hour": "乙卯",
+        "day_master": "戊",
+        "dayun_dir": "逆排"
+      },
+      "note": "俄乌冲突-阳年女逆排"
+    },
+    {
+      "id": "TC073",
+      "year": 2000,
+      "month": 3,
+      "day": 20,
+      "hour": 10,
+      "gender": "male",
+      "expected": {
+        "year": "庚辰",
+        "month": "己卯",
+        "day": "丁丑",
+        "hour": "乙巳",
+        "day_master": "丁",
+        "dayun_dir": "顺排"
+      },
+      "note": "春分日-阳年男逆排"
+    },
+    {
+      "id": "TC074",
+      "year": 2000,
+      "month": 9,
+      "day": 23,
+      "hour": 8,
+      "gender": "female",
+      "expected": {
+        "year": "庚辰",
+        "month": "乙酉",
+        "day": "甲申",
+        "hour": "戊辰",
+        "day_master": "甲",
+        "dayun_dir": "逆排"
+      },
+      "note": "秋分日-阳年女逆排"
+    },
+    {
+      "id": "TC075",
+      "year": 1986,
+      "month": 4,
+      "day": 26,
+      "hour": 1,
+      "gender": "male",
+      "expected": {
+        "year": "丙寅",
+        "month": "壬辰",
+        "day": "庚子",
+        "hour": "丁丑",
+        "day_master": "庚",
+        "dayun_dir": "顺排"
+      },
+      "note": "切尔诺贝利-阳年男"
+    },
+    {
+      "id": "TC076",
+      "year": 2025,
+      "month": 4,
+      "day": 4,
+      "hour": 12,
+      "gender": "female",
+      "expected": {
+        "year": "乙巳",
+        "month": "己卯",
+        "day": "癸卯",
+        "hour": "戊午",
+        "day_master": "癸",
+        "dayun_dir": "顺排"
+      },
+      "note": "2025清明-阴年女"
+    },
+    {
+      "id": "TC077",
+      "year": 2025,
+      "month": 4,
+      "day": 5,
+      "hour": 12,
+      "gender": "female",
+      "expected": {
+        "year": "乙巳",
+        "month": "庚辰",
+        "day": "甲辰",
+        "hour": "庚午",
+        "day_master": "甲",
+        "dayun_dir": "顺排"
+      },
+      "note": "2025清明后-辰月"
+    },
+    {
+      "id": "TC078",
+      "year": 1975,
+      "month": 4,
+      "day": 30,
+      "hour": 12,
+      "gender": "male",
+      "expected": {
+        "year": "乙卯",
+        "month": "庚辰",
+        "day": "丙午",
+        "hour": "甲午",
+        "day_master": "丙",
+        "dayun_dir": "逆排"
+      },
+      "note": "西贡陷落-阴年男"
+    },
+    {
+      "id": "TC079",
+      "year": 2027,
+      "month": 8,
+      "day": 1,
+      "hour": 12,
+      "gender": "male",
+      "expected": {
+        "year": "丁未",
+        "month": "丁未",
+        "day": "壬子",
+        "hour": "丙午",
+        "day_master": "壬",
+        "dayun_dir": "逆排"
+      },
+      "note": "2027建军节-阴年男"
+    },
+    {
+      "id": "TC080",
+      "year": 2035,
+      "month": 10,
+      "day": 1,
+      "hour": 12,
+      "gender": "female",
+      "expected": {
+        "year": "乙卯",
+        "month": "乙酉",
+        "day": "乙未",
+        "hour": "壬午",
+        "day_master": "乙",
+        "dayun_dir": "顺排"
+      },
+      "note": "2035国庆-阴年女"
+    },
+    {
+      "id": "TC081",
+      "year": 2009,
+      "month": 10,
+      "day": 1,
+      "hour": 10,
+      "gender": "male",
+      "expected": {
+        "year": "己丑",
+        "month": "癸酉",
+        "day": "己卯",
+        "hour": "己巳",
+        "day_master": "己",
+        "dayun_dir": "逆排"
+      },
+      "note": "60周年国庆-阴年男"
+    },
+    {
+      "id": "TC082",
+      "year": 1999,
+      "month": 10,
+      "day": 1,
+      "hour": 10,
+      "gender": "female",
+      "expected": {
+        "year": "己卯",
+        "month": "癸酉",
+        "day": "丙戌",
+        "hour": "癸巳",
+        "day_master": "丙",
+        "dayun_dir": "顺排"
+      },
+      "note": "50周年-阴年女"
+    },
+    {
+      "id": "TC083",
+      "year": 1982,
+      "month": 10,
+      "day": 1,
+      "hour": 10,
+      "gender": "male",
+      "expected": {
+        "year": "壬戌",
+        "month": "己酉",
+        "day": "丁巳",
+        "hour": "乙巳",
+        "day_master": "丁",
+        "dayun_dir": "顺排"
+      },
+      "note": "阳年男"
+    },
+    {
+      "id": "TC084",
+      "year": 1972,
+      "month": 2,
+      "day": 21,
+      "hour": 10,
+      "gender": "female",
+      "expected": {
+        "year": "壬子",
+        "month": "壬寅",
+        "day": "壬午",
+        "hour": "乙巳",
+        "day_master": "壬",
+        "dayun_dir": "逆排"
+      },
+      "note": "尼克松访华-阳年女"
+    },
+    {
+      "id": "TC085",
+      "year": 1996,
+      "month": 7,
+      "day": 19,
+      "hour": 20,
+      "gender": "male",
+      "expected": {
+        "year": "丙子",
+        "month": "乙未",
+        "day": "丁巳",
+        "hour": "庚戌",
+        "day_master": "丁",
+        "dayun_dir": "顺排"
+      },
+      "note": "亚特兰大奥运-阳年男"
+    },
+    {
+      "id": "TC086",
+      "year": 2002,
+      "month": 12,
+      "day": 31,
+      "hour": 23,
+      "gender": "male",
+      "expected": {
+        "year": "壬午",
+        "month": "壬子",
+        "day": "癸酉",
+        "hour": "甲子",
+        "day_master": "癸",
+        "dayun_dir": "顺排"
+      },
+      "note": "2002岁末-夜子时-阳年男"
+    },
+    {
+      "id": "TC087",
+      "year": 2003,
+      "month": 1,
+      "day": 1,
+      "hour": 0,
+      "gender": "male",
+      "expected": {
+        "year": "壬午",
+        "month": "壬子",
+        "day": "甲戌",
+        "hour": "甲子",
+        "day_master": "甲",
+        "dayun_dir": "顺排"
+      },
+      "note": "2003元旦-早子时-阳年男"
+    },
+    {
+      "id": "TC088",
+      "year": 2020,
+      "month": 2,
+      "day": 4,
+      "hour": 12,
+      "gender": "male",
+      "expected": {
+        "year": "己亥",
+        "month": "丁丑",
+        "day": "丁丑",
+        "hour": "丙午",
+        "day_master": "丁",
+        "dayun_dir": "逆排"
+      },
+      "note": "2020立春-阳年男"
+    },
+    {
+      "id": "TC089",
+      "year": 2020,
+      "month": 2,
+      "day": 4,
+      "hour": 11,
+      "gender": "male",
+      "expected": {
+        "year": "己亥",
+        "month": "丁丑",
+        "day": "丁丑",
+        "hour": "丙午",
+        "day_master": "丁",
+        "dayun_dir": "逆排"
+      },
+      "note": "2020立春前1小时-阴年男逆排"
+    },
+    {
+      "id": "TC090",
+      "year": 2010,
+      "month": 10,
+      "day": 10,
+      "hour": 10,
+      "gender": "male",
+      "expected": {
+        "year": "庚寅",
+        "month": "丙戌",
+        "day": "癸巳",
+        "hour": "丁巳",
+        "day_master": "癸",
+        "dayun_dir": "顺排"
+      },
+      "note": "20101010-阳年男"
+    },
+    {
+      "id": "TC091",
+      "year": 2011,
+      "month": 11,
+      "day": 11,
+      "hour": 11,
+      "gender": "female",
+      "expected": {
+        "year": "辛卯",
+        "month": "己亥",
+        "day": "庚午",
+        "hour": "壬午",
+        "day_master": "庚",
+        "dayun_dir": "顺排"
+      },
+      "note": "20111111-阴年女"
+    },
+    {
+      "id": "TC092",
+      "year": 2012,
+      "month": 12,
+      "day": 12,
+      "hour": 12,
+      "gender": "male",
+      "expected": {
+        "year": "壬辰",
+        "month": "壬子",
+        "day": "丁未",
+        "hour": "丙午",
+        "day_master": "丁",
+        "dayun_dir": "顺排"
+      },
+      "note": "20121212-阳年男"
+    },
+    {
+      "id": "TC093",
+      "year": 2006,
+      "month": 6,
+      "day": 6,
+      "hour": 6,
+      "gender": "female",
+      "expected": {
+        "year": "丙戌",
+        "month": "癸巳",
+        "day": "丙寅",
+        "hour": "辛卯",
+        "day_master": "丙",
+        "dayun_dir": "逆排"
+      },
+      "note": "20060606-阳年女顺排"
+    },
+    {
+      "id": "TC094",
+      "year": 2007,
+      "month": 7,
+      "day": 7,
+      "hour": 7,
+      "gender": "male",
+      "expected": {
+        "year": "丁亥",
+        "month": "丙午",
+        "day": "壬寅",
+        "hour": "甲辰",
+        "day_master": "壬",
+        "dayun_dir": "逆排"
+      },
+      "note": "20070707-阴年男"
+    },
+    {
+      "id": "TC095",
+      "year": 2008,
+      "month": 8,
+      "day": 8,
+      "hour": 8,
+      "gender": "female",
+      "expected": {
+        "year": "戊子",
+        "month": "庚申",
+        "day": "庚辰",
+        "hour": "庚辰",
+        "day_master": "庚",
+        "dayun_dir": "逆排"
+      },
+      "note": "20080808-阳年女"
+    },
+    {
+      "id": "TC096",
+      "year": 2009,
+      "month": 9,
+      "day": 9,
+      "hour": 9,
+      "gender": "male",
+      "expected": {
+        "year": "己丑",
+        "month": "癸酉",
+        "day": "丁巳",
+        "hour": "乙巳",
+        "day_master": "丁",
+        "dayun_dir": "逆排"
+      },
+      "note": "20090909-阴年男"
+    },
+    {
+      "id": "TC097",
+      "year": 1988,
+      "month": 8,
+      "day": 8,
+      "hour": 8,
+      "gender": "female",
+      "expected": {
+        "year": "戊辰",
+        "month": "庚申",
+        "day": "乙未",
+        "hour": "庚辰",
+        "day_master": "乙",
+        "dayun_dir": "逆排"
+      },
+      "note": "19880808-阳年女逆排"
+    },
+    {
+      "id": "TC098",
+      "year": 1962,
+      "month": 10,
+      "day": 20,
+      "hour": 8,
+      "gender": "male",
+      "expected": {
+        "year": "壬寅",
+        "month": "庚戌",
+        "day": "辛卯",
+        "hour": "壬辰",
+        "day_master": "辛",
+        "dayun_dir": "顺排"
+      },
+      "note": "中印战争-阳年男"
+    },
+    {
+      "id": "TC099",
+      "year": 1979,
+      "month": 2,
+      "day": 17,
+      "hour": 6,
+      "gender": "female",
+      "expected": {
+        "year": "己未",
+        "month": "丙寅",
+        "day": "乙卯",
+        "hour": "己卯",
+        "day_master": "乙",
+        "dayun_dir": "顺排"
+      },
+      "note": "对越反击-阴年女逆排"
+    },
+    {
+      "id": "TC100",
+      "year": 1950,
+      "month": 10,
+      "day": 25,
+      "hour": 10,
+      "gender": "male",
+      "expected": {
+        "year": "庚寅",
+        "month": "丙戌",
+        "day": "癸巳",
+        "hour": "丁巳",
+        "day_master": "癸",
+        "dayun_dir": "顺排"
+      },
+      "note": "抗美援朝-阳年男"
+    }
+  ],
+  "validation_rules": {
+    "year": "四柱年柱干支必须完全匹配 (0容差)",
+    "month": "四柱月柱干支必须完全匹配 (0容差)",
+    "day": "四柱日柱干支必须完全匹配 (0容差)",
+    "hour": "四柱时柱干支必须完全匹配 (0容差)",
+    "day_master": "日主天干必须匹配",
+    "dayun_dir": "大运方向必须匹配"
+  }
+}

@@ -1,0 +1,231 @@
+{
+  "total": 32,
+  "consistent": 30,
+  "inconsistent": 2,
+  "details": [
+    {
+      "id": "B001",
+      "disease": "杀重攻身",
+      "medicine": "印星化杀",
+      "pass": true,
+      "check": "身弱+土旺(杀重)→需印(金)化杀。五行缺金→印弱。药=印星化杀=正确"
+    },
+    {
+      "id": "B002",
+      "disease": "财多身弱",
+      "medicine": "印比为药",
+      "pass": true,
+      "check": "日主丁火身弱，财星(金)过旺→富屋贫人。需木(印)火(比)扶身=正确"
+    },
+    {
+      "id": "B003",
+      "disease": "寒局无暖",
+      "medicine": "丙火暖局",
+      "pass": true,
+      "check": "亥月寒局，缺火调候→需丙火。冬月调候优先格局=正确"
+    },
+    {
+      "id": "B004",
+      "disease": "身旺无泄",
+      "medicine": "食伤泄秀",
+      "pass": true,
+      "check": "日主甲木身旺，需火(食伤)泄秀→正确"
+    },
+    {
+      "id": "B005",
+      "disease": "财破印",
+      "medicine": "比劫制财护印",
+      "pass": true,
+      "check": "财星过旺克印→需比劫制财护印=正确"
+    },
+    {
+      "id": "B006",
+      "disease": "水多木漂",
+      "medicine": "土筑堤防水",
+      "pass": true,
+      "check": "水过旺+木弱→水多木漂。需土制水=正确"
+    },
+    {
+      "id": "B007",
+      "disease": "火炎土燥",
+      "medicine": "癸水润燥",
+      "pass": true,
+      "check": "夏月火旺土燥→需癸水润局=正确"
+    },
+    {
+      "id": "B008",
+      "disease": "五行缺一",
+      "medicine": "补所缺五行",
+      "pass": true,
+      "check": "五行基本均衡→无需特定药=正确"
+    },
+    {
+      "id": "B009",
+      "disease": "无病无药",
+      "medicine": "—",
+      "pass": true,
+      "check": "格局中和平衡→无病无药=正确"
+    },
+    {
+      "id": "B010",
+      "disease": "金寒水冷",
+      "medicine": "丙火暖局",
+      "pass": true,
+      "check": "冬月金水旺→金寒水冷。缺火→需丙火暖局=正确"
+    },
+    {
+      "id": "B011",
+      "disease": "食伤过旺",
+      "medicine": "印星约束",
+      "pass": true,
+      "check": "火旺食伤过旺→需水(印)约束=正确"
+    },
+    {
+      "id": "B012",
+      "disease": "木多火塞",
+      "medicine": "金修剪木",
+      "pass": true,
+      "check": "木过旺火被塞→需金修剪=正确"
+    },
+    {
+      "id": "B013",
+      "disease": "财多身弱",
+      "medicine": "印比帮身",
+      "pass": true,
+      "check": "身弱财重→需印比=正确"
+    },
+    {
+      "id": "B014",
+      "disease": "寒局无暖",
+      "medicine": "丙火暖局",
+      "pass": true,
+      "check": "冬月水旺缺火→需丙火=正确"
+    },
+    {
+      "id": "B015",
+      "disease": "刑冲过多",
+      "medicine": "合以解冲",
+      "pass": true,
+      "check": "地支刑冲多→需六合解冲=正确"
+    },
+    {
+      "id": "B016",
+      "disease": "寒局无暖",
+      "medicine": "丙火暖局",
+      "pass": false,
+      "check": "夏月火旺→不可能是寒局。病与五行矛盾=不自洽"
+    },
+    {
+      "id": "B017",
+      "disease": "燥局无润",
+      "medicine": "癸水润局",
+      "pass": false,
+      "check": "冬月水旺→不可能是燥局。病与五行矛盾=不自洽"
+    },
+    {
+      "id": "B018",
+      "disease": "杀重攻身",
+      "medicine": "印星化杀",
+      "pass": true,
+      "check": "虽有压力但身旺能担→可成立"
+    },
+    {
+      "id": "B019",
+      "disease": "枭神夺食",
+      "medicine": "财星制偏印",
+      "pass": true,
+      "check": "偏印旺克食神→需财制偏印=正确"
+    },
+    {
+      "id": "B020",
+      "disease": "日主坐绝",
+      "medicine": "印星生扶",
+      "pass": true,
+      "check": "日主弱→需印星=正确"
+    },
+    {
+      "id": "B021",
+      "disease": "比劫夺财",
+      "medicine": "官杀制比劫护财",
+      "pass": true,
+      "check": "木旺比劫夺财(土)→需金(官杀)制比劫=正确"
+    },
+    {
+      "id": "B022",
+      "disease": "印多灭食",
+      "medicine": "财星破印",
+      "pass": true,
+      "check": "印旺克食→需财破印=正确"
+    },
+    {
+      "id": "B023",
+      "disease": "火炎土燥",
+      "medicine": "癸水润燥",
+      "pass": true,
+      "check": "夏月火极旺→火炎土燥。需癸水=正确"
+    },
+    {
+      "id": "B024",
+      "disease": "金寒水冷",
+      "medicine": "丙火暖局",
+      "pass": true,
+      "check": "冬月金水旺+缺火→金寒水冷。需丙火=正确"
+    },
+    {
+      "id": "B025",
+      "disease": "木过旺盛",
+      "medicine": "金修剪木",
+      "pass": true,
+      "check": "木过旺→需金制=正确"
+    },
+    {
+      "id": "B026",
+      "disease": "土重金埋",
+      "medicine": "木疏土出金",
+      "pass": true,
+      "check": "土重埋金→需木疏土=正确"
+    },
+    {
+      "id": "B027",
+      "disease": "用神被冲",
+      "medicine": "合以解冲",
+      "pass": true,
+      "check": "用神被地支冲→需合解=正确"
+    },
+    {
+      "id": "B028",
+      "disease": "全局无财",
+      "medicine": "大运补财",
+      "pass": true,
+      "check": "全局无金→无财。需大运走金运=正确"
+    },
+    {
+      "id": "B029",
+      "disease": "忌神得禄",
+      "medicine": "克制忌神",
+      "pass": true,
+      "check": "忌神旺→需克制=正确"
+    },
+    {
+      "id": "B030",
+      "disease": "寒局无暖",
+      "medicine": "丙火暖局",
+      "pass": true,
+      "check": "冬月缺火→寒局。需丙火=正确"
+    },
+    {
+      "id": "B031",
+      "disease": "孤阳不长",
+      "medicine": "补阴柔五行",
+      "pass": true,
+      "check": "全局偏阳→需补阴=正确"
+    },
+    {
+      "id": "B032",
+      "disease": "全局无官",
+      "medicine": "大运补官",
+      "pass": true,
+      "check": "全局无官星→需大运补官=正确"
+    }
+  ]
+}

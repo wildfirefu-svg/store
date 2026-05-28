@@ -1,0 +1,22 @@
+.anthropic_key
+__pycache__/
+.pytest_cache/
+*.pyc
+.chromadb_case_index/
+bazi_kb.db
+
+# Generated reports (contain personal data)
+reports/
+
+# Test artifacts
+chart_data.json
+test_e2e_*
+test_final.json
+test_rb_*
+test_shishen.json
+
+# Dev scratch files
+_v2*
+
+# Screenshots
+*.png

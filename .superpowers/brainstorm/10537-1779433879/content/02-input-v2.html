@@ -1,0 +1,151 @@
+<h2>输入表单 v2 — 日历滚轮 + 公农历切换 + 真太阳时</h2>
+<p class="subtitle">新手模式表单升级，三个交互改进</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">改进1：公历/农历切换</div>
+    <div class="mockup-body" style="min-height:200px">
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <span style="background:var(--accent);color:var(--bg);padding:8px 18px;border-radius:8px;font-size:14px;font-weight:bold;cursor:pointer">公历</span>
+        <span style="background:var(--surface-light);border:1px solid var(--border);padding:8px 18px;border-radius:8px;font-size:14px;cursor:pointer">农历</span>
+      </div>
+      <p style="font-size:13px;color:var(--text-muted)">
+        默认公历。切换到农历时，年份范围显示农历年（如"癸酉年"），系统自动转换为公历进行计算。
+      </p>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">改进2：真太阳时开关</div>
+    <div class="mockup-body" style="min-height:200px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+        <div style="width:44px;height:24px;background:var(--accent);border-radius:12px;position:relative;cursor:pointer">
+          <div style="width:20px;height:20px;background:white;border-radius:50%;position:absolute;top:2px;right:2px"></div>
+        </div>
+        <span style="font-size:14px">使用真太阳时</span>
+      </div>
+      <p style="font-size:13px;color:var(--text-muted)">
+        开启后根据出生地经度自动校正时辰（如北京116°E，减14分钟）。<br>
+        默认关闭，用户可手动开启。开启后显示校正信息："已校正 -14分钟，时辰不变"。
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="mockup">
+    <div class="mockup-header">改进3：日期时间滚轮选择器</div>
+    <div class="mockup-body" style="min-height:280px">
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px">替代 input[type=number]，使用 iOS 风格的滚轮选择器（PC 端为下拉列选）</p>
+
+      <div style="display:flex;gap:16px;justify-content:center;align-items:center;padding:16px">
+        <!-- Year -->
+        <div style="text-align:center">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">年</div>
+          <div style="background:var(--surface-light);border:1px solid var(--border);border-radius:8px;overflow:hidden;width:80px">
+            <div style="padding:4px;text-align:center;font-size:12px;color:var(--text-muted)">▲</div>
+            <div style="padding:8px;text-align:center;font-size:20px;font-weight:bold;background:var(--surface)">1993</div>
+            <div style="padding:4px;text-align:center;font-size:12px;color:var(--text-muted)">▼</div>
+          </div>
+        </div>
+        <span style="font-size:18px;color:var(--text-muted)">-</span>
+        <!-- Month -->
+        <div style="text-align:center">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">月</div>
+          <div style="background:var(--surface-light);border:1px solid var(--border);border-radius:8px;overflow:hidden;width:70px">
+            <div style="padding:4px;text-align:center;font-size:12px;color:var(--text-muted)">▲</div>
+            <div style="padding:8px;text-align:center;font-size:20px;font-weight:bold;background:var(--surface)">07</div>
+            <div style="padding:4px;text-align:center;font-size:12px;color:var(--text-muted)">▼</div>
+          </div>
+        </div>
+        <span style="font-size:18px;color:var(--text-muted)">-</span>
+        <!-- Day -->
+        <div style="text-align:center">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">日</div>
+          <div style="background:var(--surface-light);border:1px solid var(--border);border-radius:8px;overflow:hidden;width:70px">
+            <div style="padding:4px;text-align:center;font-size:12px;color:var(--text-muted)">▲</div>
+            <div style="padding:8px;text-align:center;font-size:20px;font-weight:bold;background:var(--surface)">15</div>
+            <div style="padding:4px;text-align:center;font-size:12px;color:var(--text-muted)">▼</div>
+          </div>
+        </div>
+        <span style="font-size:18px;color:var(--text-muted);margin-left:24px">⏰</span>
+        <!-- Hour -->
+        <div style="text-align:center">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">时</div>
+          <div style="background:var(--surface-light);border:1px solid var(--border);border-radius:8px;overflow:hidden;width:65px">
+            <div style="padding:4px;text-align:center;font-size:12px;color:var(--text-muted)">▲</div>
+            <div style="padding:8px;text-align:center;font-size:20px;font-weight:bold;background:var(--surface)">14</div>
+            <div style="padding:4px;text-align:center;font-size:12px;color:var(--text-muted)">▼</div>
+          </div>
+        </div>
+        <span style="font-size:18px;color:var(--text-muted)">:</span>
+        <!-- Minute -->
+        <div style="text-align:center">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">分</div>
+          <div style="background:var(--surface-light);border:1px solid var(--border);border-radius:8px;overflow:hidden;width:65px">
+            <div style="padding:4px;text-align:center;font-size:12px;color:var(--text-muted)">▲</div>
+            <div style="padding:8px;text-align:center;font-size:20px;font-weight:bold;background:var(--surface)">30</div>
+            <div style="padding:4px;text-align:center;font-size:12px;color:var(--text-muted)">▼</div>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:12px">
+        PC端：点击 ▲▼ 按钮增减 | 移动端：触摸滑动滚轮 | 键盘：直接输入数字也支持
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>完整新手表单布局</h3>
+  <div class="mockup">
+    <div class="mockup-header">最终效果（从上到下）</div>
+    <div class="mockup-body" style="font-size:14px;line-height:2;padding:20px">
+      <div style="display:flex;gap:12px;margin-bottom:16px">
+        <span style="background:var(--accent);color:var(--bg);padding:8px 20px;border-radius:8px;font-size:14px;font-weight:bold">公历</span>
+        <span style="background:var(--surface-light);border:1px solid var(--border);padding:8px 20px;border-radius:8px;font-size:14px">农历</span>
+        <span style="margin-left:auto"></span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:40px;height:22px;background:var(--surface-light);border-radius:11px;position:relative;border:1px solid var(--border)">
+            <div style="width:18px;height:18px;background:var(--text-muted);border-radius:50%;position:absolute;top:1px;left:1px"></div>
+          </div>
+          <span style="font-size:12px;color:var(--text-muted)">真太阳时</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;justify-content:center;margin-bottom:16px">
+        <div class="mock-input" style="width:80px;text-align:center">1993</div>
+        <span>-</span>
+        <div class="mock-input" style="width:60px;text-align:center">07</div>
+        <span>-</span>
+        <div class="mock-input" style="width:60px;text-align:center">15</div>
+        <span style="margin:0 8px">⏰</span>
+        <div class="mock-input" style="width:55px;text-align:center">14</div>
+        <span>:</span>
+        <div class="mock-input" style="width:55px;text-align:center">30</div>
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center">
+        <input class="mock-input" placeholder="出生地（如：北京）" style="width:200px">
+        <select style="background:var(--surface-light);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:6px">
+          <option>男</option><option>女</option>
+        </select>
+      </div>
+      <br>
+      <button class="mock-button" style="width:100%;background:var(--accent);color:var(--bg);border:none;padding:14px;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer">开始分析 →</button>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>滚轮选择器实现方案</h3>
+  <table>
+    <tr><th>平台</th><th>方案</th><th>依赖</th></tr>
+    <tr><td>PC 端</td><td>原生 <code>&lt;input type="number"&gt;</code> + CSS 美化 + 上下箭头按钮</td><td>无</td></tr>
+    <tr><td>移动端</td><td><code>&lt;input type="date"&gt;</code> 和 <code>&lt;input type="time"&gt;</code> 触发原生滚轮</td><td>无</td></tr>
+    <tr><td>进阶 PC</td><td>纯 CSS/JS 自建滚轮组件（上下箭头 + 鼠标滚轮事件 + 键盘上下键）</td><td>无</td></tr>
+    <tr><td>农历转换</td><td>已有 <code>gregorian_to_lunar()</code> 在 bazi_calculator.py</td><td>已有</td></tr>
+    <tr><td>真太阳时</td><td>已有 <code>calculate_true_solar_time()</code> 在 bazi_calculator.py</td><td>已有</td></tr>
+  </table>
+  <p style="font-size:13px;color:var(--text-muted);margin-top:8px">
+    推荐：PC 用自建滚轮组件（纯 CSS，无依赖），移动端用原生日期/时间控件。农历转换和真太阳时后端已有，前端只需加开关传参。
+  </p>
+</div>

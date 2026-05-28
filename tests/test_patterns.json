@@ -1,0 +1,2137 @@
+{
+  "$schema": "P5格局判定测试 — 50+典型命例，三体系对比",
+  "test_cases": [
+    {
+      "id": "P001",
+      "year": 1989,
+      "month": 1,
+      "day": 15,
+      "hour": 8,
+      "gender": "male",
+      "note": "身弱七杀格-待救",
+      "ziping": {
+        "pattern": "七杀格",
+        "status": "待救",
+        "yongshen": "辛金",
+        "level": "中格",
+        "key_rule": "杀有印化"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "source": "",
+        "flow": "有阻",
+        "clarity": "清",
+        "key_rule": "杀重印化"
+      },
+      "mangpai": {
+        "gong_type": "印功",
+        "gong_strength": "中功",
+        "guest_host": "宾克主",
+        "key_rule": "印化杀为权"
+      }
+    },
+    {
+      "id": "P002",
+      "year": 1993,
+      "month": 7,
+      "day": 15,
+      "hour": 14,
+      "gender": "male",
+      "note": "身弱偏财格",
+      "ziping": {
+        "pattern": "偏财格",
+        "status": "待救",
+        "yongshen": "甲木",
+        "level": "中格",
+        "key_rule": "身弱财重需印比"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "财旺泄身"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "小功",
+        "guest_host": "宾来生主",
+        "key_rule": "食伤生财"
+      }
+    },
+    {
+      "id": "P003",
+      "year": 2018,
+      "month": 11,
+      "day": 6,
+      "hour": 6,
+      "gender": "male",
+      "note": "身弱七杀格-印化",
+      "ziping": {
+        "pattern": "七杀格",
+        "status": "待救",
+        "yongshen": "辛金",
+        "level": "中格偏下",
+        "key_rule": "杀印相生但印根弱"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "source": "",
+        "flow": "有阻",
+        "clarity": "清",
+        "key_rule": "土重金埋"
+      },
+      "mangpai": {
+        "gong_type": "印功",
+        "gong_strength": "中功",
+        "guest_host": "宾克主",
+        "key_rule": "印化杀为权"
+      }
+    },
+    {
+      "id": "P004",
+      "year": 1984,
+      "month": 2,
+      "day": 4,
+      "hour": 12,
+      "gender": "male",
+      "note": "建禄格-身旺",
+      "ziping": {
+        "pattern": "建禄格",
+        "status": "成格",
+        "yongshen": "丙火",
+        "level": "中格",
+        "key_rule": "禄格身旺喜财官"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "身旺能任财官"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "食伤泄秀"
+      }
+    },
+    {
+      "id": "P005",
+      "year": 1976,
+      "month": 9,
+      "day": 22,
+      "hour": 16,
+      "gender": "female",
+      "note": "正财格-身旺",
+      "ziping": {
+        "pattern": "正财格",
+        "status": "成格",
+        "yongshen": "壬水",
+        "level": "上格",
+        "key_rule": "财官双全"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "财官流通"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "大功",
+        "guest_host": "主去合宾",
+        "key_rule": "财官相生"
+      }
+    },
+    {
+      "id": "P006",
+      "year": 1964,
+      "month": 6,
+      "day": 15,
+      "hour": 10,
+      "gender": "male",
+      "note": "伤官格-配印",
+      "ziping": {
+        "pattern": "伤官格",
+        "status": "成格",
+        "yongshen": "乙木",
+        "level": "中格",
+        "key_rule": "伤官配印"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "水火既济"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "伤官生财"
+      }
+    },
+    {
+      "id": "P007",
+      "year": 1998,
+      "month": 12,
+      "day": 10,
+      "hour": 14,
+      "gender": "female",
+      "note": "正官格-官印相生",
+      "ziping": {
+        "pattern": "正官格",
+        "status": "成格",
+        "yongshen": "甲木",
+        "level": "上格",
+        "key_rule": "官印相生"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "官印流通"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "大功",
+        "guest_host": "宾来生主",
+        "key_rule": "官印相生掌权"
+      }
+    },
+    {
+      "id": "P008",
+      "year": 2005,
+      "month": 2,
+      "day": 8,
+      "hour": 6,
+      "gender": "male",
+      "note": "食神格-生财",
+      "ziping": {
+        "pattern": "食神格",
+        "status": "成格",
+        "yongshen": "己土",
+        "level": "中格",
+        "key_rule": "食神生财"
+      },
+      "ditian": {
+        "wangshuai": "身强",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "木火通明"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "中功",
+        "guest_host": "主去克宾",
+        "key_rule": "食神生财"
+      }
+    },
+    {
+      "id": "P009",
+      "year": 1972,
+      "month": 1,
+      "day": 20,
+      "hour": 22,
+      "gender": "male",
+      "note": "七杀格-食神制杀",
+      "ziping": {
+        "pattern": "七杀格",
+        "status": "成格",
+        "yongshen": "丙火",
+        "level": "上格",
+        "key_rule": "食神制杀"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "食神有力"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "食神制杀为权"
+      }
+    },
+    {
+      "id": "P010",
+      "year": 1986,
+      "month": 5,
+      "day": 20,
+      "hour": 8,
+      "gender": "female",
+      "note": "正印格-官印相生",
+      "ziping": {
+        "pattern": "正印格",
+        "status": "成格",
+        "yongshen": "庚金",
+        "level": "中格",
+        "key_rule": "官印相生"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "印旺生身"
+      },
+      "mangpai": {
+        "gong_type": "印功",
+        "gong_strength": "中功",
+        "guest_host": "宾来生主",
+        "key_rule": "印绶护身"
+      }
+    },
+    {
+      "id": "P011",
+      "year": 1990,
+      "month": 8,
+      "day": 12,
+      "hour": 12,
+      "gender": "male",
+      "note": "偏印格-杀印相生",
+      "ziping": {
+        "pattern": "偏印格",
+        "status": "待救",
+        "yongshen": "丁火",
+        "level": "中格",
+        "key_rule": "杀印相生"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "source": "",
+        "flow": "有阻",
+        "clarity": "浊",
+        "key_rule": "金多水浊"
+      },
+      "mangpai": {
+        "gong_type": "印功",
+        "gong_strength": "小功",
+        "guest_host": "宾克主",
+        "key_rule": "枭印夺食"
+      }
+    },
+    {
+      "id": "P012",
+      "year": 2001,
+      "month": 3,
+      "day": 25,
+      "hour": 16,
+      "gender": "female",
+      "note": "正财格-财旺生官",
+      "ziping": {
+        "pattern": "正财格",
+        "status": "成格",
+        "yongshen": "辛金",
+        "level": "上格",
+        "key_rule": "财旺生官"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "财官流通"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "财官相生"
+      }
+    },
+    {
+      "id": "P013",
+      "year": 1968,
+      "month": 11,
+      "day": 3,
+      "hour": 6,
+      "gender": "male",
+      "note": "月刃格-身旺无制",
+      "ziping": {
+        "pattern": "月刃格",
+        "status": "破格",
+        "yongshen": "壬水",
+        "level": "下格",
+        "key_rule": "刃旺无制"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "source": "",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "比劫夺财"
+      },
+      "mangpai": {
+        "gong_type": "无功",
+        "gong_strength": "无功",
+        "guest_host": "宾克主",
+        "key_rule": "比劫夺财破局"
+      }
+    },
+    {
+      "id": "P014",
+      "year": 1982,
+      "month": 4,
+      "day": 18,
+      "hour": 10,
+      "gender": "female",
+      "note": "伤官格-伤官伤尽",
+      "ziping": {
+        "pattern": "伤官格",
+        "status": "成格",
+        "yongshen": "丁火",
+        "level": "上格",
+        "key_rule": "伤官伤尽"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "伤官泄秀"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "伤官伤尽反贵"
+      }
+    },
+    {
+      "id": "P015",
+      "year": 1995,
+      "month": 12,
+      "day": 22,
+      "hour": 8,
+      "gender": "male",
+      "note": "七杀格-身弱杀重",
+      "ziping": {
+        "pattern": "七杀格",
+        "status": "破格",
+        "yongshen": "戊土",
+        "level": "下格",
+        "key_rule": "杀重身弱无制"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "source": "",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "水多木漂"
+      },
+      "mangpai": {
+        "gong_type": "无功",
+        "gong_strength": "无功",
+        "guest_host": "宾克主",
+        "key_rule": "杀重无制"
+      }
+    },
+    {
+      "id": "P016",
+      "year": 2008,
+      "month": 8,
+      "day": 8,
+      "hour": 20,
+      "gender": "male",
+      "note": "正官格-官星纯清",
+      "ziping": {
+        "pattern": "正官格",
+        "status": "成格",
+        "yongshen": "甲木",
+        "level": "上格",
+        "key_rule": "官星纯粹"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "官印流通"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "大功",
+        "guest_host": "宾来生主",
+        "key_rule": "官来合我"
+      }
+    },
+    {
+      "id": "P017",
+      "year": 1970,
+      "month": 6,
+      "day": 10,
+      "hour": 14,
+      "gender": "female",
+      "note": "食神格-枭神夺食",
+      "ziping": {
+        "pattern": "食神格",
+        "status": "破格",
+        "yongshen": "庚金",
+        "level": "下格",
+        "key_rule": "枭神夺食"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "source": "",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "金多水浊夺食"
+      },
+      "mangpai": {
+        "gong_type": "无功",
+        "gong_strength": "无功",
+        "guest_host": "宾克主",
+        "key_rule": "枭夺食破败"
+      }
+    },
+    {
+      "id": "P018",
+      "year": 2010,
+      "month": 10,
+      "day": 10,
+      "hour": 10,
+      "gender": "male",
+      "note": "偏财格-身旺任财",
+      "ziping": {
+        "pattern": "偏财格",
+        "status": "成格",
+        "yongshen": "丁火",
+        "level": "上格",
+        "key_rule": "身旺任财"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "财旺流通"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "偏财慷慨"
+      }
+    },
+    {
+      "id": "P019",
+      "year": 1994,
+      "month": 4,
+      "day": 5,
+      "hour": 12,
+      "gender": "female",
+      "note": "正印格-印旺身强",
+      "ziping": {
+        "pattern": "正印格",
+        "status": "成格",
+        "yongshen": "戊土",
+        "level": "中格",
+        "key_rule": "印旺身强喜财"
+      },
+      "ditian": {
+        "wangshuai": "身强",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "身强能任"
+      },
+      "mangpai": {
+        "gong_type": "印功",
+        "gong_strength": "中功",
+        "guest_host": "宾来生主",
+        "key_rule": "印绶生身"
+      }
+    },
+    {
+      "id": "P020",
+      "year": 1987,
+      "month": 7,
+      "day": 22,
+      "hour": 18,
+      "gender": "male",
+      "note": "建禄格-食伤泄秀",
+      "ziping": {
+        "pattern": "建禄格",
+        "status": "成格",
+        "yongshen": "壬水",
+        "level": "中格",
+        "key_rule": "禄格用食伤泄"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "火土燥热需水"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "食伤泄身"
+      }
+    },
+    {
+      "id": "P021",
+      "year": 2003,
+      "month": 9,
+      "day": 16,
+      "hour": 8,
+      "gender": "female",
+      "note": "正官格-官杀混杂",
+      "ziping": {
+        "pattern": "官杀混杂",
+        "status": "破格",
+        "yongshen": "戊土",
+        "level": "下格",
+        "key_rule": "官杀混杂"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "source": "",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "志向分散"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "小功",
+        "guest_host": "宾克主",
+        "key_rule": "多做少成"
+      }
+    },
+    {
+      "id": "P022",
+      "year": 2012,
+      "month": 3,
+      "day": 8,
+      "hour": 12,
+      "gender": "male",
+      "note": "正财格-财破印",
+      "ziping": {
+        "pattern": "正财格",
+        "status": "破格",
+        "yongshen": "丙火",
+        "level": "下格",
+        "key_rule": "财来坏印"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "source": "",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "因财损名"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "无功",
+        "guest_host": "宾克主",
+        "key_rule": "财破印损根基"
+      }
+    },
+    {
+      "id": "P023",
+      "year": 1999,
+      "month": 5,
+      "day": 30,
+      "hour": 6,
+      "gender": "male",
+      "note": "食神格-食神生财",
+      "ziping": {
+        "pattern": "食神格",
+        "status": "成格",
+        "yongshen": "甲木",
+        "level": "中格",
+        "key_rule": "食神生财"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "食神泄秀"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "技艺得财"
+      }
+    },
+    {
+      "id": "P024",
+      "year": 1978,
+      "month": 10,
+      "day": 15,
+      "hour": 16,
+      "gender": "female",
+      "note": "正印格-财星破印",
+      "ziping": {
+        "pattern": "正印格",
+        "status": "破格",
+        "yongshen": "辛金",
+        "level": "下格",
+        "key_rule": "财星破印"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "source": "",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "金寒水冷"
+      },
+      "mangpai": {
+        "gong_type": "无功",
+        "gong_strength": "无功",
+        "guest_host": "宾克主",
+        "key_rule": "印被财破"
+      }
+    },
+    {
+      "id": "P025",
+      "year": 2015,
+      "month": 1,
+      "day": 8,
+      "hour": 14,
+      "gender": "male",
+      "note": "七杀格-杀印相生",
+      "ziping": {
+        "pattern": "七杀格",
+        "status": "成格",
+        "yongshen": "乙木",
+        "level": "上格",
+        "key_rule": "杀印相生"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "source": "",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "水火既济"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "大功",
+        "guest_host": "宾来生主",
+        "key_rule": "化杀为权"
+      }
+    },
+    {
+      "id": "P026",
+      "year": 1960,
+      "month": 8,
+      "day": 20,
+      "hour": 6,
+      "gender": "male",
+      "note": "正官格-官星得禄",
+      "ziping": {
+        "pattern": "正官格",
+        "status": "成格",
+        "yongshen": "甲木",
+        "level": "上格",
+        "key_rule": "官星得禄"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "官印相生"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "大功",
+        "guest_host": "宾来生主",
+        "key_rule": "官星有力掌权"
+      }
+    },
+    {
+      "id": "P027",
+      "year": 1975,
+      "month": 3,
+      "day": 12,
+      "hour": 14,
+      "gender": "female",
+      "note": "正印格-印星过旺",
+      "ziping": {
+        "pattern": "正印格",
+        "status": "待救",
+        "yongshen": "庚金",
+        "level": "中格",
+        "key_rule": "印重身滞"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "flow": "有阻",
+        "clarity": "浊",
+        "key_rule": "印多灭食"
+      },
+      "mangpai": {
+        "gong_type": "印功",
+        "gong_strength": "中功",
+        "guest_host": "宾来生主",
+        "key_rule": "印重依赖性强"
+      }
+    },
+    {
+      "id": "P028",
+      "year": 2009,
+      "month": 1,
+      "day": 26,
+      "hour": 6,
+      "gender": "male",
+      "note": "从杀格-真从",
+      "ziping": {
+        "pattern": "从杀格",
+        "status": "成格",
+        "yongshen": "庚金",
+        "level": "上格",
+        "key_rule": "从杀真从"
+      },
+      "ditian": {
+        "wangshuai": "从格",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "从杀弃命"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "大功",
+        "guest_host": "宾克主",
+        "key_rule": "从杀依附强权"
+      }
+    },
+    {
+      "id": "P029",
+      "year": 1983,
+      "month": 11,
+      "day": 8,
+      "hour": 22,
+      "gender": "female",
+      "note": "伤官格-伤官见官",
+      "ziping": {
+        "pattern": "伤官格",
+        "status": "破格",
+        "yongshen": "癸水",
+        "level": "下格",
+        "key_rule": "伤官见官"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "水火激战"
+      },
+      "mangpai": {
+        "gong_type": "无功",
+        "gong_strength": "无功",
+        "guest_host": "宾克主",
+        "key_rule": "伤官见官为祸"
+      }
+    },
+    {
+      "id": "P030",
+      "year": 2016,
+      "month": 5,
+      "day": 15,
+      "hour": 10,
+      "gender": "male",
+      "note": "偏财格-财旺生官",
+      "ziping": {
+        "pattern": "偏财格",
+        "status": "成格",
+        "yongshen": "丁火",
+        "level": "上格",
+        "key_rule": "财旺生官"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "财官双美"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "偏财善投资"
+      }
+    },
+    {
+      "id": "P031",
+      "year": 1965,
+      "month": 9,
+      "day": 30,
+      "hour": 8,
+      "gender": "female",
+      "note": "食神格-食神泄秀",
+      "ziping": {
+        "pattern": "食神格",
+        "status": "成格",
+        "yongshen": "丙火",
+        "level": "中格",
+        "key_rule": "食神泄秀"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "火土相生"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "才华外露"
+      }
+    },
+    {
+      "id": "P032",
+      "year": 2000,
+      "month": 12,
+      "day": 20,
+      "hour": 18,
+      "gender": "male",
+      "note": "七杀格-杀旺无制",
+      "ziping": {
+        "pattern": "七杀格",
+        "status": "破格",
+        "yongshen": "乙木",
+        "level": "下格",
+        "key_rule": "杀重无制"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "水灭火光"
+      },
+      "mangpai": {
+        "gong_type": "无功",
+        "gong_strength": "无功",
+        "guest_host": "宾克主",
+        "key_rule": "压力山大"
+      }
+    },
+    {
+      "id": "P033",
+      "year": 1992,
+      "month": 4,
+      "day": 28,
+      "hour": 12,
+      "gender": "male",
+      "note": "建禄格-禄刃双全",
+      "ziping": {
+        "pattern": "建禄格",
+        "status": "成格",
+        "yongshen": "戊土",
+        "level": "中格",
+        "key_rule": "禄格用财"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "身旺财官为用"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "禄旺能任财"
+      }
+    },
+    {
+      "id": "P034",
+      "year": 1969,
+      "month": 7,
+      "day": 20,
+      "hour": 22,
+      "gender": "male",
+      "note": "正财格-财多身弱",
+      "ziping": {
+        "pattern": "正财格",
+        "status": "待救",
+        "yongshen": "甲木",
+        "level": "中格偏下",
+        "key_rule": "富屋贫人"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "有阻",
+        "clarity": "清",
+        "key_rule": "财旺泄身太过"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "小功",
+        "guest_host": "宾克主",
+        "key_rule": "富屋贫人"
+      }
+    },
+    {
+      "id": "P035",
+      "year": 1981,
+      "month": 6,
+      "day": 6,
+      "hour": 16,
+      "gender": "female",
+      "note": "正官格-官杀齐透",
+      "ziping": {
+        "pattern": "官杀混杂",
+        "status": "破格",
+        "yongshen": "辛金",
+        "level": "下格",
+        "key_rule": "官杀混杂"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "志向分散"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "小功",
+        "guest_host": "宾克主",
+        "key_rule": "多头领导"
+      }
+    },
+    {
+      "id": "P036",
+      "year": 2019,
+      "month": 10,
+      "day": 1,
+      "hour": 6,
+      "gender": "male",
+      "note": "偏印格-枭神夺食",
+      "ziping": {
+        "pattern": "偏印格",
+        "status": "破格",
+        "yongshen": "庚金",
+        "level": "下格",
+        "key_rule": "枭神夺食"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "金多土虚"
+      },
+      "mangpai": {
+        "gong_type": "无功",
+        "gong_strength": "无功",
+        "guest_host": "宾克主",
+        "key_rule": "夺食破败"
+      }
+    },
+    {
+      "id": "P037",
+      "year": 1974,
+      "month": 2,
+      "day": 14,
+      "hour": 8,
+      "gender": "female",
+      "note": "正印格-官印双全",
+      "ziping": {
+        "pattern": "正印格",
+        "status": "成格",
+        "yongshen": "戊土",
+        "level": "上格",
+        "key_rule": "官印相生"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "官印流通"
+      },
+      "mangpai": {
+        "gong_type": "印功",
+        "gong_strength": "大功",
+        "guest_host": "宾来生主",
+        "key_rule": "权印并得"
+      }
+    },
+    {
+      "id": "P038",
+      "year": 2006,
+      "month": 8,
+      "day": 18,
+      "hour": 14,
+      "gender": "male",
+      "note": "伤官格-伤官生财",
+      "ziping": {
+        "pattern": "伤官格",
+        "status": "成格",
+        "yongshen": "癸水",
+        "level": "中格",
+        "key_rule": "伤官生财"
+      },
+      "ditian": {
+        "wangshuai": "身强",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "火土金流通"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "技艺致富"
+      }
+    },
+    {
+      "id": "P039",
+      "year": 1958,
+      "month": 11,
+      "day": 22,
+      "hour": 10,
+      "gender": "male",
+      "note": "正官格-官星被合",
+      "ziping": {
+        "pattern": "正官格",
+        "status": "破格",
+        "yongshen": "丙火",
+        "level": "下格",
+        "key_rule": "官星被合"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "权力被牵"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "小功",
+        "guest_host": "宾克主",
+        "key_rule": "权力旁落"
+      }
+    },
+    {
+      "id": "P040",
+      "year": 2013,
+      "month": 3,
+      "day": 5,
+      "hour": 12,
+      "gender": "female",
+      "note": "食神格-食神逢枭",
+      "ziping": {
+        "pattern": "食神格",
+        "status": "破格",
+        "yongshen": "丁火",
+        "level": "下格",
+        "key_rule": "枭神夺食"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "偏印夺食"
+      },
+      "mangpai": {
+        "gong_type": "无功",
+        "gong_strength": "无功",
+        "guest_host": "宾克主",
+        "key_rule": "被抢功"
+      }
+    },
+    {
+      "id": "P041",
+      "year": 1997,
+      "month": 6,
+      "day": 8,
+      "hour": 6,
+      "gender": "male",
+      "note": "从财格-假从",
+      "ziping": {
+        "pattern": "从财格",
+        "status": "待救",
+        "yongshen": "乙木",
+        "level": "中格",
+        "key_rule": "假从财格"
+      },
+      "ditian": {
+        "wangshuai": "从格",
+        "flow": "有阻",
+        "clarity": "浊",
+        "key_rule": "假从不纯"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "中功",
+        "guest_host": "宾来生主",
+        "key_rule": "假从财"
+      }
+    },
+    {
+      "id": "P042",
+      "year": 1988,
+      "month": 9,
+      "day": 25,
+      "hour": 20,
+      "gender": "female",
+      "note": "七杀格-食神制杀",
+      "ziping": {
+        "pattern": "七杀格",
+        "status": "成格",
+        "yongshen": "辛金",
+        "level": "上格",
+        "key_rule": "食神制杀"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "制杀为权"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "英雄独压万人"
+      }
+    },
+    {
+      "id": "P043",
+      "year": 2007,
+      "month": 12,
+      "day": 12,
+      "hour": 12,
+      "gender": "male",
+      "note": "偏财格-比劫夺财",
+      "ziping": {
+        "pattern": "偏财格",
+        "status": "破格",
+        "yongshen": "庚金",
+        "level": "下格",
+        "key_rule": "比劫夺财"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "财来财去"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "无功",
+        "guest_host": "宾克主",
+        "key_rule": "合伙被坑"
+      }
+    },
+    {
+      "id": "P044",
+      "year": 1962,
+      "month": 1,
+      "day": 28,
+      "hour": 4,
+      "gender": "male",
+      "note": "正印格-印被财破",
+      "ziping": {
+        "pattern": "正印格",
+        "status": "破格",
+        "yongshen": "丁火",
+        "level": "下格",
+        "key_rule": "财来坏印"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "因财损名"
+      },
+      "mangpai": {
+        "gong_type": "无功",
+        "gong_strength": "无功",
+        "guest_host": "宾克主",
+        "key_rule": "贪财坏印"
+      }
+    },
+    {
+      "id": "P045",
+      "year": 2011,
+      "month": 4,
+      "day": 22,
+      "hour": 10,
+      "gender": "female",
+      "note": "建禄格-食伤生财",
+      "ziping": {
+        "pattern": "建禄格",
+        "status": "成格",
+        "yongshen": "癸水",
+        "level": "中格",
+        "key_rule": "禄格用食伤"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "水火既济"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "技艺立身"
+      }
+    },
+    {
+      "id": "P046",
+      "year": 1996,
+      "month": 5,
+      "day": 18,
+      "hour": 16,
+      "gender": "male",
+      "note": "正官格-官逢财生",
+      "ziping": {
+        "pattern": "正官格",
+        "status": "成格",
+        "yongshen": "甲木",
+        "level": "上格",
+        "key_rule": "财官相生"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "富贵双全"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "大功",
+        "guest_host": "宾来生主",
+        "key_rule": "以财求官"
+      }
+    },
+    {
+      "id": "P047",
+      "year": 1980,
+      "month": 10,
+      "day": 31,
+      "hour": 8,
+      "gender": "female",
+      "note": "食神格-身弱食重",
+      "ziping": {
+        "pattern": "食神格",
+        "status": "待救",
+        "yongshen": "戊土",
+        "level": "中格偏下",
+        "key_rule": "泄身太过"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "有阻",
+        "clarity": "清",
+        "key_rule": "食重泄身"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "小功",
+        "guest_host": "主去克宾",
+        "key_rule": "心有余力不足"
+      }
+    },
+    {
+      "id": "P048",
+      "year": 2004,
+      "month": 7,
+      "day": 7,
+      "hour": 14,
+      "gender": "male",
+      "note": "偏印格-印星带禄",
+      "ziping": {
+        "pattern": "偏印格",
+        "status": "成格",
+        "yongshen": "丙火",
+        "level": "中格",
+        "key_rule": "偏印得禄"
+      },
+      "ditian": {
+        "wangshuai": "身强",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "特殊技艺"
+      },
+      "mangpai": {
+        "gong_type": "印功",
+        "gong_strength": "中功",
+        "guest_host": "宾来生主",
+        "key_rule": "偏门成才"
+      }
+    },
+    {
+      "id": "P049",
+      "year": 1973,
+      "month": 8,
+      "day": 3,
+      "hour": 12,
+      "gender": "female",
+      "note": "正财格-财官双美",
+      "ziping": {
+        "pattern": "正财格",
+        "status": "成格",
+        "yongshen": "壬水",
+        "level": "上格",
+        "key_rule": "财官双美"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "财官流通"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "大功",
+        "guest_host": "主去合宾",
+        "key_rule": "富贵双全"
+      }
+    },
+    {
+      "id": "P050",
+      "year": 2021,
+      "month": 3,
+      "day": 15,
+      "hour": 8,
+      "gender": "male",
+      "note": "七杀格-杀印相生有力",
+      "ziping": {
+        "pattern": "七杀格",
+        "status": "成格",
+        "yongshen": "辛金",
+        "level": "上格",
+        "key_rule": "杀印相生"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "化杀为权"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "大功",
+        "guest_host": "宾来生主",
+        "key_rule": "威权并重"
+      }
+    },
+    {
+      "id": "P051",
+      "year": 1991,
+      "month": 2,
+      "day": 10,
+      "hour": 6,
+      "gender": "female",
+      "note": "伤官格-伤官配印",
+      "ziping": {
+        "pattern": "伤官格",
+        "status": "成格",
+        "yongshen": "戊土",
+        "level": "上格",
+        "key_rule": "伤官配印"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "才华有制"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "学者权威"
+      }
+    },
+    {
+      "id": "P052",
+      "year": 1955,
+      "month": 6,
+      "day": 20,
+      "hour": 14,
+      "gender": "male",
+      "note": "正印格-印重无泄",
+      "ziping": {
+        "pattern": "正印格",
+        "status": "破格",
+        "yongshen": "甲木",
+        "level": "下格",
+        "key_rule": "印多灭食"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "行动力弱"
+      },
+      "mangpai": {
+        "gong_type": "印功",
+        "gong_strength": "小功",
+        "guest_host": "宾来生主",
+        "key_rule": "纸上谈兵"
+      }
+    },
+    {
+      "id": "P053",
+      "year": 2017,
+      "month": 11,
+      "day": 11,
+      "hour": 18,
+      "gender": "male",
+      "note": "偏财格-身弱财重",
+      "ziping": {
+        "pattern": "偏财格",
+        "status": "待救",
+        "yongshen": "丁火",
+        "level": "中格偏下",
+        "key_rule": "富屋贫人"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "有阻",
+        "clarity": "清",
+        "key_rule": "财旺压身"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "小功",
+        "guest_host": "宾克主",
+        "key_rule": "看得见摸不着"
+      }
+    },
+    {
+      "id": "P054",
+      "year": 1967,
+      "month": 12,
+      "day": 5,
+      "hour": 10,
+      "gender": "female",
+      "note": "正官格-官印相生",
+      "ziping": {
+        "pattern": "正官格",
+        "status": "成格",
+        "yongshen": "庚金",
+        "level": "上格",
+        "key_rule": "官印相生"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "权印双全"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "大功",
+        "guest_host": "宾来生主",
+        "key_rule": "仕途稳健"
+      }
+    },
+    {
+      "id": "P055",
+      "year": 2002,
+      "month": 9,
+      "day": 9,
+      "hour": 22,
+      "gender": "male",
+      "note": "从儿格-真从",
+      "ziping": {
+        "pattern": "从儿格",
+        "status": "成格",
+        "yongshen": "乙木",
+        "level": "上格",
+        "key_rule": "从儿真从"
+      },
+      "ditian": {
+        "wangshuai": "从格",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "从儿才华"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "才华立身"
+      }
+    },
+    {
+      "id": "P056",
+      "year": 1979,
+      "month": 4,
+      "day": 16,
+      "hour": 16,
+      "gender": "female",
+      "note": "建禄格-比劫夺财",
+      "ziping": {
+        "pattern": "建禄格",
+        "status": "破格",
+        "yongshen": "辛金",
+        "level": "下格",
+        "key_rule": "比劫夺财"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "财来财去"
+      },
+      "mangpai": {
+        "gong_type": "无功",
+        "gong_strength": "无功",
+        "guest_host": "宾克主",
+        "key_rule": "合作破财"
+      }
+    },
+    {
+      "id": "P057",
+      "year": 2014,
+      "month": 8,
+      "day": 24,
+      "hour": 8,
+      "gender": "male",
+      "note": "正财格-财星有库",
+      "ziping": {
+        "pattern": "正财格",
+        "status": "成格",
+        "yongshen": "丙火",
+        "level": "中格",
+        "key_rule": "财星有库"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "财库丰盈"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "暗中蓄财"
+      }
+    },
+    {
+      "id": "P058",
+      "year": 1985,
+      "month": 1,
+      "day": 3,
+      "hour": 6,
+      "gender": "male",
+      "note": "七杀格-杀重寒局",
+      "ziping": {
+        "pattern": "七杀格",
+        "status": "破格",
+        "yongshen": "丙火",
+        "level": "下格",
+        "key_rule": "杀重无暖"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "寒局无暖"
+      },
+      "mangpai": {
+        "gong_type": "无功",
+        "gong_strength": "无功",
+        "guest_host": "宾克主",
+        "key_rule": "杀重寒局双重克"
+      }
+    },
+    {
+      "id": "P059",
+      "year": 2023,
+      "month": 5,
+      "day": 20,
+      "hour": 12,
+      "gender": "female",
+      "note": "正印格-印星虚浮",
+      "ziping": {
+        "pattern": "正印格",
+        "status": "待救",
+        "yongshen": "戊土",
+        "level": "中格",
+        "key_rule": "印星无根"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "有阻",
+        "clarity": "清",
+        "key_rule": "虚不受补"
+      },
+      "mangpai": {
+        "gong_type": "印功",
+        "gong_strength": "小功",
+        "guest_host": "宾来生主",
+        "key_rule": "贵人虚浮"
+      }
+    },
+    {
+      "id": "P060",
+      "year": 1990,
+      "month": 3,
+      "day": 22,
+      "hour": 10,
+      "gender": "male",
+      "note": "伤官格-伤官去官",
+      "ziping": {
+        "pattern": "伤官格",
+        "status": "成格",
+        "yongshen": "丁火",
+        "level": "中格",
+        "key_rule": "伤官去官"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "弃官从艺"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "中功",
+        "guest_host": "主去克宾",
+        "key_rule": "自主创业"
+      }
+    },
+    {
+      "id": "P061",
+      "year": 1971,
+      "month": 10,
+      "day": 10,
+      "hour": 20,
+      "gender": "female",
+      "note": "偏财格-财旺生杀",
+      "ziping": {
+        "pattern": "偏财格",
+        "status": "待救",
+        "yongshen": "甲木",
+        "level": "中格偏下",
+        "key_rule": "财生杀攻身"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "有阻",
+        "clarity": "浊",
+        "key_rule": "财杀相生"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "小功",
+        "guest_host": "宾克主",
+        "key_rule": "因财惹祸"
+      }
+    },
+    {
+      "id": "P062",
+      "year": 2018,
+      "month": 6,
+      "day": 14,
+      "hour": 8,
+      "gender": "male",
+      "note": "食神格-火炎土燥",
+      "ziping": {
+        "pattern": "食神格",
+        "status": "待救",
+        "yongshen": "壬水",
+        "level": "中格",
+        "key_rule": "燥局需润"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "flow": "有阻",
+        "clarity": "浊",
+        "key_rule": "火炎土燥"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "中功",
+        "guest_host": "主去克宾",
+        "key_rule": "才华过旺难收"
+      }
+    },
+    {
+      "id": "P063",
+      "year": 2005,
+      "month": 7,
+      "day": 25,
+      "hour": 14,
+      "gender": "female",
+      "note": "正官格-独官为贵",
+      "ziping": {
+        "pattern": "正官格",
+        "status": "成格",
+        "yongshen": "乙木",
+        "level": "上格",
+        "key_rule": "独官为贵"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "格局清纯"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "大功",
+        "guest_host": "宾来生主",
+        "key_rule": "志向专一"
+      }
+    },
+    {
+      "id": "P064",
+      "year": 1963,
+      "month": 5,
+      "day": 1,
+      "hour": 6,
+      "gender": "male",
+      "note": "正印格-印星被合",
+      "ziping": {
+        "pattern": "正印格",
+        "status": "待救",
+        "yongshen": "庚金",
+        "level": "中格",
+        "key_rule": "印星被合"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "有阻",
+        "clarity": "浊",
+        "key_rule": "贵人离去"
+      },
+      "mangpai": {
+        "gong_type": "印功",
+        "gong_strength": "小功",
+        "guest_host": "宾克主",
+        "key_rule": "失去庇护"
+      }
+    },
+    {
+      "id": "P065",
+      "year": 1998,
+      "month": 9,
+      "day": 14,
+      "hour": 16,
+      "gender": "male",
+      "note": "七杀格-杀带食神",
+      "ziping": {
+        "pattern": "七杀格",
+        "status": "成格",
+        "yongshen": "丙火",
+        "level": "上格",
+        "key_rule": "食神制杀"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "制杀为权"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "以智取胜"
+      }
+    },
+    {
+      "id": "P066",
+      "year": 2001,
+      "month": 12,
+      "day": 30,
+      "hour": 8,
+      "gender": "female",
+      "note": "月刃格-刃头财",
+      "ziping": {
+        "pattern": "月刃格",
+        "status": "待救",
+        "yongshen": "辛金",
+        "level": "中格偏下",
+        "key_rule": "刃头财险"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "flow": "有阻",
+        "clarity": "浊",
+        "key_rule": "比劫林立"
+      },
+      "mangpai": {
+        "gong_type": "无功",
+        "gong_strength": "无功",
+        "guest_host": "宾克主",
+        "key_rule": "刃旺夺财"
+      }
+    },
+    {
+      "id": "P067",
+      "year": 2015,
+      "month": 4,
+      "day": 8,
+      "hour": 12,
+      "gender": "male",
+      "note": "从强格-专旺",
+      "ziping": {
+        "pattern": "从强格",
+        "status": "成格",
+        "yongshen": "甲木",
+        "level": "上格",
+        "key_rule": "从强专旺"
+      },
+      "ditian": {
+        "wangshuai": "从格",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "比劫成势"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "团体核心"
+      }
+    },
+    {
+      "id": "P068",
+      "year": 1982,
+      "month": 10,
+      "day": 5,
+      "hour": 18,
+      "gender": "female",
+      "note": "正官格-官星无根",
+      "ziping": {
+        "pattern": "正官格",
+        "status": "破格",
+        "yongshen": "丁火",
+        "level": "下格",
+        "key_rule": "官星虚浮"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "有名无实"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "小功",
+        "guest_host": "宾克主",
+        "key_rule": "虚职无权"
+      }
+    },
+    {
+      "id": "P069",
+      "year": 2008,
+      "month": 2,
+      "day": 29,
+      "hour": 10,
+      "gender": "male",
+      "note": "偏印格-杀印相生",
+      "ziping": {
+        "pattern": "偏印格",
+        "status": "成格",
+        "yongshen": "庚金",
+        "level": "中格",
+        "key_rule": "杀印相生"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "印化杀权"
+      },
+      "mangpai": {
+        "gong_type": "印功",
+        "gong_strength": "大功",
+        "guest_host": "宾来生主",
+        "key_rule": "化敌为友"
+      }
+    },
+    {
+      "id": "P070",
+      "year": 1977,
+      "month": 3,
+      "day": 18,
+      "hour": 10,
+      "gender": "female",
+      "note": "正财格-财被比劫",
+      "ziping": {
+        "pattern": "正财格",
+        "status": "破格",
+        "yongshen": "癸水",
+        "level": "下格",
+        "key_rule": "比劫夺财"
+      },
+      "ditian": {
+        "wangshuai": "身旺",
+        "flow": "断",
+        "clarity": "浊",
+        "key_rule": "财来财去"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "无功",
+        "guest_host": "宾克主",
+        "key_rule": "破财格"
+      }
+    },
+    {
+      "id": "P071",
+      "year": 1995,
+      "month": 8,
+      "day": 20,
+      "hour": 14,
+      "gender": "male",
+      "note": "伤官格-金水伤官",
+      "ziping": {
+        "pattern": "伤官格",
+        "status": "成格",
+        "yongshen": "丙火",
+        "level": "中格",
+        "key_rule": "金水伤官"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "聪明绝顶"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "学术高手"
+      }
+    },
+    {
+      "id": "P072",
+      "year": 2020,
+      "month": 7,
+      "day": 18,
+      "hour": 6,
+      "gender": "female",
+      "note": "食神格-食神带禄",
+      "ziping": {
+        "pattern": "食神格",
+        "status": "成格",
+        "yongshen": "丁火",
+        "level": "中格",
+        "key_rule": "食神得禄"
+      },
+      "ditian": {
+        "wangshuai": "身强",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "福气深厚"
+      },
+      "mangpai": {
+        "gong_type": "食伤功",
+        "gong_strength": "大功",
+        "guest_host": "主去克宾",
+        "key_rule": "才华变现"
+      }
+    },
+    {
+      "id": "P073",
+      "year": 1966,
+      "month": 4,
+      "day": 12,
+      "hour": 8,
+      "gender": "male",
+      "note": "七杀格-杀从印化",
+      "ziping": {
+        "pattern": "七杀格",
+        "status": "成格",
+        "yongshen": "乙木",
+        "level": "上格",
+        "key_rule": "杀印相生"
+      },
+      "ditian": {
+        "wangshuai": "中和",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "化杀为权"
+      },
+      "mangpai": {
+        "gong_type": "官功",
+        "gong_strength": "大功",
+        "guest_host": "宾来生主",
+        "key_rule": "威权在握"
+      }
+    },
+    {
+      "id": "P074",
+      "year": 2010,
+      "month": 1,
+      "day": 15,
+      "hour": 12,
+      "gender": "female",
+      "note": "正印格-印旺身弱",
+      "ziping": {
+        "pattern": "正印格",
+        "status": "待救",
+        "yongshen": "丙火",
+        "level": "中格",
+        "key_rule": "印重身滞"
+      },
+      "ditian": {
+        "wangshuai": "身弱",
+        "flow": "有阻",
+        "clarity": "浊",
+        "key_rule": "虚不受补"
+      },
+      "mangpai": {
+        "gong_type": "印功",
+        "gong_strength": "小功",
+        "guest_host": "宾来生主",
+        "key_rule": "依赖性强"
+      }
+    },
+    {
+      "id": "P075",
+      "year": 2003,
+      "month": 6,
+      "day": 28,
+      "hour": 20,
+      "gender": "male",
+      "note": "从势格-弃命从势",
+      "ziping": {
+        "pattern": "从势格",
+        "status": "成格",
+        "yongshen": "戊土",
+        "level": "上格",
+        "key_rule": "弃命从势"
+      },
+      "ditian": {
+        "wangshuai": "从格",
+        "flow": "顺畅",
+        "clarity": "清",
+        "key_rule": "顺势而为"
+      },
+      "mangpai": {
+        "gong_type": "财功",
+        "gong_strength": "大功",
+        "guest_host": "宾来生主",
+        "key_rule": "顺势发财"
+      }
+    }
+  ],
+  "consistency_rules": {
+    "wangshuai_match": "子平的身旺/身弱判定应与滴天髓的旺衰等级一致（允许±1级差异）",
+    "pattern_gong_match": "子平的格局类型应与盲派的做功类型存在合理对应",
+    "level_gong_match": "子平的格局层次（上/中/下）应与盲派的功力（大/中/小/无）大致对应",
+    "flow_status_match": "滴天髓的流通评级应与格局成否相关（成格→顺畅, 破格→断/有阻）",
+    "no_contradiction": "三体系对同一命局的判断不应存在根本性矛盾"
+  }
+}

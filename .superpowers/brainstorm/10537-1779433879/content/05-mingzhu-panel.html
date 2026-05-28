@@ -1,0 +1,204 @@
+<h2>布局 v3 — 新增命主切换面板 + 合婚入口</h2>
+<p class="subtitle">四栏：命主列表(可折叠) | 对话 | 命盘 | 报告</p>
+
+<div class="mockup">
+  <div class="mockup-header">整体布局</div>
+  <div class="mockup-body" style="padding:0;min-height:550px">
+    <div style="display:flex;height:550px">
+
+      <!-- COLUMN 0: 命主面板 (collapsible) -->
+      <div style="width:180px;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column">
+        <!-- Panel header -->
+        <div style="padding:10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:bold;color:var(--accent);font-size:13px">命主</span>
+          <span style="font-size:10px;color:var(--text-muted);cursor:pointer" title="折叠">◀</span>
+        </div>
+        <!-- 命主 list -->
+        <div style="flex:1;overflow-y:auto;padding:8px">
+          <!-- Current active -->
+          <div style="background:var(--accent);color:var(--bg);padding:8px;border-radius:6px;margin-bottom:6px;cursor:pointer;font-size:12px">
+            <div style="font-weight:bold;font-size:13px">张三</div>
+            <div style="font-size:10px;opacity:0.8">1993-07-15 男</div>
+            <div style="font-size:10px;opacity:0.8">丁火 · 食神格</div>
+          </div>
+          <!-- Other saved -->
+          <div style="background:var(--surface-light);padding:8px;border-radius:6px;margin-bottom:6px;cursor:pointer;font-size:12px;border:1px solid var(--border)">
+            <div style="font-weight:bold;font-size:13px">李四</div>
+            <div style="font-size:10px;color:var(--text-muted)">1995-03-20 女</div>
+            <div style="font-size:10px;color:var(--text-muted)">乙木 · 正官格</div>
+          </div>
+          <div style="background:var(--surface-light);padding:8px;border-radius:6px;margin-bottom:6px;cursor:pointer;font-size:12px;border:1px solid var(--border)">
+            <div style="font-weight:bold;font-size:13px">王小明</div>
+            <div style="font-size:10px;color:var(--text-muted)">2018-11-06 男</div>
+            <div style="font-size:10px;color:var(--text-muted)">癸水 · 七杀格</div>
+          </div>
+          <!-- Add new -->
+          <div style="border:1px dashed var(--border);padding:8px;border-radius:6px;text-align:center;cursor:pointer;font-size:20px;color:var(--text-muted)">
+            +
+          </div>
+        </div>
+        <!-- Panel footer -->
+        <div style="padding:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);text-align:center">
+          3个命盘 · <span style="color:var(--accent);cursor:pointer">管理</span>
+        </div>
+      </div>
+
+      <!-- 折叠按钮（面板收起后显示） -->
+      <div style="width:28px;border-right:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <span style="font-size:10px;color:var(--text-muted);writing-mode:vertical-rl">命 主</span>
+      </div>
+
+      <!-- Rest of layout stays the same but width adjusted -->
+      <!-- LEFT: 32% Chat -->
+      <div style="width:32%;border-right:1px solid var(--border);display:flex;flex-direction:column">
+        <div style="background:var(--surface);padding:10px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+          <span style="font-weight:bold;color:var(--accent);font-size:14px">玄机子</span>
+          <span style="font-size:10px;color:var(--text-muted)">当前命主: 张三</span>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:10px;background:var(--bg)">
+          <div style="margin-bottom:10px">
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">系统</div>
+            <div style="background:var(--surface);padding:8px 10px;border-radius:6px;font-size:12px">
+              已切换到 <b>李四</b>（1995-03-20 女）。您可以继续提问。
+            </div>
+          </div>
+          <div style="margin-bottom:10px;text-align:right">
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">您</div>
+            <div style="background:var(--accent);color:var(--bg);padding:8px 10px;border-radius:6px;display:inline-block;text-align:left;font-size:12px">
+              看看张三和李四合不合适
+            </div>
+          </div>
+          <div style="margin-bottom:10px">
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">玄机子 <span style="color:var(--accent)">🔧 合婚分析</span></div>
+            <div style="background:var(--surface);padding:8px 10px;border-radius:6px;font-size:12px">
+              已为您生成<b>合婚报告</b>（见右侧）。两人日支六合，感情基础好，但用神互补度一般。<br>
+              综合评分: <b>68分 B级</b>。
+            </div>
+          </div>
+        </div>
+        <!-- Chat input + dual-person button -->
+        <div style="border-top:1px solid var(--border);background:var(--surface)">
+          <!-- Dual-person toggle -->
+          <div style="padding:6px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)">
+            <span style="font-size:10px;color:var(--text-muted)">合婚模式</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <!-- Person 1 selector -->
+              <span style="background:var(--accent);color:var(--bg);padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">张三 ▾</span>
+              <span style="font-size:10px;color:var(--text-muted)">×</span>
+              <span style="background:var(--surface-light);border:1px solid var(--border);padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer">李四 ▾</span>
+              <span style="font-size:10px;color:var(--accent);cursor:pointer;margin-left:4px">分析 →</span>
+              <span style="margin-left:auto;font-size:10px;color:var(--text-muted);cursor:pointer">✕ 关闭</span>
+            </div>
+          </div>
+          <!-- Normal chat input -->
+          <div style="padding:8px 10px;display:flex;gap:6px">
+            <span style="font-size:10px;color:var(--text-muted);cursor:pointer;padding:6px 4px" title="双人合婚">👥</span>
+            <input class="mock-input" placeholder="输入问题..." style="flex:1;font-size:12px">
+            <button class="mock-button" style="background:var(--accent);color:var(--bg);border:none;padding:6px 14px;border-radius:4px;font-size:12px">发送</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MIDDLE: 22% Chart -->
+      <div style="width:22%;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column">
+        <div style="padding:8px;border-bottom:1px solid var(--border)">
+          <span style="font-size:10px;font-weight:bold;color:var(--accent)">八字排盘 · 张三</span>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:8px">
+          <table style="width:100%;border-collapse:collapse;font-size:9px">
+            <tr style="color:var(--accent)"><td></td><td>年</td><td>月</td><td>日</td><td>时</td></tr>
+            <tr><td style="color:var(--accent)">干</td><td>癸</td><td>己</td><td style="color:var(--accent)">丁</td><td>丁</td></tr>
+            <tr><td style="color:var(--accent)">支</td><td>酉</td><td>未</td><td>酉</td><td>未</td></tr>
+            <tr><td style="color:var(--accent)">藏</td><td>辛</td><td>己丁乙</td><td>辛</td><td>己丁乙</td></tr>
+            <tr><td style="color:var(--accent)">神</td><td>杀</td><td>食</td><td>主</td><td>比</td></tr>
+          </table>
+          <div style="font-size:9px;color:var(--text-muted);margin-top:6px;line-height:1.6">
+            日主: <b>丁火</b> | 格局: 食神格<br>
+            用神: 甲木 | 大运: 乙卯<br>
+          </div>
+        </div>
+        <div style="padding:8px;border-top:1px solid var(--border);flex:1;overflow-y:auto">
+          <div style="font-size:10px;font-weight:bold;color:var(--accent);margin-bottom:4px">紫微斗数</div>
+          <table style="width:100%;border-collapse:collapse;font-size:8px">
+            <tr style="color:var(--accent)"><td>宫</td><td>支</td><td>星</td></tr>
+            <tr><td>命</td><td>寅</td><td>机</td></tr>
+            <tr><td>兄</td><td>卯</td><td>—</td></tr>
+            <tr><td>夫</td><td>辰</td><td>阳</td></tr>
+            <tr><td>子</td><td>巳</td><td>武</td></tr>
+            <tr><td>财</td><td>午</td><td>同</td></tr>
+            <tr><td>疾</td><td>未</td><td>—</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- RIGHT: 40% Report -->
+      <div style="width:40%;display:flex;flex-direction:column">
+        <div style="background:var(--surface);padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:4px;align-items:center">
+          <span style="font-size:10px;color:var(--text-muted)">报告</span>
+          <span style="background:var(--surface-light);padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer">总览</span>
+          <span style="background:var(--accent);color:var(--bg);padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer">合婚</span>
+          <span style="background:var(--surface-light);padding:3px 8px;border-radius:3px;font-size:10px;cursor:pointer">+</span>
+          <span style="margin-left:auto;font-size:9px;color:var(--success)">✅ 已修正2处</span>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:14px;background:var(--bg);font-size:12px;line-height:1.7">
+          <h3 style="color:var(--accent);font-size:14px;margin:0 0 8px">合婚分析 · 张三 × 李四</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+            <div style="background:var(--surface);padding:10px;border-radius:4px">
+              <div style="font-size:10px;color:var(--text-muted)">日主旺衰对比</div>
+              <div style="font-size:12px">张三丁火 ↔ 李四乙木</div>
+              <div style="color:var(--accent);font-size:11px">木生火，女方付出更多</div>
+            </div>
+            <div style="background:var(--surface);padding:10px;border-radius:4px">
+              <div style="font-size:10px;color:var(--text-muted)">日支婚宫</div>
+              <div style="font-size:12px">酉 ↔ 辰</div>
+              <div style="color:var(--success);font-size:11px">六合，感情基础好</div>
+            </div>
+            <div style="background:var(--surface);padding:10px;border-radius:4px">
+              <div style="font-size:10px;color:var(--text-muted)">纳音气场</div>
+              <div style="font-size:12px">剑锋金 ↔ 白蜡金</div>
+              <div style="font-size:11px">同类金，个性相投</div>
+            </div>
+            <div style="background:var(--surface);padding:10px;border-radius:4px">
+              <div style="font-size:10px;color:var(--text-muted)">用神互补</div>
+              <div style="font-size:12px">甲木 ↔ 丙火</div>
+              <div style="color:var(--text-muted);font-size:11px">部分互补，非完美匹配</div>
+            </div>
+          </div>
+          <h3 style="font-size:14px;margin:12px 0 6px">综合评分</h3>
+          <div style="text-align:center;padding:16px;background:var(--surface);border-radius:6px">
+            <div style="font-size:36px;font-weight:bold;color:var(--accent)">68</div>
+            <div style="font-size:14px">B级 · 可成</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:4px">纳音80 · 日柱85 · 十神65 · 用神50</div>
+          </div>
+          <p style="font-size:11px;color:var(--text-muted);margin-top:12px">
+            💡 建议：女方身弱，男方需多承担经济责任。感情基础好但长期需要男方更多付出。
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>命主面板交互</h3>
+  <table>
+    <tr><th>操作</th><th>行为</th></tr>
+    <tr><td>点击命主卡片</td><td>切换当前对话命主，对话区显示"已切换到XXX"，中间区更新命盘，右侧报告清空等待新对话</td></tr>
+    <tr><td>点击 + 号</td><td>弹出出生信息表单 → 排盘 → 添加到命主列表</td></tr>
+    <tr><td>点击 ◀ 折叠</td><td>面板缩小到28px竖条，显示"命 主"竖排文字</td></tr>
+    <tr><td>点击 👥 按钮</td><td>对话框底部展开合婚选择栏，选两个命主→点"分析"→右侧生成合婚报告</td></tr>
+    <tr><td>命主数据</td><td>存储在 sessionStorage，最多保存6个命盘。刷新不丢失</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>最终栏宽</h3>
+  <table>
+    <tr><th>区域</th><th>展开时</th><th>折叠时</th></tr>
+    <tr><td>命主面板</td><td>180px + 28px 折叠条</td><td>28px</td></tr>
+    <tr><td>左·对话</td><td>32%</td><td>34%</td></tr>
+    <tr><td>中·命盘</td><td>22%</td><td>24%</td></tr>
+    <tr><td>右·报告</td><td>40%</td><td>42%</td></tr>
+  </table>
+</div>

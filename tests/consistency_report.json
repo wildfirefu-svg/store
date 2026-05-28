@@ -1,0 +1,66 @@
+{
+  "total": 75,
+  "errors": [],
+  "warnings": [
+    {
+      "id": "P002",
+      "note": "身弱偏财格",
+      "rule": "level_gong_match",
+      "detail": "中格 ←→ 小功"
+    },
+    {
+      "id": "P011",
+      "note": "偏印格-杀印相生",
+      "rule": "level_gong_match",
+      "detail": "中格 ←→ 小功"
+    },
+    {
+      "id": "P017",
+      "note": "食神格-枭神夺食",
+      "rule": "pattern_gong_match",
+      "detail": "食神格 → 无功 (expected: ['食伤功'])"
+    },
+    {
+      "id": "P029",
+      "note": "伤官格-伤官见官",
+      "rule": "pattern_gong_match",
+      "detail": "伤官格 → 无功 (expected: ['食伤功'])"
+    },
+    {
+      "id": "P040",
+      "note": "食神格-食神逢枭",
+      "rule": "pattern_gong_match",
+      "detail": "食神格 → 无功 (expected: ['食伤功'])"
+    },
+    {
+      "id": "P056",
+      "note": "建禄格-比劫夺财",
+      "rule": "pattern_gong_match",
+      "detail": "建禄格 → 无功 (expected: ['食伤功', '财功'])"
+    },
+    {
+      "id": "P059",
+      "note": "正印格-印星虚浮",
+      "rule": "level_gong_match",
+      "detail": "中格 ←→ 小功"
+    },
+    {
+      "id": "P064",
+      "note": "正印格-印星被合",
+      "rule": "level_gong_match",
+      "detail": "中格 ←→ 小功"
+    },
+    {
+      "id": "P066",
+      "note": "月刃格-刃头财",
+      "rule": "level_gong_match",
+      "detail": "中格偏下 ←→ 无功"
+    },
+    {
+      "id": "P074",
+      "note": "正印格-印旺身弱",
+      "rule": "level_gong_match",
+      "detail": "中格 ←→ 小功"
+    }
+  ]
+}

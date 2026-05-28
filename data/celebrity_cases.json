@@ -1,0 +1,1867 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "generated_date": "2026-05-21",
+    "source": "wikipedia_scraper",
+    "total_cases": 64,
+    "known_hour_cases": 64
+  },
+  "cases": [
+    {
+      "id": "wiki_barack_obama",
+      "source": "wikipedia",
+      "name": "Barack Obama",
+      "birth": {
+        "datetime": "1961-08-04T19:24:00-10:00",
+        "location": "Honolulu, USA",
+        "hour_unknown": false,
+        "timezone": -10,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1961,
+          "category": "family",
+          "description": "1961年8月4日：出生于Honolulu, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_george_w_bush",
+      "source": "wikipedia",
+      "name": "George W. Bush",
+      "birth": {
+        "datetime": "1946-07-06T07:26:00-5:00",
+        "location": "New Haven, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1946,
+          "category": "family",
+          "description": "1946年7月6日：出生于New Haven, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_ronald_reagan",
+      "source": "wikipedia",
+      "name": "Ronald Reagan",
+      "birth": {
+        "datetime": "1911-02-06T02:16:00-6:00",
+        "location": "Tampico, USA",
+        "hour_unknown": false,
+        "timezone": -6,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1911,
+          "category": "family",
+          "description": "1911年2月6日：出生于Tampico, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_john_f_kennedy",
+      "source": "wikipedia",
+      "name": "John F. Kennedy",
+      "birth": {
+        "datetime": "1917-05-29T15:00:00-5:00",
+        "location": "Brookline, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1917,
+          "category": "family",
+          "description": "1917年5月29日：出生于Brookline, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_richard_nixon",
+      "source": "wikipedia",
+      "name": "Richard Nixon",
+      "birth": {
+        "datetime": "1913-01-09T21:35:00-8:00",
+        "location": "Yorba Linda, USA",
+        "hour_unknown": false,
+        "timezone": -8,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1913,
+          "category": "family",
+          "description": "1913年1月9日：出生于Yorba Linda, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_franklin_d_roosevelt",
+      "source": "wikipedia",
+      "name": "Franklin D. Roosevelt",
+      "birth": {
+        "datetime": "1882-01-30T20:00:00-5:00",
+        "location": "Hyde Park, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1882,
+          "category": "family",
+          "description": "1882年1月30日：出生于Hyde Park, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_jimmy_carter",
+      "source": "wikipedia",
+      "name": "Jimmy Carter",
+      "birth": {
+        "datetime": "1924-10-01T07:00:00-5:00",
+        "location": "Plains, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1924,
+          "category": "family",
+          "description": "1924年10月1日：出生于Plains, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_joe_biden",
+      "source": "wikipedia",
+      "name": "Joe Biden",
+      "birth": {
+        "datetime": "1942-11-20T08:30:00-5:00",
+        "location": "Scranton, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1942,
+          "category": "family",
+          "description": "1942年11月20日：出生于Scranton, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_queen_elizabeth_ii",
+      "source": "wikipedia",
+      "name": "Queen Elizabeth II",
+      "birth": {
+        "datetime": "1926-04-21T02:40:00+01:00",
+        "location": "London, UK",
+        "hour_unknown": false,
+        "timezone": 1,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "female",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1926,
+          "category": "family",
+          "description": "1926年4月21日：出生于London, UK。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_princess_diana",
+      "source": "wikipedia",
+      "name": "Princess Diana",
+      "birth": {
+        "datetime": "1961-07-01T19:45:00+01:00",
+        "location": "Sandringham, UK",
+        "hour_unknown": false,
+        "timezone": 1,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "female",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1961,
+          "category": "family",
+          "description": "1961年7月1日：出生于Sandringham, UK。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_prince_william",
+      "source": "wikipedia",
+      "name": "Prince William",
+      "birth": {
+        "datetime": "1982-06-21T21:03:00+01:00",
+        "location": "London, UK",
+        "hour_unknown": false,
+        "timezone": 1,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1982,
+          "category": "family",
+          "description": "1982年6月21日：出生于London, UK。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_winston_churchill",
+      "source": "wikipedia",
+      "name": "Winston Churchill",
+      "birth": {
+        "datetime": "1874-11-30T01:30:00+00:00",
+        "location": "Blenheim, UK",
+        "hour_unknown": false,
+        "timezone": 0,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1874,
+          "category": "family",
+          "description": "1874年11月30日：出生于Blenheim, UK。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_margaret_thatcher",
+      "source": "wikipedia",
+      "name": "Margaret Thatcher",
+      "birth": {
+        "datetime": "1925-10-13T09:00:00+00:00",
+        "location": "Grantham, UK",
+        "hour_unknown": false,
+        "timezone": 0,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "female",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1925,
+          "category": "family",
+          "description": "1925年10月13日：出生于Grantham, UK。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_tony_blair",
+      "source": "wikipedia",
+      "name": "Tony Blair",
+      "birth": {
+        "datetime": "1953-05-06T06:10:00+01:00",
+        "location": "Edinburgh, UK",
+        "hour_unknown": false,
+        "timezone": 1,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1953,
+          "category": "family",
+          "description": "1953年5月6日：出生于Edinburgh, UK。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_boris_johnson",
+      "source": "wikipedia",
+      "name": "Boris Johnson",
+      "birth": {
+        "datetime": "1964-06-19T14:00:00+00:00",
+        "location": "New York City, USA",
+        "hour_unknown": false,
+        "timezone": 0,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1964,
+          "category": "family",
+          "description": "1964年6月19日：出生于New York City, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_stephen_hawking",
+      "source": "wikipedia",
+      "name": "Stephen Hawking",
+      "birth": {
+        "datetime": "1942-01-08T00:00:00+00:00",
+        "location": "Oxford, UK",
+        "hour_unknown": false,
+        "timezone": 0,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1942,
+          "category": "family",
+          "description": "1942年1月8日：出生于Oxford, UK。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_marie_curie",
+      "source": "wikipedia",
+      "name": "Marie Curie",
+      "birth": {
+        "datetime": "1867-11-07T12:00:00+01:00",
+        "location": "Warsaw, Poland",
+        "hour_unknown": false,
+        "timezone": 1,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "female",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1867,
+          "category": "family",
+          "description": "1867年11月7日：出生于Warsaw, Poland。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_alan_turing",
+      "source": "wikipedia",
+      "name": "Alan Turing",
+      "birth": {
+        "datetime": "1912-06-23T02:15:00+00:00",
+        "location": "London, UK",
+        "hour_unknown": false,
+        "timezone": 0,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1912,
+          "category": "family",
+          "description": "1912年6月23日：出生于London, UK。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_nikola_tesla",
+      "source": "wikipedia",
+      "name": "Nikola Tesla",
+      "birth": {
+        "datetime": "1856-07-10T00:00:00+01:00",
+        "location": "Smiljan, Croatia",
+        "hour_unknown": false,
+        "timezone": 1,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1856,
+          "category": "family",
+          "description": "1856年7月10日：出生于Smiljan, Croatia。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_charles_darwin",
+      "source": "wikipedia",
+      "name": "Charles Darwin",
+      "birth": {
+        "datetime": "1809-02-12T03:00:00+00:00",
+        "location": "Shrewsbury, UK",
+        "hour_unknown": false,
+        "timezone": 0,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1809,
+          "category": "family",
+          "description": "1809年2月12日：出生于Shrewsbury, UK。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_richard_feynman",
+      "source": "wikipedia",
+      "name": "Richard Feynman",
+      "birth": {
+        "datetime": "1918-05-11T11:45:00-5:00",
+        "location": "New York City, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1918,
+          "category": "family",
+          "description": "1918年5月11日：出生于New York City, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_elvis_presley",
+      "source": "wikipedia",
+      "name": "Elvis Presley",
+      "birth": {
+        "datetime": "1935-01-08T04:35:00-6:00",
+        "location": "Tupelo, USA",
+        "hour_unknown": false,
+        "timezone": -6,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1935,
+          "category": "family",
+          "description": "1935年1月8日：出生于Tupelo, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_john_lennon",
+      "source": "wikipedia",
+      "name": "John Lennon",
+      "birth": {
+        "datetime": "1940-10-09T18:30:00+01:00",
+        "location": "Liverpool, UK",
+        "hour_unknown": false,
+        "timezone": 1,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1940,
+          "category": "family",
+          "description": "1940年10月9日：出生于Liverpool, UK。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_paul_mccartney",
+      "source": "wikipedia",
+      "name": "Paul McCartney",
+      "birth": {
+        "datetime": "1942-06-18T14:00:00+01:00",
+        "location": "Liverpool, UK",
+        "hour_unknown": false,
+        "timezone": 1,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1942,
+          "category": "family",
+          "description": "1942年6月18日：出生于Liverpool, UK。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_bob_dylan",
+      "source": "wikipedia",
+      "name": "Bob Dylan",
+      "birth": {
+        "datetime": "1941-05-24T21:05:00-5:00",
+        "location": "Duluth, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1941,
+          "category": "family",
+          "description": "1941年5月24日：出生于Duluth, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_freddie_mercury",
+      "source": "wikipedia",
+      "name": "Freddie Mercury",
+      "birth": {
+        "datetime": "1946-09-05T17:15:00+03:00",
+        "location": "Zanzibar, Tanzania",
+        "hour_unknown": false,
+        "timezone": 3,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1946,
+          "category": "family",
+          "description": "1946年9月5日：出生于Zanzibar, Tanzania。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_david_bowie",
+      "source": "wikipedia",
+      "name": "David Bowie",
+      "birth": {
+        "datetime": "1947-01-08T09:00:00+00:00",
+        "location": "London, UK",
+        "hour_unknown": false,
+        "timezone": 0,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1947,
+          "category": "family",
+          "description": "1947年1月8日：出生于London, UK。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_kurt_cobain",
+      "source": "wikipedia",
+      "name": "Kurt Cobain",
+      "birth": {
+        "datetime": "1967-02-20T19:38:00-8:00",
+        "location": "Aberdeen, USA",
+        "hour_unknown": false,
+        "timezone": -8,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1967,
+          "category": "family",
+          "description": "1967年2月20日：出生于Aberdeen, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_prince",
+      "source": "wikipedia",
+      "name": "Prince",
+      "birth": {
+        "datetime": "1958-06-07T18:17:00-5:00",
+        "location": "Minneapolis, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1958,
+          "category": "family",
+          "description": "1958年6月7日：出生于Minneapolis, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_madonna",
+      "source": "wikipedia",
+      "name": "Madonna",
+      "birth": {
+        "datetime": "1958-08-16T07:05:00-4:00",
+        "location": "Bay City, USA",
+        "hour_unknown": false,
+        "timezone": -4,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "female",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1958,
+          "category": "family",
+          "description": "1958年8月16日：出生于Bay City, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_michael_jackson",
+      "source": "wikipedia",
+      "name": "Michael Jackson",
+      "birth": {
+        "datetime": "1958-08-29T19:33:00-5:00",
+        "location": "Gary, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1958,
+          "category": "family",
+          "description": "1958年8月29日：出生于Gary, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_whitney_houston",
+      "source": "wikipedia",
+      "name": "Whitney Houston",
+      "birth": {
+        "datetime": "1963-08-09T00:00:00-4:00",
+        "location": "Newark, USA",
+        "hour_unknown": false,
+        "timezone": -4,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "female",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1963,
+          "category": "family",
+          "description": "1963年8月9日：出生于Newark, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_taylor_swift",
+      "source": "wikipedia",
+      "name": "Taylor Swift",
+      "birth": {
+        "datetime": "1989-12-13T08:36:00-5:00",
+        "location": "West Reading, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "female",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1989,
+          "category": "family",
+          "description": "1989年12月13日：出生于West Reading, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_beyonc",
+      "source": "wikipedia",
+      "name": "Beyoncé",
+      "birth": {
+        "datetime": "1981-09-04T10:00:00-5:00",
+        "location": "Houston, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "female",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1981,
+          "category": "family",
+          "description": "1981年9月4日：出生于Houston, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_lady_gaga",
+      "source": "wikipedia",
+      "name": "Lady Gaga",
+      "birth": {
+        "datetime": "1986-03-28T21:00:00-5:00",
+        "location": "New York City, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "female",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1986,
+          "category": "family",
+          "description": "1986年3月28日：出生于New York City, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_marilyn_monroe",
+      "source": "wikipedia",
+      "name": "Marilyn Monroe",
+      "birth": {
+        "datetime": "1926-06-01T09:30:00-8:00",
+        "location": "Los Angeles, USA",
+        "hour_unknown": false,
+        "timezone": -8,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "female",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1926,
+          "category": "family",
+          "description": "1926年6月1日：出生于Los Angeles, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_audrey_hepburn",
+      "source": "wikipedia",
+      "name": "Audrey Hepburn",
+      "birth": {
+        "datetime": "1929-05-04T03:00:00+01:00",
+        "location": "Brussels, Belgium",
+        "hour_unknown": false,
+        "timezone": 1,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "female",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1929,
+          "category": "family",
+          "description": "1929年5月4日：出生于Brussels, Belgium。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_marlon_brando",
+      "source": "wikipedia",
+      "name": "Marlon Brando",
+      "birth": {
+        "datetime": "1924-04-03T23:00:00-6:00",
+        "location": "Omaha, USA",
+        "hour_unknown": false,
+        "timezone": -6,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1924,
+          "category": "family",
+          "description": "1924年4月3日：出生于Omaha, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_alfred_hitchcock",
+      "source": "wikipedia",
+      "name": "Alfred Hitchcock",
+      "birth": {
+        "datetime": "1899-08-13T02:15:00+00:00",
+        "location": "London, UK",
+        "hour_unknown": false,
+        "timezone": 0,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1899,
+          "category": "family",
+          "description": "1899年8月13日：出生于London, UK。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_steven_spielberg",
+      "source": "wikipedia",
+      "name": "Steven Spielberg",
+      "birth": {
+        "datetime": "1946-12-18T18:16:00-5:00",
+        "location": "Cincinnati, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1946,
+          "category": "family",
+          "description": "1946年12月18日：出生于Cincinnati, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_martin_scorsese",
+      "source": "wikipedia",
+      "name": "Martin Scorsese",
+      "birth": {
+        "datetime": "1942-11-17T00:00:00-5:00",
+        "location": "New York City, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1942,
+          "category": "family",
+          "description": "1942年11月17日：出生于New York City, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_muhammad_ali",
+      "source": "wikipedia",
+      "name": "Muhammad Ali",
+      "birth": {
+        "datetime": "1942-01-17T18:35:00-5:00",
+        "location": "Louisville, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1942,
+          "category": "family",
+          "description": "1942年1月17日：出生于Louisville, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_pel",
+      "source": "wikipedia",
+      "name": "Pelé",
+      "birth": {
+        "datetime": "1940-10-23T00:00:00-3:00",
+        "location": "Três Corações, Brazil",
+        "hour_unknown": false,
+        "timezone": -3,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1940,
+          "category": "family",
+          "description": "1940年10月23日：出生于Três Corações, Brazil。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_diego_maradona",
+      "source": "wikipedia",
+      "name": "Diego Maradona",
+      "birth": {
+        "datetime": "1960-10-30T07:05:00-3:00",
+        "location": "Lanús, Argentina",
+        "hour_unknown": false,
+        "timezone": -3,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1960,
+          "category": "family",
+          "description": "1960年10月30日：出生于Lanús, Argentina。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_michael_jordan",
+      "source": "wikipedia",
+      "name": "Michael Jordan",
+      "birth": {
+        "datetime": "1963-02-17T00:00:00-5:00",
+        "location": "Brooklyn, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1963,
+          "category": "family",
+          "description": "1963年2月17日：出生于Brooklyn, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_serena_williams",
+      "source": "wikipedia",
+      "name": "Serena Williams",
+      "birth": {
+        "datetime": "1981-09-26T20:28:00-5:00",
+        "location": "Saginaw, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "female",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1981,
+          "category": "family",
+          "description": "1981年9月26日：出生于Saginaw, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_usain_bolt",
+      "source": "wikipedia",
+      "name": "Usain Bolt",
+      "birth": {
+        "datetime": "1986-08-21T12:00:00-5:00",
+        "location": "Sherwood Content, Jamaica",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1986,
+          "category": "family",
+          "description": "1986年8月21日：出生于Sherwood Content, Jamaica。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_michael_phelps",
+      "source": "wikipedia",
+      "name": "Michael Phelps",
+      "birth": {
+        "datetime": "1985-06-30T00:00:00-4:00",
+        "location": "Baltimore, USA",
+        "hour_unknown": false,
+        "timezone": -4,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1985,
+          "category": "family",
+          "description": "1985年6月30日：出生于Baltimore, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_roger_federer",
+      "source": "wikipedia",
+      "name": "Roger Federer",
+      "birth": {
+        "datetime": "1981-08-08T08:00:00+02:00",
+        "location": "Basel, Switzerland",
+        "hour_unknown": false,
+        "timezone": 2,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1981,
+          "category": "family",
+          "description": "1981年8月8日：出生于Basel, Switzerland。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_tiger_woods",
+      "source": "wikipedia",
+      "name": "Tiger Woods",
+      "birth": {
+        "datetime": "1975-12-30T22:50:00-8:00",
+        "location": "Cypress, USA",
+        "hour_unknown": false,
+        "timezone": -8,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1975,
+          "category": "family",
+          "description": "1975年12月30日：出生于Cypress, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_warren_buffett",
+      "source": "wikipedia",
+      "name": "Warren Buffett",
+      "birth": {
+        "datetime": "1930-08-30T09:00:00-5:00",
+        "location": "Omaha, USA",
+        "hour_unknown": false,
+        "timezone": -5,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1930,
+          "category": "family",
+          "description": "1930年8月30日：出生于Omaha, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_jeff_bezos",
+      "source": "wikipedia",
+      "name": "Jeff Bezos",
+      "birth": {
+        "datetime": "1964-01-12T09:00:00-7:00",
+        "location": "Albuquerque, USA",
+        "hour_unknown": false,
+        "timezone": -7,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1964,
+          "category": "family",
+          "description": "1964年1月12日：出生于Albuquerque, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_mark_zuckerberg",
+      "source": "wikipedia",
+      "name": "Mark Zuckerberg",
+      "birth": {
+        "datetime": "1984-05-14T00:00:00-4:00",
+        "location": "White Plains, USA",
+        "hour_unknown": false,
+        "timezone": -4,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1984,
+          "category": "family",
+          "description": "1984年5月14日：出生于White Plains, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_larry_page",
+      "source": "wikipedia",
+      "name": "Larry Page",
+      "birth": {
+        "datetime": "1973-03-26T00:00:00-4:00",
+        "location": "East Lansing, USA",
+        "hour_unknown": false,
+        "timezone": -4,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1973,
+          "category": "family",
+          "description": "1973年3月26日：出生于East Lansing, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_sergey_brin",
+      "source": "wikipedia",
+      "name": "Sergey Brin",
+      "birth": {
+        "datetime": "1973-08-21T00:00:00+03:00",
+        "location": "Moscow, Russia",
+        "hour_unknown": false,
+        "timezone": 3,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1973,
+          "category": "family",
+          "description": "1973年8月21日：出生于Moscow, Russia。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_elon_musk",
+      "source": "wikipedia",
+      "name": "Elon Musk",
+      "birth": {
+        "datetime": "1971-06-28T07:30:00+02:00",
+        "location": "Pretoria, South Africa",
+        "hour_unknown": false,
+        "timezone": 2,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1971,
+          "category": "family",
+          "description": "1971年6月28日：出生于Pretoria, South Africa。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_steve_jobs",
+      "source": "wikipedia",
+      "name": "Steve Jobs",
+      "birth": {
+        "datetime": "1955-02-24T19:15:00-8:00",
+        "location": "San Francisco, USA",
+        "hour_unknown": false,
+        "timezone": -8,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1955,
+          "category": "family",
+          "description": "1955年2月24日：出生于San Francisco, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_bill_gates",
+      "source": "wikipedia",
+      "name": "Bill Gates",
+      "birth": {
+        "datetime": "1955-10-28T21:15:00-8:00",
+        "location": "Seattle, USA",
+        "hour_unknown": false,
+        "timezone": -8,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1955,
+          "category": "family",
+          "description": "1955年10月28日：出生于Seattle, USA。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_napoleon_bonaparte",
+      "source": "wikipedia",
+      "name": "Napoleon Bonaparte",
+      "birth": {
+        "datetime": "1769-08-15T11:00:00+00:00",
+        "location": "Ajaccio, France",
+        "hour_unknown": false,
+        "timezone": 0,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1769,
+          "category": "family",
+          "description": "1769年8月15日：出生于Ajaccio, France。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_ludwig_van_beethoven",
+      "source": "wikipedia",
+      "name": "Ludwig van Beethoven",
+      "birth": {
+        "datetime": "1770-12-17T10:00:00+00:00",
+        "location": "Bonn, Germany",
+        "hour_unknown": false,
+        "timezone": 0,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1770,
+          "category": "family",
+          "description": "1770年12月17日：出生于Bonn, Germany。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_wolfgang_amadeus_mozart",
+      "source": "wikipedia",
+      "name": "Wolfgang Amadeus Mozart",
+      "birth": {
+        "datetime": "1756-01-27T20:00:00+00:00",
+        "location": "Salzburg, Austria",
+        "hour_unknown": false,
+        "timezone": 0,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1756,
+          "category": "family",
+          "description": "1756年1月27日：出生于Salzburg, Austria。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_vincent_van_gogh",
+      "source": "wikipedia",
+      "name": "Vincent van Gogh",
+      "birth": {
+        "datetime": "1853-03-30T11:00:00+01:00",
+        "location": "Zundert, Netherlands",
+        "hour_unknown": false,
+        "timezone": 1,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1853,
+          "category": "family",
+          "description": "1853年3月30日：出生于Zundert, Netherlands。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_pablo_picasso",
+      "source": "wikipedia",
+      "name": "Pablo Picasso",
+      "birth": {
+        "datetime": "1881-10-25T23:15:00+00:00",
+        "location": "Málaga, Spain",
+        "hour_unknown": false,
+        "timezone": 0,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "male",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1881,
+          "category": "family",
+          "description": "1881年10月25日：出生于Málaga, Spain。",
+          "verified": false
+        }
+      ]
+    },
+    {
+      "id": "wiki_frida_kahlo",
+      "source": "wikipedia",
+      "name": "Frida Kahlo",
+      "birth": {
+        "datetime": "1907-07-06T08:30:00-6:00",
+        "location": "Mexico City, Mexico",
+        "hour_unknown": false,
+        "timezone": -6,
+        "timezone_note": "Verified from reliable sources"
+      },
+      "gender": "female",
+      "bazi": {
+        "year": "",
+        "month": "",
+        "day": "",
+        "hour": ""
+      },
+      "bazi_calculated": false,
+      "dayun": [],
+      "events": [
+        {
+          "year": 1907,
+          "category": "family",
+          "description": "1907年7月6日：出生于Mexico City, Mexico。",
+          "verified": false
+        }
+      ]
+    }
+  ]
+}

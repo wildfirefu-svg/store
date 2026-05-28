@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>玄机子 · 八字命理分析</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app-container" id="app-container">
+    <!-- COL 0: 命主面板 -->
+    <aside class="mingzhu-panel" id="mingzhu-panel">
+        <div class="panel-header">
+            <span class="panel-title">命主</span>
+            <span class="panel-add" id="panel-add-btn" title="添加命主">＋</span>
+            <span class="panel-toggle" id="panel-toggle" title="折叠面板">◀</span>
+        </div>
+        <div class="mingzhu-list" id="mingzhu-list">
+            <div class="mingzhu-empty">点击 + 添加命主</div>
+        </div>
+        <div class="panel-footer">
+            <span id="mingzhu-count">0 个命盘</span>
+        </div>
+    </aside>
+
+    <!-- COL 1: 对话区 -->
+    <section class="chat-column">
+        <div class="chat-header">
+            <span class="chat-title">玄机子</span>
+            <span class="chat-subtitle" id="current-mingzhu-label"></span>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <div class="chat-welcome">
+                <p><b>欢迎使用玄机子八字分析</b></p>
+                <p>请输入您的出生信息开始分析：</p>
+                <p class="example">公历 1993年7月15日 14:30 男 北京</p>
+                <p style="font-size:11px;color:var(--text-tertiary);margin-top:12px">支持自然语言输入 · 例如"农历 癸酉年六月初八 午时 男"</p>
+            </div>
+        </div>
+        <div class="chat-input-area">
+            <div class="hehun-bar hidden" id="hehun-bar">
+                <span style="font-weight:600">合婚模式</span>
+                <select id="hehun-p1"></select>
+                <span style="color:var(--text-tertiary)">×</span>
+                <select id="hehun-p2"></select>
+                <button id="hehun-analyze-btn">开始分析</button>
+                <button id="hehun-close-btn">取消</button>
+            </div>
+            <div class="chat-input-row">
+                <button id="hehun-toggle-btn" title="双人合婚">👥</button>
+                <button id="add-mingzhu-btn" title="添加命主">＋</button>
+                <button id="correct-btn" title="指正报告错误" style="display:none">🔧 指正</button>
+                <input type="text" id="chat-input" placeholder="输入出生信息或问题…">
+                <button id="chat-send-btn">发送</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- COL 2: 命盘展示 -->
+    <section class="chart-column">
+        <div class="chart-tabs">
+            <span class="chart-tab active" data-chart="bazi">八字</span>
+            <span class="chart-tab" data-chart="ziwei">紫微</span>
+        </div>
+        <div class="chart-section" id="bazi-section">
+            <div id="bazi-table"><p style="color:var(--text-faint);font-size:12px;text-align:center;padding:20px">等待输入…</p></div>
+            <div id="bazi-summary"></div>
+        </div>
+        <div class="chart-section hidden" id="ziwei-section">
+            <div id="ziwei-table"><p style="color:var(--text-faint);font-size:12px;text-align:center;padding:20px">等待输入…</p></div>
+        </div>
+    </section>
+
+    <!-- COL 3: 报告区 -->
+    <section class="report-column">
+        <div class="report-tabs" id="report-tabs">
+            <span class="report-tab active" data-tab="overview">总览</span>
+            <span class="report-correct-count hidden" id="correct-count"></span>
+        </div>
+        <div class="report-status done" id="report-status"></div>
+        <div class="report-content" id="report-content">
+            <p class="report-placeholder">输入出生信息后，报告将在此显示</p>
+        </div>
+    </section>
+
+    <!-- 新增命主弹窗 -->
+    <div class="modal hidden" id="add-mingzhu-modal">
+        <div class="modal-content">
+            <h3>添加命主</h3>
+            <div class="toggle-row">
+                <button class="toggle-btn active" data-cal="solar">公历</button>
+                <button class="toggle-btn" data-cal="lunar">农历</button>
+                <label class="solar-time-toggle">
+                    <input type="checkbox" id="solar-time-check"> 真太阳时
+                </label>
+            </div>
+            <div class="picker-row">
+                <div class="picker"><label>年</label><input type="number" class="picker-inp" id="pick-year" value="1993" min="1900" max="2100"></div>
+                <div class="picker"><label>月</label><input type="number" class="picker-inp" id="pick-month" value="7" min="1" max="12"></div>
+                <div class="picker"><label>日</label><input type="number" class="picker-inp" id="pick-day" value="15" min="1" max="31"></div>
+                <div class="picker"><label>时</label><input type="number" class="picker-inp" id="pick-hour" value="14" min="0" max="23"></div>
+                <div class="picker"><label>分</label><input type="number" class="picker-inp" id="pick-minute" value="0" min="0" max="59"></div>
+            </div>
+            <div class="form-row">
+                <input type="text" id="mingzhu-name" placeholder="姓名（可选）" style="flex:1">
+                <select id="mingzhu-gender" style="flex:0.6">
+                    <option value="male">男</option>
+                    <option value="female">女</option>
+                </select>
+                <input type="text" id="mingzhu-location" placeholder="出生地" value="北京" style="flex:1;min-width:0">
+            </div>
+            <button id="mingzhu-submit-btn">排盘</button>
+        </div>
+    </div>
+
+    <!-- Mobile bottom nav -->
+    <nav class="mobile-nav" id="mobile-nav">
+        <button class="mnav-btn active" data-panel="chat">💬 对话</button>
+        <button class="mnav-btn" data-panel="chart">📊 命盘</button>
+        <button class="mnav-btn" data-panel="report">📄 报告</button>
+        <button class="mnav-btn" id="mnav-mingzhu">👤 命主</button>
+    </nav>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

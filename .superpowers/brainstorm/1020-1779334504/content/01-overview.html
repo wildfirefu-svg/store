@@ -1,0 +1,65 @@
+<h2>Agent 系统优化 — 当前架构与瓶颈</h2>
+<p class="subtitle">1,361行 Agent Prompt | 55+文件 | 7个工具 | 39个金标案例</p>
+
+<div class="section">
+  <h3>当前数据流</h3>
+  <div class="mockup">
+    <div class="mockup-header">Agent 分析流程（每次 ~8步，~15-30秒）</div>
+    <div class="mockup-body" style="font-size:13px;line-height:1.8">
+      <b>用户输入</b> → ①排盘(calculator) → ②案例检索(39例) → ③通用引擎(U1-U4) →
+      ④模式分析(Mode 1-6) → ⑤交叉验证 → ⑥生成Markdown → ⑦PDF输出 → <b>报告</b>
+      <br><br>
+      <b>自助工具调用</b>（独立路径，非串联）：择日 | 流年 | 取名 | 穿壬
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>已识别的结构性问题</h3>
+  <table style="width:100%;border-collapse:collapse">
+    <tr style="background:var(--surface-dark)">
+      <th style="padding:8px;text-align:left">#</th>
+      <th style="padding:8px;text-align:left">问题</th>
+      <th style="padding:8px;text-align:left">现状</th>
+      <th style="padding:8px;text-align:left">影响</th>
+    </tr>
+    <tr><td>T1</td><td><b>Agent Prompt 过大</b></td><td>1,361行，6套报告模板内嵌</td><td>每次对话加载全部，token浪费</td></tr>
+    <tr><td>T2</td><td><b>知识库JSON离散</b></td><td>12个独立JSON，无统一schema</td><td>检索需多次Read，Agent迷惑</td></tr>
+    <tr><td>T3</td><td><b>案例检索弱</b></td><td>简单特征匹配，39例</td><td>相似度粗糙，无向量语义</td></tr>
+    <tr><td>T4</td><td><b>报告模板内嵌</b></td><td>6套模板在Prompt内，~400行</td><td>Model切换需完整上下文</td></tr>
+    <tr><td>T5</td><td><b>工具调用无缓存</b></td><td>每次重新排盘、重新检索</td><td>重复计算浪费</td></tr>
+    <tr><td>T6</td><td><b>测试数据分散</b></td><td>tests/ + quality/ + data/ 三处</td><td>维护成本高</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>优化方向选择</h3>
+  <p>上述问题指向三个可能的优化方向，侧重点不同：</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>轻量重组 — 不伤筋动骨</h3>
+      <p>Prompt模板外置 · JSON schema统一 · 简单LRU缓存 · 案例库扩充到50+ · 文件目录规范</p>
+      <p style="color:var(--muted)">改动量: ~200行 | 风险: 低 | 收益: 中</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>结构化升级 — 建立索引层</h3>
+      <p>Agent/模板分离 · 知识库SQLite索引 · 案例向量检索(ChromaDB本地) · 分层Prompt(核心/扩展) · 统一测试框架</p>
+      <p style="color:var(--muted)">改动量: ~500行 | 风险: 中 | 收益: 高</p>
+    </div>
+  </div>
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>深度重构 — 模块化引擎</h3>
+      <p>Python分析引擎(替代Prompt推理) · 知识图谱(neo4j风格) · API服务化 · 前端报告界面 · 数据库持久化</p>
+      <p style="color:var(--muted)">改动量: ~2000+行 | 风险: 高 | 收益: 极高</p>
+    </div>
+  </div>
+</div>

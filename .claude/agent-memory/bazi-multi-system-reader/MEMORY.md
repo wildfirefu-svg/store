@@ -1,0 +1,2 @@
+- [calculator-known-issues](calculator_known_issues.md) — BaZi calculator script: reversed 十神 logic and ziwei indexing mismatch bugs
+- [calibration-1963-07-09](feedback/calibration_case_1963-07-09.md) — 关键校准案例: 丑未冲≠婚姻凶、天魁补印、格局≠人生、变量互动裁决

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python bazi_calculator.py --year 2018 --month 11 --day 6 --hour 6 --gender male --mode all)",
+      "Bash(python -c ' *)",
+      "Bash(python bazi_calculator.py --year 1988 --month 2 --day 20 --hour 11 --gender male --mode all -o chart_data.json)",
+      "Bash(python report_to_pdf.py *)"
+    ]
+  }
+}

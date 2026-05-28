@@ -1,0 +1,91 @@
+<h2>网站化路径：B+C 分阶段实施</h2>
+<p class="subtitle">目标：八字命理分析网站 | 策略：B打底 → C渐进</p>
+
+<div class="section">
+  <h3>三阶段路线图</h3>
+  <div class="mockup">
+    <div class="mockup-header">Phase 1: 后端地基（~2周） — 来自方案B</div>
+    <div class="mockup-body" style="font-size:13px;line-height:1.8">
+      <table style="width:100%">
+        <tr><td>◻ Agent/Prompt 分离</td><td>核心规则 → JSON schema → 模板外置。Agent只需加载核心规则+模式指针</td></tr>
+        <tr><td>◻ SQLite 知识库索引</td><td>12个JSON → 1个SQLite db。统一schema，全文检索+字段查询</td></tr>
+        <tr><td>◻ ChromaDB 案例向量检索</td><td>39例 → 向量化嵌入，语义相似度检索（需本地embedding模型）</td></tr>
+        <tr><td>◻ 统一 JSON API</td><td>排盘/分析/择日/流年/取名 → 标准化 REST 接口</td></tr>
+        <tr><td style="color:var(--accent)"><b>交付物</b></td><td style="color:var(--accent)"><b>可用的后端 API，postman/curl 可直接调用</b></td></tr>
+      </table>
+    </div>
+  </div>
+  <br>
+  <div class="mockup">
+    <div class="mockup-header">Phase 2: Web服务层（~1周） — 进入方案C</div>
+    <div class="mockup-body" style="font-size:13px;line-height:1.8">
+      <table style="width:100%">
+        <tr><td>◻ FastAPI Web 服务</td><td>异步API + Swagger文档 + 文件上传</td></tr>
+        <tr><td>◻ 报告 HTML 模板</td><td>Jinja2渲染，4套视觉风格，响应式布局</td></tr>
+        <tr><td>◻ 用户会话管理</td><td>Session/cookie，命盘缓存，分析历史</td></tr>
+        <tr><td>◻ PDF 在线生成</td><td>report_to_pdf.py 集成到API，一键下载</td></tr>
+        <tr><td style="color:var(--accent)"><b>交付物</b></td><td style="color:var(--accent)"><b>可直接部署的网站，浏览器访问</b></td></tr>
+      </table>
+    </div>
+  </div>
+  <br>
+  <div class="mockup">
+    <div class="mockup-header">Phase 3: 前端+高级（~2周） — 方案C完整形态</div>
+    <div class="mockup-body" style="font-size:13px;line-height:1.8">
+      <table style="width:100%">
+        <tr><td>◻ Vue/React SPA 前端</td><td>命盘输入→分析→报告→下载，全流程Web界面</td></tr>
+        <tr><td>◻ 知识图谱可视化</td><td>五行生克/十神关系/大运流年 → D3.js 交互图</td></tr>
+        <tr><td>◻ 用户系统+持久化</td><td>注册/登录 + PostgreSQL命盘库 + 分析历史</td></tr>
+        <tr><td>◻ 批量分析+对比</td><td>多命盘对比、合婚报告、金标案例浏览</td></tr>
+        <tr><td style="color:var(--accent)"><b>交付物</b></td><td style="color:var(--accent)"><b>完整SaaS级八字分析平台</b></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>关键架构决策</h3>
+  <div class="split">
+    <div>
+      <h4 style="color:var(--accent)">技术栈（推荐）</h4>
+      <ul>
+        <li><b>后端</b>: FastAPI + Python 3.14</li>
+        <li><b>数据库</b>: SQLite (知识库) + PostgreSQL (用户数据，可选)</li>
+        <li><b>向量库</b>: ChromaDB (本地嵌入)</li>
+        <li><b>前端</b>: Vue 3 + NaiveUI</li>
+        <li><b>部署</b>: Docker + Nginx</li>
+      </ul>
+    </div>
+    <div>
+      <h4 style="color:var(--accent)">模块边界</h4>
+      <ul>
+        <li><b>calculator</b>: 纯计算，无状态，输入→输出</li>
+        <li><b>analyzer</b>: Agent逻辑→Python函数，可缓存</li>
+        <li><b>knowledge</b>: SQLite查询，毫秒级</li>
+        <li><b>reports</b>: Jinja2模板，HTML/PDF双输出</li>
+        <li><b>api</b>: FastAPI路由，薄封装层</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <p class="subtitle">推荐从 Phase 1 开始。完成后立即可验证 API 是否正常工作，再决定是否继续后续阶段。</p>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="start_p1" onclick="toggleSelect(this)">
+    <div class="letter">▶</div>
+    <div class="content">
+      <h3>从 Phase 1 开始：后端地基</h3>
+      <p>先建立 SQLite 知识库 + API 框架 + Prompt 分离。预计改动 ~500 行，Week 1 可交付验证</p>
+    </div>
+  </div>
+  <div class="option" data-choice="adjust" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content">
+      <h3>调整方案</h3>
+      <p>技术栈/阶段划分/优先级需要调整</p>
+    </div>
+  </div>
+</div>

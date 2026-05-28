@@ -1,0 +1,209 @@
+<h2>布局 v2 — 35/25/40 | 命盘展示 | 智能工具 | 渐进式报告</h2>
+<p class="subtitle">所有改动已整合</p>
+
+<div class="mockup">
+  <div class="mockup-header">整体布局（35% 对话 | 25% 命盘 | 40% 报告）</div>
+  <div class="mockup-body" style="padding:0;min-height:550px">
+    <div style="display:flex;height:550px">
+
+      <!-- LEFT: 35% Chat dialog -->
+      <div style="width:35%;border-right:1px solid var(--border);display:flex;flex-direction:column">
+        <div style="background:var(--surface);padding:10px 12px;border-bottom:1px solid var(--border)">
+          <span style="font-weight:bold;color:var(--accent);font-size:14px">玄机子</span>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:8px">命理对话</span>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:10px;background:var(--bg)">
+          <!-- System intro -->
+          <div style="margin-bottom:10px">
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">系统</div>
+            <div style="background:var(--surface);padding:8px 10px;border-radius:6px;font-size:12px;line-height:1.5">
+              请输入您的出生信息开始分析：<br>
+              <b>公历 1993年7月15日 14:30 男 北京</b>
+            </div>
+          </div>
+          <!-- Agent response: simple -->
+          <div style="margin-bottom:10px">
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">玄机子</div>
+            <div style="background:var(--surface);padding:8px 10px;border-radius:6px;font-size:12px;line-height:1.5">
+              已为您排盘完毕。您的命盘日主<b>丁火</b>，格局<b>食神格</b>。<br>
+              整体来看，您聪明敏感，适合技术或文化行业。财运以正财为主，不宜投机。<br><br>
+              您可以继续问我任何问题。
+            </div>
+          </div>
+          <!-- User asks follow-up -->
+          <div style="margin-bottom:10px;text-align:right">
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">您</div>
+            <div style="background:var(--accent);color:var(--bg);padding:8px 10px;border-radius:6px;display:inline-block;text-align:left;font-size:12px">
+              帮我详细看看财运，什么时候适合投资
+            </div>
+          </div>
+          <!-- Agent uses tool + responds simply -->
+          <div style="margin-bottom:10px">
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">玄机子 <span style="color:var(--accent)">🔧 调用了流年分析</span></div>
+            <div style="background:var(--surface);padding:8px 10px;border-radius:6px;font-size:12px;line-height:1.5">
+              好的，已为您生成<b>财运专题报告</b>（见右侧）。<br>
+              简单来说：<b>2026年</b>是您近三年财运最好的年份，适合稳健投资。2028年需谨慎。
+            </div>
+          </div>
+          <!-- User asks for depth -->
+          <div style="margin-bottom:10px;text-align:right">
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">您</div>
+            <div style="background:var(--accent);color:var(--bg);padding:8px 10px;border-radius:6px;display:inline-block;text-align:left;font-size:12px">
+              能给我一份完整的深度报告吗？四合出那种
+            </div>
+          </div>
+          <div style="margin-bottom:10px">
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">玄机子 <span style="color:var(--accent)">🔧 四合出深度分析</span></div>
+            <div style="background:var(--surface);padding:8px 10px;border-radius:6px;font-size:12px;line-height:1.5">
+              已为您生成<b>四合出 · 四派综合分析报告</b>（见右侧）。<br>
+              四体系交叉验证，结论更可靠。如需调整任何部分，随时告诉我。
+            </div>
+          </div>
+        </div>
+        <!-- Chat input -->
+        <div style="padding:8px 10px;border-top:1px solid var(--border);background:var(--surface);display:flex;gap:6px">
+          <input class="mock-input" placeholder="输入问题..." style="flex:1;font-size:12px">
+          <button class="mock-button" style="background:var(--accent);color:var(--bg);border:none;padding:6px 14px;border-radius:4px;font-size:12px;white-space:nowrap">发送</button>
+        </div>
+      </div>
+
+      <!-- MIDDLE: 25% BaZi chart + Ziwei -->
+      <div style="width:25%;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column">
+        <!-- 上: BaZi chart table -->
+        <div style="padding:10px;border-bottom:1px solid var(--border);flex:1;overflow-y:auto">
+          <div style="font-size:11px;font-weight:bold;color:var(--accent);margin-bottom:6px">八字排盘</div>
+          <table style="width:100%;border-collapse:collapse;font-size:10px">
+            <tr style="color:var(--accent)"><td></td><td>年柱</td><td>月柱</td><td>日柱</td><td>时柱</td></tr>
+            <tr><td style="color:var(--accent)">天干</td><td>癸</td><td>己</td><td style="color:var(--accent)">丁</td><td>丁</td></tr>
+            <tr><td style="color:var(--accent)">地支</td><td>酉</td><td>未</td><td>酉</td><td>未</td></tr>
+            <tr><td style="color:var(--accent)">藏干</td><td>辛</td><td>己丁乙</td><td>辛</td><td>己丁乙</td></tr>
+            <tr><td style="color:var(--accent)">十神</td><td>七杀</td><td>食神</td><td>日主</td><td>比肩</td></tr>
+            <tr><td style="color:var(--accent)">纳音</td><td>剑锋金</td><td>天上火</td><td>山下火</td><td>天河水</td></tr>
+          </table>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.6">
+            日主: <b>丁火</b> | 格局: <b>食神格</b><br>
+            用神: 甲木 | 忌神: 辛金<br>
+            起运: 2岁 | 大运方向: 顺排<br>
+            <br>
+            当前大运: <b>乙卯</b><br>
+            32岁-41岁 (2025-2034)<br>
+            <br>
+            五行: 金2 木0 水1 火3 土2<br>
+            缺: 木
+          </div>
+        </div>
+
+        <!-- 下: Ziwei chart -->
+        <div style="padding:10px;border-top:1px solid var(--border);flex:1;overflow-y:auto">
+          <div style="font-size:11px;font-weight:bold;color:var(--accent);margin-bottom:6px">紫微斗数</div>
+          <table style="width:100%;border-collapse:collapse;font-size:9px">
+            <tr style="color:var(--accent)"><td>宫位</td><td>干支</td><td>主星</td><td>辅星</td></tr>
+            <tr><td>命宫</td><td>甲寅</td><td>天机</td><td>文昌</td></tr>
+            <tr><td>兄弟</td><td>乙卯</td><td>—</td><td>—</td></tr>
+            <tr><td>夫妻</td><td>丙辰</td><td>太阳</td><td>—</td></tr>
+            <tr><td>子女</td><td>丁巳</td><td>武曲</td><td>天钺</td></tr>
+            <tr><td>财帛</td><td>戊午</td><td>天同</td><td>—</td></tr>
+            <tr><td>疾厄</td><td>己未</td><td>—</td><td>—</td></tr>
+            <tr><td>迁移</td><td>庚申</td><td>—</td><td>—</td></tr>
+            <tr><td>交友</td><td>辛酉</td><td>廉贞</td><td>—</td></tr>
+            <tr><td>官禄</td><td>壬戌</td><td>—</td><td>—</td></tr>
+            <tr><td>田宅</td><td>癸亥</td><td>巨门</td><td>—</td></tr>
+            <tr><td>福德</td><td>甲子</td><td>天梁</td><td>—</td></tr>
+            <tr><td>父母</td><td>乙丑</td><td>紫微</td><td>左辅</td></tr>
+          </table>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:6px">
+            身宫: 甲寅 | 五行局: 木三局<br>
+            化禄: 天机 | 化权: —<br>
+            化科: 文昌 | 化忌: —
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: 40% Report -->
+      <div style="width:40%;display:flex;flex-direction:column">
+        <!-- Tab bar: switch between reports -->
+        <div style="background:var(--surface);padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:4px;align-items:center">
+          <span style="font-size:10px;color:var(--text-muted);margin-right:8px">报告切换</span>
+          <span style="background:var(--accent);color:var(--bg);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">总览</span>
+          <span style="background:var(--surface-light);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">财运专题</span>
+          <span style="background:var(--surface-light);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">四合出</span>
+          <span style="background:var(--surface-light);padding:4px 10px;border-radius:4px;font-size:11px;cursor:pointer">+</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--success)">✅ 已纠正1处</span>
+        </div>
+
+        <!-- Report content with streaming indicator -->
+        <div style="flex:1;overflow-y:auto;padding:14px;background:var(--bg);font-size:12px;line-height:1.7">
+          <!-- Currently generating indicator -->
+          <div style="background:var(--surface-light);border:1px dashed var(--accent);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:var(--accent)">
+            ⏳ 正在生成四合出深度报告...
+            <span style="animation:blink 1s infinite">▌</span>
+          </div>
+
+          <h3 style="color:var(--accent);font-size:14px;margin:0 0 6px">命主画像</h3>
+          <p>丁火日主，温和但内心有主见。生于未月，食神吐秀，思维活跃。您像<u>一盏温暖的灯</u>，外表柔和，内在有清晰的方向感。</p>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0">
+            <div style="background:var(--surface);padding:8px;border-radius:4px;text-align:center">
+              <div style="font-size:10px;color:var(--text-muted)">事业</div>
+              <div style="font-size:16px">⭐⭐⭐</div>
+              <div style="font-size:10px">宜文教技术</div>
+            </div>
+            <div style="background:var(--surface);padding:8px;border-radius:4px;text-align:center">
+              <div style="font-size:10px;color:var(--text-muted)">财运</div>
+              <div style="font-size:16px">⭐⭐⭐</div>
+              <div style="font-size:10px">正财为主</div>
+            </div>
+            <div style="background:var(--surface);padding:8px;border-radius:4px;text-align:center">
+              <div style="font-size:10px;color:var(--text-muted)">感情</div>
+              <div style="font-size:16px">⭐⭐⭐</div>
+              <div style="font-size:10px">配偶务实</div>
+            </div>
+            <div style="background:var(--surface);padding:8px;border-radius:4px;text-align:center">
+              <div style="font-size:10px;color:var(--text-muted)">健康</div>
+              <div style="font-size:16px">⭐⭐⭐</div>
+              <div style="font-size:10px">注意心火</div>
+            </div>
+          </div>
+
+          <p style="color:var(--text-muted);font-size:10px;margin-top:16px;border-top:1px solid var(--border);padding-top:8px">
+            💡 提示：您可以纠正任何分析偏差，报告会自动更新。例如："我其实是做金融的，不是技术"。
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>设计要点总结</h3>
+  <table>
+    <tr><th>需求</th><th>实现</th></tr>
+    <tr><td>1. 35/25/40 比例</td><td>左对话 35%，中命盘 25%，右报告 40%</td></tr>
+    <tr><td>2. 中间区上下分</td><td>上半：八字排盘表 + 日主/格局/用神/大运/五行；下半：紫微十二宫表</td></tr>
+    <tr><td>3. 取消手动按钮</td><td>Agent 根据对话内容自动判断：问财运→调流年工具，问日子→调择日工具，问名字→调取名工具</td></tr>
+    <tr><td>4. 渐进式报告</td><td>初次→新手卡片报告；用户要深度→四合出完整报告。右侧标签栏可切换</td></tr>
+    <tr><td>5. 专题报告</td><td>问财运→生成"财运专题"标签；问婚姻→生成"婚姻专题"标签。各标签独立，可切换</td></tr>
+    <tr><td>6. 生成过程可见</td><td>报告区顶部显示"⏳ 正在生成..."状态条 + 闪烁光标，文字逐段出现（typewriter效果）</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>数据流</h3>
+  <div class="mockup">
+    <div class="mockup-body" style="font-size:13px;padding:16px">
+      <code>
+      用户输入出生信息 → POST /api/chart → 返回 chart_id<br>
+      → 左侧显示简答 + 右侧渲染新手报告（/api/analyze mode=5 默认）<br>
+      <br>
+      用户问"财运" → Agent 判断需调工具 → POST /api/tools/liunian<br>
+      → 结合流年数据生成财运专题 → 右侧新增"财运专题"标签<br>
+      <br>
+      用户要深度报告 → Agent 调四合出分析<br>
+      → POST /api/analyze mode=5 → 右侧新增"四合出"标签<br>
+      <br>
+      用户指出偏差 → Agent 接收纠正 → 重新推理 → PUT 更新报告对应章节
+      </code>
+    </div>
+  </div>
+</div>

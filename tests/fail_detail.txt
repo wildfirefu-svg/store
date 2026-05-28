@@ -1,0 +1,95 @@
+TC006 (2000立春交界): ['month']
+  Exp: Y=庚辰 M=戊寅 D=壬辰 H=癸卯
+  Got: Y=庚辰 M=己丑 D=壬辰 H=癸卯
+  DM-exp=壬 DM-got=壬 dir-exp=顺排 dir-got=顺排
+
+TC008 (寒露-立冬间): ['month']
+  Exp: Y=戊戌 M=壬戌 D=壬寅 H=癸卯
+  Got: Y=戊戌 M=癸亥 D=壬寅 H=癸卯
+  DM-exp=壬 DM-got=壬 dir-exp=顺排 dir-got=顺排
+
+TC009 (立冬后): ['day', 'hour', 'day_master']
+  Exp: Y=戊戌 M=癸亥 D=癸卯 H=乙卯
+  Got: Y=戊戌 M=癸亥 D=甲辰 H=丁卯
+  DM-exp=癸 DM-got=甲 dir-exp=顺排 dir-got=顺排
+
+TC010 (甲子年女): ['month']
+  Exp: Y=甲子 M=丙寅 D=戊辰 H=戊午
+  Got: Y=甲子 M=丁丑 D=戊辰 H=戊午
+  DM-exp=戊 DM-got=戊 dir-exp=逆排 dir-got=逆排
+
+TC018 (年末-夜子时): ['day', 'hour']
+  Exp: Y=庚戌 M=戊子 D=乙卯 H=丙子
+  Got: Y=庚戌 M=戊子 D=乙酉 H=戊子
+  DM-exp=乙 DM-got=乙 dir-exp=逆排 dir-got=逆排
+
+TC020 (2024立春): ['month']
+  Exp: Y=甲辰 M=丙寅 D=戊戌 H=戊午
+  Got: Y=甲辰 M=丁丑 D=戊戌 H=戊午
+  DM-exp=戊 DM-got=戊 dir-exp=逆排 dir-got=逆排
+
+TC029 (立夏后一日-巳月): ['hour']
+  Exp: Y=庚申 M=辛巳 D=己卯 H=己巳
+  Got: Y=庚申 M=辛巳 D=己卯 H=庚午
+  DM-exp=己 DM-got=己 dir-exp=顺排 dir-got=顺排
+
+TC046 (2022春节-早子时): ['year', 'month', 'dayun_dir']
+  Exp: Y=壬寅 M=壬寅 D=乙酉 H=丙子
+  Got: Y=辛丑 M=辛丑 D=乙酉 H=丙子
+  DM-exp=乙 DM-got=乙 dir-exp=逆排 dir-got=顺排
+
+TC048 (2019立春后一日): ['hour']
+  Exp: Y=己亥 M=丙寅 D=癸酉 H=丁巳
+  Got: Y=己亥 M=丙寅 D=癸酉 H=戊午
+  DM-exp=癸 DM-got=癸 dir-exp=逆排 dir-got=逆排
+
+TC056 (2026今日-阳年女): ['day']
+  Exp: Y=丙午 M=癸巳 D=癸亥 H=戊午
+  Got: Y=丙午 M=癸巳 D=癸巳 H=戊午
+  DM-exp=癸 DM-got=癸 dir-exp=逆排 dir-got=逆排
+
+TC061 (未来年份-阳年男): ['day']
+  Exp: Y=庚戌 M=壬午 D=辛亥 H=壬辰
+  Got: Y=庚戌 M=壬午 D=辛巳 H=壬辰
+  DM-exp=辛 DM-got=辛 dir-exp=顺排 dir-got=顺排
+
+TC064 (清明节-阳年男): ['month']
+  Exp: Y=甲戌 M=戊辰 D=辛酉 H=甲午
+  Got: Y=甲戌 M=丁卯 D=辛酉 H=甲午
+  DM-exp=辛 DM-got=辛 dir-exp=顺排 dir-got=顺排
+
+TC065 (清明后一天): ['month']
+  Exp: Y=甲戌 M=戊辰 D=壬戌 H=丙午
+  Got: Y=甲戌 M=丁卯 D=壬戌 H=丙午
+  DM-exp=壬 DM-got=壬 dir-exp=顺排 dir-got=顺排
+
+TC077 (2025清明后-辰月): ['month']
+  Exp: Y=乙巳 M=庚辰 D=甲辰 H=庚午
+  Got: Y=乙巳 M=己卯 D=甲辰 H=庚午
+  DM-exp=甲 DM-got=甲 dir-exp=顺排 dir-got=顺排
+
+TC086 (2002岁末-夜子时-阳年男): ['hour']
+  Exp: Y=壬午 M=壬子 D=癸酉 H=壬子
+  Got: Y=壬午 M=壬子 D=癸酉 H=甲子
+  DM-exp=癸 DM-got=癸 dir-exp=顺排 dir-got=顺排
+
+TC088 (2020立春-阳年男): ['month']
+  Exp: Y=庚子 M=戊寅 D=丁丑 H=丙午
+  Got: Y=庚子 M=己丑 D=丁丑 H=丙午
+  DM-exp=丁 DM-got=丁 dir-exp=顺排 dir-got=顺排
+
+TC089 (2020立春前1小时-阴年男逆排): ['year', 'month', 'hour', 'dayun_dir']
+  Exp: Y=己亥 M=丁丑 D=丁丑 H=乙巳
+  Got: Y=庚子 M=己丑 D=丁丑 H=丙午
+  DM-exp=丁 DM-got=丁 dir-exp=逆排 dir-got=顺排
+
+TC094 (20070707-阴年男): ['month']
+  Exp: Y=丁亥 M=丙午 D=壬寅 H=甲辰
+  Got: Y=丁亥 M=丁未 D=壬寅 H=甲辰
+  DM-exp=壬 DM-got=壬 dir-exp=逆排 dir-got=逆排
+
+TC099 (对越反击-阴年女逆排): ['day']
+  Exp: Y=己未 M=丙寅 D=乙巳 H=己卯
+  Got: Y=己未 M=丙寅 D=乙卯 H=己卯
+  DM-exp=乙 DM-got=乙 dir-exp=顺排 dir-got=顺排
+

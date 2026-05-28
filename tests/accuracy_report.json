@@ -1,0 +1,16 @@
+{
+  "test_date": "2026-05-19",
+  "total_cases": 100,
+  "passed": 100,
+  "failed": 0,
+  "accuracy_pct": 100.0,
+  "elapsed_sec": 0.04,
+  "validation_rules": {
+    "year": "四柱年柱干支必须完全匹配 (0容差)",
+    "month": "四柱月柱干支必须完全匹配 (0容差)",
+    "day": "四柱日柱干支必须完全匹配 (0容差)",
+    "hour": "四柱时柱干支必须完全匹配 (0容差)",
+    "day_master": "日主天干必须匹配",
+    "dayun_dir": "大运方向必须匹配"
+  }
+}

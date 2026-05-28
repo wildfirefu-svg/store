@@ -1,0 +1,123 @@
+<h2>页面布局 — 对话式分析 + 实时报告</h2>
+<p class="subtitle">左侧对话 | 右侧报告 | 实时修正</p>
+
+<div class="mockup">
+  <div class="mockup-header">整体布局（三栏：左对话 + 中工具 + 右报告）</div>
+  <div class="mockup-body" style="padding:0;min-height:500px">
+    <div style="display:flex;height:500px">
+
+      <!-- LEFT: Chat dialog -->
+      <div style="width:42%;border-right:1px solid var(--border);display:flex;flex-direction:column">
+        <div style="background:var(--surface);padding:12px;border-bottom:1px solid var(--border)">
+          <span style="font-weight:bold;color:var(--accent)">玄机子 · 命理对话</span>
+        </div>
+        <!-- Chat messages -->
+        <div style="flex:1;overflow-y:auto;padding:12px;background:var(--bg)">
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">玄机子</div>
+            <div style="background:var(--surface);padding:10px;border-radius:8px;font-size:13px;line-height:1.6">
+              您好！我已根据您的出生信息排盘完毕。<br>
+              日主<b>丁火</b>，生于未月，食神格。<br>
+              您可以问我任何问题，比如"我的事业运如何？"
+            </div>
+          </div>
+          <div style="margin-bottom:12px;text-align:right">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">您</div>
+            <div style="background:var(--accent);color:var(--bg);padding:10px;border-radius:8px;display:inline-block;text-align:left;font-size:13px">
+              我的财运怎么样？什么时候能发财？
+            </div>
+          </div>
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">玄机子</div>
+            <div style="background:var(--surface);padding:10px;border-radius:8px;font-size:13px;line-height:1.6">
+              您的命局食神生财，有稳定的财富来源。但日主身弱，<b>不宜投机或高风险投资</b>。<br><br>
+              当前大运乙卯（32-41岁），卯木帮身，财运逐步上升。<br>
+              <b>2026丙午年</b>比劫帮身，是合作求财的好时机。
+            </div>
+          </div>
+        </div>
+        <!-- Chat input -->
+        <div style="padding:10px;border-top:1px solid var(--border);background:var(--surface);display:flex;gap:8px">
+          <input class="mock-input" placeholder="输入问题，如：我的感情运势如何？" style="flex:1">
+          <button class="mock-button" style="background:var(--accent);color:var(--bg);border:none;padding:8px 16px;border-radius:6px;font-size:13px;white-space:nowrap">发送</button>
+        </div>
+      </div>
+
+      <!-- MIDDLE: Birth info + tools (collapsible) -->
+      <div style="width:16%;border-right:1px solid var(--border);background:var(--surface);padding:10px;display:flex;flex-direction:column;gap:8px">
+        <div style="font-size:12px;font-weight:bold;color:var(--accent)">命盘</div>
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.8">
+          癸酉 己未 丁酉 丁未<br>
+          日主: 丁火<br>
+          格局: 食神格<br>
+          用神: 甲木<br>
+          <br>
+          大运: 乙卯(32-41)<br>
+          <br>
+          <span style="color:var(--accent)">[切换模式]</span><br>
+          <span style="color:var(--text-muted)">[择日]</span><br>
+          <span style="color:var(--text-muted)">[流年]</span><br>
+          <span style="color:var(--text-muted)">[取名]</span>
+        </div>
+      </div>
+
+      <!-- RIGHT: Live report -->
+      <div style="width:42%;display:flex;flex-direction:column">
+        <div style="background:var(--surface);padding:12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:bold;color:var(--accent)">命理报告</span>
+          <span style="font-size:11px">
+            <span style="color:var(--success);margin-right:12px">✅ 已自动修正3处</span>
+            <span style="color:var(--text-muted);cursor:pointer">📥 PDF</span>
+          </span>
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:16px;background:var(--bg);font-size:13px;line-height:1.8">
+          <h3 style="color:var(--accent);font-size:15px;margin:0 0 8px">⭐ 财运分析 — 正财稳定，不宜投机</h3>
+          <p>食神生财格局，有稳定的财富创造能力。但日主身弱，财多身弱为"富屋贫人"——有钱但留不住。</p>
+          <p><b>当前大运乙卯(32-41岁)</b>：乙木偏印帮身，卯木为日主之根，财运逐步改善。2026丙午年比劫帮身，合作求财有利。</p>
+          <p><b>建议</b>：以稳健收入为主，避免高风险投资。适合文化教育、技术研发等行业。</p>
+
+          <hr style="border-color:var(--border)">
+
+          <h3 style="color:var(--accent);font-size:15px;margin:12px 0 8px">⭐ 感情婚姻 — 日支偏财，配偶务实</h3>
+          <p>日支酉金为偏财，配偶精明务实，性格独立。丁酉日柱自坐偏财，中年后婚姻财富双收。</p>
+          <p><b>注意</b>：时柱未土食神，晚年感情趋于平淡。2030年后大运换甲寅，感情有新变化。</p>
+
+          <hr style="border-color:var(--border)">
+
+          <h3 style="color:var(--accent);font-size:15px;margin:12px 0 8px">⭐ 性格特质 — 聪明敏感，外冷内热</h3>
+          <p>丁火日主，温和但内心有主见。食神吐秀，思维活跃善于表达。</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>关键交互流程</h3>
+  <table>
+    <tr><th>步骤</th><th>用户操作</th><th>系统行为</th></tr>
+    <tr><td>1</td><td>在左侧输入出生信息 → 点击发送</td><td>排盘 → 右侧显示初始报告</td></tr>
+    <tr><td>2</td><td>对话区输入"我的财运怎么样？"</td><td>Agent 分析 → 右侧定位到财运章节并高亮</td></tr>
+    <tr><td>3</td><td>用户指出"不对，我其实是做技术的"</td><td>Agent 修正分析 → 右侧报告实时更新</td></tr>
+    <tr><td>4</td><td>用户问"换个体系看看"</td><td>切换分析模式（如子平→盲派）→ 右侧报告刷新</td></tr>
+    <tr><td>5</td><td>点击报告右上角 📥 PDF</td><td>下载 PDF 版本</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h3>设计决策</h3>
+  <table>
+    <tr><th>决策</th><th>选择</th><th>理由</th></tr>
+    <tr><td>三栏比例</td><td>42% / 16% / 42%</td><td>对话和报告同等重要，中间栏放命盘摘要+快捷工具</td></tr>
+    <tr><td>对话驱动报告</td><td>每次对话响应都带上完整报告更新</td><td>报告始终是最新状态，用户不需要手动刷新</td></tr>
+    <tr><td>修正机制</td><td>用户指出偏差 → Agent 重新推理 → 覆盖特定章节</td><td>只改被纠正的部分，不改其他章节</td></tr>
+    <tr><td>中间栏</td><td>命盘摘要 + 模式切换 + 工具入口</td><td>始终可见，方便快速切换</td></tr>
+    <tr><td>对话历史</td><td>保存在 sessionStorage</td><td>刷新页面后对话不丢失</td></tr>
+    <tr><td>初始输入</td><td>对话的第一条消息就是出生信息</td><td>自然语言输入，不需要分页跳转</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <p class="subtitle">移动端：三栏变为单栏，对话在上，报告在下，中间栏折叠到顶部导航</p>
+</div>

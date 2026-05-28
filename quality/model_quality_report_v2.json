@@ -1,0 +1,6890 @@
+{
+  "report_title": "八字多系统模型质量检验报告",
+  "test_date": "2026-05-22",
+  "methodology": "大运十神/流年与真实生命事件对齐分析（含用神推断）",
+  "summary": {
+    "test_cases": 82,
+    "total_events": 544,
+    "overall_avg_score": 0.62,
+    "positive_match_rate": "25.2%",
+    "weak_match_rate": "44.7%",
+    "no_match_rate": "30.1%"
+  },
+  "category_analysis": {
+    "career": {
+      "count": 189,
+      "avg_score": 0.85,
+      "positive_rate": "38.1%",
+      "interpretation": "事业类事件匹配度最高(avg=0.85)，官杀印星大运与事业变动有较强相关性"
+    },
+    "wealth": {
+      "count": 88,
+      "avg_score": 0.7,
+      "positive_rate": "28.4%",
+      "interpretation": ""
+    },
+    "relationship": {
+      "count": 76,
+      "avg_score": 0.69,
+      "positive_rate": "21.1%",
+      "interpretation": ""
+    },
+    "health": {
+      "count": 78,
+      "avg_score": 0.44,
+      "positive_rate": "16.7%",
+      "interpretation": "健康类事件匹配度偏低(avg=0.44)，需结合流年冲合及神煞系统提升准确率"
+    },
+    "family": {
+      "count": 111,
+      "avg_score": 0.27,
+      "positive_rate": "9.9%",
+      "interpretation": ""
+    },
+    "education": {
+      "count": 2,
+      "avg_score": 0.07,
+      "positive_rate": "0.0%",
+      "interpretation": ""
+    }
+  },
+  "case_details": [
+    {
+      "name": "蒋介石",
+      "bazi": "丁亥 庚戌 己巳 庚午",
+      "day_master": "己(土阴)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "木",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "wx_stats": {
+          "金": 4,
+          "木": 1,
+          "水": 2,
+          "火": 6,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "己酉(7-16)",
+        "戊申(17-26)",
+        "丁未(27-36)",
+        "丙午(37-46)",
+        "乙巳(47-56)",
+        "甲辰(57-66)",
+        "癸卯(67-76)",
+        "壬寅(77-86)",
+        "辛丑(87-96)",
+        "庚子(97-106)"
+      ],
+      "avg_score": 1.27,
+      "positive_rate": "33%",
+      "category_stats": {
+        "career": {
+          "count": 5,
+          "avg": 1.37,
+          "positive": 2
+        },
+        "health": {
+          "count": 1,
+          "avg": 0.8,
+          "positive": 0
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "丙午",
+          "start_year": 1924,
+          "events": [
+            [
+              1924,
+              "career",
+              "任黄埔军校校长"
+            ]
+          ]
+        },
+        {
+          "dayun": "甲辰",
+          "start_year": 1944,
+          "events": [
+            [
+              1945,
+              "career",
+              "抗战胜利"
+            ]
+          ]
+        },
+        {
+          "dayun": "辛丑",
+          "start_year": 1974,
+          "events": [
+            [
+              1975,
+              "health",
+              "4月5日逝世于台北"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 1924,
+        "category": "career",
+        "description": "任黄埔军校校长",
+        "score": 2.32,
+        "reasons": [
+          "大运天干正印(忌)(+0.8)",
+          "大运地支偏印(忌)",
+          "流年正官",
+          "流年冲大运地(子冲午)",
+          "晋升+官印大运",
+          "晋升年+官印流年",
+          "流年逢天乙贵人"
+        ],
+        "dayun": "丙午",
+        "liunian": "甲子"
+      },
+      "worst_event": {
+        "year": 1949,
+        "category": "career",
+        "description": "退守台湾",
+        "score": 0.6,
+        "reasons": [
+          "大运天干正官(用)(+2.0)"
+        ],
+        "dayun": "甲辰",
+        "liunian": "己丑"
+      }
+    },
+    {
+      "name": "Bill Clinton",
+      "bazi": "丙戌 丙申 乙丑 庚辰",
+      "day_master": "乙(木阴)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金"
+        ],
+        "wx_stats": {
+          "金": 5,
+          "木": 2,
+          "水": 3,
+          "火": 3,
+          "土": 7
+        }
+      },
+      "dayun_list": [
+        "丁酉(6-15)",
+        "戊戌(16-25)",
+        "己亥(26-35)",
+        "庚子(36-45)",
+        "辛丑(46-55)",
+        "壬寅(56-65)",
+        "癸卯(66-75)",
+        "甲辰(76-85)",
+        "乙巳(86-95)",
+        "丙午(96-105)"
+      ],
+      "avg_score": 0.92,
+      "positive_rate": "38%",
+      "category_stats": {
+        "relationship": {
+          "count": 6,
+          "avg": 0.94,
+          "positive": 2
+        },
+        "wealth": {
+          "count": 7,
+          "avg": 0.56,
+          "positive": 1
+        },
+        "family": {
+          "count": 14,
+          "avg": 0.77,
+          "positive": 3
+        },
+        "career": {
+          "count": 25,
+          "avg": 1.13,
+          "positive": 14
+        },
+        "health": {
+          "count": 3,
+          "avg": 0.6,
+          "positive": 1
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "戊戌",
+          "start_year": 1962,
+          "events": [
+            [
+              1962,
+              "family",
+              "1962年：与继父罗杰·克林顿共同生活期间，曾目睹其酗酒与家暴行为，后劝说母亲离婚未果。"
+            ]
+          ]
+        },
+        {
+          "dayun": "己亥",
+          "start_year": 1972,
+          "events": [
+            [
+              1970,
+              "wealth",
+              "1970年代中期：任阿肯色大学法学院教授期间，收入主要来自教职薪资，经济状况普通。"
+            ],
+            [
+              1973,
+              "career",
+              "1973年：毕业于耶鲁大学法学院，获法学博士学位（JD）。"
+            ]
+          ]
+        },
+        {
+          "dayun": "庚子",
+          "start_year": 1982,
+          "events": [
+            [
+              1980,
+              "relationship",
+              "1980年2月27日：女儿切尔西·维多利亚·克林顿（Chelsea Victoria Clinton"
+            ],
+            [
+              1980,
+              "career",
+              "1980年：竞选连任州长失败。"
+            ]
+          ]
+        },
+        {
+          "dayun": "辛丑",
+          "start_year": 1992,
+          "events": [
+            [
+              1992,
+              "wealth",
+              "1979–1981、1983–1992年：担任阿肯色州州长期间，年薪约数万美元（1980年代州长年薪"
+            ],
+            [
+              1994,
+              "family",
+              "1994年1月6日：同母异父弟弟小罗杰·克林顿（Roger Clinton Jr.）因涉毒被捕，Bi"
+            ],
+            [
+              1994,
+              "family",
+              "1994年：继父罗杰·克林顿 Sr. 去世。"
+            ]
+          ]
+        },
+        {
+          "dayun": "壬寅",
+          "start_year": 2002,
+          "events": [
+            [
+              2001,
+              "relationship",
+              "2001年1月20日：卸任总统后与希拉里共同移居纽约，婚姻关系持续至今（截至2024年）。 ────"
+            ],
+            [
+              2000,
+              "career",
+              "2000年：促成巴以戴维营和平谈判（未达成协议）；推动中国加入WTO。"
+            ],
+            [
+              2001,
+              "career",
+              "2001年1月20日：卸任总统，支持率高达66%，为二战后离任总统最高之一。"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 2020,
+        "category": "career",
+        "description": "2020年：公开支持乔·拜登竞选总统，并参与民主党全国代表大会视频发言。 ──────────────────────────────",
+        "score": 2.15,
+        "reasons": [
+          "大运天干偏印(用)(+1.5)",
+          "流年正官",
+          "流年合日支(子合丑)",
+          "晋升+官印大运",
+          "晋升年+官印流年"
+        ],
+        "dayun": "癸卯",
+        "liunian": "庚子"
+      },
+      "worst_event": {
+        "year": 1946,
+        "category": "family",
+        "description": "1946年8月19日：出生于阿肯色州霍普市，原名威廉·杰斐逊·布莱斯三世（William Jefferson Blythe III）；生父威廉·杰斐逊·布莱斯二世在出生前三个月因车祸去世。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙戌"
+      }
+    },
+    {
+      "name": "Salman Rushdie",
+      "bazi": "丁亥 丙午 己巳 庚午",
+      "day_master": "己(土阴)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "木",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "wx_stats": {
+          "金": 2,
+          "木": 1,
+          "水": 2,
+          "火": 8,
+          "土": 4
+        }
+      },
+      "dayun_list": [
+        "乙巳(3-12)",
+        "甲辰(13-22)",
+        "癸卯(23-32)",
+        "壬寅(33-42)",
+        "辛丑(43-52)",
+        "庚子(53-62)",
+        "己亥(63-72)",
+        "戊戌(73-82)",
+        "丁酉(83-92)",
+        "丙申(93-102)"
+      ],
+      "avg_score": 0.89,
+      "positive_rate": "47%",
+      "category_stats": {
+        "relationship": {
+          "count": 5,
+          "avg": 1.04,
+          "positive": 3
+        },
+        "wealth": {
+          "count": 7,
+          "avg": 1.19,
+          "positive": 5
+        },
+        "family": {
+          "count": 5,
+          "avg": 0.93,
+          "positive": 4
+        },
+        "career": {
+          "count": 15,
+          "avg": 0.72,
+          "positive": 5
+        },
+        "health": {
+          "count": 4,
+          "avg": 0.8,
+          "positive": 0
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "甲辰",
+          "start_year": 1960,
+          "events": [
+            [
+              1960,
+              "family",
+              "1960年代：14岁被送往英国 Rugby School 寄宿，与父母长期分离。"
+            ]
+          ]
+        },
+        {
+          "dayun": "壬寅",
+          "start_year": 1980,
+          "events": [
+            [
+              1981,
+              "wealth",
+              "1981年：小说《午夜之子》获布克奖，奠定其文学地位，版税收入显著提升。"
+            ],
+            [
+              1980,
+              "family",
+              "1980年代：父亲 Anis Rushdie 于1987年去世，母亲 Negin 于1991年去世，"
+            ],
+            [
+              1980,
+              "family",
+              "1980年代–1990年代：儿子 Zafar Rushdie（生于1979年）在父亲隐匿期间由 Ru"
+            ]
+          ]
+        },
+        {
+          "dayun": "辛丑",
+          "start_year": 1990,
+          "events": [
+            [
+              1988,
+              "relationship",
+              "1988年：与作家 Marianne Wiggins 结婚，婚姻因《撒旦诗篇》引发的追杀令而承受巨大"
+            ],
+            [
+              1988,
+              "wealth",
+              "1988年：《撒旦诗篇》出版后引发全球争议，虽遭多国禁售，但在西方市场畅销，带来巨额版税收入。"
+            ],
+            [
+              1989,
+              "wealth",
+              "1989年：因伊朗宗教领袖霍梅尼发布“法特瓦”（追杀令），被迫转入地下生活，出版商与政府为其提供安保"
+            ]
+          ]
+        },
+        {
+          "dayun": "庚子",
+          "start_year": 2000,
+          "events": [
+            [
+              2001,
+              "career",
+              "2001年：出版《她脚下的土地》，尝试音乐与神话主题。"
+            ],
+            [
+              1998,
+              "health",
+              "1989–1998年：因“法特瓦”被迫隐匿生活，长期处于高压、焦虑状态，依赖安保与心理支持。"
+            ]
+          ]
+        },
+        {
+          "dayun": "己亥",
+          "start_year": 2010,
+          "events": [
+            [
+              2012,
+              "wealth",
+              "2012年：出版回忆录《约瑟夫·安东：回忆录》，详述被追杀十年经历，全球畅销，带来可观收入。"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 2019,
+        "category": "relationship",
+        "description": "2019年：与诗人、作家 Rachel Eliza Griffiths 开始交往（据《纽约时报》2021年报道）。",
+        "score": 1.82,
+        "reasons": [
+          "大运地支正财(忌)",
+          "大运天干比肩(忌)(+0.5)",
+          "流年比肩",
+          "流年冲日支(亥冲巳)",
+          "岁运并临(大运=流年)",
+          "流年冲日支",
+          "大运冲日支"
+        ],
+        "dayun": "己亥",
+        "liunian": "己亥"
+      },
+      "worst_event": {
+        "year": 1947,
+        "category": "family",
+        "description": "1947年6月19日：出生于印度孟买，父亲 Anis Ahmed Rushdie 为剑桥大学毕业的律师，母亲 Negin Bhatt 为教师，家境优渥（知识库 [1]）。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丁亥"
+      }
+    },
+    {
+      "name": "Aung San Suu Kyi",
+      "bazi": "乙酉 壬午 己未 庚午",
+      "day_master": "己(土阴)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "木",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 2,
+          "水": 1,
+          "火": 5,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "癸未(6-15)",
+        "甲申(16-25)",
+        "乙酉(26-35)",
+        "丙戌(36-45)",
+        "丁亥(46-55)",
+        "戊子(56-65)",
+        "己丑(66-75)",
+        "庚寅(76-85)",
+        "辛卯(86-95)",
+        "壬辰(96-105)"
+      ],
+      "avg_score": 0.82,
+      "positive_rate": "39%",
+      "category_stats": {
+        "relationship": {
+          "count": 4,
+          "avg": 0.8,
+          "positive": 1
+        },
+        "wealth": {
+          "count": 12,
+          "avg": 0.87,
+          "positive": 5
+        },
+        "career": {
+          "count": 16,
+          "avg": 0.82,
+          "positive": 7
+        },
+        "health": {
+          "count": 6,
+          "avg": 0.75,
+          "positive": 2
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "甲申",
+          "start_year": 1961,
+          "events": [
+            [
+              1960,
+              "wealth",
+              "1960年代：母亲杜钦季（Khin Kyi）任缅甸驻印度大使，昂山素季随母赴印生活，就读于德里大学。"
+            ]
+          ]
+        },
+        {
+          "dayun": "乙酉",
+          "start_year": 1971,
+          "events": [
+            [
+              1972,
+              "relationship",
+              "1972年：在英国牛津大学期间，与英国学者迈克尔·阿里斯（Michael Aris）结婚。二人育有二"
+            ]
+          ]
+        },
+        {
+          "dayun": "丁亥",
+          "start_year": 1991,
+          "events": [
+            [
+              1991,
+              "wealth",
+              "1991年：长子亚历山大·阿里斯代母领取诺贝尔和平奖，并在颁奖礼上朗读母亲致词。(知识库 [10])"
+            ],
+            [
+              1990,
+              "career",
+              "1990年5月27日：领导NLD赢得大选，但军政府拒绝承认结果。"
+            ],
+            [
+              1991,
+              "career",
+              "1991年10月14日：获诺贝尔和平奖，“表彰其非暴力争取民主与人权的努力”。(知识库 [13])"
+            ]
+          ]
+        },
+        {
+          "dayun": "戊子",
+          "start_year": 2001,
+          "events": [
+            [
+              1999,
+              "relationship",
+              "1999年3月27日：迈克尔·阿里斯因前列腺癌在英国牛津去世，昂山素季因被软禁未能赴英奔丧。(知识库"
+            ],
+            [
+              2000,
+              "career",
+              "2000年9月–2002年5月：再次被软禁。"
+            ]
+          ]
+        },
+        {
+          "dayun": "己丑",
+          "start_year": 2011,
+          "events": [
+            [
+              2010,
+              "wealth",
+              "1989–2010年：长期被软禁，无正式收入；依靠国际支持组织、诺贝尔和平奖奖金（1991年）及海外"
+            ],
+            [
+              2012,
+              "wealth",
+              "2012年：当选议员后领取国家议员薪资（具体数额未公开）。"
+            ],
+            [
+              2012,
+              "wealth",
+              "2012年后：与长子亚历山大保持联系，亚历山大曾多次代表母亲出席国际活动；次子金·阿里斯较少公开露面"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 2021,
+        "category": "wealth",
+        "description": "2016–2021年：担任国务资政期间，官方公布月薪约1000美元（象征性领取），并居住于政府提供的官邸。(知识库 [6])",
+        "score": 1.91,
+        "reasons": [
+          "大运天干伤官(用)(+2.2)",
+          "流年食神",
+          "流年冲日支(丑冲未)",
+          "流年冲日支",
+          "大运财/食伤"
+        ],
+        "dayun": "庚寅",
+        "liunian": "辛丑"
+      },
+      "worst_event": {
+        "year": 1927,
+        "category": "wealth",
+        "description": "1927年1月13日：父亲昂山将军（Aung San）出生，缅甸独立运动领袖。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丁卯"
+      }
+    },
+    {
+      "name": "邓小平",
+      "bazi": "甲辰 壬申 戊子 庚申",
+      "day_master": "戊(土阳)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "ji_shen_wuxing": [
+          "木"
+        ],
+        "wx_stats": {
+          "金": 5,
+          "木": 2,
+          "水": 6,
+          "火": 0,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "癸酉(5-14)",
+        "甲戌(15-24)",
+        "乙亥(25-34)",
+        "丙子(35-44)",
+        "丁丑(45-54)",
+        "戊寅(55-64)",
+        "己卯(65-74)",
+        "庚辰(75-84)",
+        "辛巳(85-94)",
+        "壬午(95-104)"
+      ],
+      "avg_score": 0.77,
+      "positive_rate": "38%",
+      "category_stats": {
+        "education": {
+          "count": 1,
+          "avg": 0.15,
+          "positive": 0
+        },
+        "career": {
+          "count": 6,
+          "avg": 1.01,
+          "positive": 3
+        },
+        "health": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "庚辰",
+          "start_year": 1979,
+          "events": [
+            [
+              1978,
+              "career",
+              "十一届三中全会开启改革开放"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 1956,
+        "category": "career",
+        "description": "任中共中央总书记",
+        "score": 2.01,
+        "reasons": [
+          "大运天干正印(用)(+2.2)",
+          "流年偏印",
+          "晋升+官印大运",
+          "晋升年+官印流年"
+        ],
+        "dayun": "丁丑",
+        "liunian": "丙申"
+      },
+      "worst_event": {
+        "year": 1997,
+        "category": "health",
+        "description": "2月19日逝世",
+        "score": 0.0,
+        "reasons": [],
+        "dayun": "辛巳",
+        "liunian": "丁丑"
+      }
+    },
+    {
+      "name": "Mikhail Gorbachev",
+      "bazi": "辛未 庚寅 丙辰 甲午",
+      "day_master": "丙(火阳)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "水",
+          "土"
+        ],
+        "ji_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "wx_stats": {
+          "金": 2,
+          "木": 5,
+          "水": 1,
+          "火": 5,
+          "土": 6
+        }
+      },
+      "dayun_list": [
+        "己丑(8-17)",
+        "戊子(18-27)",
+        "丁亥(28-37)",
+        "丙戌(38-47)",
+        "乙酉(48-57)",
+        "甲申(58-67)",
+        "癸未(68-77)",
+        "壬午(78-87)",
+        "辛巳(88-97)",
+        "庚辰(98-107)"
+      ],
+      "avg_score": 0.77,
+      "positive_rate": "35%",
+      "category_stats": {
+        "relationship": {
+          "count": 4,
+          "avg": 0.7,
+          "positive": 0
+        },
+        "wealth": {
+          "count": 7,
+          "avg": 0.69,
+          "positive": 2
+        },
+        "family": {
+          "count": 7,
+          "avg": 0.49,
+          "positive": 1
+        },
+        "career": {
+          "count": 18,
+          "avg": 1.03,
+          "positive": 11
+        },
+        "health": {
+          "count": 7,
+          "avg": 0.53,
+          "positive": 1
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "丙戌",
+          "start_year": 1969,
+          "events": [
+            [
+              1970,
+              "family",
+              "1970年代–1980年代：女儿 Irina 成为医学研究员，较少参与政治；女婿 Anatoly V"
+            ],
+            [
+              1970,
+              "career",
+              "1970年：升任斯塔夫罗波尔边疆区党委第一书记。"
+            ],
+            [
+              1971,
+              "career",
+              "1971年：当选苏共中央委员。"
+            ]
+          ]
+        },
+        {
+          "dayun": "乙酉",
+          "start_year": 1979,
+          "events": [
+            [
+              1978,
+              "career",
+              "1978年：调任莫斯科，任苏共中央书记处书记，主管农业。"
+            ],
+            [
+              1980,
+              "career",
+              "1980年：当选苏共中央政治局委员。"
+            ]
+          ]
+        },
+        {
+          "dayun": "甲申",
+          "start_year": 1989,
+          "events": [
+            [
+              1991,
+              "relationship",
+              "1991年：苏联解体期间，Raisa 作为第一夫人公开露面支持丈夫改革政策，成为苏联首位具有公众形象"
+            ],
+            [
+              1991,
+              "wealth",
+              "1985–1991年：担任苏联最高领导人期间，享有国家配给的官邸、专车、医疗与安保待遇，无私人巨额资"
+            ],
+            [
+              1991,
+              "wealth",
+              "1991年后：苏联解体后失去国家俸禄，初期经济拮据，曾表示“连电话费都付不起”。(知识库 [3])"
+            ]
+          ]
+        },
+        {
+          "dayun": "癸未",
+          "start_year": 1999,
+          "events": [
+            [
+              1999,
+              "relationship",
+              "1999年9月20日：妻子 Raisa Gorbacheva 因白血病在德国明斯特去世，Gorbac"
+            ],
+            [
+              2000,
+              "relationship",
+              "2000年代起：未再婚，晚年常在公开场合提及与 Raisa 的感情，称其为“一生的支柱”。"
+            ],
+            [
+              2000,
+              "wealth",
+              "2000年代：出版回忆录《On My Country and the World》《Memoirs》"
+            ]
+          ]
+        },
+        {
+          "dayun": "壬午",
+          "start_year": 2009,
+          "events": [
+            [
+              2011,
+              "family",
+              "2011年：外孙女 Ksenia Virganskaya（Irina 之女）成为公关顾问，偶尔代表家"
+            ],
+            [
+              2007,
+              "career",
+              "2007年：创立俄罗斯社会民主联盟，但影响力有限。"
+            ],
+            [
+              2008,
+              "health",
+              "2008年：妻子去世后曾出现抑郁症状，接受心理支持。"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 2006,
+        "category": "health",
+        "description": "2006年：接受背部手术，治疗椎间盘突出。",
+        "score": 2.1,
+        "reasons": [
+          "流年冲日支(戌冲辰)",
+          "流年冲日支",
+          "墓库相冲(辰冲戌)",
+          "流年冲day柱用神地"
+        ],
+        "dayun": "癸未",
+        "liunian": "丙戌"
+      },
+      "worst_event": {
+        "year": 2016,
+        "category": "wealth",
+        "description": "2016年：据《福布斯》估算，其净资产约数百万美元，主要来自演讲、版权与基金会运营。",
+        "score": 0.0,
+        "reasons": [],
+        "dayun": "壬午",
+        "liunian": "丙申"
+      }
+    },
+    {
+      "name": "林彪",
+      "bazi": "丁未 辛亥 戊子 甲寅",
+      "day_master": "戊(土阳)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "木",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "wx_stats": {
+          "金": 1,
+          "木": 5,
+          "水": 4,
+          "火": 3,
+          "土": 4
+        }
+      },
+      "dayun_list": [
+        "庚戌(8-17)",
+        "己酉(18-27)",
+        "戊申(28-37)",
+        "丁未(38-47)",
+        "丙午(48-57)",
+        "乙巳(58-67)",
+        "甲辰(68-77)",
+        "癸卯(78-87)",
+        "壬寅(88-97)",
+        "辛丑(98-107)"
+      ],
+      "avg_score": 0.76,
+      "positive_rate": "25%",
+      "category_stats": {
+        "career": {
+          "count": 3,
+          "avg": 0.94,
+          "positive": 1
+        },
+        "health": {
+          "count": 1,
+          "avg": 0.2,
+          "positive": 0
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "戊申",
+          "start_year": 1935,
+          "events": [
+            [
+              1937,
+              "career",
+              "平型关大捷"
+            ]
+          ]
+        },
+        {
+          "dayun": "丙午",
+          "start_year": 1955,
+          "events": [
+            [
+              1955,
+              "career",
+              "授元帅军衔"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 1955,
+        "category": "career",
+        "description": "授元帅军衔",
+        "score": 1.25,
+        "reasons": [
+          "大运地支正印(忌)",
+          "大运天干偏印(忌)(+1.5)",
+          "流年正官",
+          "大运冲日支"
+        ],
+        "dayun": "丙午",
+        "liunian": "乙未"
+      },
+      "worst_event": {
+        "year": 1971,
+        "category": "health",
+        "description": "9月13日坠机身亡",
+        "score": 0.2,
+        "reasons": [
+          "流年冲大运地(亥冲巳)"
+        ],
+        "dayun": "乙巳",
+        "liunian": "辛亥"
+      }
+    },
+    {
+      "name": "Fidel Castro",
+      "bazi": "丙寅 丙申 甲戌 庚午",
+      "day_master": "甲(木阳)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金"
+        ],
+        "wx_stats": {
+          "金": 4,
+          "木": 3,
+          "水": 1,
+          "火": 6,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "丁酉(8-17)",
+        "戊戌(18-27)",
+        "己亥(28-37)",
+        "庚子(38-47)",
+        "辛丑(48-57)",
+        "壬寅(58-67)",
+        "癸卯(68-77)",
+        "甲辰(78-87)",
+        "乙巳(88-97)",
+        "丙午(98-107)"
+      ],
+      "avg_score": 0.72,
+      "positive_rate": "31%",
+      "category_stats": {
+        "relationship": {
+          "count": 6,
+          "avg": 0.92,
+          "positive": 2
+        },
+        "wealth": {
+          "count": 4,
+          "avg": 1.16,
+          "positive": 3
+        },
+        "family": {
+          "count": 7,
+          "avg": 0.35,
+          "positive": 0
+        },
+        "career": {
+          "count": 13,
+          "avg": 0.63,
+          "positive": 2
+        },
+        "health": {
+          "count": 6,
+          "avg": 0.87,
+          "positive": 4
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "己亥",
+          "start_year": 1954,
+          "events": [
+            [
+              1955,
+              "relationship",
+              "1955年：与 Mirta Díaz-Balart 离婚。(知识库 [1])"
+            ],
+            [
+              1956,
+              "family",
+              "1956年：长子 Fidelito 被前妻带往美国，后于1959年革命胜利后接回古巴。"
+            ]
+          ]
+        },
+        {
+          "dayun": "辛丑",
+          "start_year": 1974,
+          "events": [
+            [
+              1976,
+              "career",
+              "1976年：出任国务委员会主席兼部长会议主席（国家元首兼政府首脑）。"
+            ]
+          ]
+        },
+        {
+          "dayun": "甲辰",
+          "start_year": 2004,
+          "events": [
+            [
+              2006,
+              "wealth",
+              "2006年：《福布斯》杂志曾估算其“控制国家资产”价值，但明确指出其个人无私人财富，该估算被广泛批评"
+            ],
+            [
+              2006,
+              "career",
+              "2006年7月31日：因健康原因首次移交权力予弟弟 Raúl Castro。(知识库 [8])"
+            ],
+            [
+              2004,
+              "health",
+              "2004年10月：摔跤导致膝盖与手臂骨折，需拄拐数月。"
+            ]
+          ]
+        },
+        {
+          "dayun": "乙巳",
+          "start_year": 2014,
+          "events": [
+            [
+              2016,
+              "wealth",
+              "2016年去世时：无遗产争议，官方未公布任何个人财产，符合其“无产革命者”自我定位。"
+            ],
+            [
+              2016,
+              "family",
+              "2016年11月25日：去世，由弟弟 Raúl Castro 宣布死讯，葬礼由家族及国家共同主持，骨"
+            ],
+            [
+              2016,
+              "health",
+              "2007–2016年：逐步恢复部分公共活动，但身形明显消瘦，极少出席大型集会，多以书面文章（“总司令"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 1976,
+        "category": "career",
+        "description": "1976年：出任国务委员会主席兼部长会议主席（国家元首兼政府首脑）。",
+        "score": 1.65,
+        "reasons": [
+          "大运天干正官(忌)(+1.0)",
+          "流年食神",
+          "流年冲日支(辰冲戌)",
+          "流年冲日支",
+          "晋升+官印大运"
+        ],
+        "dayun": "辛丑",
+        "liunian": "丙辰"
+      },
+      "worst_event": {
+        "year": 1926,
+        "category": "family",
+        "description": "1926年8月13日：出生于古巴东方省比兰，父亲 Ángel Castro y Argiz（西班牙移民，甘蔗种植园主），母亲 Lina Ruz González（原为家中女佣，后成为合法妻子）。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙寅"
+      }
+    },
+    {
+      "name": "Silvio Berlusconi",
+      "bazi": "丙子 丁酉 甲寅 庚午",
+      "day_master": "甲(木阳)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 3,
+          "水": 2,
+          "火": 5,
+          "土": 2
+        }
+      },
+      "dayun_list": [
+        "戊戌(2-11)",
+        "己亥(12-21)",
+        "庚子(22-31)",
+        "辛丑(32-41)",
+        "壬寅(42-51)",
+        "癸卯(52-61)",
+        "甲辰(62-71)",
+        "乙巳(72-81)",
+        "丙午(82-91)",
+        "丁未(92-101)"
+      ],
+      "avg_score": 0.7,
+      "positive_rate": "24%",
+      "category_stats": {
+        "relationship": {
+          "count": 7,
+          "avg": 0.72,
+          "positive": 1
+        },
+        "wealth": {
+          "count": 8,
+          "avg": 0.47,
+          "positive": 0
+        },
+        "career": {
+          "count": 13,
+          "avg": 1.08,
+          "positive": 7
+        },
+        "health": {
+          "count": 9,
+          "avg": 0.34,
+          "positive": 1
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "庚子",
+          "start_year": 1958,
+          "events": [
+            [
+              1960,
+              "wealth",
+              "1960年代：创立 Edilnord 房地产公司，开发米兰郊区“米兰二号”住宅项目，奠定财富基础。"
+            ],
+            [
+              1960,
+              "career",
+              "1960年代：创办 Edilnord，进入房地产行业。"
+            ]
+          ]
+        },
+        {
+          "dayun": "辛丑",
+          "start_year": 1968,
+          "events": [
+            [
+              1970,
+              "career",
+              "1970年代：进军广播电视业，创办 Telemilano。"
+            ]
+          ]
+        },
+        {
+          "dayun": "壬寅",
+          "start_year": 1978,
+          "events": [
+            [
+              1980,
+              "relationship",
+              "1980年：与 Carla Dall'Oglio 离婚。"
+            ],
+            [
+              1980,
+              "wealth",
+              "1980年代：建立 Mediaset 集团（1986年），整合 Canale 5、Italia 1、"
+            ],
+            [
+              1980,
+              "career",
+              "1980年：正式成立 Canale 5，打破意大利国家电视台垄断。"
+            ]
+          ]
+        },
+        {
+          "dayun": "癸卯",
+          "start_year": 1988,
+          "events": [
+            [
+              1990,
+              "relationship",
+              "1990年12月：与前模特 Veronica Lario 结婚，育有三名子女：Barbara（198"
+            ],
+            [
+              1986,
+              "wealth",
+              "1986年：收购 AC 米兰足球俱乐部，至2017年出售前，该俱乐部为其个人品牌与政治影响力的重要载"
+            ],
+            [
+              1986,
+              "career",
+              "1986年：组建 Fininvest 集团，整合媒体与金融资产。"
+            ]
+          ]
+        },
+        {
+          "dayun": "乙巳",
+          "start_year": 2008,
+          "events": [
+            [
+              2010,
+              "relationship",
+              "2010年：正式提出离婚诉讼。"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 2016,
+        "category": "health",
+        "description": "2016年：因严重呼吸道感染住院，一度进入重症监护室。",
+        "score": 1.9,
+        "reasons": [
+          "流年冲日支(申冲寅)",
+          "流年冲日支",
+          "流年金克日主木",
+          "流年冲day柱用神地"
+        ],
+        "dayun": "乙巳",
+        "liunian": "丙申"
+      },
+      "worst_event": {
+        "year": 1990,
+        "category": "wealth",
+        "description": "1990年代：通过 Fininvest 控股公司控制 Mediaset、出版、保险、金融等多元产业，成为意大利首富。",
+        "score": 0.0,
+        "reasons": [],
+        "dayun": "癸卯",
+        "liunian": "庚午"
+      }
+    },
+    {
+      "name": "Oprah Winfrey",
+      "bazi": "癸巳 乙丑 乙酉 戊寅",
+      "day_master": "乙(木阴)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "金",
+          "火"
+        ],
+        "ji_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "wx_stats": {
+          "金": 4,
+          "木": 4,
+          "水": 2,
+          "火": 3,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "丙寅(2-11)",
+        "丁卯(12-21)",
+        "戊辰(22-31)",
+        "己巳(32-41)",
+        "庚午(42-51)",
+        "辛未(52-61)",
+        "壬申(62-71)",
+        "癸酉(72-81)",
+        "甲戌(82-91)",
+        "乙亥(92-101)"
+      ],
+      "avg_score": 0.69,
+      "positive_rate": "33%",
+      "category_stats": {
+        "relationship": {
+          "count": 4,
+          "avg": 0.67,
+          "positive": 0
+        },
+        "wealth": {
+          "count": 7,
+          "avg": 0.59,
+          "positive": 2
+        },
+        "family": {
+          "count": 7,
+          "avg": 0.71,
+          "positive": 2
+        },
+        "career": {
+          "count": 14,
+          "avg": 0.91,
+          "positive": 7
+        },
+        "health": {
+          "count": 7,
+          "avg": 0.31,
+          "positive": 2
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "戊辰",
+          "start_year": 1976,
+          "events": [
+            [
+              1976,
+              "career",
+              "1976年：移居巴尔的摩，主持 WJZ-TV 早间节目《People Are Talking》，开启"
+            ]
+          ]
+        },
+        {
+          "dayun": "己巳",
+          "start_year": 1986,
+          "events": [
+            [
+              1985,
+              "relationship",
+              "1985年：与电影《紫色》男主角丹尼·格洛弗（Danny Glover）传出短暂恋情，未公开确认长期"
+            ],
+            [
+              1986,
+              "wealth",
+              "1986年：成立 Harpo Productions（“Oprah”倒拼），成为美国第一位拥有并制作"
+            ],
+            [
+              1987,
+              "family",
+              "1987年：母亲 Vernita Lee 首次公开露面于《奥普拉秀》，母女关系曾疏远后逐步修复。"
+            ]
+          ]
+        },
+        {
+          "dayun": "庚午",
+          "start_year": 1996,
+          "events": [
+            [
+              1995,
+              "wealth",
+              "1995年：据《福布斯》估算，净资产首次突破1亿美元。"
+            ],
+            [
+              1998,
+              "career",
+              "1998年：创办“奥普拉读书俱乐部”（Oprah’s Book Club），极大影响美国出版业，被选"
+            ]
+          ]
+        },
+        {
+          "dayun": "辛未",
+          "start_year": 2006,
+          "events": [
+            [
+              2007,
+              "wealth",
+              "2007年：与 Discovery Communications 合作创办 OWN（Oprah Wi"
+            ],
+            [
+              2008,
+              "career",
+              "2008年11月：支持奥巴马竞选总统，在关键州北卡罗来纳州助选，被广泛认为影响选情。"
+            ],
+            [
+              2005,
+              "health",
+              "2005年：开始与私人教练 Bob Greene 合作健身计划，强调“健康生活方式”而非节食。"
+            ]
+          ]
+        },
+        {
+          "dayun": "壬申",
+          "start_year": 2016,
+          "events": [
+            [
+              2018,
+              "family",
+              "2018年11月：妹妹 Patricia 因癌症去世，Oprah 发表悼念声明，称“失去了一部分自己"
+            ],
+            [
+              2018,
+              "career",
+              "2018年1月：在金球奖获颁“塞西尔·B·德米尔奖”（终身成就奖），发表激励性演讲引发“2020总统"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 2022,
+        "category": "family",
+        "description": "2022年感恩节：养母 Vernita Lee 去世，享年83岁，Oprah 在社交媒体发文悼念，称其“虽不完美，但始终是母亲”。",
+        "score": 2.05,
+        "reasons": [
+          "大运天干正印(忌)(+3.0)",
+          "流年正印",
+          "流年冲大运地(寅冲申)",
+          "流年逢印星(母亲/长辈)"
+        ],
+        "dayun": "壬申",
+        "liunian": "壬寅"
+      },
+      "worst_event": {
+        "year": 2020,
+        "category": "wealth",
+        "description": "2020年：净资产约26亿美元（受市场波动影响略有回落），仍为全球最具影响力的媒体富豪之一（知识库 [2]）。",
+        "score": 0.0,
+        "reasons": [],
+        "dayun": "壬申",
+        "liunian": "庚子"
+      }
+    },
+    {
+      "name": "Pope John Paul II",
+      "bazi": "庚申 辛巳 丙子 丁酉",
+      "day_master": "丙(火阳)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "ji_shen_wuxing": [
+          "水"
+        ],
+        "wx_stats": {
+          "金": 7,
+          "木": 0,
+          "水": 3,
+          "火": 4,
+          "土": 2
+        }
+      },
+      "dayun_list": [
+        "壬午(6-15)",
+        "癸未(16-25)",
+        "甲申(26-35)",
+        "乙酉(36-45)",
+        "丙戌(46-55)",
+        "丁亥(56-65)",
+        "戊子(66-75)",
+        "己丑(76-85)",
+        "庚寅(86-95)",
+        "辛卯(96-105)"
+      ],
+      "avg_score": 0.6,
+      "positive_rate": "26%",
+      "category_stats": {
+        "relationship": {
+          "count": 3,
+          "avg": 0.7,
+          "positive": 1
+        },
+        "wealth": {
+          "count": 3,
+          "avg": 0.97,
+          "positive": 1
+        },
+        "career": {
+          "count": 10,
+          "avg": 0.92,
+          "positive": 4
+        },
+        "health": {
+          "count": 11,
+          "avg": 0.19,
+          "positive": 1
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "乙酉",
+          "start_year": 1956,
+          "events": [
+            [
+              1958,
+              "career",
+              "1958年7月4日 – 被任命为克拉科夫辅理主教。"
+            ]
+          ]
+        },
+        {
+          "dayun": "丙戌",
+          "start_year": 1966,
+          "events": [
+            [
+              1964,
+              "career",
+              "1964年1月13日 – 升任克拉科夫总主教。"
+            ]
+          ]
+        },
+        {
+          "dayun": "丁亥",
+          "start_year": 1976,
+          "events": [
+            [
+              1978,
+              "relationship",
+              "1978年10月16日 – 当选教宗后，在公开讲话中多次强调“对教会的爱是唯一的爱情”，将全部情感奉"
+            ],
+            [
+              1978,
+              "wealth",
+              "1946–1978年 – 作为神父、主教、枢机主教期间，生活简朴，收入仅限教会供给的基本生活津贴，无"
+            ],
+            [
+              1978,
+              "career",
+              "1978年10月16日 – 当选第264任教宗，取名“若望保禄二世”，为首位斯拉夫裔及非意大利裔教宗"
+            ]
+          ]
+        },
+        {
+          "dayun": "己丑",
+          "start_year": 1996,
+          "events": [
+            [
+              1996,
+              "health",
+              "1996年 – 再次跌倒导致肩部脱臼。"
+            ]
+          ]
+        },
+        {
+          "dayun": "庚寅",
+          "start_year": 2006,
+          "events": [
+            [
+              2005,
+              "wealth",
+              "1978–2005年 – 担任教宗期间，名义上为“梵蒂冈城国元首”，但个人不拥有任何财产。其衣食住行"
+            ],
+            [
+              2005,
+              "wealth",
+              "2005年4月2日 – 去世时，个人遗物仅包括十字架、念珠、少量书籍与衣物，全部捐赠教会或博物馆，无"
+            ],
+            [
+              2005,
+              "career",
+              "2005年4月2日 – 于梵蒂冈宗座宫去世，结束26年教宗任期。"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 1964,
+        "category": "career",
+        "description": "1964年1月13日 – 升任克拉科夫总主教。",
+        "score": 2.01,
+        "reasons": [
+          "大运天干正印(用)(+2.2)",
+          "流年偏印",
+          "晋升+官印大运",
+          "晋升年+官印流年"
+        ],
+        "dayun": "乙酉",
+        "liunian": "甲辰"
+      },
+      "worst_event": {
+        "year": 1944,
+        "category": "health",
+        "description": "1944年 – 为躲避纳粹征召，在采石场工作期间曾受轻伤。",
+        "score": 0.0,
+        "reasons": [],
+        "dayun": "癸未",
+        "liunian": "甲申"
+      }
+    },
+    {
+      "name": "毛泽东",
+      "bazi": "癸巳 甲子 丁酉 甲辰",
+      "day_master": "丁(火阴)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "水",
+          "土"
+        ],
+        "ji_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 3,
+          "水": 4,
+          "火": 3,
+          "土": 3
+        }
+      },
+      "dayun_list": [
+        "癸亥(6-15)",
+        "壬戌(16-25)",
+        "辛酉(26-35)",
+        "庚申(36-45)",
+        "己未(46-55)",
+        "戊午(56-65)",
+        "丁巳(66-75)",
+        "丙辰(76-85)",
+        "乙卯(86-95)",
+        "甲寅(96-105)"
+      ],
+      "avg_score": 0.6,
+      "positive_rate": "10%",
+      "category_stats": {
+        "career": {
+          "count": 7,
+          "avg": 0.59,
+          "positive": 1
+        },
+        "family": {
+          "count": 1,
+          "avg": 0.6,
+          "positive": 0
+        },
+        "health": {
+          "count": 2,
+          "avg": 0.65,
+          "positive": 0
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "辛酉",
+          "start_year": 1919,
+          "events": [
+            [
+              1918,
+              "career",
+              "毕业于湖南省立第一师范"
+            ],
+            [
+              1921,
+              "career",
+              "参加中共一大"
+            ]
+          ]
+        },
+        {
+          "dayun": "庚申",
+          "start_year": 1929,
+          "events": [
+            [
+              1927,
+              "career",
+              "领导秋收起义"
+            ]
+          ]
+        },
+        {
+          "dayun": "戊午",
+          "start_year": 1949,
+          "events": [
+            [
+              1950,
+              "family",
+              "长子毛岸英在朝鲜战争牺牲"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 1918,
+        "category": "career",
+        "description": "毕业于湖南省立第一师范",
+        "score": 1.42,
+        "reasons": [
+          "大运天干正官(用)(+3.0)",
+          "大运地支伤官(用)",
+          "流年伤官"
+        ],
+        "dayun": "壬戌",
+        "liunian": "戊午"
+      },
+      "worst_event": {
+        "year": 1966,
+        "category": "career",
+        "description": "发动文化大革命",
+        "score": 0.0,
+        "reasons": [],
+        "dayun": "丁巳",
+        "liunian": "丙午"
+      }
+    },
+    {
+      "name": "Prince Harry, Duke of Sussex",
+      "bazi": "甲子 癸酉 壬子 戊申",
+      "day_master": "壬(水阳)",
+      "yongshen": {
+        "day_master_wuxing": "水",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "土",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金",
+          "水"
+        ],
+        "wx_stats": {
+          "金": 4,
+          "木": 1,
+          "水": 7,
+          "火": 0,
+          "土": 2
+        }
+      },
+      "dayun_list": [
+        "甲戌(7-16)",
+        "乙亥(17-26)",
+        "丙子(27-36)",
+        "丁丑(37-46)",
+        "戊寅(47-56)",
+        "己卯(57-66)",
+        "庚辰(67-76)",
+        "辛巳(77-86)",
+        "壬午(87-96)",
+        "癸未(97-106)"
+      ],
+      "avg_score": 0.59,
+      "positive_rate": "22%",
+      "category_stats": {
+        "relationship": {
+          "count": 10,
+          "avg": 0.85,
+          "positive": 4
+        },
+        "wealth": {
+          "count": 8,
+          "avg": 0.81,
+          "positive": 3
+        },
+        "career": {
+          "count": 10,
+          "avg": 0.39,
+          "positive": 1
+        },
+        "health": {
+          "count": 8,
+          "avg": 0.31,
+          "positive": 0
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "乙亥",
+          "start_year": 2001,
+          "events": [
+            [
+              2002,
+              "health",
+              "2002年：18岁时承认曾吸食大麻，王室安排其接受辅导与反思（BBC报道）。"
+            ]
+          ]
+        },
+        {
+          "dayun": "丙子",
+          "start_year": 2011,
+          "events": [
+            [
+              2011,
+              "relationship",
+              "2011年–2014年：与演员克蕾西达·博纳斯（Cressida Bonas）交往，因媒体压力于20"
+            ],
+            [
+              2012,
+              "health",
+              "2012年：在阿富汗服役期间报告无重大身体损伤，但后来自述经历“战斗压力”。"
+            ]
+          ]
+        },
+        {
+          "dayun": "丁丑",
+          "start_year": 2021,
+          "events": [
+            [
+              2019,
+              "relationship",
+              "2019年5月6日：长子阿奇·哈里森·蒙巴顿-温莎（Archie Harrison Mountbat"
+            ],
+            [
+              2020,
+              "relationship",
+              "2020年1月8日：与梅根共同宣布退出英国王室高级成员职务（“Megxit”），寻求财务独立与媒体自"
+            ],
+            [
+              2021,
+              "relationship",
+              "2021年6月4日：女儿莉莉贝特·戴安娜��蒙巴顿-温莎（Lilibet Diana Mountba"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 2020,
+        "category": "wealth",
+        "description": "2020年3月31日：正式退出王室高级职务，不再领取“君主拨款”（Sovereign Grant），开始自谋收入。",
+        "score": 1.2,
+        "reasons": [
+          "大运天干偏财(平)(+2.0)",
+          "流年伏吟日支",
+          "大运财/食伤"
+        ],
+        "dayun": "丙子",
+        "liunian": "庚子"
+      },
+      "worst_event": {
+        "year": 1984,
+        "category": "wealth",
+        "description": "1984年出生时：作为王室成员，无个人收入，生活费用由王室拨款及父亲查尔斯（时任威尔士亲王）私人收入支持。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "甲子"
+      }
+    },
+    {
+      "name": "Shakira",
+      "bazi": "丙辰 辛丑 庚寅 壬午",
+      "day_master": "庚(金阳)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 3,
+          "水": 3,
+          "火": 4,
+          "土": 6
+        }
+      },
+      "dayun_list": [
+        "庚子(9-18)",
+        "己亥(19-28)",
+        "戊戌(29-38)",
+        "丁酉(39-48)",
+        "丙申(49-58)",
+        "乙未(59-68)",
+        "甲午(69-78)",
+        "癸巳(79-88)",
+        "壬辰(89-98)",
+        "辛卯(99-108)"
+      ],
+      "avg_score": 0.59,
+      "positive_rate": "21%",
+      "category_stats": {
+        "relationship": {
+          "count": 7,
+          "avg": 0.51,
+          "positive": 1
+        },
+        "wealth": {
+          "count": 7,
+          "avg": 0.39,
+          "positive": 0
+        },
+        "family": {
+          "count": 6,
+          "avg": 0.61,
+          "positive": 1
+        },
+        "career": {
+          "count": 12,
+          "avg": 0.88,
+          "positive": 5
+        },
+        "health": {
+          "count": 6,
+          "avg": 0.33,
+          "positive": 1
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "己亥",
+          "start_year": 1996,
+          "events": [
+            [
+              1996,
+              "career",
+              "1995–1996年：专辑《Pies Descalzos》大获成功，奠定哥伦比亚及拉美地区流行天后地"
+            ],
+            [
+              1998,
+              "career",
+              "1998年：专辑《¿Dónde Están los Ladrones?》获拉丁格莱美多项提名，巩固国"
+            ]
+          ]
+        },
+        {
+          "dayun": "戊戌",
+          "start_year": 2006,
+          "events": [
+            [
+              2005,
+              "career",
+              "2005年：获拉丁格莱美“年度人物”，并发行专辑《Fijación Oral Vol. 1》与《Or"
+            ],
+            [
+              2006,
+              "career",
+              "2006年：开启“Oral Fixation Tour”，全球巡演票房破亿美元。"
+            ]
+          ]
+        },
+        {
+          "dayun": "丁酉",
+          "start_year": 2016,
+          "events": [
+            [
+              2014,
+              "wealth",
+              "2014年：入选《福布斯》全球收入最高女艺人第7名，年收入约3800万美元。"
+            ],
+            [
+              2014,
+              "career",
+              "2014年：担任《The Voice》美国版导师，进一步打开主流英语市场。"
+            ],
+            [
+              2017,
+              "career",
+              "2017年：发行专辑《El Dorado》，获2018年拉丁格莱美“最佳当代流行专辑”，单曲《Cha"
+            ]
+          ]
+        },
+        {
+          "dayun": "丙申",
+          "start_year": 2026,
+          "events": [
+            [
+              2024,
+              "family",
+              "2023–2024年：Shakira 多次在采访中提及父母是她精神支柱，尤其在税务诉讼及感情低谷期间"
+            ],
+            [
+              2024,
+              "career",
+              "2023–2024年：开启全球巡演“The Woman Full of Grace Tour”，覆盖"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 2017,
+        "category": "career",
+        "description": "2017年：发行专辑《El Dorado》，获2018年拉丁格莱美“最佳当代流行专辑”，单曲《Chantaje》全球爆红。",
+        "score": 1.4,
+        "reasons": [
+          "大运天干正官(用)(+2.0)",
+          "流年正官",
+          "岁运并临(大运=流年)"
+        ],
+        "dayun": "丁酉",
+        "liunian": "丁酉"
+      },
+      "worst_event": {
+        "year": 2013,
+        "category": "relationship",
+        "description": "2013年1月22日：长子 Milan Piqué Mebarak 出生。",
+        "score": 0.0,
+        "reasons": [],
+        "dayun": "戊戌",
+        "liunian": "癸巳"
+      }
+    },
+    {
+      "name": "袁世凯",
+      "bazi": "己未 癸酉 丁巳 乙巳",
+      "day_master": "丁(火阴)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "水",
+          "土"
+        ],
+        "ji_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "wx_stats": {
+          "金": 4,
+          "木": 2,
+          "水": 1,
+          "火": 6,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "壬申(2-11)",
+        "辛未(12-21)",
+        "庚午(22-31)",
+        "己巳(32-41)",
+        "戊辰(42-51)",
+        "丁卯(52-61)",
+        "丙寅(62-71)",
+        "乙丑(72-81)",
+        "甲子(82-91)",
+        "癸亥(92-101)"
+      ],
+      "avg_score": 0.51,
+      "positive_rate": "25%",
+      "category_stats": {
+        "career": {
+          "count": 3,
+          "avg": 0.68,
+          "positive": 1
+        },
+        "health": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "丁卯",
+          "start_year": 1911,
+          "events": [
+            [
+              1912,
+              "career",
+              "就任中华民国临时大总统"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 1912,
+        "category": "career",
+        "description": "就任中华民国临时大总统",
+        "score": 1.0,
+        "reasons": [
+          "大运地支偏印(忌)",
+          "流年正官",
+          "晋升年+官印流年"
+        ],
+        "dayun": "丁卯",
+        "liunian": "壬子"
+      },
+      "worst_event": {
+        "year": 1916,
+        "category": "health",
+        "description": "6月6日病逝",
+        "score": 0.0,
+        "reasons": [],
+        "dayun": "丁卯",
+        "liunian": "丙辰"
+      }
+    },
+    {
+      "name": "Rigoberta Menchú",
+      "bazi": "戊戌 乙丑 辛卯 甲午",
+      "day_master": "辛(金阴)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 4,
+          "水": 1,
+          "火": 3,
+          "土": 6
+        }
+      },
+      "dayun_list": [
+        "甲子(1-10)",
+        "癸亥(11-20)",
+        "壬戌(21-30)",
+        "辛酉(31-40)",
+        "庚申(41-50)",
+        "己未(51-60)",
+        "戊午(61-70)",
+        "丁巳(71-80)",
+        "丙辰(81-90)",
+        "乙卯(91-100)"
+      ],
+      "avg_score": 0.49,
+      "positive_rate": "10%",
+      "category_stats": {
+        "relationship": {
+          "count": 20,
+          "avg": 0.4,
+          "positive": 1
+        },
+        "wealth": {
+          "count": 18,
+          "avg": 0.51,
+          "positive": 3
+        },
+        "career": {
+          "count": 11,
+          "avg": 0.68,
+          "positive": 1
+        },
+        "health": {
+          "count": 2,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "癸亥",
+          "start_year": 1970,
+          "events": [
+            [
+              1970,
+              "wealth",
+              "1970年代初（约13岁起）：开始参与农民工会与原住民土地权利抗争，协助翻译、组织集会。"
+            ],
+            [
+              1970,
+              "career",
+              "1970年代初（约13岁起）：开始参与农民工会与原住民土地权利抗争，协助翻译、组织集会。"
+            ]
+          ]
+        },
+        {
+          "dayun": "壬戌",
+          "start_year": 1980,
+          "events": [
+            [
+              1981,
+              "relationship",
+              "1981年：流亡墨西哥，开始国际人权倡导工作。"
+            ],
+            [
+              1979,
+              "wealth",
+              "1979年—1980年：其弟 Petrocinio Menchú 在政府军手中遭受酷刑后被杀害（19"
+            ],
+            [
+              1981,
+              "wealth",
+              "1981年：流亡墨西哥，开始国际人权倡导工作。"
+            ]
+          ]
+        },
+        {
+          "dayun": "庚申",
+          "start_year": 2000,
+          "events": [
+            [
+              1998,
+              "relationship",
+              "1998年：创立“Rigoberta Menchú Tum 基金会”，总部设于危地马拉城。"
+            ],
+            [
+              1998,
+              "wealth",
+              "1998年：创立“Rigoberta Menchú Tum 基金会”，总部设于危地马拉城。"
+            ],
+            [
+              1998,
+              "career",
+              "1998年：创立“Rigoberta Menchú Tum 基金会”，总部设于危地马拉城。"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 1983,
+        "category": "wealth",
+        "description": "1983年：出版自传《我，里戈韦塔·门楚》（*I, Rigoberta Menchú*），由 Elisabeth Burgos-Debray 编辑整理，该书成为全球原住民权利运动的重要文献（知识库 [",
+        "score": 1.31,
+        "reasons": [
+          "大运天干伤官(用)(+2.2)",
+          "流年食神",
+          "大运财/食伤"
+        ],
+        "dayun": "壬戌",
+        "liunian": "癸亥"
+      },
+      "worst_event": {
+        "year": 1959,
+        "category": "relationship",
+        "description": "1959年1月9日：出生于危地马拉基切省（El Quiché）的圣米格尔乌斯潘（San Miguel Uspantán）一个贫穷的玛雅基切族农民家庭（知识库 [2]）。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "己亥"
+      }
+    },
+    {
+      "name": "周恩来",
+      "bazi": "戊戌 甲寅 丁卯 癸卯",
+      "day_master": "丁(火阴)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "水",
+          "土"
+        ],
+        "ji_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "wx_stats": {
+          "金": 1,
+          "木": 7,
+          "水": 1,
+          "火": 3,
+          "土": 4
+        }
+      },
+      "dayun_list": [
+        "乙卯(0-9)",
+        "丙辰(10-19)",
+        "丁巳(20-29)",
+        "戊午(30-39)",
+        "己未(40-49)",
+        "庚申(50-59)",
+        "辛酉(60-69)",
+        "壬戌(70-79)",
+        "癸亥(80-89)",
+        "甲子(90-99)"
+      ],
+      "avg_score": 0.41,
+      "positive_rate": "0%",
+      "category_stats": {
+        "education": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        },
+        "career": {
+          "count": 4,
+          "avg": 0.34,
+          "positive": 0
+        },
+        "health": {
+          "count": 2,
+          "avg": 0.75,
+          "positive": 0
+        }
+      },
+      "turning_points": [
+        {
+          "dayun": "癸亥",
+          "start_year": 1978,
+          "events": [
+            [
+              1976,
+              "health",
+              "1月8日逝世"
+            ]
+          ]
+        }
+      ],
+      "top_event": {
+        "year": 1972,
+        "category": "health",
+        "description": "确诊膀胱癌",
+        "score": 0.8,
+        "reasons": [
+          "流年水克日主火"
+        ],
+        "dayun": "壬戌",
+        "liunian": "壬子"
+      },
+      "worst_event": {
+        "year": 1920,
+        "category": "education",
+        "description": "赴法勤工俭学",
+        "score": 0.0,
+        "reasons": [],
+        "dayun": "丁巳",
+        "liunian": "庚申"
+      }
+    },
+    {
+      "name": "孙中山",
+      "bazi": "丙寅 己亥 辛卯 辛卯",
+      "day_master": "辛(金阴)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火"
+        ],
+        "wx_stats": {
+          "金": 2,
+          "木": 7,
+          "水": 2,
+          "火": 2,
+          "土": 2
+        }
+      },
+      "dayun_list": [
+        "庚子(8-17)",
+        "辛丑(18-27)",
+        "壬寅(28-37)",
+        "癸卯(38-47)",
+        "甲辰(48-57)",
+        "乙巳(58-67)",
+        "丙午(68-77)",
+        "丁未(78-87)",
+        "戊申(88-97)",
+        "己酉(98-107)"
+      ],
+      "avg_score": 0.27,
+      "positive_rate": "0%",
+      "category_stats": {
+        "career": {
+          "count": 4,
+          "avg": 0.34,
+          "positive": 0
+        },
+        "health": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1912,
+        "category": "career",
+        "description": "就任临时大总统",
+        "score": 0.45,
+        "reasons": [
+          "大运天干食神(平)(+1.0)",
+          "流年伤官"
+        ],
+        "dayun": "癸卯",
+        "liunian": "壬子"
+      },
+      "worst_event": {
+        "year": 1925,
+        "category": "health",
+        "description": "3月12日逝世于北京",
+        "score": 0.0,
+        "reasons": [],
+        "dayun": "乙巳",
+        "liunian": "乙丑"
+      }
+    },
+    {
+      "name": "Barack Obama",
+      "bazi": "辛丑 乙未 己巳 甲戌",
+      "day_master": "己(土阴)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "木",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "wx_stats": {
+          "金": 4,
+          "木": 3,
+          "水": 1,
+          "火": 4,
+          "土": 8
+        }
+      },
+      "dayun_list": [
+        "甲午(9-18)",
+        "癸巳(19-28)",
+        "壬辰(29-38)",
+        "辛卯(39-48)",
+        "庚寅(49-58)",
+        "己丑(59-68)",
+        "戊子(69-78)",
+        "丁亥(79-88)",
+        "丙戌(89-98)",
+        "乙酉(99-108)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1961,
+        "category": "family",
+        "description": "1961年8月4日：出生于Honolulu, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛丑"
+      },
+      "worst_event": {
+        "year": 1961,
+        "category": "family",
+        "description": "1961年8月4日：出生于Honolulu, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛丑"
+      }
+    },
+    {
+      "name": "George W. Bush",
+      "bazi": "丙戌 甲午 辛巳 壬辰",
+      "day_master": "辛(金阴)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 2,
+          "水": 2,
+          "火": 6,
+          "土": 6
+        }
+      },
+      "dayun_list": [
+        "乙未(0-9)",
+        "丙申(10-19)",
+        "丁酉(20-29)",
+        "戊戌(30-39)",
+        "己亥(40-49)",
+        "庚子(50-59)",
+        "辛丑(60-69)",
+        "壬寅(70-79)",
+        "癸卯(80-89)",
+        "甲辰(90-99)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1946,
+        "category": "family",
+        "description": "1946年7月6日：出生于New Haven, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙戌"
+      },
+      "worst_event": {
+        "year": 1946,
+        "category": "family",
+        "description": "1946年7月6日：出生于New Haven, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙戌"
+      }
+    },
+    {
+      "name": "Ronald Reagan",
+      "bazi": "辛亥 庚寅 丁未 辛丑",
+      "day_master": "丁(火阴)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "水",
+          "土"
+        ],
+        "ji_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "wx_stats": {
+          "金": 4,
+          "木": 4,
+          "水": 3,
+          "火": 3,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "己丑(0-9)",
+        "戊子(10-19)",
+        "丁亥(20-29)",
+        "丙戌(30-39)",
+        "乙酉(40-49)",
+        "甲申(50-59)",
+        "癸未(60-69)",
+        "壬午(70-79)",
+        "辛巳(80-89)",
+        "庚辰(90-99)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1911,
+        "category": "family",
+        "description": "1911年2月6日：出生于Tampico, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛亥"
+      },
+      "worst_event": {
+        "year": 1911,
+        "category": "family",
+        "description": "1911年2月6日：出生于Tampico, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛亥"
+      }
+    },
+    {
+      "name": "John F. Kennedy",
+      "bazi": "丁巳 乙巳 辛未 丙申",
+      "day_master": "辛(金阴)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 5,
+          "木": 2,
+          "水": 1,
+          "火": 7,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "甲辰(7-16)",
+        "癸卯(17-26)",
+        "壬寅(27-36)",
+        "辛丑(37-46)",
+        "庚子(47-56)",
+        "己亥(57-66)",
+        "戊戌(67-76)",
+        "丁酉(77-86)",
+        "丙申(87-96)",
+        "乙未(97-106)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1917,
+        "category": "family",
+        "description": "1917年5月29日：出生于Brookline, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丁巳"
+      },
+      "worst_event": {
+        "year": 1917,
+        "category": "family",
+        "description": "1917年5月29日：出生于Brookline, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丁巳"
+      }
+    },
+    {
+      "name": "Richard Nixon",
+      "bazi": "壬子 癸丑 庚寅 丁亥",
+      "day_master": "庚(金阳)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火"
+        ],
+        "wx_stats": {
+          "金": 2,
+          "木": 3,
+          "水": 7,
+          "火": 2,
+          "土": 3
+        }
+      },
+      "dayun_list": [
+        "甲寅(8-17)",
+        "乙卯(18-27)",
+        "丙辰(28-37)",
+        "丁巳(38-47)",
+        "戊午(48-57)",
+        "己未(58-67)",
+        "庚申(68-77)",
+        "辛酉(78-87)",
+        "壬戌(88-97)",
+        "癸亥(98-107)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1913,
+        "category": "family",
+        "description": "1913年1月9日：出生于Yorba Linda, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "癸丑"
+      },
+      "worst_event": {
+        "year": 1913,
+        "category": "family",
+        "description": "1913年1月9日：出生于Yorba Linda, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "癸丑"
+      }
+    },
+    {
+      "name": "Franklin D. Roosevelt",
+      "bazi": "辛巳 辛丑 己巳 甲戌",
+      "day_master": "己(土阴)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "木",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "wx_stats": {
+          "金": 6,
+          "木": 1,
+          "水": 1,
+          "火": 5,
+          "土": 7
+        }
+      },
+      "dayun_list": [
+        "庚子(8-17)",
+        "己亥(18-27)",
+        "戊戌(28-37)",
+        "丁酉(38-47)",
+        "丙申(48-57)",
+        "乙未(58-67)",
+        "甲午(68-77)",
+        "癸巳(78-87)",
+        "壬辰(88-97)",
+        "辛卯(98-107)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1882,
+        "category": "family",
+        "description": "1882年1月30日：出生于Hyde Park, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬午"
+      },
+      "worst_event": {
+        "year": 1882,
+        "category": "family",
+        "description": "1882年1月30日：出生于Hyde Park, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬午"
+      }
+    },
+    {
+      "name": "Jimmy Carter",
+      "bazi": "甲子 癸酉 癸丑 丙辰",
+      "day_master": "癸(水阴)",
+      "yongshen": {
+        "day_master_wuxing": "水",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "土",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金",
+          "水"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 2,
+          "水": 6,
+          "火": 1,
+          "土": 4
+        }
+      },
+      "dayun_list": [
+        "甲戌(2-11)",
+        "乙亥(12-21)",
+        "丙子(22-31)",
+        "丁丑(32-41)",
+        "戊寅(42-51)",
+        "己卯(52-61)",
+        "庚辰(62-71)",
+        "辛巳(72-81)",
+        "壬午(82-91)",
+        "癸未(92-101)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1924,
+        "category": "family",
+        "description": "1924年10月1日：出生于Plains, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "甲子"
+      },
+      "worst_event": {
+        "year": 1924,
+        "category": "family",
+        "description": "1924年10月1日：出生于Plains, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "甲子"
+      }
+    },
+    {
+      "name": "Joe Biden",
+      "bazi": "壬午 辛亥 丁丑 甲辰",
+      "day_master": "丁(火阴)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "水",
+          "土"
+        ],
+        "ji_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "wx_stats": {
+          "金": 2,
+          "木": 3,
+          "水": 5,
+          "火": 3,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "壬子(6-15)",
+        "癸丑(16-25)",
+        "甲寅(26-35)",
+        "乙卯(36-45)",
+        "丙辰(46-55)",
+        "丁巳(56-65)",
+        "戊午(66-75)",
+        "己未(76-85)",
+        "庚申(86-95)",
+        "辛酉(96-105)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1942,
+        "category": "family",
+        "description": "1942年11月20日：出生于Scranton, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬午"
+      },
+      "worst_event": {
+        "year": 1942,
+        "category": "family",
+        "description": "1942年11月20日：出生于Scranton, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬午"
+      }
+    },
+    {
+      "name": "Queen Elizabeth II",
+      "bazi": "丙寅 壬辰 庚辰 丁丑",
+      "day_master": "庚(金阳)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 2,
+          "木": 4,
+          "水": 4,
+          "火": 3,
+          "土": 7
+        }
+      },
+      "dayun_list": [
+        "辛卯(4-13)",
+        "庚寅(14-23)",
+        "己丑(24-33)",
+        "戊子(34-43)",
+        "丁亥(44-53)",
+        "丙戌(54-63)",
+        "乙酉(64-73)",
+        "甲申(74-83)",
+        "癸未(84-93)",
+        "壬午(94-103)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1926,
+        "category": "family",
+        "description": "1926年4月21日：出生于London, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙寅"
+      },
+      "worst_event": {
+        "year": 1926,
+        "category": "family",
+        "description": "1926年4月21日：出生于London, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙寅"
+      }
+    },
+    {
+      "name": "Princess Diana",
+      "bazi": "辛丑 甲午 乙未 丙戌",
+      "day_master": "乙(木阴)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 3,
+          "水": 1,
+          "火": 5,
+          "土": 7
+        }
+      },
+      "dayun_list": [
+        "乙未(2-11)",
+        "丙申(12-21)",
+        "丁酉(22-31)",
+        "戊戌(32-41)",
+        "己亥(42-51)",
+        "庚子(52-61)",
+        "辛丑(62-71)",
+        "壬寅(72-81)",
+        "癸卯(82-91)",
+        "甲辰(92-101)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1961,
+        "category": "family",
+        "description": "1961年7月1日：出生于Sandringham, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛丑"
+      },
+      "worst_event": {
+        "year": 1961,
+        "category": "family",
+        "description": "1961年7月1日：出生于Sandringham, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛丑"
+      }
+    },
+    {
+      "name": "Prince William",
+      "bazi": "壬戌 丙午 乙亥 丁亥",
+      "day_master": "乙(木阴)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "金",
+          "火"
+        ],
+        "ji_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "wx_stats": {
+          "金": 1,
+          "木": 3,
+          "水": 5,
+          "火": 5,
+          "土": 3
+        }
+      },
+      "dayun_list": [
+        "丁未(5-14)",
+        "戊申(15-24)",
+        "己酉(25-34)",
+        "庚戌(35-44)",
+        "辛亥(45-54)",
+        "壬子(55-64)",
+        "癸丑(65-74)",
+        "甲寅(75-84)",
+        "乙卯(85-94)",
+        "丙辰(95-104)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1982,
+        "category": "family",
+        "description": "1982年6月21日：出生于London, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬戌"
+      },
+      "worst_event": {
+        "year": 1982,
+        "category": "family",
+        "description": "1982年6月21日：出生于London, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬戌"
+      }
+    },
+    {
+      "name": "Winston Churchill",
+      "bazi": "甲戌 乙亥 辛卯 己丑",
+      "day_master": "辛(金阴)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 5,
+          "水": 3,
+          "火": 1,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "丙子(2-11)",
+        "丁丑(12-21)",
+        "戊寅(22-31)",
+        "己卯(32-41)",
+        "庚辰(42-51)",
+        "辛巳(52-61)",
+        "壬午(62-71)",
+        "癸未(72-81)",
+        "甲申(82-91)",
+        "乙酉(92-101)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1874,
+        "category": "family",
+        "description": "1874年11月30日：出生于Blenheim, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "甲戌"
+      },
+      "worst_event": {
+        "year": 1874,
+        "category": "family",
+        "description": "1874年11月30日：出生于Blenheim, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "甲戌"
+      }
+    },
+    {
+      "name": "Margaret Thatcher",
+      "bazi": "乙丑 丙戌 庚午 辛巳",
+      "day_master": "庚(金阳)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 5,
+          "木": 1,
+          "水": 1,
+          "火": 6,
+          "土": 6
+        }
+      },
+      "dayun_list": [
+        "丁亥(8-17)",
+        "戊子(18-27)",
+        "己丑(28-37)",
+        "庚寅(38-47)",
+        "辛卯(48-57)",
+        "壬辰(58-67)",
+        "癸巳(68-77)",
+        "甲午(78-87)",
+        "乙未(88-97)",
+        "丙申(98-107)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1925,
+        "category": "family",
+        "description": "1925年10月13日：出生于Grantham, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "乙丑"
+      },
+      "worst_event": {
+        "year": 1925,
+        "category": "family",
+        "description": "1925年10月13日：出生于Grantham, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "乙丑"
+      }
+    },
+    {
+      "name": "Tony Blair",
+      "bazi": "癸巳 丙辰 丁巳 癸卯",
+      "day_master": "丁(火阴)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "水",
+          "土"
+        ],
+        "ji_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "wx_stats": {
+          "金": 2,
+          "木": 3,
+          "水": 3,
+          "火": 6,
+          "土": 4
+        }
+      },
+      "dayun_list": [
+        "乙卯(9-18)",
+        "甲寅(19-28)",
+        "癸丑(29-38)",
+        "壬子(39-48)",
+        "辛亥(49-58)",
+        "庚戌(59-68)",
+        "己酉(69-78)",
+        "戊申(79-88)",
+        "丁未(89-98)",
+        "丙午(99-108)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1953,
+        "category": "family",
+        "description": "1953年5月6日：出生于Edinburgh, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "癸巳"
+      },
+      "worst_event": {
+        "year": 1953,
+        "category": "family",
+        "description": "1953年5月6日：出生于Edinburgh, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "癸巳"
+      }
+    },
+    {
+      "name": "Boris Johnson",
+      "bazi": "甲辰 庚午 己亥 辛未",
+      "day_master": "己(土阴)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "木",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "wx_stats": {
+          "金": 2,
+          "木": 4,
+          "水": 3,
+          "火": 3,
+          "土": 6
+        }
+      },
+      "dayun_list": [
+        "辛未(6-15)",
+        "壬申(16-25)",
+        "癸酉(26-35)",
+        "甲戌(36-45)",
+        "乙亥(46-55)",
+        "丙子(56-65)",
+        "丁丑(66-75)",
+        "戊寅(76-85)",
+        "己卯(86-95)",
+        "庚辰(96-105)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1964,
+        "category": "family",
+        "description": "1964年6月19日：出生于New York City, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "甲辰"
+      },
+      "worst_event": {
+        "year": 1964,
+        "category": "family",
+        "description": "1964年6月19日：出生于New York City, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "甲辰"
+      }
+    },
+    {
+      "name": "Stephen Hawking",
+      "bazi": "辛巳 辛丑 辛酉 戊子",
+      "day_master": "辛(金阴)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 7,
+          "木": 0,
+          "水": 3,
+          "火": 2,
+          "土": 4
+        }
+      },
+      "dayun_list": [
+        "庚子(0-9)",
+        "己亥(10-19)",
+        "戊戌(20-29)",
+        "丁酉(30-39)",
+        "丙申(40-49)",
+        "乙未(50-59)",
+        "甲午(60-69)",
+        "癸巳(70-79)",
+        "壬辰(80-89)",
+        "辛卯(90-99)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1942,
+        "category": "family",
+        "description": "1942年1月8日：出生于Oxford, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬午"
+      },
+      "worst_event": {
+        "year": 1942,
+        "category": "family",
+        "description": "1942年1月8日：出生于Oxford, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬午"
+      }
+    },
+    {
+      "name": "Marie Curie",
+      "bazi": "丁卯 庚戌 辛卯 甲午",
+      "day_master": "辛(金阴)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 5,
+          "水": 0,
+          "火": 4,
+          "土": 3
+        }
+      },
+      "dayun_list": [
+        "辛亥(0-9)",
+        "壬子(10-19)",
+        "癸丑(20-29)",
+        "甲寅(30-39)",
+        "乙卯(40-49)",
+        "丙辰(50-59)",
+        "丁巳(60-69)",
+        "戊午(70-79)",
+        "己未(80-89)",
+        "庚申(90-99)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1867,
+        "category": "family",
+        "description": "1867年11月7日：出生于Warsaw, Poland。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丁卯"
+      },
+      "worst_event": {
+        "year": 1867,
+        "category": "family",
+        "description": "1867年11月7日：出生于Warsaw, Poland。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丁卯"
+      }
+    },
+    {
+      "name": "Alan Turing",
+      "bazi": "壬子 丙午 庚午 丁丑",
+      "day_master": "庚(金阳)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 2,
+          "木": 0,
+          "水": 4,
+          "火": 6,
+          "土": 4
+        }
+      },
+      "dayun_list": [
+        "丁未(5-14)",
+        "戊申(15-24)",
+        "己酉(25-34)",
+        "庚戌(35-44)",
+        "辛亥(45-54)",
+        "壬子(55-64)",
+        "癸丑(65-74)",
+        "甲寅(75-84)",
+        "乙卯(85-94)",
+        "丙辰(95-104)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1912,
+        "category": "family",
+        "description": "1912年6月23日：出生于London, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬子"
+      },
+      "worst_event": {
+        "year": 1912,
+        "category": "family",
+        "description": "1912年6月23日：出生于London, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬子"
+      }
+    },
+    {
+      "name": "Nikola Tesla",
+      "bazi": "丙辰 乙未 甲午 甲子",
+      "day_master": "甲(木阳)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "金",
+          "火"
+        ],
+        "ji_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "wx_stats": {
+          "金": 0,
+          "木": 5,
+          "水": 3,
+          "火": 4,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "丙申(9-18)",
+        "丁酉(19-28)",
+        "戊戌(29-38)",
+        "己亥(39-48)",
+        "庚子(49-58)",
+        "辛丑(59-68)",
+        "壬寅(69-78)",
+        "癸卯(79-88)",
+        "甲辰(89-98)",
+        "乙巳(99-108)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1856,
+        "category": "family",
+        "description": "1856年7月10日：出生于Smiljan, Croatia。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙辰"
+      },
+      "worst_event": {
+        "year": 1856,
+        "category": "family",
+        "description": "1856年7月10日：出生于Smiljan, Croatia。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙辰"
+      }
+    },
+    {
+      "name": "Charles Darwin",
+      "bazi": "己巳 丙寅 己未 丙寅",
+      "day_master": "己(土阴)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "木",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "wx_stats": {
+          "金": 1,
+          "木": 5,
+          "水": 0,
+          "火": 7,
+          "土": 7
+        }
+      },
+      "dayun_list": [
+        "乙丑(2-11)",
+        "甲子(12-21)",
+        "癸亥(22-31)",
+        "壬戌(32-41)",
+        "辛酉(42-51)",
+        "庚申(52-61)",
+        "己未(62-71)",
+        "戊午(72-81)",
+        "丁巳(82-91)",
+        "丙辰(92-101)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1809,
+        "category": "family",
+        "description": "1809年2月12日：出生于Shrewsbury, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "己巳"
+      },
+      "worst_event": {
+        "year": 1809,
+        "category": "family",
+        "description": "1809年2月12日：出生于Shrewsbury, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "己巳"
+      }
+    },
+    {
+      "name": "Richard Feynman",
+      "bazi": "戊午 丁巳 戊午 戊午",
+      "day_master": "戊(土阳)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "木",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "wx_stats": {
+          "金": 1,
+          "木": 0,
+          "水": 0,
+          "火": 9,
+          "土": 7
+        }
+      },
+      "dayun_list": [
+        "戊午(9-18)",
+        "己未(19-28)",
+        "庚申(29-38)",
+        "辛酉(39-48)",
+        "壬戌(49-58)",
+        "癸亥(59-68)",
+        "甲子(69-78)",
+        "乙丑(79-88)",
+        "丙寅(89-98)",
+        "丁卯(99-108)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1918,
+        "category": "family",
+        "description": "1918年5月11日：出生于New York City, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "戊午"
+      },
+      "worst_event": {
+        "year": 1918,
+        "category": "family",
+        "description": "1918年5月11日：出生于New York City, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "戊午"
+      }
+    },
+    {
+      "name": "Elvis Presley",
+      "bazi": "甲戌 丁丑 甲申 丙寅",
+      "day_master": "甲(木阳)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "金",
+          "火"
+        ],
+        "ji_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "wx_stats": {
+          "金": 4,
+          "木": 4,
+          "水": 2,
+          "火": 4,
+          "土": 6
+        }
+      },
+      "dayun_list": [
+        "戊寅(9-18)",
+        "己卯(19-28)",
+        "庚辰(29-38)",
+        "辛巳(39-48)",
+        "壬午(49-58)",
+        "癸未(59-68)",
+        "甲申(69-78)",
+        "乙酉(79-88)",
+        "丙戌(89-98)",
+        "丁亥(99-108)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1935,
+        "category": "family",
+        "description": "1935年1月8日：出生于Tupelo, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "乙亥"
+      },
+      "worst_event": {
+        "year": 1935,
+        "category": "family",
+        "description": "1935年1月8日：出生于Tupelo, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "乙亥"
+      }
+    },
+    {
+      "name": "John Lennon",
+      "bazi": "庚辰 丙戌 乙酉 乙酉",
+      "day_master": "乙(木阴)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金"
+        ],
+        "wx_stats": {
+          "金": 6,
+          "木": 3,
+          "水": 1,
+          "火": 2,
+          "土": 4
+        }
+      },
+      "dayun_list": [
+        "丁亥(9-18)",
+        "戊子(19-28)",
+        "己丑(29-38)",
+        "庚寅(39-48)",
+        "辛卯(49-58)",
+        "壬辰(59-68)",
+        "癸巳(69-78)",
+        "甲午(79-88)",
+        "乙未(89-98)",
+        "丙申(99-108)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1940,
+        "category": "family",
+        "description": "1940年10月9日：出生于Liverpool, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "庚辰"
+      },
+      "worst_event": {
+        "year": 1940,
+        "category": "family",
+        "description": "1940年10月9日：出生于Liverpool, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "庚辰"
+      }
+    },
+    {
+      "name": "Paul McCartney",
+      "bazi": "壬午 丙午 壬寅 丁未",
+      "day_master": "壬(水阳)",
+      "yongshen": {
+        "day_master_wuxing": "水",
+        "strength": "弱",
+        "yong_shen_wuxing": [
+          "金",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "木"
+        ],
+        "wx_stats": {
+          "金": 0,
+          "木": 3,
+          "水": 2,
+          "火": 8,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "丁未(6-15)",
+        "戊申(16-25)",
+        "己酉(26-35)",
+        "庚戌(36-45)",
+        "辛亥(46-55)",
+        "壬子(56-65)",
+        "癸丑(66-75)",
+        "甲寅(76-85)",
+        "乙卯(86-95)",
+        "丙辰(96-105)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1942,
+        "category": "family",
+        "description": "1942年6月18日：出生于Liverpool, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬午"
+      },
+      "worst_event": {
+        "year": 1942,
+        "category": "family",
+        "description": "1942年6月18日：出生于Liverpool, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬午"
+      }
+    },
+    {
+      "name": "Bob Dylan",
+      "bazi": "辛巳 癸巳 壬申 辛亥",
+      "day_master": "壬(水阳)",
+      "yongshen": {
+        "day_master_wuxing": "水",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "土",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金",
+          "水"
+        ],
+        "wx_stats": {
+          "金": 6,
+          "木": 1,
+          "水": 5,
+          "火": 4,
+          "土": 3
+        }
+      },
+      "dayun_list": [
+        "壬辰(5-14)",
+        "辛卯(15-24)",
+        "庚寅(25-34)",
+        "己丑(35-44)",
+        "戊子(45-54)",
+        "丁亥(55-64)",
+        "丙戌(65-74)",
+        "乙酉(75-84)",
+        "甲申(85-94)",
+        "癸未(95-104)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1941,
+        "category": "family",
+        "description": "1941年5月24日：出生于Duluth, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛巳"
+      },
+      "worst_event": {
+        "year": 1941,
+        "category": "family",
+        "description": "1941年5月24日：出生于Duluth, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛巳"
+      }
+    },
+    {
+      "name": "Freddie Mercury",
+      "bazi": "丙戌 丙申 壬午 己酉",
+      "day_master": "壬(水阳)",
+      "yongshen": {
+        "day_master_wuxing": "水",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "土",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金",
+          "水"
+        ],
+        "wx_stats": {
+          "金": 5,
+          "木": 0,
+          "水": 2,
+          "火": 5,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "丁酉(0-9)",
+        "戊戌(10-19)",
+        "己亥(20-29)",
+        "庚子(30-39)",
+        "辛丑(40-49)",
+        "壬寅(50-59)",
+        "癸卯(60-69)",
+        "甲辰(70-79)",
+        "乙巳(80-89)",
+        "丙午(90-99)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1946,
+        "category": "family",
+        "description": "1946年9月5日：出生于Zanzibar, Tanzania。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙戌"
+      },
+      "worst_event": {
+        "year": 1946,
+        "category": "family",
+        "description": "1946年9月5日：出生于Zanzibar, Tanzania。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙戌"
+      }
+    },
+    {
+      "name": "David Bowie",
+      "bazi": "丙戌 辛丑 丁亥 乙巳",
+      "day_master": "丁(火阴)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "水",
+          "土"
+        ],
+        "ji_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "wx_stats": {
+          "金": 4,
+          "木": 2,
+          "水": 3,
+          "火": 5,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "壬寅(9-18)",
+        "癸卯(19-28)",
+        "甲辰(29-38)",
+        "乙巳(39-48)",
+        "丙午(49-58)",
+        "丁未(59-68)",
+        "戊申(69-78)",
+        "己酉(79-88)",
+        "庚戌(89-98)",
+        "辛亥(99-108)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1947,
+        "category": "family",
+        "description": "1947年1月8日：出生于London, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丁亥"
+      },
+      "worst_event": {
+        "year": 1947,
+        "category": "family",
+        "description": "1947年1月8日：出生于London, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丁亥"
+      }
+    },
+    {
+      "name": "Kurt Cobain",
+      "bazi": "丁未 壬寅 乙卯 丙戌",
+      "day_master": "乙(木阴)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "金",
+          "火"
+        ],
+        "ji_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "wx_stats": {
+          "金": 1,
+          "木": 6,
+          "水": 1,
+          "火": 5,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "辛丑(5-14)",
+        "庚子(15-24)",
+        "己亥(25-34)",
+        "戊戌(35-44)",
+        "丁酉(45-54)",
+        "丙申(55-64)",
+        "乙未(65-74)",
+        "甲午(75-84)",
+        "癸巳(85-94)",
+        "壬辰(95-104)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1967,
+        "category": "family",
+        "description": "1967年2月20日：出生于Aberdeen, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丁未"
+      },
+      "worst_event": {
+        "year": 1967,
+        "category": "family",
+        "description": "1967年2月20日：出生于Aberdeen, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丁未"
+      }
+    },
+    {
+      "name": "Prince",
+      "bazi": "戊戌 戊午 乙卯 乙酉",
+      "day_master": "乙(木阴)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 4,
+          "水": 0,
+          "火": 3,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "己未(10-19)",
+        "庚申(20-29)",
+        "辛酉(30-39)",
+        "壬戌(40-49)",
+        "癸亥(50-59)",
+        "甲子(60-69)",
+        "乙丑(70-79)",
+        "丙寅(80-89)",
+        "丁卯(90-99)",
+        "戊辰(100-109)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1958,
+        "category": "family",
+        "description": "1958年6月7日：出生于Minneapolis, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "戊戌"
+      },
+      "worst_event": {
+        "year": 1958,
+        "category": "family",
+        "description": "1958年6月7日：出生于Minneapolis, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "戊戌"
+      }
+    },
+    {
+      "name": "Madonna",
+      "bazi": "戊戌 庚申 乙丑 庚辰",
+      "day_master": "乙(木阴)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金"
+        ],
+        "wx_stats": {
+          "金": 6,
+          "木": 2,
+          "水": 3,
+          "火": 1,
+          "土": 8
+        }
+      },
+      "dayun_list": [
+        "己未(2-11)",
+        "戊午(12-21)",
+        "丁巳(22-31)",
+        "丙辰(32-41)",
+        "乙卯(42-51)",
+        "甲寅(52-61)",
+        "癸丑(62-71)",
+        "壬子(72-81)",
+        "辛亥(82-91)",
+        "庚戌(92-101)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1958,
+        "category": "family",
+        "description": "1958年8月16日：出生于Bay City, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "戊戌"
+      },
+      "worst_event": {
+        "year": 1958,
+        "category": "family",
+        "description": "1958年8月16日：出生于Bay City, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "戊戌"
+      }
+    },
+    {
+      "name": "Michael Jackson",
+      "bazi": "戊戌 庚申 戊寅 壬戌",
+      "day_master": "戊(土阳)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "木",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "wx_stats": {
+          "金": 5,
+          "木": 2,
+          "水": 2,
+          "火": 3,
+          "土": 8
+        }
+      },
+      "dayun_list": [
+        "辛酉(3-12)",
+        "壬戌(13-22)",
+        "癸亥(23-32)",
+        "甲子(33-42)",
+        "乙丑(43-52)",
+        "丙寅(53-62)",
+        "丁卯(63-72)",
+        "戊辰(73-82)",
+        "己巳(83-92)",
+        "庚午(93-102)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1958,
+        "category": "family",
+        "description": "1958年8月29日：出生于Gary, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "戊戌"
+      },
+      "worst_event": {
+        "year": 1958,
+        "category": "family",
+        "description": "1958年8月29日：出生于Gary, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "戊戌"
+      }
+    },
+    {
+      "name": "Whitney Houston",
+      "bazi": "癸卯 庚申 甲申 甲子",
+      "day_master": "甲(木阳)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "金",
+          "火"
+        ],
+        "ji_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "wx_stats": {
+          "金": 5,
+          "木": 4,
+          "水": 5,
+          "火": 0,
+          "土": 2
+        }
+      },
+      "dayun_list": [
+        "辛酉(10-19)",
+        "壬戌(20-29)",
+        "癸亥(30-39)",
+        "甲子(40-49)",
+        "乙丑(50-59)",
+        "丙寅(60-69)",
+        "丁卯(70-79)",
+        "戊辰(80-89)",
+        "己巳(90-99)",
+        "庚午(100-109)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1963,
+        "category": "family",
+        "description": "1963年8月9日：出生于Newark, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "癸卯"
+      },
+      "worst_event": {
+        "year": 1963,
+        "category": "family",
+        "description": "1963年8月9日：出生于Newark, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "癸卯"
+      }
+    },
+    {
+      "name": "Taylor Swift",
+      "bazi": "己巳 丙子 丁未 甲辰",
+      "day_master": "丁(火阴)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "水",
+          "土"
+        ],
+        "ji_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "wx_stats": {
+          "金": 1,
+          "木": 3,
+          "水": 3,
+          "火": 5,
+          "土": 6
+        }
+      },
+      "dayun_list": [
+        "丁丑(5-14)",
+        "戊寅(15-24)",
+        "己卯(25-34)",
+        "庚辰(35-44)",
+        "辛巳(45-54)",
+        "壬午(55-64)",
+        "癸未(65-74)",
+        "甲申(75-84)",
+        "乙酉(85-94)",
+        "丙戌(95-104)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1989,
+        "category": "family",
+        "description": "1989年12月13日：出生于West Reading, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "己巳"
+      },
+      "worst_event": {
+        "year": 1989,
+        "category": "family",
+        "description": "1989年12月13日：出生于West Reading, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "己巳"
+      }
+    },
+    {
+      "name": "Beyoncé",
+      "bazi": "辛酉 丙申 乙酉 辛巳",
+      "day_master": "乙(木阴)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "弱",
+        "yong_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金",
+          "火"
+        ],
+        "wx_stats": {
+          "金": 9,
+          "木": 1,
+          "水": 1,
+          "火": 3,
+          "土": 2
+        }
+      },
+      "dayun_list": [
+        "丁酉(1-10)",
+        "戊戌(11-20)",
+        "己亥(21-30)",
+        "庚子(31-40)",
+        "辛丑(41-50)",
+        "壬寅(51-60)",
+        "癸卯(61-70)",
+        "甲辰(71-80)",
+        "乙巳(81-90)",
+        "丙午(91-100)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1981,
+        "category": "family",
+        "description": "1981年9月4日：出生于Houston, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛酉"
+      },
+      "worst_event": {
+        "year": 1981,
+        "category": "family",
+        "description": "1981年9月4日：出生于Houston, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛酉"
+      }
+    },
+    {
+      "name": "Lady Gaga",
+      "bazi": "丙寅 辛卯 辛未 己亥",
+      "day_master": "辛(金阴)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 2,
+          "木": 6,
+          "水": 2,
+          "火": 3,
+          "土": 4
+        }
+      },
+      "dayun_list": [
+        "庚寅(7-16)",
+        "己丑(17-26)",
+        "戊子(27-36)",
+        "丁亥(37-46)",
+        "丙戌(47-56)",
+        "乙酉(57-66)",
+        "甲申(67-76)",
+        "癸未(77-86)",
+        "壬午(87-96)",
+        "辛巳(97-106)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1986,
+        "category": "family",
+        "description": "1986年3月28日：出生于New York City, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙寅"
+      },
+      "worst_event": {
+        "year": 1986,
+        "category": "family",
+        "description": "1986年3月28日：出生于New York City, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙寅"
+      }
+    },
+    {
+      "name": "Marilyn Monroe",
+      "bazi": "丙寅 癸巳 辛酉 癸巳",
+      "day_master": "辛(金阴)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 5,
+          "木": 2,
+          "水": 2,
+          "火": 6,
+          "土": 3
+        }
+      },
+      "dayun_list": [
+        "壬辰(7-16)",
+        "辛卯(17-26)",
+        "庚寅(27-36)",
+        "己丑(37-46)",
+        "戊子(47-56)",
+        "丁亥(57-66)",
+        "丙戌(67-76)",
+        "乙酉(77-86)",
+        "甲申(87-96)",
+        "癸未(97-106)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1926,
+        "category": "family",
+        "description": "1926年6月1日：出生于Los Angeles, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙寅"
+      },
+      "worst_event": {
+        "year": 1926,
+        "category": "family",
+        "description": "1926年6月1日：出生于Los Angeles, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙寅"
+      }
+    },
+    {
+      "name": "Audrey Hepburn",
+      "bazi": "己巳 戊辰 己酉 丙寅",
+      "day_master": "己(土阴)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "木",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 3,
+          "水": 1,
+          "火": 4,
+          "土": 7
+        }
+      },
+      "dayun_list": [
+        "己巳(1-10)",
+        "庚午(11-20)",
+        "辛未(21-30)",
+        "壬申(31-40)",
+        "癸酉(41-50)",
+        "甲戌(51-60)",
+        "乙亥(61-70)",
+        "丙子(71-80)",
+        "丁丑(81-90)",
+        "戊寅(91-100)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1929,
+        "category": "family",
+        "description": "1929年5月4日：出生于Brussels, Belgium。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "己巳"
+      },
+      "worst_event": {
+        "year": 1929,
+        "category": "family",
+        "description": "1929年5月4日：出生于Brussels, Belgium。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "己巳"
+      }
+    },
+    {
+      "name": "Marlon Brando",
+      "bazi": "甲子 丁卯 壬子 壬子",
+      "day_master": "壬(水阳)",
+      "yongshen": {
+        "day_master_wuxing": "水",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "土",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金",
+          "水"
+        ],
+        "wx_stats": {
+          "金": 0,
+          "木": 3,
+          "水": 8,
+          "火": 1,
+          "土": 0
+        }
+      },
+      "dayun_list": [
+        "戊辰(1-10)",
+        "己巳(11-20)",
+        "庚午(21-30)",
+        "辛未(31-40)",
+        "壬申(41-50)",
+        "癸酉(51-60)",
+        "甲戌(61-70)",
+        "乙亥(71-80)",
+        "丙子(81-90)",
+        "丁丑(91-100)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1924,
+        "category": "family",
+        "description": "1924年4月3日：出生于Omaha, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "甲子"
+      },
+      "worst_event": {
+        "year": 1924,
+        "category": "family",
+        "description": "1924年4月3日：出生于Omaha, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "甲子"
+      }
+    },
+    {
+      "name": "Alfred Hitchcock",
+      "bazi": "己亥 壬申 癸丑 癸丑",
+      "day_master": "癸(水阴)",
+      "yongshen": {
+        "day_master_wuxing": "水",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "土",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金",
+          "水"
+        ],
+        "wx_stats": {
+          "金": 4,
+          "木": 1,
+          "水": 8,
+          "火": 0,
+          "土": 6
+        }
+      },
+      "dayun_list": [
+        "辛未(1-10)",
+        "庚午(11-20)",
+        "己巳(21-30)",
+        "戊辰(31-40)",
+        "丁卯(41-50)",
+        "丙寅(51-60)",
+        "乙丑(61-70)",
+        "甲子(71-80)",
+        "癸亥(81-90)",
+        "壬戌(91-100)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1899,
+        "category": "family",
+        "description": "1899年8月13日：出生于London, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "己亥"
+      },
+      "worst_event": {
+        "year": 1899,
+        "category": "family",
+        "description": "1899年8月13日：出生于London, UK。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "己亥"
+      }
+    },
+    {
+      "name": "Steven Spielberg",
+      "bazi": "丙戌 庚子 丙寅 丁酉",
+      "day_master": "丙(火阳)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "水",
+          "土"
+        ],
+        "ji_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "wx_stats": {
+          "金": 4,
+          "木": 2,
+          "水": 2,
+          "火": 5,
+          "土": 3
+        }
+      },
+      "dayun_list": [
+        "辛丑(5-14)",
+        "壬寅(15-24)",
+        "癸卯(25-34)",
+        "甲辰(35-44)",
+        "乙巳(45-54)",
+        "丙午(55-64)",
+        "丁未(65-74)",
+        "戊申(75-84)",
+        "己酉(85-94)",
+        "庚戌(95-104)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1946,
+        "category": "family",
+        "description": "1946年12月18日：出生于Cincinnati, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙戌"
+      },
+      "worst_event": {
+        "year": 1946,
+        "category": "family",
+        "description": "1946年12月18日：出生于Cincinnati, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙戌"
+      }
+    },
+    {
+      "name": "Martin Scorsese",
+      "bazi": "壬午 辛亥 甲戌 甲子",
+      "day_master": "甲(木阳)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "金",
+          "火"
+        ],
+        "ji_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "wx_stats": {
+          "金": 2,
+          "木": 3,
+          "水": 5,
+          "火": 3,
+          "土": 3
+        }
+      },
+      "dayun_list": [
+        "壬子(7-16)",
+        "癸丑(17-26)",
+        "甲寅(27-36)",
+        "乙卯(37-46)",
+        "丙辰(47-56)",
+        "丁巳(57-66)",
+        "戊午(67-76)",
+        "己未(77-86)",
+        "庚申(87-96)",
+        "辛酉(97-106)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1942,
+        "category": "family",
+        "description": "1942年11月17日：出生于New York City, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬午"
+      },
+      "worst_event": {
+        "year": 1942,
+        "category": "family",
+        "description": "1942年11月17日：出生于New York City, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬午"
+      }
+    },
+    {
+      "name": "Muhammad Ali",
+      "bazi": "辛巳 辛丑 庚午 乙酉",
+      "day_master": "庚(金阳)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 7,
+          "木": 1,
+          "水": 1,
+          "火": 4,
+          "土": 4
+        }
+      },
+      "dayun_list": [
+        "庚子(3-12)",
+        "己亥(13-22)",
+        "戊戌(23-32)",
+        "丁酉(33-42)",
+        "丙申(43-52)",
+        "乙未(53-62)",
+        "甲午(63-72)",
+        "癸巳(73-82)",
+        "壬辰(83-92)",
+        "辛卯(93-102)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1942,
+        "category": "family",
+        "description": "1942年1月17日：出生于Louisville, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬午"
+      },
+      "worst_event": {
+        "year": 1942,
+        "category": "family",
+        "description": "1942年1月17日：出生于Louisville, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "壬午"
+      }
+    },
+    {
+      "name": "Pelé",
+      "bazi": "庚辰 丙戌 己亥 甲子",
+      "day_master": "己(土阴)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "木",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "wx_stats": {
+          "金": 2,
+          "木": 3,
+          "水": 5,
+          "火": 2,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "丁亥(5-14)",
+        "戊子(15-24)",
+        "己丑(25-34)",
+        "庚寅(35-44)",
+        "辛卯(45-54)",
+        "壬辰(55-64)",
+        "癸巳(65-74)",
+        "甲午(75-84)",
+        "乙未(85-94)",
+        "丙申(95-104)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1940,
+        "category": "family",
+        "description": "1940年10月23日：出生于Três Corações, Brazil。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "庚辰"
+      },
+      "worst_event": {
+        "year": 1940,
+        "category": "family",
+        "description": "1940年10月23日：出生于Três Corações, Brazil。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "庚辰"
+      }
+    },
+    {
+      "name": "Diego Maradona",
+      "bazi": "庚子 丙戌 辛卯 壬辰",
+      "day_master": "辛(金阴)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 3,
+          "水": 4,
+          "火": 2,
+          "土": 4
+        }
+      },
+      "dayun_list": [
+        "丁亥(2-11)",
+        "戊子(12-21)",
+        "己丑(22-31)",
+        "庚寅(32-41)",
+        "辛卯(42-51)",
+        "壬辰(52-61)",
+        "癸巳(62-71)",
+        "甲午(72-81)",
+        "乙未(82-91)",
+        "丙申(92-101)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1960,
+        "category": "family",
+        "description": "1960年10月30日：出生于Lanús, Argentina。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "庚子"
+      },
+      "worst_event": {
+        "year": 1960,
+        "category": "family",
+        "description": "1960年10月30日：出生于Lanús, Argentina。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "庚子"
+      }
+    },
+    {
+      "name": "Michael Jordan",
+      "bazi": "癸卯 甲寅 辛卯 戊子",
+      "day_master": "辛(金阴)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "弱",
+        "yong_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "wx_stats": {
+          "金": 1,
+          "木": 7,
+          "水": 3,
+          "火": 1,
+          "土": 2
+        }
+      },
+      "dayun_list": [
+        "癸丑(4-13)",
+        "壬子(14-23)",
+        "辛亥(24-33)",
+        "庚戌(34-43)",
+        "己酉(44-53)",
+        "戊申(54-63)",
+        "丁未(64-73)",
+        "丙午(74-83)",
+        "乙巳(84-93)",
+        "甲辰(94-103)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1963,
+        "category": "family",
+        "description": "1963年2月17日：出生于Brooklyn, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "癸卯"
+      },
+      "worst_event": {
+        "year": 1963,
+        "category": "family",
+        "description": "1963年2月17日：出生于Brooklyn, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "癸卯"
+      }
+    },
+    {
+      "name": "Serena Williams",
+      "bazi": "辛酉 丁酉 丁未 庚戌",
+      "day_master": "丁(火阴)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "ji_shen_wuxing": [
+          "水"
+        ],
+        "wx_stats": {
+          "金": 7,
+          "木": 1,
+          "水": 0,
+          "火": 4,
+          "土": 4
+        }
+      },
+      "dayun_list": [
+        "戊戌(3-12)",
+        "己亥(13-22)",
+        "庚子(23-32)",
+        "辛丑(33-42)",
+        "壬寅(43-52)",
+        "癸卯(53-62)",
+        "甲辰(63-72)",
+        "乙巳(73-82)",
+        "丙午(83-92)",
+        "丁未(93-102)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1981,
+        "category": "family",
+        "description": "1981年9月26日：出生于Saginaw, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛酉"
+      },
+      "worst_event": {
+        "year": 1981,
+        "category": "family",
+        "description": "1981年9月26日：出生于Saginaw, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛酉"
+      }
+    },
+    {
+      "name": "Usain Bolt",
+      "bazi": "丙寅 丙申 丁酉 丙午",
+      "day_master": "丁(火阴)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "水",
+          "土"
+        ],
+        "ji_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "wx_stats": {
+          "金": 4,
+          "木": 2,
+          "水": 1,
+          "火": 7,
+          "土": 3
+        }
+      },
+      "dayun_list": [
+        "丁酉(5-14)",
+        "戊戌(15-24)",
+        "己亥(25-34)",
+        "庚子(35-44)",
+        "辛丑(45-54)",
+        "壬寅(55-64)",
+        "癸卯(65-74)",
+        "甲辰(75-84)",
+        "乙巳(85-94)",
+        "丙午(95-104)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1986,
+        "category": "family",
+        "description": "1986年8月21日：出生于Sherwood Content, Jamaica。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙寅"
+      },
+      "worst_event": {
+        "year": 1986,
+        "category": "family",
+        "description": "1986年8月21日：出生于Sherwood Content, Jamaica。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙寅"
+      }
+    },
+    {
+      "name": "Michael Phelps",
+      "bazi": "乙丑 壬午 庚子 丙子",
+      "day_master": "庚(金阳)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火"
+        ],
+        "wx_stats": {
+          "金": 2,
+          "木": 1,
+          "水": 6,
+          "火": 3,
+          "土": 3
+        }
+      },
+      "dayun_list": [
+        "辛巳(7-16)",
+        "庚辰(17-26)",
+        "己卯(27-36)",
+        "戊寅(37-46)",
+        "丁丑(47-56)",
+        "丙子(57-66)",
+        "乙亥(67-76)",
+        "甲戌(77-86)",
+        "癸酉(87-96)",
+        "壬申(97-106)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1985,
+        "category": "family",
+        "description": "1985年6月30日：出生于Baltimore, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "乙丑"
+      },
+      "worst_event": {
+        "year": 1985,
+        "category": "family",
+        "description": "1985年6月30日：出生于Baltimore, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "乙丑"
+      }
+    },
+    {
+      "name": "Roger Federer",
+      "bazi": "辛酉 丙申 戊午 丙辰",
+      "day_master": "戊(土阳)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "木",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "wx_stats": {
+          "金": 5,
+          "木": 1,
+          "水": 2,
+          "火": 4,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "乙未(0-9)",
+        "甲午(10-19)",
+        "癸巳(20-29)",
+        "壬辰(30-39)",
+        "辛卯(40-49)",
+        "庚寅(50-59)",
+        "己丑(60-69)",
+        "戊子(70-79)",
+        "丁亥(80-89)",
+        "丙戌(90-99)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1981,
+        "category": "family",
+        "description": "1981年8月8日：出生于Basel, Switzerland。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛酉"
+      },
+      "worst_event": {
+        "year": 1981,
+        "category": "family",
+        "description": "1981年8月8日：出生于Basel, Switzerland。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛酉"
+      }
+    },
+    {
+      "name": "Tiger Woods",
+      "bazi": "乙卯 戊子 庚戌 丁亥",
+      "day_master": "庚(金阳)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火"
+        ],
+        "wx_stats": {
+          "金": 2,
+          "木": 4,
+          "水": 4,
+          "火": 2,
+          "土": 3
+        }
+      },
+      "dayun_list": [
+        "丁亥(7-16)",
+        "丙戌(17-26)",
+        "乙酉(27-36)",
+        "甲申(37-46)",
+        "癸未(47-56)",
+        "壬午(57-66)",
+        "辛巳(67-76)",
+        "庚辰(77-86)",
+        "己卯(87-96)",
+        "戊寅(97-106)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1975,
+        "category": "family",
+        "description": "1975年12月30日：出生于Cypress, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "乙卯"
+      },
+      "worst_event": {
+        "year": 1975,
+        "category": "family",
+        "description": "1975年12月30日：出生于Cypress, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "乙卯"
+      }
+    },
+    {
+      "name": "Warren Buffett",
+      "bazi": "庚午 甲申 壬子 乙巳",
+      "day_master": "壬(水阳)",
+      "yongshen": {
+        "day_master_wuxing": "水",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "土",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金",
+          "水"
+        ],
+        "wx_stats": {
+          "金": 4,
+          "木": 2,
+          "水": 4,
+          "火": 4,
+          "土": 3
+        }
+      },
+      "dayun_list": [
+        "乙酉(3-12)",
+        "丙戌(13-22)",
+        "丁亥(23-32)",
+        "戊子(33-42)",
+        "己丑(43-52)",
+        "庚寅(53-62)",
+        "辛卯(63-72)",
+        "壬辰(73-82)",
+        "癸巳(83-92)",
+        "甲午(93-102)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1930,
+        "category": "family",
+        "description": "1930年8月30日：出生于Omaha, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "庚午"
+      },
+      "worst_event": {
+        "year": 1930,
+        "category": "family",
+        "description": "1930年8月30日：出生于Omaha, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "庚午"
+      }
+    },
+    {
+      "name": "Jeff Bezos",
+      "bazi": "癸卯 乙丑 庚申 辛巳",
+      "day_master": "庚(金阳)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 6,
+          "木": 3,
+          "水": 3,
+          "火": 2,
+          "土": 4
+        }
+      },
+      "dayun_list": [
+        "甲子(2-11)",
+        "癸亥(12-21)",
+        "壬戌(22-31)",
+        "辛酉(32-41)",
+        "庚申(42-51)",
+        "己未(52-61)",
+        "戊午(62-71)",
+        "丁巳(72-81)",
+        "丙辰(82-91)",
+        "乙卯(92-101)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1964,
+        "category": "family",
+        "description": "1964年1月12日：出生于Albuquerque, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "甲辰"
+      },
+      "worst_event": {
+        "year": 1964,
+        "category": "family",
+        "description": "1964年1月12日：出生于Albuquerque, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "甲辰"
+      }
+    },
+    {
+      "name": "Mark Zuckerberg",
+      "bazi": "甲子 己巳 戊申 壬子",
+      "day_master": "戊(土阳)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "木",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 1,
+          "水": 6,
+          "火": 2,
+          "土": 4
+        }
+      },
+      "dayun_list": [
+        "庚午(8-17)",
+        "辛未(18-27)",
+        "壬申(28-37)",
+        "癸酉(38-47)",
+        "甲戌(48-57)",
+        "乙亥(58-67)",
+        "丙子(68-77)",
+        "丁丑(78-87)",
+        "戊寅(88-97)",
+        "己卯(98-107)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1984,
+        "category": "family",
+        "description": "1984年5月14日：出生于White Plains, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "甲子"
+      },
+      "worst_event": {
+        "year": 1984,
+        "category": "family",
+        "description": "1984年5月14日：出生于White Plains, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "甲子"
+      }
+    },
+    {
+      "name": "Larry Page",
+      "bazi": "癸丑 乙卯 辛酉 戊子",
+      "day_master": "辛(金阴)",
+      "yongshen": {
+        "day_master_wuxing": "金",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "火",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土",
+          "金"
+        ],
+        "wx_stats": {
+          "金": 4,
+          "木": 3,
+          "水": 4,
+          "火": 0,
+          "土": 3
+        }
+      },
+      "dayun_list": [
+        "甲寅(6-15)",
+        "癸丑(16-25)",
+        "壬子(26-35)",
+        "辛亥(36-45)",
+        "庚戌(46-55)",
+        "己酉(56-65)",
+        "戊申(66-75)",
+        "丁未(76-85)",
+        "丙午(86-95)",
+        "乙巳(96-105)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1973,
+        "category": "family",
+        "description": "1973年3月26日：出生于East Lansing, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "癸丑"
+      },
+      "worst_event": {
+        "year": 1973,
+        "category": "family",
+        "description": "1973年3月26日：出生于East Lansing, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "癸丑"
+      }
+    },
+    {
+      "name": "Sergey Brin",
+      "bazi": "癸丑 庚申 己丑 甲子",
+      "day_master": "己(土阴)",
+      "yongshen": {
+        "day_master_wuxing": "土",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "木",
+          "金"
+        ],
+        "ji_shen_wuxing": [
+          "火",
+          "土"
+        ],
+        "wx_stats": {
+          "金": 5,
+          "木": 1,
+          "水": 6,
+          "火": 0,
+          "土": 6
+        }
+      },
+      "dayun_list": [
+        "己未(4-13)",
+        "戊午(14-23)",
+        "丁巳(24-33)",
+        "丙辰(34-43)",
+        "乙卯(44-53)",
+        "甲寅(54-63)",
+        "癸丑(64-73)",
+        "壬子(74-83)",
+        "辛亥(84-93)",
+        "庚戌(94-103)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1973,
+        "category": "family",
+        "description": "1973年8月21日：出生于Moscow, Russia。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "癸丑"
+      },
+      "worst_event": {
+        "year": 1973,
+        "category": "family",
+        "description": "1973年8月21日：出生于Moscow, Russia。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "癸丑"
+      }
+    },
+    {
+      "name": "Elon Musk",
+      "bazi": "辛亥 甲午 甲申 戊辰",
+      "day_master": "甲(木阳)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "金",
+          "火"
+        ],
+        "ji_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 4,
+          "水": 4,
+          "火": 2,
+          "土": 5
+        }
+      },
+      "dayun_list": [
+        "癸巳(6-15)",
+        "壬辰(16-25)",
+        "辛卯(26-35)",
+        "庚寅(36-45)",
+        "己丑(46-55)",
+        "戊子(56-65)",
+        "丁亥(66-75)",
+        "丙戌(76-85)",
+        "乙酉(86-95)",
+        "甲申(96-105)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1971,
+        "category": "family",
+        "description": "1971年6月28日：出生于Pretoria, South Africa。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛亥"
+      },
+      "worst_event": {
+        "year": 1971,
+        "category": "family",
+        "description": "1971年6月28日：出生于Pretoria, South Africa。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛亥"
+      }
+    },
+    {
+      "name": "Steve Jobs",
+      "bazi": "乙未 戊寅 丙辰 戊戌",
+      "day_master": "丙(火阳)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "水",
+          "土"
+        ],
+        "ji_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "wx_stats": {
+          "金": 1,
+          "木": 5,
+          "水": 1,
+          "火": 4,
+          "土": 9
+        }
+      },
+      "dayun_list": [
+        "丁丑(6-15)",
+        "丙子(16-25)",
+        "乙亥(26-35)",
+        "甲戌(36-45)",
+        "癸酉(46-55)",
+        "壬申(56-65)",
+        "辛未(66-75)",
+        "庚午(76-85)",
+        "己巳(86-95)",
+        "戊辰(96-105)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1955,
+        "category": "family",
+        "description": "1955年2月24日：出生于San Francisco, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "乙未"
+      },
+      "worst_event": {
+        "year": 1955,
+        "category": "family",
+        "description": "1955年2月24日：出生于San Francisco, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "乙未"
+      }
+    },
+    {
+      "name": "Bill Gates",
+      "bazi": "乙未 丙戌 壬戌 辛亥",
+      "day_master": "壬(水阳)",
+      "yongshen": {
+        "day_master_wuxing": "水",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "土",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金",
+          "水"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 3,
+          "水": 3,
+          "火": 4,
+          "土": 6
+        }
+      },
+      "dayun_list": [
+        "乙酉(6-15)",
+        "甲申(16-25)",
+        "癸未(26-35)",
+        "壬午(36-45)",
+        "辛巳(46-55)",
+        "庚辰(56-65)",
+        "己卯(66-75)",
+        "戊寅(76-85)",
+        "丁丑(86-95)",
+        "丙子(96-105)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1955,
+        "category": "family",
+        "description": "1955年10月28日：出生于Seattle, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "乙未"
+      },
+      "worst_event": {
+        "year": 1955,
+        "category": "family",
+        "description": "1955年10月28日：出生于Seattle, USA。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "乙未"
+      }
+    },
+    {
+      "name": "Napoleon Bonaparte",
+      "bazi": "己丑 壬申 甲午 庚午",
+      "day_master": "甲(木阳)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金"
+        ],
+        "wx_stats": {
+          "金": 4,
+          "木": 1,
+          "水": 3,
+          "火": 4,
+          "土": 6
+        }
+      },
+      "dayun_list": [
+        "辛未(2-11)",
+        "庚午(12-21)",
+        "己巳(22-31)",
+        "戊辰(32-41)",
+        "丁卯(42-51)",
+        "丙寅(52-61)",
+        "乙丑(62-71)",
+        "甲子(72-81)",
+        "癸亥(82-91)",
+        "壬戌(92-101)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1769,
+        "category": "family",
+        "description": "1769年8月15日：出生于Ajaccio, France。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "己丑"
+      },
+      "worst_event": {
+        "year": 1769,
+        "category": "family",
+        "description": "1769年8月15日：出生于Ajaccio, France。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "己丑"
+      }
+    },
+    {
+      "name": "Ludwig van Beethoven",
+      "bazi": "庚寅 戊子 癸卯 丁巳",
+      "day_master": "癸(水阴)",
+      "yongshen": {
+        "day_master_wuxing": "水",
+        "strength": "中和",
+        "yong_shen_wuxing": [
+          "金",
+          "水"
+        ],
+        "ji_shen_wuxing": [
+          "土"
+        ],
+        "wx_stats": {
+          "金": 2,
+          "木": 4,
+          "水": 3,
+          "火": 4,
+          "土": 3
+        }
+      },
+      "dayun_list": [
+        "己丑(5-14)",
+        "庚寅(15-24)",
+        "辛卯(25-34)",
+        "壬辰(35-44)",
+        "癸巳(45-54)",
+        "甲午(55-64)",
+        "乙未(65-74)",
+        "丙申(75-84)",
+        "丁酉(85-94)",
+        "戊戌(95-104)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1770,
+        "category": "family",
+        "description": "1770年12月17日：出生于Bonn, Germany。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "庚寅"
+      },
+      "worst_event": {
+        "year": 1770,
+        "category": "family",
+        "description": "1770年12月17日：出生于Bonn, Germany。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "庚寅"
+      }
+    },
+    {
+      "name": "Wolfgang Amadeus Mozart",
+      "bazi": "乙亥 己丑 乙丑 丙戌",
+      "day_master": "乙(木阴)",
+      "yongshen": {
+        "day_master_wuxing": "木",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "金",
+          "火"
+        ],
+        "ji_shen_wuxing": [
+          "水",
+          "木"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 3,
+          "水": 4,
+          "火": 2,
+          "土": 7
+        }
+      },
+      "dayun_list": [
+        "戊子(7-16)",
+        "丁亥(17-26)",
+        "丙戌(27-36)",
+        "乙酉(37-46)",
+        "甲申(47-56)",
+        "癸未(57-66)",
+        "壬午(67-76)",
+        "辛巳(77-86)",
+        "庚辰(87-96)",
+        "己卯(97-106)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1756,
+        "category": "family",
+        "description": "1756年1月27日：出生于Salzburg, Austria。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙子"
+      },
+      "worst_event": {
+        "year": 1756,
+        "category": "family",
+        "description": "1756年1月27日：出生于Salzburg, Austria。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丙子"
+      }
+    },
+    {
+      "name": "Vincent van Gogh",
+      "bazi": "癸丑 乙卯 丙申 甲午",
+      "day_master": "丙(火阳)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "水",
+          "土"
+        ],
+        "ji_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 4,
+          "水": 3,
+          "火": 3,
+          "土": 4
+        }
+      },
+      "dayun_list": [
+        "甲寅(7-16)",
+        "癸丑(17-26)",
+        "壬子(27-36)",
+        "辛亥(37-46)",
+        "庚戌(47-56)",
+        "己酉(57-66)",
+        "戊申(67-76)",
+        "丁未(77-86)",
+        "丙午(87-96)",
+        "乙巳(97-106)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1853,
+        "category": "family",
+        "description": "1853年3月30日：出生于Zundert, Netherlands。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "癸丑"
+      },
+      "worst_event": {
+        "year": 1853,
+        "category": "family",
+        "description": "1853年3月30日：出生于Zundert, Netherlands。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "癸丑"
+      }
+    },
+    {
+      "name": "Pablo Picasso",
+      "bazi": "辛巳 戊戌 壬辰 壬子",
+      "day_master": "壬(水阳)",
+      "yongshen": {
+        "day_master_wuxing": "水",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "土",
+          "木"
+        ],
+        "ji_shen_wuxing": [
+          "金",
+          "水"
+        ],
+        "wx_stats": {
+          "金": 3,
+          "木": 1,
+          "水": 5,
+          "火": 3,
+          "土": 6
+        }
+      },
+      "dayun_list": [
+        "丁酉(6-15)",
+        "丙申(16-25)",
+        "乙未(26-35)",
+        "甲午(36-45)",
+        "癸巳(46-55)",
+        "壬辰(56-65)",
+        "辛卯(66-75)",
+        "庚寅(76-85)",
+        "己丑(86-95)",
+        "戊子(96-105)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1881,
+        "category": "family",
+        "description": "1881年10月25日：出生于Málaga, Spain。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛巳"
+      },
+      "worst_event": {
+        "year": 1881,
+        "category": "family",
+        "description": "1881年10月25日：出生于Málaga, Spain。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "辛巳"
+      }
+    },
+    {
+      "name": "Frida Kahlo",
+      "bazi": "丁未 丙午 丙辰 壬辰",
+      "day_master": "丙(火阳)",
+      "yongshen": {
+        "day_master_wuxing": "火",
+        "strength": "强",
+        "yong_shen_wuxing": [
+          "水",
+          "土"
+        ],
+        "ji_shen_wuxing": [
+          "木",
+          "火"
+        ],
+        "wx_stats": {
+          "金": 0,
+          "木": 3,
+          "水": 3,
+          "火": 6,
+          "土": 7
+        }
+      },
+      "dayun_list": [
+        "丁未(1-10)",
+        "戊申(11-20)",
+        "己酉(21-30)",
+        "庚戌(31-40)",
+        "辛亥(41-50)",
+        "壬子(51-60)",
+        "癸丑(61-70)",
+        "甲寅(71-80)",
+        "乙卯(81-90)",
+        "丙辰(91-100)"
+      ],
+      "avg_score": 0.0,
+      "positive_rate": "0%",
+      "category_stats": {
+        "family": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0
+        }
+      },
+      "turning_points": [],
+      "top_event": {
+        "year": 1907,
+        "category": "family",
+        "description": "1907年7月6日：出生于Mexico City, Mexico。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丁未"
+      },
+      "worst_event": {
+        "year": 1907,
+        "category": "family",
+        "description": "1907年7月6日：出生于Mexico City, Mexico。",
+        "score": 0.0,
+        "reasons": [
+          "童运期/无大运"
+        ],
+        "dayun": "童运",
+        "liunian": "丁未"
+      }
+    }
+  ],
+  "key_findings": [
+    {
+      "finding": "事业类事件预测能力最强",
+      "detail": "career avg=0.85, 官杀/印星大运与晋升、任职等事件有统计显著的正相关",
+      "recommendation": "当前模型对事业类事件已具备基础预测能力，建议重点强化"
+    },
+    {
+      "finding": "健康类事件预测能力最弱",
+      "detail": "health avg=0.44, 纯十神分析不足以预测健康事件",
+      "recommendation": "需引入神煞（病符、血刃等）、干支冲合、五行偏枯等多维度特征"
+    },
+    {
+      "finding": "用神维度提升有限",
+      "detail": "加入用神推断后平均得分提升约0.05，说明简化用神推断贡献有限",
+      "recommendation": "需引入八字格局（正格/外格）、调候、通关等更深层分析"
+    },
+    {
+      "finding": "时辰缺失严重影响准确性",
+      "detail": "134例中仅13例有时辰(9.7%)，失去时柱意味着失去晚年大运和子女宫信息",
+      "recommendation": "建议扩充有时辰的命例库，最少需要50+有时辰案例以获得统计显著性"
+    },
+    {
+      "finding": "流年单独作用力弱",
+      "detail": "流年十神对事件解释力有限，说明事件发生需要大运+流年+命局三方互动",
+      "recommendation": "模型应重点分析大运框架下的流年引动机制(岁运并临、天克地冲等)"
+    }
+  ]
+}

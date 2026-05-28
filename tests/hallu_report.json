@@ -1,0 +1,18 @@
+{
+  "report": "tests/bad_rpt.md",
+  "chart": "tests/tc.json",
+  "errors": [
+    "非法格局名: 飞天禄马格"
+  ],
+  "warnings": [
+    "神煞不在已知列表中: 神煞",
+    "神煞不在已知列表中: 贵人"
+  ],
+  "stats": {
+    "total_checks": 14,
+    "passed": 11,
+    "failed": 3
+  },
+  "hallucination_rate": 21.43,
+  "pass": false
+}

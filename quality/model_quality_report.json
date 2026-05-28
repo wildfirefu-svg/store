@@ -1,0 +1,1818 @@
+{
+  "test_date": "2026-05-20",
+  "test_cases": 16,
+  "total_events": 333,
+  "overall_avg_score": 0.44,
+  "overall_positive_rate": 0.108,
+  "category_stats": {
+    "relationship": {
+      "avg": 0.47,
+      "count": 51
+    },
+    "wealth": {
+      "avg": 0.35,
+      "count": 62
+    },
+    "family": {
+      "avg": 0.36,
+      "count": 29
+    },
+    "career": {
+      "avg": 0.57,
+      "count": 136
+    },
+    "health": {
+      "avg": 0.21,
+      "count": 53
+    },
+    "education": {
+      "avg": 0.07,
+      "count": 2
+    }
+  },
+  "case_results": [
+    {
+      "name": "Bill Clinton",
+      "id": "bp_bill_clinton_P007",
+      "bazi": "丙戌 丙申 乙丑 庚辰",
+      "day_master": "乙(木阴)",
+      "avg_score": 0.57,
+      "positive_rate": "22%",
+      "category_stats": {
+        "relationship": {
+          "count": 6,
+          "avg": 0.85,
+          "positive": 0,
+          "negative": 0
+        },
+        "wealth": {
+          "count": 7,
+          "avg": 0.24,
+          "positive": 0,
+          "negative": 6
+        },
+        "family": {
+          "count": 14,
+          "avg": 0.29,
+          "positive": 2,
+          "negative": 11
+        },
+        "career": {
+          "count": 25,
+          "avg": 0.8,
+          "positive": 10,
+          "negative": 3
+        },
+        "health": {
+          "count": 3,
+          "avg": 0.17,
+          "positive": 0,
+          "negative": 2
+        }
+      },
+      "dayun_list": [
+        "丁酉(6-15)",
+        "戊戌(16-25)",
+        "己亥(26-35)",
+        "庚子(36-45)",
+        "辛丑(46-55)",
+        "壬寅(56-65)",
+        "癸卯(66-75)",
+        "甲辰(76-85)",
+        "乙巳(86-95)",
+        "丙午(96-105)"
+      ]
+    },
+    {
+      "name": "Donald Trump",
+      "id": "bp_donald_trump_P012",
+      "bazi": "丙戌 甲午 己未 己巳",
+      "day_master": "己(土阴)",
+      "avg_score": 0,
+      "positive_rate": "0%",
+      "category_stats": {},
+      "dayun_list": [
+        "乙未(8-17)",
+        "丙申(18-27)",
+        "丁酉(28-37)",
+        "戊戌(38-47)",
+        "己亥(48-57)",
+        "庚子(58-67)",
+        "辛丑(68-77)",
+        "壬寅(78-87)",
+        "癸卯(88-97)",
+        "甲辰(98-107)"
+      ]
+    },
+    {
+      "name": "King Charles III",
+      "id": "bp_king_charles_iii_P026",
+      "bazi": "戊子 癸亥 癸卯 癸亥",
+      "day_master": "癸(水阴)",
+      "avg_score": 0,
+      "positive_rate": "0%",
+      "category_stats": {},
+      "dayun_list": [
+        "甲子(8-17)",
+        "乙丑(18-27)",
+        "丙寅(28-37)",
+        "丁卯(38-47)",
+        "戊辰(48-57)",
+        "己巳(58-67)",
+        "庚午(68-77)",
+        "辛未(78-87)",
+        "壬申(88-97)",
+        "癸酉(98-107)"
+      ]
+    },
+    {
+      "name": "Oprah Winfrey",
+      "id": "bp_oprah_winfrey_P035",
+      "bazi": "癸巳 乙丑 乙酉 戊寅",
+      "day_master": "乙(木阴)",
+      "avg_score": 0.48,
+      "positive_rate": "18%",
+      "category_stats": {
+        "relationship": {
+          "count": 4,
+          "avg": 0.67,
+          "positive": 0,
+          "negative": 0
+        },
+        "wealth": {
+          "count": 7,
+          "avg": 0.38,
+          "positive": 1,
+          "negative": 4
+        },
+        "family": {
+          "count": 7,
+          "avg": 0.44,
+          "positive": 1,
+          "negative": 2
+        },
+        "career": {
+          "count": 14,
+          "avg": 0.63,
+          "positive": 4,
+          "negative": 3
+        },
+        "health": {
+          "count": 7,
+          "avg": 0.21,
+          "positive": 1,
+          "negative": 5
+        }
+      },
+      "dayun_list": [
+        "丙寅(2-11)",
+        "丁卯(12-21)",
+        "戊辰(22-31)",
+        "己巳(32-41)",
+        "庚午(42-51)",
+        "辛未(52-61)",
+        "壬申(62-71)",
+        "癸酉(72-81)",
+        "甲戌(82-91)",
+        "乙亥(92-101)"
+      ]
+    },
+    {
+      "name": "Pope John Paul II",
+      "id": "bp_pope_john_paul_ii_P037",
+      "bazi": "庚申 辛巳 丙子 丁酉",
+      "day_master": "丙(火阳)",
+      "avg_score": 0.42,
+      "positive_rate": "11%",
+      "category_stats": {
+        "relationship": {
+          "count": 3,
+          "avg": 0.43,
+          "positive": 0,
+          "negative": 0
+        },
+        "wealth": {
+          "count": 3,
+          "avg": 0.54,
+          "positive": 0,
+          "negative": 1
+        },
+        "career": {
+          "count": 10,
+          "avg": 0.62,
+          "positive": 2,
+          "negative": 1
+        },
+        "health": {
+          "count": 11,
+          "avg": 0.21,
+          "positive": 1,
+          "negative": 9
+        }
+      },
+      "dayun_list": [
+        "壬午(6-15)",
+        "癸未(16-25)",
+        "甲申(26-35)",
+        "乙酉(36-45)",
+        "丙戌(46-55)",
+        "丁亥(56-65)",
+        "戊子(66-75)",
+        "己丑(76-85)",
+        "庚寅(86-95)",
+        "辛卯(96-105)"
+      ]
+    },
+    {
+      "name": "Prince Harry, Duke of Sussex",
+      "id": "bp_prince_harry_duke_of_sussex_P038",
+      "bazi": "甲子 癸酉 壬子 戊申",
+      "day_master": "壬(水阳)",
+      "avg_score": 0.39,
+      "positive_rate": "3%",
+      "category_stats": {
+        "relationship": {
+          "count": 10,
+          "avg": 0.66,
+          "positive": 0,
+          "negative": 1
+        },
+        "wealth": {
+          "count": 8,
+          "avg": 0.5,
+          "positive": 0,
+          "negative": 1
+        },
+        "career": {
+          "count": 10,
+          "avg": 0.2,
+          "positive": 0,
+          "negative": 8
+        },
+        "health": {
+          "count": 8,
+          "avg": 0.19,
+          "positive": 1,
+          "negative": 6
+        }
+      },
+      "dayun_list": [
+        "甲戌(7-16)",
+        "乙亥(17-26)",
+        "丙子(27-36)",
+        "丁丑(37-46)",
+        "戊寅(47-56)",
+        "己卯(57-66)",
+        "庚辰(67-76)",
+        "辛巳(77-86)",
+        "壬午(87-96)",
+        "癸未(97-106)"
+      ]
+    },
+    {
+      "name": "毛泽东",
+      "id": "cn_毛泽东_1893",
+      "bazi": "癸巳 甲子 丁酉 甲辰",
+      "day_master": "丁(火阴)",
+      "avg_score": 0.21,
+      "positive_rate": "0%",
+      "category_stats": {
+        "career": {
+          "count": 7,
+          "avg": 0.26,
+          "positive": 0,
+          "negative": 4
+        },
+        "family": {
+          "count": 1,
+          "avg": 0.3,
+          "positive": 0,
+          "negative": 0
+        },
+        "health": {
+          "count": 2,
+          "avg": 0.0,
+          "positive": 0,
+          "negative": 2
+        }
+      },
+      "dayun_list": [
+        "癸亥(6-15)",
+        "壬戌(16-25)",
+        "辛酉(26-35)",
+        "庚申(36-45)",
+        "己未(46-55)",
+        "戊午(56-65)",
+        "丁巳(66-75)",
+        "丙辰(76-85)",
+        "乙卯(86-95)",
+        "甲寅(96-105)"
+      ]
+    },
+    {
+      "name": "周恩来",
+      "id": "cn_周恩来_1898",
+      "bazi": "戊戌 甲寅 丁卯 癸卯",
+      "day_master": "丁(火阴)",
+      "avg_score": 0.01,
+      "positive_rate": "0%",
+      "category_stats": {
+        "education": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0,
+          "negative": 1
+        },
+        "career": {
+          "count": 4,
+          "avg": 0.02,
+          "positive": 0,
+          "negative": 4
+        },
+        "health": {
+          "count": 2,
+          "avg": 0.0,
+          "positive": 0,
+          "negative": 2
+        }
+      },
+      "dayun_list": [
+        "乙卯(0-9)",
+        "丙辰(10-19)",
+        "丁巳(20-29)",
+        "戊午(30-39)",
+        "己未(40-49)",
+        "庚申(50-59)",
+        "辛酉(60-69)",
+        "壬戌(70-79)",
+        "癸亥(80-89)",
+        "甲子(90-99)"
+      ]
+    },
+    {
+      "name": "邓小平",
+      "id": "cn_邓小平_1904",
+      "bazi": "甲辰 壬申 戊子 庚申",
+      "day_master": "戊(土阳)",
+      "avg_score": 0.52,
+      "positive_rate": "12%",
+      "category_stats": {
+        "education": {
+          "count": 1,
+          "avg": 0.15,
+          "positive": 0,
+          "negative": 1
+        },
+        "career": {
+          "count": 6,
+          "avg": 0.67,
+          "positive": 1,
+          "negative": 0
+        },
+        "health": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0,
+          "negative": 1
+        }
+      },
+      "dayun_list": [
+        "癸酉(5-14)",
+        "甲戌(15-24)",
+        "乙亥(25-34)",
+        "丙子(35-44)",
+        "丁丑(45-54)",
+        "戊寅(55-64)",
+        "己卯(65-74)",
+        "庚辰(75-84)",
+        "辛巳(85-94)",
+        "壬午(95-104)"
+      ]
+    },
+    {
+      "name": "蒋介石",
+      "id": "cn_蒋介石_1887",
+      "bazi": "丁亥 庚戌 己巳 庚午",
+      "day_master": "己(土阴)",
+      "avg_score": 0.85,
+      "positive_rate": "33%",
+      "category_stats": {
+        "career": {
+          "count": 5,
+          "avg": 1.02,
+          "positive": 2,
+          "negative": 0
+        },
+        "health": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0,
+          "negative": 1
+        }
+      },
+      "dayun_list": [
+        "己酉(8-17)",
+        "戊申(18-27)",
+        "丁未(28-37)",
+        "丙午(38-47)",
+        "乙巳(48-57)",
+        "甲辰(58-67)",
+        "癸卯(68-77)",
+        "壬寅(78-87)",
+        "辛丑(88-97)",
+        "庚子(98-107)"
+      ]
+    },
+    {
+      "name": "孙中山",
+      "id": "cn_孙中山_1866",
+      "bazi": "丙寅 己亥 辛卯 辛卯",
+      "day_master": "辛(金阴)",
+      "avg_score": 0.23,
+      "positive_rate": "0%",
+      "category_stats": {
+        "career": {
+          "count": 4,
+          "avg": 0.29,
+          "positive": 0,
+          "negative": 1
+        },
+        "health": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0,
+          "negative": 1
+        }
+      },
+      "dayun_list": [
+        "庚子(8-17)",
+        "辛丑(18-27)",
+        "壬寅(28-37)",
+        "癸卯(38-47)",
+        "甲辰(48-57)",
+        "乙巳(58-67)",
+        "丙午(68-77)",
+        "丁未(78-87)",
+        "戊申(88-97)",
+        "己酉(98-107)"
+      ]
+    },
+    {
+      "name": "袁世凯",
+      "id": "cn_袁世凯_1859",
+      "bazi": "己未 癸酉 丁巳 乙巳",
+      "day_master": "丁(火阴)",
+      "avg_score": 0.41,
+      "positive_rate": "0%",
+      "category_stats": {
+        "career": {
+          "count": 3,
+          "avg": 0.55,
+          "positive": 0,
+          "negative": 0
+        },
+        "health": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0,
+          "negative": 1
+        }
+      },
+      "dayun_list": [
+        "壬申(2-11)",
+        "辛未(12-21)",
+        "庚午(22-31)",
+        "己巳(32-41)",
+        "戊辰(42-51)",
+        "丁卯(52-61)",
+        "丙寅(62-71)",
+        "乙丑(72-81)",
+        "甲子(82-91)",
+        "癸亥(92-101)"
+      ]
+    },
+    {
+      "name": "林彪",
+      "id": "cn_林彪_1907",
+      "bazi": "丁未 辛亥 戊子 甲寅",
+      "day_master": "戊(土阳)",
+      "avg_score": 0.41,
+      "positive_rate": "0%",
+      "category_stats": {
+        "career": {
+          "count": 3,
+          "avg": 0.54,
+          "positive": 0,
+          "negative": 0
+        },
+        "health": {
+          "count": 1,
+          "avg": 0.0,
+          "positive": 0,
+          "negative": 1
+        }
+      },
+      "dayun_list": [
+        "庚戌(9-18)",
+        "己酉(19-28)",
+        "戊申(29-38)",
+        "丁未(39-48)",
+        "丙午(49-58)",
+        "乙巳(59-68)",
+        "甲辰(69-78)",
+        "癸卯(79-88)",
+        "壬寅(89-98)",
+        "辛丑(99-108)"
+      ]
+    },
+    {
+      "name": "Rigoberta Menchú",
+      "id": "bp_rigoberta_menchu_P040",
+      "bazi": "戊戌 乙丑 辛卯 甲午",
+      "day_master": "辛(金阴)",
+      "avg_score": 0.29,
+      "positive_rate": "2%",
+      "category_stats": {
+        "relationship": {
+          "count": 20,
+          "avg": 0.22,
+          "positive": 0,
+          "negative": 15
+        },
+        "wealth": {
+          "count": 18,
+          "avg": 0.28,
+          "positive": 0,
+          "negative": 9
+        },
+        "career": {
+          "count": 11,
+          "avg": 0.48,
+          "positive": 1,
+          "negative": 3
+        },
+        "health": {
+          "count": 2,
+          "avg": 0.0,
+          "positive": 0,
+          "negative": 2
+        }
+      },
+      "dayun_list": [
+        "甲子(1-10)",
+        "癸亥(11-20)",
+        "壬戌(21-30)",
+        "辛酉(31-40)",
+        "庚申(41-50)",
+        "己未(51-60)",
+        "戊午(61-70)",
+        "丁巳(71-80)",
+        "丙辰(81-90)",
+        "乙卯(91-100)"
+      ]
+    },
+    {
+      "name": "Mikhail Gorbachev",
+      "id": "bp_mikhail_gorbachev_P034",
+      "bazi": "辛未 庚寅 丙辰 甲午",
+      "day_master": "丙(火阳)",
+      "avg_score": 0.5,
+      "positive_rate": "12%",
+      "category_stats": {
+        "relationship": {
+          "count": 4,
+          "avg": 0.54,
+          "positive": 0,
+          "negative": 0
+        },
+        "wealth": {
+          "count": 7,
+          "avg": 0.37,
+          "positive": 0,
+          "negative": 2
+        },
+        "family": {
+          "count": 7,
+          "avg": 0.44,
+          "positive": 2,
+          "negative": 2
+        },
+        "career": {
+          "count": 18,
+          "avg": 0.71,
+          "positive": 2,
+          "negative": 2
+        },
+        "health": {
+          "count": 7,
+          "avg": 0.14,
+          "positive": 1,
+          "negative": 6
+        }
+      },
+      "dayun_list": [
+        "己丑(8-17)",
+        "戊子(18-27)",
+        "丁亥(28-37)",
+        "丙戌(38-47)",
+        "乙酉(48-57)",
+        "甲申(58-67)",
+        "癸未(68-77)",
+        "壬午(78-87)",
+        "辛巳(88-97)",
+        "庚辰(98-107)"
+      ]
+    },
+    {
+      "name": "Aung San Suu Kyi",
+      "id": "bp_aung_san_suu_kyi_P004",
+      "bazi": "乙酉 壬午 己未 庚午",
+      "day_master": "己(土阴)",
+      "avg_score": 0.47,
+      "positive_rate": "11%",
+      "category_stats": {
+        "relationship": {
+          "count": 4,
+          "avg": 0.51,
+          "positive": 0,
+          "negative": 0
+        },
+        "wealth": {
+          "count": 12,
+          "avg": 0.37,
+          "positive": 0,
+          "negative": 4
+        },
+        "career": {
+          "count": 16,
+          "avg": 0.47,
+          "positive": 2,
+          "negative": 5
+        },
+        "health": {
+          "count": 6,
+          "avg": 0.68,
+          "positive": 2,
+          "negative": 1
+        }
+      },
+      "dayun_list": [
+        "癸未(6-15)",
+        "甲申(16-25)",
+        "乙酉(26-35)",
+        "丙戌(36-45)",
+        "丁亥(46-55)",
+        "戊子(56-65)",
+        "己丑(66-75)",
+        "庚寅(76-85)",
+        "辛卯(86-95)",
+        "壬辰(96-105)"
+      ]
+    }
+  ],
+  "event_details": [
+    {
+      "case": "Bill Clinton",
+      "year": 2001,
+      "category": "wealth",
+      "score": 0.17,
+      "description": "1993–2001年：担任美国总统期间，年薪20万美元（1999年调整为40万美元）。",
+      "dayun": "辛丑",
+      "liunian": "辛巳",
+      "reasons": [
+        "大运地支偏财(+2.0)",
+        "大运天干七杀(-0.5)",
+        "流年七杀(-0.5)"
+      ]
+    },
+    {
+      "case": "Bill Clinton",
+      "year": 2001,
+      "category": "wealth",
+      "score": 0.17,
+      "description": "2001年后：通过出版回忆录《我的生活》（My Life，2004年）获得约1500万美元预付稿酬；全球巡回演讲（单场报酬常达数十万美元）；成立克林顿基金会并接",
+      "dayun": "辛丑",
+      "liunian": "辛巳",
+      "reasons": [
+        "大运地支偏财(+2.0)",
+        "大运天干七杀(-0.5)",
+        "流年七杀(-0.5)"
+      ]
+    },
+    {
+      "case": "Bill Clinton",
+      "year": 2015,
+      "category": "wealth",
+      "score": 0.0,
+      "description": "2015年：据公开税务申报，克林顿夫妇2014年收入约2780万美元，主要来自演讲和出版。",
+      "dayun": "癸卯",
+      "liunian": "乙未",
+      "reasons": []
+    },
+    {
+      "case": "Bill Clinton",
+      "year": 2020,
+      "category": "wealth",
+      "score": -0.07,
+      "description": "2020年后：持续通过演讲、顾问角色和基金会相关活动获得收入，财富稳定增长（无最新精确数字，但长期位列前总统财富前列）。 ───────────────────",
+      "dayun": "癸卯",
+      "liunian": "庚子",
+      "reasons": [
+        "流年正官(-0.5)"
+      ]
+    },
+    {
+      "case": "Bill Clinton",
+      "year": 1950,
+      "category": "family",
+      "score": 0.0,
+      "description": "1950年：母亲弗吉尼亚·德尔·卡西迪（Virginia Dell Cassidy）与罗杰·克林顿（Roger Clinton Sr.）再婚，Bill 随继父姓",
+      "dayun": "童运",
+      "liunian": "庚寅",
+      "reasons": [
+        "无大运数据(童运期)"
+      ]
+    },
+    {
+      "case": "Bill Clinton",
+      "year": 1967,
+      "category": "family",
+      "score": 0.0,
+      "description": "1967年：正式将法律姓名从“威廉·杰斐逊·布莱斯”改为“威廉·杰斐逊·克林顿”。",
+      "dayun": "戊戌",
+      "liunian": "丁未",
+      "reasons": []
+    },
+    {
+      "case": "Bill Clinton",
+      "year": 1997,
+      "category": "family",
+      "score": 0.0,
+      "description": "1997年：弟弟小罗杰·克林顿因酒驾再次被捕。",
+      "dayun": "辛丑",
+      "liunian": "丁丑",
+      "reasons": []
+    },
+    {
+      "case": "Bill Clinton",
+      "year": 1998,
+      "category": "family",
+      "score": 0.0,
+      "description": "1998年：母亲弗吉尼亚出版回忆录《亲历生活》（Living History，实际为希拉里著作，此处应为误记；弗吉尼亚本人未出版回忆录）——注：弗吉尼亚于199",
+      "dayun": "辛丑",
+      "liunian": "戊寅",
+      "reasons": []
+    },
+    {
+      "case": "Bill Clinton",
+      "year": 1968,
+      "category": "career",
+      "score": -0.33,
+      "description": "1968年：毕业于乔治城大学外交学院，获国际事务学士学位。",
+      "dayun": "戊戌",
+      "liunian": "戊申",
+      "reasons": [
+        "大运天干正财(-0.5)",
+        "大运地支正财(-0.5)",
+        "流年正财(-0.5)"
+      ]
+    },
+    {
+      "case": "Bill Clinton",
+      "year": 1970,
+      "category": "career",
+      "score": 0.05,
+      "description": "1968–1970年：获罗德奖学金赴英国牛津大学学习政治学（未获学位）。",
+      "dayun": "戊戌",
+      "liunian": "庚戌",
+      "reasons": [
+        "大运天干正财(-0.5)",
+        "大运地支正财(-0.5)",
+        "流年正官(+2.0)"
+      ]
+    },
+    {
+      "case": "Bill Clinton",
+      "year": 1960,
+      "category": "health",
+      "score": 0.0,
+      "description": "1960年代：青少年时期有哮喘病史。",
+      "dayun": "丁酉",
+      "liunian": "庚子",
+      "reasons": []
+    },
+    {
+      "case": "Bill Clinton",
+      "year": 2004,
+      "category": "health",
+      "score": 0.0,
+      "description": "2004年9月6日：因胸痛和呼吸急促入院， === 基于 Bill Clinton 信息生成的选择题 === Q1: 命主在1975年感情生活中的关键事件是什么",
+      "dayun": "壬寅",
+      "liunian": "甲申",
+      "reasons": []
+    },
+    {
+      "case": "Oprah Winfrey",
+      "year": 2003,
+      "category": "wealth",
+      "score": 0.15,
+      "description": "2003年：以10亿美元净资产成为美国历史上第一位非裔女性亿万富翁（知识库 [1]）。",
+      "dayun": "庚午",
+      "liunian": "癸未",
+      "reasons": [
+        "大运地支食神(+1.5)",
+        "大运天干正官(-0.5)"
+      ]
+    },
+    {
+      "case": "Oprah Winfrey",
+      "year": 2020,
+      "category": "wealth",
+      "score": -0.17,
+      "description": "2020年：净资产约26亿美元（受市场波动影响略有回落），仍为全球最具影响力的媒体富豪之一（知识库 [2]）。",
+      "dayun": "壬申",
+      "liunian": "庚子",
+      "reasons": [
+        "大运地支正官(-0.5)",
+        "流年正官(-0.5)"
+      ]
+    },
+    {
+      "case": "Oprah Winfrey",
+      "year": 2023,
+      "category": "wealth",
+      "score": -0.1,
+      "description": "2023年：据《福布斯》实时数据，净资产约25亿美元，持续通过媒体、投资与慈善维持财富增长。",
+      "dayun": "壬申",
+      "liunian": "癸卯",
+      "reasons": [
+        "大运地支正官(-0.5)"
+      ]
+    },
+    {
+      "case": "Oprah Winfrey",
+      "year": 1987,
+      "category": "family",
+      "score": 0.0,
+      "description": "1987年：母亲 Vernita Lee 首次公开露面于《奥普拉秀》，母女关系曾疏远后逐步修复。",
+      "dayun": "己巳",
+      "liunian": "丁卯",
+      "reasons": []
+    },
+    {
+      "case": "Oprah Winfrey",
+      "year": 1990,
+      "category": "family",
+      "score": 0.0,
+      "description": "1990年代：资助同父异母妹妹 Patricia Lee Lloyd，后因 Patricia 滥用药物及媒体曝光家庭隐私，关系破裂。",
+      "dayun": "己巳",
+      "liunian": "庚午",
+      "reasons": []
+    },
+    {
+      "case": "Oprah Winfrey",
+      "year": 1976,
+      "category": "career",
+      "score": -0.1,
+      "description": "1976年：移居巴尔的摩，主持 WJZ-TV 早间节目《People Are Talking》，开启脱口秀生涯。",
+      "dayun": "戊辰",
+      "liunian": "丙辰",
+      "reasons": [
+        "大运天干正财(-0.5)",
+        "大运地支正财(-0.5)",
+        "流年伤官(+1.0)"
+      ]
+    },
+    {
+      "case": "Oprah Winfrey",
+      "year": 1984,
+      "category": "career",
+      "score": -0.25,
+      "description": "1984年：移居芝加哥，接手早间脱口秀《AM Chicago》，节目收视率迅速超越竞争对手。",
+      "dayun": "戊辰",
+      "liunian": "甲子",
+      "reasons": [
+        "大运天干正财(-0.5)",
+        "大运地支正财(-0.5)"
+      ]
+    },
+    {
+      "case": "Oprah Winfrey",
+      "year": 1985,
+      "category": "career",
+      "score": -0.25,
+      "description": "1985年：出演斯皮尔伯格执导电影《紫色》，获奥斯卡最佳女配角提名，演技获认可。",
+      "dayun": "戊辰",
+      "liunian": "乙丑",
+      "reasons": [
+        "大运天干正财(-0.5)",
+        "大运地支正财(-0.5)"
+      ]
+    },
+    {
+      "case": "Oprah Winfrey",
+      "year": 1988,
+      "category": "health",
+      "score": 0.0,
+      "description": "1988年：公开在节目中称自己减重67磅，开始关注体重与健康议题，此后多次公开减肥历程。",
+      "dayun": "己巳",
+      "liunian": "戊辰",
+      "reasons": []
+    },
+    {
+      "case": "Oprah Winfrey",
+      "year": 1990,
+      "category": "health",
+      "score": 0.0,
+      "description": "1990年代–2000年代：多次因体重反弹陷入公众关注，坦言与“情绪化进食”斗争。",
+      "dayun": "己巳",
+      "liunian": "庚午",
+      "reasons": []
+    },
+    {
+      "case": "Oprah Winfrey",
+      "year": 2015,
+      "category": "health",
+      "score": 0.0,
+      "description": "2015年：接受《人物》杂志采访，透露曾因压力过大导致甲状腺功能异常，需服药控制。",
+      "dayun": "辛未",
+      "liunian": "乙未",
+      "reasons": []
+    },
+    {
+      "case": "Oprah Winfrey",
+      "year": 2020,
+      "category": "health",
+      "score": 0.0,
+      "description": "2020年：在 OWN 节目中透露自己每日冥想、坚持植物性饮食与规律运动，重视心理健康。",
+      "dayun": "壬申",
+      "liunian": "庚子",
+      "reasons": []
+    },
+    {
+      "case": "Oprah Winfrey",
+      "year": 2021,
+      "category": "health",
+      "score": 0.0,
+      "description": "2021年：公开谈论更年期症状（如潮热、失眠），鼓励女性正视并科学应对生理变化。",
+      "dayun": "壬申",
+      "liunian": "辛丑",
+      "reasons": []
+    },
+    {
+      "case": "Pope John Paul II",
+      "year": 1978,
+      "category": "wealth",
+      "score": 0.12,
+      "description": "1946–1978年 – 作为神父、主教、枢机主教期间，生活简朴，收入仅限教会供给的基本生活津贴，无个人资产积累。",
+      "dayun": "丁亥",
+      "liunian": "戊午",
+      "reasons": [
+        "大运地支七杀(-0.5)",
+        "流年食神(+1.5)"
+      ]
+    },
+    {
+      "case": "Pope John Paul II",
+      "year": 1944,
+      "category": "health",
+      "score": 0.0,
+      "description": "1944年 – 为躲避纳粹征召，在采石场工作期间曾受轻伤。",
+      "dayun": "癸未",
+      "liunian": "甲申",
+      "reasons": []
+    },
+    {
+      "case": "Pope John Paul II",
+      "year": 1981,
+      "category": "health",
+      "score": 0.0,
+      "description": "1981年5月13日 – 遭枪击，腹部与手臂中弹，经6小时手术后康复。(知识库 [5])",
+      "dayun": "丁亥",
+      "liunian": "辛酉",
+      "reasons": []
+    },
+    {
+      "case": "Pope John Paul II",
+      "year": 1992,
+      "category": "health",
+      "score": 0.0,
+      "description": "1992年 – 接受结肠肿瘤切除手术。",
+      "dayun": "戊子",
+      "liunian": "壬申",
+      "reasons": []
+    },
+    {
+      "case": "Pope John Paul II",
+      "year": 1994,
+      "category": "health",
+      "score": 0.0,
+      "description": "1994年4月 – 右股骨骨折，接受手术并使用拐杖。",
+      "dayun": "戊子",
+      "liunian": "甲戌",
+      "reasons": []
+    },
+    {
+      "case": "Pope John Paul II",
+      "year": 2001,
+      "category": "health",
+      "score": 0.0,
+      "description": "2001年 – 被诊断患有帕金森病，症状逐渐公开化（手部震颤、步履蹒跚）。",
+      "dayun": "己丑",
+      "liunian": "辛巳",
+      "reasons": []
+    },
+    {
+      "case": "Pope John Paul II",
+      "year": 2003,
+      "category": "health",
+      "score": 0.0,
+      "description": "2003年 – 呼吸系统感染频发，公开露面减少。",
+      "dayun": "己丑",
+      "liunian": "癸未",
+      "reasons": []
+    },
+    {
+      "case": "Pope John Paul II",
+      "year": 2005,
+      "category": "health",
+      "score": 0.0,
+      "description": "2005年2月 – 因流感引发喉部并发症接受气管切开术，丧失说话能力。",
+      "dayun": "己丑",
+      "liunian": "乙酉",
+      "reasons": []
+    },
+    {
+      "case": "Pope John Paul II",
+      "year": 2005,
+      "category": "health",
+      "score": 0.0,
+      "description": "2005年3月30日 – 多器官衰竭，进入弥留状态。",
+      "dayun": "己丑",
+      "liunian": "乙酉",
+      "reasons": []
+    },
+    {
+      "case": "Pope John Paul II",
+      "year": 2005,
+      "category": "health",
+      "score": 0.0,
+      "description": "2005年4月2日 – 21:37（罗马时间）因心搏停止逝世，享年84岁。",
+      "dayun": "己丑",
+      "liunian": "乙酉",
+      "reasons": []
+    },
+    {
+      "case": "Prince Harry, Duke of Sussex",
+      "year": 2004,
+      "category": "relationship",
+      "score": 0.1,
+      "description": "2004年–2010年：与切尔西·戴维（Chelsy Davy）交往，两人在伊顿公学时期相识，关系断续维持约7年，最终和平分手。",
+      "dayun": "乙亥",
+      "liunian": "甲申",
+      "reasons": [
+        "大运地支比肩(+0.5)"
+      ]
+    },
+    {
+      "case": "Prince Harry, Duke of Sussex",
+      "year": 1984,
+      "category": "wealth",
+      "score": 0.0,
+      "description": "1984年出生时：作为王室成员，无个人收入，生活费用由王室拨款及父亲查尔斯（时任威尔士亲王）私人收入支持。",
+      "dayun": "童运",
+      "liunian": "甲子",
+      "reasons": [
+        "无大运数据(童运期)"
+      ]
+    },
+    {
+      "case": "Prince Harry, Duke of Sussex",
+      "year": 2012,
+      "category": "career",
+      "score": 0.0,
+      "description": "2012年–2013年：第二次部署阿富汗，担任阿帕奇武装直升机飞行员，执行作战任务。",
+      "dayun": "丙子",
+      "liunian": "壬辰",
+      "reasons": []
+    },
+    {
+      "case": "Prince Harry, Duke of Sussex",
+      "year": 2013,
+      "category": "career",
+      "score": 0.0,
+      "description": "2013年6月：与威廉王子共同创办“不可征服运动会”（Invictus Games），旨在帮助受伤退伍军人康复。",
+      "dayun": "丙子",
+      "liunian": "癸巳",
+      "reasons": []
+    },
+    {
+      "case": "Prince Harry, Duke of Sussex",
+      "year": 2015,
+      "category": "career",
+      "score": 0.15,
+      "description": "2015年6月：从英国陆军正式退役，结束10年军旅生涯，获上尉军衔。",
+      "dayun": "丙子",
+      "liunian": "乙未",
+      "reasons": [
+        "流年伤官(+1.0)"
+      ]
+    },
+    {
+      "case": "Prince Harry, Duke of Sussex",
+      "year": 2016,
+      "category": "career",
+      "score": 0.0,
+      "description": "2016年–2019年：担任王室高级成员，专注心理健康、退伍军人、环保与青年议题，频繁代表王室出访。",
+      "dayun": "丙子",
+      "liunian": "丙申",
+      "reasons": []
+    },
+    {
+      "case": "Prince Harry, Duke of Sussex",
+      "year": 2012,
+      "category": "health",
+      "score": 0.0,
+      "description": "2012年：在阿富汗服役期间报告无重大身体损伤，但后来自述经历“战斗压力”。",
+      "dayun": "丙子",
+      "liunian": "壬辰",
+      "reasons": []
+    },
+    {
+      "case": "Prince Harry, Duke of Sussex",
+      "year": 2017,
+      "category": "health",
+      "score": 0.0,
+      "description": "2017年4月：公开承认20余年来未处理母亲去世带来的心理创伤，接受心理咨询（《每日电讯报》专访）。",
+      "dayun": "丙子",
+      "liunian": "丁酉",
+      "reasons": []
+    },
+    {
+      "case": "Prince Harry, Duke of Sussex",
+      "year": 2019,
+      "category": "health",
+      "score": 0.0,
+      "description": "2019年：与梅根共同倡导心理健康议题，承认曾经历“焦虑发作”与“情绪崩溃”。",
+      "dayun": "丙子",
+      "liunian": "己亥",
+      "reasons": []
+    },
+    {
+      "case": "Prince Harry, Duke of Sussex",
+      "year": 2021,
+      "category": "health",
+      "score": 0.0,
+      "description": "2021年：接受美国脱口秀主持人奥普拉专访，详述心理健康挣扎与王室系统压力（Oprah Winfrey Interview, CBS）。",
+      "dayun": "丁丑",
+      "liunian": "辛丑",
+      "reasons": []
+    },
+    {
+      "case": "Prince Harry, Duke of Sussex",
+      "year": 2023,
+      "category": "health",
+      "score": 0.0,
+      "description": "2023年：在回忆录中披露曾接受长期心理治疗，服用抗抑郁药物，并称“治疗救了我的命”（《Spare》第28章）(知识库 [3])。",
+      "dayun": "丁丑",
+      "liunian": "癸卯",
+      "reasons": []
+    },
+    {
+      "case": "Prince Harry, Duke of Sussex",
+      "year": 2023,
+      "category": "health",
+      "score": 0.0,
+      "description": "2023年至今：公开倡导心理治疗去污名化，定期参与心理健康论坛，自身状况稳定。",
+      "dayun": "丁丑",
+      "liunian": "癸卯",
+      "reasons": []
+    },
+    {
+      "case": "毛泽东",
+      "year": 1921,
+      "category": "career",
+      "score": 0.0,
+      "description": "参加中共一大",
+      "dayun": "辛酉",
+      "liunian": "辛酉",
+      "reasons": []
+    },
+    {
+      "case": "毛泽东",
+      "year": 1927,
+      "category": "career",
+      "score": 0.0,
+      "description": "领导秋收起义",
+      "dayun": "辛酉",
+      "liunian": "丁卯",
+      "reasons": []
+    },
+    {
+      "case": "毛泽东",
+      "year": 1935,
+      "category": "career",
+      "score": -0.03,
+      "description": "遵义会议确立领导地位",
+      "dayun": "庚申",
+      "liunian": "乙亥",
+      "reasons": [
+        "大运天干正财(-0.5)",
+        "大运地支正财(-0.5)",
+        "流年偏印(+1.5)"
+      ]
+    },
+    {
+      "case": "毛泽东",
+      "year": 1966,
+      "category": "career",
+      "score": 0.0,
+      "description": "发动文化大革命",
+      "dayun": "丁巳",
+      "liunian": "丙午",
+      "reasons": []
+    },
+    {
+      "case": "毛泽东",
+      "year": 1972,
+      "category": "health",
+      "score": 0.0,
+      "description": "健康恶化",
+      "dayun": "丙辰",
+      "liunian": "壬子",
+      "reasons": []
+    },
+    {
+      "case": "毛泽东",
+      "year": 1976,
+      "category": "health",
+      "score": 0.0,
+      "description": "9月9日逝世",
+      "dayun": "丙辰",
+      "liunian": "丙辰",
+      "reasons": []
+    },
+    {
+      "case": "周恩来",
+      "year": 1920,
+      "category": "education",
+      "score": 0.0,
+      "description": "赴法勤工俭学",
+      "dayun": "丁巳",
+      "liunian": "庚申",
+      "reasons": []
+    },
+    {
+      "case": "周恩来",
+      "year": 1927,
+      "category": "career",
+      "score": 0.0,
+      "description": "领导南昌起义",
+      "dayun": "丁巳",
+      "liunian": "丁卯",
+      "reasons": []
+    },
+    {
+      "case": "周恩来",
+      "year": 1949,
+      "category": "career",
+      "score": -0.1,
+      "description": "任国务院总理",
+      "dayun": "庚申",
+      "liunian": "己丑",
+      "reasons": [
+        "大运天干正财(-0.5)",
+        "大运地支正财(-0.5)",
+        "流年食神(+1.0)"
+      ]
+    },
+    {
+      "case": "周恩来",
+      "year": 1955,
+      "category": "career",
+      "score": -0.03,
+      "description": "万隆会议提出和平共处五项原则",
+      "dayun": "庚申",
+      "liunian": "乙未",
+      "reasons": [
+        "大运天干正财(-0.5)",
+        "大运地支正财(-0.5)",
+        "流年偏印(+1.5)"
+      ]
+    },
+    {
+      "case": "周恩来",
+      "year": 1972,
+      "category": "health",
+      "score": 0.0,
+      "description": "确诊膀胱癌",
+      "dayun": "壬戌",
+      "liunian": "壬子",
+      "reasons": []
+    },
+    {
+      "case": "周恩来",
+      "year": 1976,
+      "category": "health",
+      "score": 0.0,
+      "description": "1月8日逝世",
+      "dayun": "壬戌",
+      "liunian": "丙辰",
+      "reasons": []
+    },
+    {
+      "case": "邓小平",
+      "year": 1920,
+      "category": "education",
+      "score": 0.15,
+      "description": "赴法勤工俭学",
+      "dayun": "甲戌",
+      "liunian": "庚申",
+      "reasons": [
+        "流年食神(+1.0)"
+      ]
+    },
+    {
+      "case": "邓小平",
+      "year": 1997,
+      "category": "health",
+      "score": 0.0,
+      "description": "2月19日逝世",
+      "dayun": "辛巳",
+      "liunian": "丁丑",
+      "reasons": []
+    },
+    {
+      "case": "蒋介石",
+      "year": 1975,
+      "category": "health",
+      "score": 0.0,
+      "description": "4月5日逝世于台北",
+      "dayun": "辛丑",
+      "liunian": "乙卯",
+      "reasons": []
+    },
+    {
+      "case": "孙中山",
+      "year": 1894,
+      "category": "career",
+      "score": 0.12,
+      "description": "创建兴中会",
+      "dayun": "壬寅",
+      "liunian": "甲午",
+      "reasons": [
+        "大运天干伤官(+1.0)",
+        "大运地支正财(-0.5)",
+        "流年正财(-0.5)"
+      ]
+    },
+    {
+      "case": "孙中山",
+      "year": 1925,
+      "category": "health",
+      "score": 0.0,
+      "description": "3月12日逝世于北京",
+      "dayun": "乙巳",
+      "liunian": "乙丑",
+      "reasons": []
+    },
+    {
+      "case": "袁世凯",
+      "year": 1916,
+      "category": "health",
+      "score": 0.0,
+      "description": "6月6日病逝",
+      "dayun": "丁卯",
+      "liunian": "丙辰",
+      "reasons": []
+    },
+    {
+      "case": "林彪",
+      "year": 1971,
+      "category": "health",
+      "score": 0.0,
+      "description": "9月13日坠机身亡",
+      "dayun": "乙巳",
+      "liunian": "辛亥",
+      "reasons": []
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 1959,
+      "category": "relationship",
+      "score": 0.0,
+      "description": "1959年1月9日：出生于危地马拉基切省（El Quiché）的圣米格尔乌斯潘（San Miguel Uspantán）一个贫穷的玛雅基切族农民家庭（知识库 [",
+      "dayun": "童运",
+      "liunian": "己亥",
+      "reasons": [
+        "无大运数据(童运期)"
+      ]
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 1979,
+      "category": "relationship",
+      "score": 0.0,
+      "description": "1979年—1980年：其弟 Petrocinio Menchú 在政府军手中遭受酷刑后被杀害（1979年）；其母 Juana Tum Kótoja 被军方绑架",
+      "dayun": "癸亥",
+      "liunian": "己未",
+      "reasons": []
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 1980,
+      "category": "relationship",
+      "score": 0.07,
+      "description": "1980年：其父 Vicente Menchú 在危地马拉城西班牙大使馆抗议活动中，因政府军纵火导致37人死亡，其中包括 Vicente Menchú（1980",
+      "dayun": "壬戌",
+      "liunian": "庚申",
+      "reasons": [
+        "流年劫财(+0.5)"
+      ]
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 1970,
+      "category": "relationship",
+      "score": 0.07,
+      "description": "1970年代初（约13岁起）：开始参与农民工会与原住民土地权利抗争，协助翻译、组织集会。",
+      "dayun": "癸亥",
+      "liunian": "庚戌",
+      "reasons": [
+        "流年劫财(+0.5)"
+      ]
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 1981,
+      "category": "relationship",
+      "score": 0.07,
+      "description": "1981年：流亡墨西哥，开始国际人权倡导工作。",
+      "dayun": "壬戌",
+      "liunian": "辛酉",
+      "reasons": [
+        "流年比肩(+0.5)"
+      ]
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 1983,
+      "category": "relationship",
+      "score": 0.0,
+      "description": "1983年：出版自传《我，里戈韦塔·门楚》（*I, Rigoberta Menchú*），由 Elisabeth Burgos-Debray 编辑整理，该书成为",
+      "dayun": "壬戌",
+      "liunian": "癸亥",
+      "reasons": []
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 1980,
+      "category": "relationship",
+      "score": 0.07,
+      "description": "1980年代—1990年代：作为联合国教科文组织亲善大使，在全球推动原住民文化与教育权利。",
+      "dayun": "壬戌",
+      "liunian": "庚申",
+      "reasons": [
+        "流年劫财(+0.5)"
+      ]
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 1980,
+      "category": "relationship",
+      "score": 0.07,
+      "description": "1980年代流亡期间，曾因政治压力与创伤经历接受心理支持，但无官方诊断公布。",
+      "dayun": "壬戌",
+      "liunian": "庚申",
+      "reasons": [
+        "流年劫财(+0.5)"
+      ]
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 1959,
+      "category": "wealth",
+      "score": 0.0,
+      "description": "1959年1月9日：出生于危地马拉基切省（El Quiché）的圣米格尔乌斯潘（San Miguel Uspantán）一个贫穷的玛雅基切族农民家庭（知识库 [",
+      "dayun": "童运",
+      "liunian": "己亥",
+      "reasons": [
+        "无大运数据(童运期)"
+      ]
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 1998,
+      "category": "wealth",
+      "score": 0.0,
+      "description": "1998年：收养儿子 Mash Nahual J’a。 四、事业",
+      "dayun": "辛酉",
+      "liunian": "戊寅",
+      "reasons": []
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 1996,
+      "category": "wealth",
+      "score": -0.07,
+      "description": "1996年：参与推动《危地马拉和平协定》签署，结束长达36年内战。",
+      "dayun": "辛酉",
+      "liunian": "丙子",
+      "reasons": [
+        "流年正官(-0.5)"
+      ]
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 1998,
+      "category": "wealth",
+      "score": 0.0,
+      "description": "1998年：创立“Rigoberta Menchú Tum 基金会”，总部设于危地马拉城。",
+      "dayun": "辛酉",
+      "liunian": "戊寅",
+      "reasons": []
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 2007,
+      "category": "wealth",
+      "score": -0.07,
+      "description": "2007年、2011年：两次代表“温纳克政治运动”（Winaq）参选危地马拉总统，虽未当选，但开创原住民女性参选国家元首先例。",
+      "dayun": "庚申",
+      "liunian": "丁亥",
+      "reasons": [
+        "流年七杀(-0.5)"
+      ]
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 2000,
+      "category": "wealth",
+      "score": 0.0,
+      "description": "2000年代后公开露面频繁，未见健康异常报道，目前（截至2024年）仍活跃于公共事务。",
+      "dayun": "庚申",
+      "liunian": "庚辰",
+      "reasons": []
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 1992,
+      "category": "career",
+      "score": 0.15,
+      "description": "1992年10月：获诺贝尔和平奖，表彰其“基于和解、尊重原住民权利基础上，争取社会正义与民族和解的工作”（知识库 [6]）。",
+      "dayun": "辛酉",
+      "liunian": "壬申",
+      "reasons": [
+        "流年伤官(+1.0)"
+      ]
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 2000,
+      "category": "career",
+      "score": 0.0,
+      "description": "2000年代后公开露面频繁，未见健康异常报道，目前（截至2024年）仍活跃于公共事务。",
+      "dayun": "庚申",
+      "liunian": "庚辰",
+      "reasons": []
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 1980,
+      "category": "health",
+      "score": 0.0,
+      "description": "1980年代流亡期间，曾因政治压力与创伤经历接受心理支持，但无官方诊断公布。",
+      "dayun": "壬戌",
+      "liunian": "庚申",
+      "reasons": []
+    },
+    {
+      "case": "Rigoberta Menchú",
+      "year": 2000,
+      "category": "health",
+      "score": 0.0,
+      "description": "2000年代后公开露面频繁，未见健康异常报道，目前（截至2024年）仍活跃于公共事务。",
+      "dayun": "庚申",
+      "liunian": "庚辰",
+      "reasons": []
+    },
+    {
+      "case": "Mikhail Gorbachev",
+      "year": 2005,
+      "category": "wealth",
+      "score": 0.15,
+      "description": "2005年：接受路易威登广告拍摄，坐在柏林墙残垣手持手提包，被媒体称为“为资本主义代言”，报酬未公开。",
+      "dayun": "癸未",
+      "liunian": "乙酉",
+      "reasons": [
+        "大运地支伤官(+1.5)",
+        "大运天干正官(-0.5)"
+      ]
+    },
+    {
+      "case": "Mikhail Gorbachev",
+      "year": 2016,
+      "category": "wealth",
+      "score": -0.15,
+      "description": "2016年：据《福布斯》估算，其净资产约数百万美元，主要来自演讲、版权与基金会运营。",
+      "dayun": "壬午",
+      "liunian": "丙申",
+      "reasons": [
+        "大运天干七杀(-0.5)"
+      ]
+    },
+    {
+      "case": "Mikhail Gorbachev",
+      "year": 1933,
+      "category": "family",
+      "score": 0.0,
+      "description": "1933年：祖父因“富农”身份被斯大林政权流放，家庭受政治迫害影响。",
+      "dayun": "童运",
+      "liunian": "癸酉",
+      "reasons": [
+        "无大运数据(童运期)"
+      ]
+    },
+    {
+      "case": "Mikhail Gorbachev",
+      "year": 1999,
+      "category": "family",
+      "score": 0.0,
+      "description": "1999年：妻子 Raisa 去世（见感情部分）。",
+      "dayun": "癸未",
+      "liunian": "己卯",
+      "reasons": []
+    },
+    {
+      "case": "Mikhail Gorbachev",
+      "year": 1971,
+      "category": "career",
+      "score": 0.12,
+      "description": "1971年：当选苏共中央委员。",
+      "dayun": "丙戌",
+      "liunian": "辛亥",
+      "reasons": [
+        "大运地支食神(+1.0)",
+        "流年正财(-0.5)"
+      ]
+    },
+    {
+      "case": "Mikhail Gorbachev",
+      "year": 1990,
+      "category": "health",
+      "score": 0.0,
+      "description": "1990年代初期：曾因过度劳累住院，具体病症未公开。",
+      "dayun": "甲申",
+      "liunian": "庚午",
+      "reasons": []
+    },
+    {
+      "case": "Mikhail Gorbachev",
+      "year": 2008,
+      "category": "health",
+      "score": 0.0,
+      "description": "2008年：妻子去世后曾出现抑郁症状，接受心理支持。",
+      "dayun": "癸未",
+      "liunian": "戊子",
+      "reasons": []
+    },
+    {
+      "case": "Mikhail Gorbachev",
+      "year": 2010,
+      "category": "health",
+      "score": 0.0,
+      "description": "2010年代：多次因糖尿病、高血压接受治疗。",
+      "dayun": "壬午",
+      "liunian": "庚寅",
+      "reasons": []
+    },
+    {
+      "case": "Mikhail Gorbachev",
+      "year": 2015,
+      "category": "health",
+      "score": 0.0,
+      "description": "2015年：住院治疗严重背痛与感染，取消多场公开活动。",
+      "dayun": "壬午",
+      "liunian": "乙未",
+      "reasons": []
+    },
+    {
+      "case": "Mikhail Gorbachev",
+      "year": 2021,
+      "category": "health",
+      "score": 0.0,
+      "description": "2020–2021年：因肾功能问题多次住院，行动需轮椅辅助。",
+      "dayun": "辛巳",
+      "liunian": "辛丑",
+      "reasons": []
+    },
+    {
+      "case": "Mikhail Gorbachev",
+      "year": 2022,
+      "category": "health",
+      "score": 0.0,
+      "description": "2022年8月30日：因长期重病在莫斯科中央临床医院去世，官方未公布具体病因，但据俄媒报道与肾衰竭有关。(知识库 [5])",
+      "dayun": "辛巳",
+      "liunian": "壬寅",
+      "reasons": []
+    },
+    {
+      "case": "Aung San Suu Kyi",
+      "year": 1988,
+      "category": "wealth",
+      "score": 0.0,
+      "description": "1988年前：作为学者家属，生活稳定但无显著财富积累；丈夫为牛津大学研究员，家庭属中产阶层。",
+      "dayun": "丙戌",
+      "liunian": "戊辰",
+      "reasons": []
+    },
+    {
+      "case": "Aung San Suu Kyi",
+      "year": 1927,
+      "category": "wealth",
+      "score": 0.0,
+      "description": "1927年1月13日：父亲昂山将军（Aung San）出生，缅甸独立运动领袖。",
+      "dayun": "童运",
+      "liunian": "丁卯",
+      "reasons": [
+        "无大运数据(童运期)"
+      ]
+    },
+    {
+      "case": "Aung San Suu Kyi",
+      "year": 1947,
+      "category": "wealth",
+      "score": 0.0,
+      "description": "1947年7月19日：父亲昂山将军遇刺身亡，时年昂山素季仅2岁。(知识库 [7])",
+      "dayun": "童运",
+      "liunian": "丁亥",
+      "reasons": [
+        "无大运数据(童运期)"
+      ]
+    },
+    {
+      "case": "Aung San Suu Kyi",
+      "year": 1988,
+      "category": "wealth",
+      "score": 0.0,
+      "description": "1988年12月：母亲杜钦季病重，昂山素季返缅照顾，后母亲于1989年12月27日去世，正值其首次被软禁期间。(知识库 [9])",
+      "dayun": "丙戌",
+      "liunian": "戊辰",
+      "reasons": []
+    },
+    {
+      "case": "Aung San Suu Kyi",
+      "year": 2003,
+      "category": "career",
+      "score": 0.0,
+      "description": "2003年5月30日：“德帕因事件”后再度被拘，软禁持续至2010年11月13日。",
+      "dayun": "戊子",
+      "liunian": "癸未",
+      "reasons": []
+    },
+    {
+      "case": "Aung San Suu Kyi",
+      "year": 2012,
+      "category": "career",
+      "score": -0.07,
+      "description": "2012年4月1日：当选人民院议员，重返政坛。",
+      "dayun": "己丑",
+      "liunian": "壬辰",
+      "reasons": [
+        "流年正财(-0.5)"
+      ]
+    },
+    {
+      "case": "Aung San Suu Kyi",
+      "year": 2019,
+      "category": "career",
+      "score": 0.0,
+      "description": "2017–2019年：因罗兴亚危机遭国际批评，被剥夺多项国际荣誉。",
+      "dayun": "己丑",
+      "liunian": "己亥",
+      "reasons": []
+    },
+    {
+      "case": "Aung San Suu Kyi",
+      "year": 2020,
+      "category": "career",
+      "score": 0.15,
+      "description": "2020年11月：NLD再次赢得大选。",
+      "dayun": "己丑",
+      "liunian": "庚子",
+      "reasons": [
+        "流年伤官(+1.0)"
+      ]
+    },
+    {
+      "case": "Aung San Suu Kyi",
+      "year": 2010,
+      "category": "health",
+      "score": 0.0,
+      "description": "1989–2010年：软禁期间多次传出健康恶化，包括妇科疾病、高血压、疲劳等，但军政府常拒绝提供独立医疗评估。(知识库 [15])",
+      "dayun": "戊子",
+      "liunian": "庚寅",
+      "reasons": []
+    }
+  ]
+}

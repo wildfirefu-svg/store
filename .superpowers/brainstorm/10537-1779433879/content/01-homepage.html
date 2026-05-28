@@ -1,0 +1,65 @@
+<h2>首页设计 — 新手/高级双模式入口</h2>
+<p class="subtitle">一个首页，两条路径，同一套后端</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">路径A：新手模式（默认）</div>
+    <div class="mockup-body" style="font-size:14px;line-height:1.8;min-height:320px">
+      <p style="color:var(--accent);font-size:18px;font-weight:bold;text-align:center">八字命理 · 深度分析</p>
+      <p style="color:var(--text-muted);text-align:center">输入出生信息，一键生成完整命理报告</p>
+      <hr style="border-color:var(--border)">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label style="font-size:12px;color:var(--text-muted)">姓名</label><br><input class="mock-input" placeholder="张三（可选）" style="width:90%"></div>
+        <div><label style="font-size:12px;color:var(--text-muted)">性别</label><br><select style="background:var(--surface-light);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:6px;width:90%"><option>男</option><option>女</option></select></div>
+        <div><label style="font-size:12px;color:var(--text-muted)">出生日期</label><br><input class="mock-input" placeholder="1993-07-15" style="width:90%"></div>
+        <div><label style="font-size:12px;color:var(--text-muted)">出生时间</label><br><input class="mock-input" placeholder="14:30" style="width:90%"></div>
+        <div><label style="font-size:12px;color:var(--text-muted)">出生地</label><br><input class="mock-input" placeholder="北京" style="width:90%"></div>
+      </div>
+      <br>
+      <button class="mock-button" style="width:100%;background:var(--accent);color:var(--bg);border:none;padding:14px;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer">开始分析 →</button>
+      <p style="text-align:center;margin-top:8px"><a href="#" style="color:var(--text-muted);font-size:12px">切换到高级模式</a></p>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">路径B：高级模式（点击切换后）</div>
+    <div class="mockup-body" style="font-size:14px;line-height:1.8;min-height:320px">
+      <p style="color:var(--accent);font-size:18px;font-weight:bold;text-align:center">高级分析</p>
+      <p style="color:var(--text-muted);text-align:center">选择分析体系，多维度交叉验证</p>
+      <hr style="border-color:var(--border)">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:12px;color:var(--text-muted)">姓名</label><input class="mock-input" placeholder="张三" style="width:85%"></div>
+        <div><label style="font-size:12px;color:var(--text-muted)">性别</label><select style="background:var(--surface-light);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:6px;width:85%"><option>男</option></select></div>
+        <div><label style="font-size:12px;color:var(--text-muted)">出生年</label><input class="mock-input" placeholder="1993" style="width:85%"></div>
+        <div><label style="font-size:12px;color:var(--text-muted)">出生月</label><input class="mock-input" placeholder="7" style="width:85%"></div>
+        <div><label style="font-size:12px;color:var(--text-muted)">出生日</label><input class="mock-input" placeholder="15" style="width:85%"></div>
+        <div><label style="font-size:12px;color:var(--text-muted)">出生时</label><input class="mock-input" placeholder="14" style="width:85%"></div>
+        <div><label style="font-size:12px;color:var(--text-muted)">出生地</label><input class="mock-input" placeholder="北京" style="width:85%"></div>
+      </div>
+      <br>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:4px">分析体系</p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <span style="background:var(--surface-light);border:2px solid var(--accent);color:var(--accent);padding:6px 10px;border-radius:6px;font-size:12px">子平真诠</span>
+        <span style="background:var(--surface-light);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:12px">滴天髓</span>
+        <span style="background:var(--surface-light);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:12px">紫微斗数</span>
+        <span style="background:var(--surface-light);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:12px">盲派</span>
+        <span style="background:var(--surface-light);border:1px solid var(--border);padding:6px 10px;border-radius:6px;font-size:12px">四合出</span>
+      </div>
+      <br>
+      <button class="mock-button" style="width:100%;background:var(--accent);color:var(--bg);border:none;padding:14px;border-radius:8px;font-size:16px;font-weight:bold;cursor:pointer">开始深度分析 →</button>
+      <p style="text-align:center;margin-top:8px"><a href="#" style="color:var(--text-muted);font-size:12px">切换到新手模式</a></p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>设计要点</h3>
+  <table>
+    <tr><th>决策</th><th>选择</th><th>理由</th></tr>
+    <tr><td>新手表单</td><td>日期选择器 + 时间选择器</td><td>不需要知道时辰概念</td></tr>
+    <tr><td>新手报告</td><td>命主画像卡片 + 7维评分雷达 + 大白话解读</td><td>不暴露八字术语</td></tr>
+    <tr><td>高级表单</td><td>当前表单 + 模式选择 chip 组</td><td>命理爱好者熟悉的格式</td></tr>
+    <tr><td>高级报告</td><td>完整10章节 + 模式切换标签</td><td>可对比不同体系结论</td></tr>
+    <tr><td>模式切换</td><td>同一页面内 toggle，不跳转</td><td>保持用户输入不丢失</td></tr>
+    <tr><td>新手默认模式</td><td>自动选四合出(Mode 5)</td><td>最全面，四体系交叉</td></tr>
+  </table>
+</div>

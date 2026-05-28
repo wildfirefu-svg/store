@@ -1,0 +1,439 @@
+{
+  "four_pillars": {
+    "year": {
+      "gan": "癸",
+      "zhi": "酉",
+      "cangan": "辛",
+      "cangan_detail": [
+        {
+          "stem": "辛",
+          "level": "本气"
+        }
+      ],
+      "shishen": {
+        "辛": "偏财",
+        "癸": "七杀"
+      },
+      "nayin": "剑锋金",
+      "kongwang": "戌亥"
+    },
+    "month": {
+      "gan": "庚",
+      "zhi": "申",
+      "cangan": "庚,壬,戊",
+      "cangan_detail": [
+        {
+          "stem": "庚",
+          "level": "本气"
+        },
+        {
+          "stem": "壬",
+          "level": "中气"
+        },
+        {
+          "stem": "戊",
+          "level": "余气"
+        }
+      ],
+      "shishen": {
+        "庚": "正财",
+        "壬": "正官",
+        "戊": "伤官"
+      },
+      "nayin": "石榴木",
+      "kongwang": "子丑"
+    },
+    "day": {
+      "gan": "丁",
+      "zhi": "亥",
+      "cangan": "壬,甲",
+      "cangan_detail": [
+        {
+          "stem": "壬",
+          "level": "本气"
+        },
+        {
+          "stem": "甲",
+          "level": "中气"
+        }
+      ],
+      "shishen": {
+        "壬": "正官",
+        "甲": "正印",
+        "丁": "比肩"
+      },
+      "nayin": "屋上土",
+      "kongwang": "午未"
+    },
+    "hour": {
+      "gan": "庚",
+      "zhi": "戌",
+      "cangan": "戊,辛,丁",
+      "cangan_detail": [
+        {
+          "stem": "戊",
+          "level": "本气"
+        },
+        {
+          "stem": "辛",
+          "level": "中气"
+        },
+        {
+          "stem": "丁",
+          "level": "余气"
+        }
+      ],
+      "shishen": {
+        "戊": "伤官",
+        "辛": "偏财",
+        "丁": "比肩",
+        "庚": "正财"
+      },
+      "nayin": "钗钏金",
+      "kongwang": "寅卯"
+    },
+    "day_master": "丁",
+    "taiyuan": {
+      "gan": "己",
+      "zhi": "亥",
+      "nayin": "平地木"
+    },
+    "minggong": {
+      "gan": "戊",
+      "zhi": "午",
+      "nayin": "天上火"
+    },
+    "shengong": {
+      "gan": "戊",
+      "zhi": "午",
+      "nayin": "天上火"
+    },
+    "branch_relations": [
+      {
+        "type": "三刑",
+        "pillars": "day-year",
+        "detail": "亥酉刑"
+      },
+      {
+        "type": "六害",
+        "pillars": "day-month",
+        "detail": "亥申害"
+      },
+      {
+        "type": "六害",
+        "pillars": "hour-year",
+        "detail": "戌酉害"
+      }
+    ],
+    "changsheng": {
+      "year": "帝旺",
+      "month": "长生",
+      "day": "养",
+      "hour": "冠带",
+      "day_master": "养"
+    },
+    "rizhu_zihe": {
+      "is_zihe": true,
+      "day_gan": "丁",
+      "hidden_stem": "壬",
+      "he_type": "丁壬合",
+      "meaning": "表面温和，内心有大志向，官星藏于内"
+    },
+    "nayin_wuxing": {
+      "year": "金",
+      "month": "木",
+      "day": "土",
+      "hour": "金"
+    }
+  },
+  "dayun": {
+    "direction": "顺排",
+    "starting_age": 1.7,
+    "starting_age_exact": "1岁",
+    "days_to_junction": 5,
+    "current_pillar": {
+      "gan": "甲",
+      "zhi": "子",
+      "index": 3,
+      "start_age": 31,
+      "end_age": 40,
+      "years": "2024-2033"
+    },
+    "pillars": [
+      {
+        "gan": "辛",
+        "zhi": "酉",
+        "index": 0,
+        "start_age": 1,
+        "end_age": 10,
+        "years": "1994-2003"
+      },
+      {
+        "gan": "壬",
+        "zhi": "戌",
+        "index": 1,
+        "start_age": 11,
+        "end_age": 20,
+        "years": "2004-2013"
+      },
+      {
+        "gan": "癸",
+        "zhi": "亥",
+        "index": 2,
+        "start_age": 21,
+        "end_age": 30,
+        "years": "2014-2023"
+      },
+      {
+        "gan": "甲",
+        "zhi": "子",
+        "index": 3,
+        "start_age": 31,
+        "end_age": 40,
+        "years": "2024-2033"
+      },
+      {
+        "gan": "乙",
+        "zhi": "丑",
+        "index": 4,
+        "start_age": 41,
+        "end_age": 50,
+        "years": "2034-2043"
+      },
+      {
+        "gan": "丙",
+        "zhi": "寅",
+        "index": 5,
+        "start_age": 51,
+        "end_age": 60,
+        "years": "2044-2053"
+      },
+      {
+        "gan": "丁",
+        "zhi": "卯",
+        "index": 6,
+        "start_age": 61,
+        "end_age": 70,
+        "years": "2054-2063"
+      },
+      {
+        "gan": "戊",
+        "zhi": "辰",
+        "index": 7,
+        "start_age": 71,
+        "end_age": 80,
+        "years": "2064-2073"
+      },
+      {
+        "gan": "己",
+        "zhi": "巳",
+        "index": 8,
+        "start_age": 81,
+        "end_age": 90,
+        "years": "2074-2083"
+      },
+      {
+        "gan": "庚",
+        "zhi": "午",
+        "index": 9,
+        "start_age": 91,
+        "end_age": 100,
+        "years": "2084-2093"
+      }
+    ],
+    "current_year": 2026,
+    "current_age": 33
+  },
+  "shensha": {
+    "year": [
+      "文昌贵人"
+    ],
+    "month": [
+      "无"
+    ],
+    "day": [
+      "天乙贵人"
+    ],
+    "hour": [
+      "华盖",
+      "魁罡"
+    ]
+  },
+  "ziwei": {
+    "minggong": "午",
+    "minggong_gan": "戊",
+    "shengong": "午",
+    "wuxing_ju": "天上火→火六局",
+    "wuxing_ju_num": 6,
+    "palaces": {
+      "命宫": {
+        "zhi": "午",
+        "gan": "壬",
+        "stars": [
+          "太阳"
+        ],
+        "aux_stars": [
+          "擎羊"
+        ],
+        "daxian": "116-125",
+        "is_shengong": true
+      },
+      "兄弟": {
+        "zhi": "巳",
+        "gan": "癸",
+        "stars": [
+          "武曲"
+        ],
+        "aux_stars": [
+          "火星"
+        ],
+        "daxian": "106-115",
+        "is_shengong": false
+      },
+      "夫妻": {
+        "zhi": "辰",
+        "gan": "甲",
+        "stars": [
+          "天同"
+        ],
+        "aux_stars": [
+          "地劫"
+        ],
+        "daxian": "96-105",
+        "is_shengong": false
+      },
+      "子女": {
+        "zhi": "卯",
+        "gan": "乙",
+        "stars": [
+          "廉贞",
+          "破军"
+        ],
+        "aux_stars": [
+          "天魁",
+          "天钺"
+        ],
+        "daxian": "86-95",
+        "is_shengong": false
+      },
+      "财帛": {
+        "zhi": "寅",
+        "gan": "丙",
+        "stars": [
+          "七杀"
+        ],
+        "aux_stars": [
+          "右弼",
+          "文曲"
+        ],
+        "daxian": "76-85",
+        "is_shengong": false
+      },
+      "疾厄": {
+        "zhi": "丑",
+        "gan": "丁",
+        "stars": [
+          "天梁"
+        ],
+        "aux_stars": [],
+        "daxian": "66-75",
+        "is_shengong": false
+      },
+      "迁移": {
+        "zhi": "子",
+        "gan": "戊",
+        "stars": [
+          "天相"
+        ],
+        "aux_stars": [
+          "左辅"
+        ],
+        "daxian": "56-65",
+        "is_shengong": false
+      },
+      "仆役": {
+        "zhi": "亥",
+        "gan": "己",
+        "stars": [
+          "巨门"
+        ],
+        "aux_stars": [],
+        "daxian": "46-55",
+        "is_shengong": false
+      },
+      "官禄": {
+        "zhi": "戌",
+        "gan": "庚",
+        "stars": [
+          "贪狼"
+        ],
+        "aux_stars": [
+          "文昌",
+          "铃星",
+          "天空"
+        ],
+        "daxian": "36-45",
+        "is_shengong": false
+      },
+      "田宅": {
+        "zhi": "酉",
+        "gan": "辛",
+        "stars": [
+          "太阴"
+        ],
+        "aux_stars": [],
+        "daxian": "26-35",
+        "is_shengong": false
+      },
+      "福德": {
+        "zhi": "申",
+        "gan": "壬",
+        "stars": [
+          "紫微",
+          "天府"
+        ],
+        "aux_stars": [
+          "陀罗"
+        ],
+        "daxian": "16-25",
+        "is_shengong": false
+      },
+      "父母": {
+        "zhi": "未",
+        "gan": "癸",
+        "stars": [
+          "天机"
+        ],
+        "aux_stars": [],
+        "daxian": "6-15",
+        "is_shengong": false
+      }
+    },
+    "sihua": {
+      "化禄": {
+        "star": "破军",
+        "palace_idx": 3
+      },
+      "化权": {
+        "star": "巨门",
+        "palace_idx": 11
+      },
+      "化科": {
+        "star": "太阴",
+        "palace_idx": 9
+      },
+      "化忌": {
+        "star": "贪狼",
+        "palace_idx": 10
+      }
+    }
+  },
+  "wuyun_liuqi": {
+    "五运": "火运",
+    "主事脏腑": "心/小肠",
+    "体质倾向": "心脑血管先天需关注",
+    "六气": "阳明燥金",
+    "外邪倾向": "燥邪伤肺",
+    "易感季节": "秋季"
+  }
+}
