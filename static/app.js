@@ -25,6 +25,53 @@ const MingzhuManager = {
 };
 
 // ================================================================
+// ChatHistory — per-mingzhu chat persistence (survives refresh)
+// ================================================================
+const ChatHistory = {
+    PREFIX: 'bazi_chat_',
+    MAX_MSGS: 200,
+
+    _key(chartId) { return this.PREFIX + chartId; },
+
+    load(chartId) {
+        if (!chartId) return [];
+        try { return JSON.parse(sessionStorage.getItem(this._key(chartId))) || []; }
+        catch { return []; }
+    },
+
+    save(chartId, messages) {
+        if (!chartId) return;
+        const trimmed = messages.slice(-this.MAX_MSGS);
+        try { sessionStorage.setItem(this._key(chartId), JSON.stringify(trimmed)); }
+        catch { /* storage full — silently drop */ }
+    },
+
+    append(chartId, role, text, tool) {
+        if (!chartId) return;
+        const msgs = this.load(chartId);
+        msgs.push({role: role, text: text, tool: tool || null});
+        this.save(chartId, msgs);
+    },
+
+    remove(chartId) {
+        if (!chartId) return;
+        sessionStorage.removeItem(this._key(chartId));
+    },
+
+    restore(chartId) {
+        const msgs = this.load(chartId);
+        const container = document.getElementById('chat-messages');
+        if (msgs.length === 0) {
+            const mz = MingzhuManager.getAll().find(m => m.chart_id === chartId);
+            container.innerHTML = '<div class="chat-welcome"><p>已切换到 <b>' + _escHtml(mz ? mz.name : '命主') + '</b></p></div>';
+            return;
+        }
+        container.innerHTML = '';
+        msgs.forEach(function(m) { addChatMsg(m.role, m.text, m.tool); });
+    }
+};
+
+// ================================================================
 // CorrectionManager — feedback loop for user corrections
 // ================================================================
 const CorrectionManager = {
@@ -403,6 +450,9 @@ function addChatMsg(role, text, tool) {
     const safeText = role === 'user' ? _escHtml(text) : text;
     d.innerHTML = '<div class="sender">' + (role==='user'?'您':role==='system'?'系统':'玄机子') + (tool?' <span class="tool-tag">🔧 '+tool+'</span>':'') + '</div><div class="bubble">' + safeText + '</div>';
     c.appendChild(d);
+    // Persist to sessionStorage (per current mingzhu)
+    const cur = MingzhuManager.getCurrent();
+    if (cur && role !== 'system') { ChatHistory.append(cur.chart_id, role, text, tool); }
     // Only scroll if user is already at bottom (within 50px)
     if (c.scrollHeight - c.scrollTop - c.clientHeight < 50) c.scrollTop = c.scrollHeight;
     return d;
@@ -423,7 +473,8 @@ function refreshPanel() {
 function switchMingzhu(chartId) {
     MingzhuManager.setCurrent(chartId); refreshPanel();
     const mz = MingzhuManager.getAll().find(m => m.chart_id === chartId);
-    document.getElementById('chat-messages').innerHTML = '<div class="chat-welcome"><p>已切换到 <b>' + _escHtml(mz?mz.name:'命主') + '</b></p></div>';
+    ChatHistory.restore(chartId);
+    ReportTabs.init();
     document.getElementById('report-content').innerHTML = '';
     document.getElementById('bazi-table').innerHTML = '<p style="text-align:center;color:var(--text-tertiary);padding:20px">加载中…</p>';
     document.getElementById('ziwei-table').innerHTML = '';
@@ -450,6 +501,8 @@ function switchMingzhu(chartId) {
 function deleteMingzhu(chartId) {
     if (!confirm('确定删除？')) return;
     MingzhuManager.remove(chartId);
+    ChatHistory.remove(chartId);
+    ReportTabs.init();
     const list = MingzhuManager.getAll();
     if (list.length > 0) { switchMingzhu(list[0].chart_id); } else {
         document.getElementById('chat-messages').innerHTML = '<div class="chat-welcome"><p>请添加命主</p></div>';
@@ -832,13 +885,15 @@ document.querySelectorAll('.mnav-btn').forEach(function(btn) {
     });
 });
 
-// Init — restore panel + current mingzhu on page refresh
+// Init — restore panel + current mingzhu + chat history on page refresh
 refreshPanel();
 ReportTabs.init();
 (function restoreCurrent() {
     const cur = MingzhuManager.getCurrent();
-    if (cur && cur._chart && cur._chart.four_pillars) {
+    if (!cur) return;
+    if (cur._chart && cur._chart.four_pillars) {
         renderFullChart(cur._chart);
         document.getElementById('current-mingzhu-label').textContent = '当前：' + cur.name;
     }
+    ChatHistory.restore(cur.chart_id);
 })();

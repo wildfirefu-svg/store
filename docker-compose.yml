@@ -1,0 +1,22 @@
+services:
+  app:
+    build: .
+    container_name: bazi-api
+    ports:
+      - "8000:8000"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    volumes:
+      - ./.anthropic_key:/app/.anthropic_key:ro
+      - ./reports:/app/reports
+      - bazi_data:/app/data/charts
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  bazi_data:

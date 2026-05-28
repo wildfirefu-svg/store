@@ -4,7 +4,7 @@
     "import_date": "2026-05-20",
     "source": "cases_real.json",
     "total_cases": 198,
-    "known_hour_cases": 77,
+    "known_hour_cases": 97,
     "total_events": 1727,
     "categories": [
       "career",
@@ -20,7 +20,8 @@
       "chinese_famous"
     ],
     "usage": "Real case database for BaZi model validation and quality testing",
-    "last_merged": "2026-05-28"
+    "last_merged": "2026-05-28",
+    "last_inference": "2026-05-28"
   },
   "cases": [
     {
@@ -3390,7 +3391,11 @@
       "birth": {
         "datetime": "1947-01-08T12:00:00+08:00",
         "location": "英国伦敦布里克斯顿",
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "寅",
+        "inferred_hour_pillar": "壬寅",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "bazi": {
@@ -15834,7 +15839,11 @@
       "birth": {
         "datetime": "1898-11-24T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "巳",
+        "inferred_hour_pillar": "癸巳",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "politics",
@@ -15888,7 +15897,11 @@
       "birth": {
         "datetime": "1898-10-24T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "戌",
+        "inferred_hour_pillar": "丙戌",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "politics",
@@ -16032,7 +16045,11 @@
       "birth": {
         "datetime": "1915-11-20T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "亥",
+        "inferred_hour_pillar": "丁亥",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "politics",
@@ -16314,7 +16331,11 @@
       "birth": {
         "datetime": "1881-09-25T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "申",
+        "inferred_hour_pillar": "戊申",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "literature",
@@ -16416,7 +16437,11 @@
       "birth": {
         "datetime": "1899-02-03T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "酉",
+        "inferred_hour_pillar": "己酉",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "literature",
@@ -16542,7 +16567,11 @@
       "birth": {
         "datetime": "1920-09-30T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "丑",
+        "inferred_hour_pillar": "己丑",
+        "inference_confidence": "medium"
       },
       "gender": "female",
       "field": "literature",
@@ -17340,7 +17369,11 @@
       "birth": {
         "datetime": "1954-10-24T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "寅",
+        "inferred_hour_pillar": "甲寅",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "business",
@@ -17424,7 +17457,11 @@
       "birth": {
         "datetime": "1969-12-16T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "辰",
+        "inferred_hour_pillar": "庚辰",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "business",
@@ -17862,7 +17899,11 @@
       "birth": {
         "datetime": "1954-04-07T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "未",
+        "inferred_hour_pillar": "己未",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "entertainment",
@@ -17940,7 +17981,11 @@
       "birth": {
         "datetime": "1962-06-22T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "亥",
+        "inferred_hour_pillar": "己亥",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "entertainment",
@@ -17982,7 +18027,11 @@
       "birth": {
         "datetime": "1961-09-27T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "未",
+        "inferred_hour_pillar": "己未",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "entertainment",
@@ -18060,7 +18109,11 @@
       "birth": {
         "datetime": "1956-09-12T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "丑",
+        "inferred_hour_pillar": "辛丑",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "entertainment",
@@ -18300,7 +18353,11 @@
       "birth": {
         "datetime": "1980-09-12T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "寅",
+        "inferred_hour_pillar": "甲寅",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "sports",
@@ -18348,7 +18405,11 @@
       "birth": {
         "datetime": "1963-03-10T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "戌",
+        "inferred_hour_pillar": "庚戌",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "sports",
@@ -18468,7 +18529,11 @@
       "birth": {
         "datetime": "1654-05-04T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "卯",
+        "inferred_hour_pillar": "乙卯",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "history",
@@ -18564,7 +18629,11 @@
       "birth": {
         "datetime": "1328-10-21T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "寅",
+        "inferred_hour_pillar": "丙寅",
+        "inference_confidence": "high"
       },
       "gender": "male",
       "field": "history",
@@ -18684,7 +18753,11 @@
       "birth": {
         "datetime": "1811-11-26T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "未",
+        "inferred_hour_pillar": "乙未",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "history",
@@ -18918,7 +18991,11 @@
       "birth": {
         "datetime": "1894-10-22T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "子",
+        "inferred_hour_pillar": "壬子",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "entertainment",
@@ -18960,7 +19037,11 @@
       "birth": {
         "datetime": "1864-01-01T12:00:00+08:00",
         "location": null,
-        "hour_unknown": true
+        "hour_unknown": false,
+        "hour_inferred": true,
+        "inferred_hour_zhi": "亥",
+        "inferred_hour_pillar": "丁亥",
+        "inference_confidence": "medium"
       },
       "gender": "male",
       "field": "entertainment",

@@ -1,0 +1,41 @@
+# Secrets
+.anthropic_key
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Dev tools
+tests/
+quality/
+.superpowers/
+.claude/skills/
+
+# Generated
+reports/
+*.pdf
+
+# Git
+.git/
+.gitignore
+
+# OS
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Temp
+*.png
+chart_data.json
+_v2*
+test_*.json
+test_*.md
