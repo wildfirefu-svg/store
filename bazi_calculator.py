@@ -1115,11 +1115,11 @@ def calculate_shensha(four_pillars, day_master):
             if zhi == _ziwei_ss.get(group):            ss.append('紫微')
             if zhi == _sanhelu.get(group):             ss.append('三合禄')
 
-        # ── 孤辰寡宿 (四正局) ──
+        # ── 孤辰寡宿 (四正局) — keyed by year_zhi group → target zhi ──
         for sg, gz in _guchen.items():
-            if zhi in sg and zhi == gz:                ss.append('孤辰')
+            if year_zhi in sg and zhi == gz:           ss.append('孤辰')
         for sg, gz in _guasu.items():
-            if zhi in sg and zhi == gz:                ss.append('寡宿')
+            if year_zhi in sg and zhi == gz:           ss.append('寡宿')
 
         # ── 月支系 ──
         if _tiande.get(month_zhi) == gan:              ss.append('天德贵人')

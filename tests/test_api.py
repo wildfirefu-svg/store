@@ -9,7 +9,27 @@ api = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(api)
 
 from fastapi.testclient import TestClient
-client = TestClient(api.app)
+
+# Auto-detect API key for auth-enabled servers
+_API_KEY = getattr(api, '_BAZI_API_KEY', '')
+_AUTH_HEADERS = {'Authorization': f'Bearer {_API_KEY}'} if _API_KEY else {}
+
+class _AuthClient:
+    """Wrapper around TestClient that auto-injects auth headers."""
+    def __init__(self, client):
+        self._c = client
+    def _h(self, headers):
+        if not _AUTH_HEADERS:
+            return headers
+        return {**headers, **_AUTH_HEADERS} if headers else _AUTH_HEADERS
+    def get(self, url, **kw):
+        kw['headers'] = self._h(kw.get('headers'))
+        return self._c.get(url, **kw)
+    def post(self, url, **kw):
+        kw['headers'] = self._h(kw.get('headers'))
+        return self._c.post(url, **kw)
+
+client = _AuthClient(TestClient(api.app))
 
 # Shared: get a chart ID for dependent endpoints
 def _get_chart_id(gender='male'):

@@ -30,6 +30,7 @@ const MingzhuManager = {
 const ChatHistory = {
     PREFIX: 'bazi_chat_',
     MAX_MSGS: 200,
+    _restoring: false,
 
     _key(chartId) { return this.PREFIX + chartId; },
 
@@ -41,14 +42,14 @@ const ChatHistory = {
 
     save(chartId, messages) {
         if (!chartId) return;
-        const trimmed = messages.slice(-this.MAX_MSGS);
+        var trimmed = messages.slice(-this.MAX_MSGS);
         try { sessionStorage.setItem(this._key(chartId), JSON.stringify(trimmed)); }
         catch { /* storage full — silently drop */ }
     },
 
     append(chartId, role, text, tool) {
-        if (!chartId) return;
-        const msgs = this.load(chartId);
+        if (!chartId || this._restoring) return;
+        var msgs = this.load(chartId);
         msgs.push({role: role, text: text, tool: tool || null});
         this.save(chartId, msgs);
     },
@@ -59,15 +60,17 @@ const ChatHistory = {
     },
 
     restore(chartId) {
-        const msgs = this.load(chartId);
-        const container = document.getElementById('chat-messages');
+        this._restoring = true;
+        var msgs = this.load(chartId);
+        var container = document.getElementById('chat-messages');
         if (msgs.length === 0) {
-            const mz = MingzhuManager.getAll().find(m => m.chart_id === chartId);
+            var mz = MingzhuManager.getAll().find(function(x) { return x.chart_id === chartId; });
             container.innerHTML = '<div class="chat-welcome"><p>已切换到 <b>' + _escHtml(mz ? mz.name : '命主') + '</b></p></div>';
-            return;
+        } else {
+            container.innerHTML = '';
+            msgs.forEach(function(m) { addChatMsg(m.role, m.text, m.tool); });
         }
-        container.innerHTML = '';
-        msgs.forEach(function(m) { addChatMsg(m.role, m.text, m.tool); });
+        this._restoring = false;
     }
 };
 
@@ -118,20 +121,31 @@ const CorrectionManager = {
 // ReportTabs — dynamic report tab management
 // ================================================================
 const ReportTabs = {
-    _cache: {},
+    _cache: {},       // chartId -> {tabId: content}
     _active: 'overview',
+    _currentChart: null,
 
-    init() {
-        this._cache = {};
+    init(chartId) {
+        this._currentChart = chartId || null;
+        if (chartId && !this._cache[chartId]) {
+            this._cache[chartId] = {};
+        }
         this._active = 'overview';
         this._renderTabs();
     },
 
+    _getStore() {
+        if (!this._currentChart) return {};
+        if (!this._cache[this._currentChart]) this._cache[this._currentChart] = {};
+        return this._cache[this._currentChart];
+    },
+
     _renderTabs() {
-        const container = document.getElementById('report-tabs');
-        const correctEl = document.getElementById('correct-count');
+        var container = document.getElementById('report-tabs');
+        var correctEl = document.getElementById('correct-count');
+        var store = this._getStore();
         container.innerHTML = '';
-        const tabNames = {
+        var tabNames = {
             'overview': '总览',
             'sihechu': '四合出',
             'wealth': '财运专题',
@@ -141,13 +155,13 @@ const ReportTabs = {
             'name': '取名',
             'health': '健康',
         };
-        for (const [tabId, label] of Object.entries(tabNames)) {
-            if (this._cache[tabId] !== undefined || tabId === 'overview') {
-                const span = document.createElement('span');
+        for (var tabId in tabNames) {
+            if (store[tabId] !== undefined || tabId === 'overview') {
+                var span = document.createElement('span');
                 span.className = 'report-tab' + (tabId === this._active ? ' active' : '');
                 span.dataset.tab = tabId;
-                span.textContent = label;
-                span.onclick = function() { ReportTabs.switchTo(tabId); };
+                span.textContent = tabNames[tabId];
+                span.onclick = function(tid) { return function() { ReportTabs.switchTo(tid); }; }(tabId);
                 container.appendChild(span);
             }
         }
@@ -155,15 +169,30 @@ const ReportTabs = {
     },
 
     set(tabId, content) {
-        this._cache[tabId] = content;
+        var store = this._getStore();
+        store[tabId] = content;
         this._renderTabs();
     },
 
     switchTo(tabId) {
         this._active = tabId;
         this._renderTabs();
-        const content = this._cache[tabId] || '';
-        document.getElementById('report-content').innerHTML = renderMarkdown(content);
+        var store = this._getStore();
+        var content = store[tabId];
+        // If this tab has no content, fall back to first non-empty tab
+        if (content === undefined) {
+            for (var tid in store) {
+                if (store[tid] !== undefined) {
+                    content = store[tid];
+                    this._active = tid;
+                    this._renderTabs();
+                    break;
+                }
+            }
+        }
+        if (content !== undefined) {
+            document.getElementById('report-content').innerHTML = renderMarkdown(content);
+        }
     },
 
     getActive() {
@@ -234,7 +263,7 @@ function renderBazi(chart) {
     const wuDots = {'金':'wd-metal','木':'wd-wood','水':'wd-water','火':'wd-fire','土':'wd-earth'};
     h += '<div class="bazi-wuxing"><div class="wuxing-row">';
     ['金','木','水','火','土'].forEach(w => {
-        h += '<div class="wuxing-item"><div class="wuxing-dot ' + wuDots[w] + '">' + w + '</div><div class="wuxing-count">' + wuMap[w] + '</div></div>';
+        h += '<div class="wuxing-item"><div class="wuxing-dot ' + wuDots[w] + '">' + w + '</div><div class="wuxing-count ' + wuDots[w] + '">' + wuMap[w] + '</div></div>';
     });
     h += '</div></div>';
 
@@ -471,10 +500,16 @@ function refreshPanel() {
     ['hehun-p1','hehun-p2'].forEach(id => { const s=document.getElementById(id); if(s) s.innerHTML = list.map(m=>'<option value="'+_escHtml(m.chart_id)+'">'+_escHtml(m.name)+'</option>').join(''); });
 }
 function switchMingzhu(chartId) {
+    // Save current chat before switching away
+    var prev = MingzhuManager.getCurrent();
+    if (prev && prev.chart_id !== chartId) {
+        // Current DOM messages are already persisted via addChatMsg,
+        // so no extra save needed — just restore the target mingzhu.
+    }
     MingzhuManager.setCurrent(chartId); refreshPanel();
-    const mz = MingzhuManager.getAll().find(m => m.chart_id === chartId);
+    var mz = MingzhuManager.getAll().find(function(x) { return x.chart_id === chartId; });
     ChatHistory.restore(chartId);
-    ReportTabs.init();
+    ReportTabs.init(chartId);
     document.getElementById('report-content').innerHTML = '';
     document.getElementById('bazi-table').innerHTML = '<p style="text-align:center;color:var(--text-tertiary);padding:20px">加载中…</p>';
     document.getElementById('ziwei-table').innerHTML = '';
@@ -502,7 +537,6 @@ function deleteMingzhu(chartId) {
     if (!confirm('确定删除？')) return;
     MingzhuManager.remove(chartId);
     ChatHistory.remove(chartId);
-    ReportTabs.init();
     const list = MingzhuManager.getAll();
     if (list.length > 0) { switchMingzhu(list[0].chart_id); } else {
         document.getElementById('chat-messages').innerHTML = '<div class="chat-welcome"><p>请添加命主</p></div>';
@@ -624,9 +658,7 @@ function _sendWithStream(chartId, prompt, onSuccess) {
 }
 
 function ensureReportTab(tabId) {
-    if (ReportTabs._cache[tabId] === undefined) {
-        ReportTabs.set(tabId, '');
-    }
+    ReportTabs.set(tabId, '');
 }
 
 function activateReportTab(tabId) {
@@ -634,7 +666,8 @@ function activateReportTab(tabId) {
 }
 
 function showReportStreaming(tab, content) {
-    ReportTabs._cache[tab] = content;
+    var store = ReportTabs._getStore();
+    store[tab] = content;
     ReportTabs._active = tab;
     ReportTabs._renderTabs();
     document.getElementById('report-content').innerHTML =
@@ -642,8 +675,31 @@ function showReportStreaming(tab, content) {
     document.getElementById('report-status').classList.remove('done');
 }
 
+function _buildOverview() {
+    var store = ReportTabs._getStore();
+    var tabNames = {sihechu:'四合出', wealth:'财运专题', marriage:'感情专题', career:'事业专题', hehun:'合婚', name:'取名', health:'健康'};
+    var parts = [];
+    for (var tid in tabNames) {
+        if (store[tid]) {
+            var h2s = store[tid].match(/^## (.+)$/gm);
+            if (h2s && h2s.length > 0) {
+                parts.push('#### ' + tabNames[tid]);
+                for (var i = 0; i < Math.min(h2s.length, 5); i++) {
+                    parts.push('- ' + h2s[i].replace(/^## /, ''));
+                }
+            } else {
+                parts.push('- **' + tabNames[tid] + '**：已有分析结果');
+            }
+        }
+    }
+    if (parts.length === 0) return '输入出生信息后，报告将在此显示';
+    return '# 分析总览\n\n' + parts.join('\n');
+}
+
 function showReportFinal(tab, content) {
-    ReportTabs._cache[tab] = content;
+    var store = ReportTabs._getStore();
+    store[tab] = content;
+    store['overview'] = _buildOverview();
     ReportTabs._active = tab;
     ReportTabs._renderTabs();
     document.getElementById('report-content').innerHTML = renderMarkdown(content);
@@ -737,6 +793,7 @@ document.getElementById('mingzhu-submit-btn').addEventListener('click', async ()
         gender: b.gender, day_master: chart.day_master.gan+chart.day_master.wuxing,
         _chart: chart };
     MingzhuManager.save(mz); MingzhuManager.setCurrent(chart.chart_id);
+    ReportTabs.init(chart.chart_id);
     document.getElementById('add-mingzhu-modal').classList.add('hidden');
     refreshPanel();
 
@@ -887,7 +944,7 @@ document.querySelectorAll('.mnav-btn').forEach(function(btn) {
 
 // Init — restore panel + current mingzhu + chat history on page refresh
 refreshPanel();
-ReportTabs.init();
+ReportTabs.init(MingzhuManager.getCurrent()?.chart_id || null);
 (function restoreCurrent() {
     const cur = MingzhuManager.getCurrent();
     if (!cur) return;

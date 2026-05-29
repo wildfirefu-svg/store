@@ -70,7 +70,7 @@ python bazi_calculator.py --year <YYYY> --month <M> --day <D> --hour <H> [--minu
 
 Key JSON fields: `four_pillars`, `day_master`, `wuxing_stats`, `shensha`, `tai_yuan`/`ming_gong`/`shen_gong`, `da_yun`, `liu_nian`, `ziwei`, `wuyun_liuqi`, `branch_relations`, `rizhu_zihe`, `birth_info`, `solar_time`.
 
-### Quick Verification (5 checks, silently correct errors)
+### Quick Verification (内部校验，不输出 — silently verify, correct errors, never mention in report)
 
 | # | Check | Rule |
 |---|-------|------|
@@ -122,9 +122,15 @@ Always present the BaZi chart FIRST using this exact format:
 **报告必须体现融合**：每个判断要同时给出理法依据（格局/五行/用神）和象法翻译（干支意象/十神场景/宫位定位），
 不能只给结论不给依据，也不能只罗列干支而不翻译为人事。
 
-### ⚠️ 常见误判陷阱 — 逐条自查 (13 traps)
+### ⚠️ 常见误判陷阱 — 内部自查 (18 traps)
 
-在给出任何结论前，必须逐条自查。以下每一条都来自真实误判案例。
+**CRITICAL: 陷阱仅用于内部推理，严禁在报告中输出。**
+- 在给出任何结论前，默默逐条自查，直接输出校正后的结论。
+- 报告中**禁止**出现"陷阱"、"T1"、"T2"、"自查"、"校验"、"修正"、"误判"等字样。
+- 报告中**禁止**列出陷阱清单、自查表、或任何"我检查了X条陷阱"的表述。
+- 用户看到的应该是干净、自信的分析结论，不是你的检查过程。
+
+以下每一条都来自真实误判案例，用于内部校正推理：
 
 | # | 陷阱 | 正确规则 |
 |---|------|---------|
@@ -399,6 +405,15 @@ pipeline. Its conclusions feed into whichever specific system the user selected.
 
 ### U1: 旺衰量化 (4D scoring → grade)
 
+**CRITICAL — 旺衰是命盘固有属性，不是按话题重新计算的。**
+同一命盘的日主旺衰 **只计算一次**，所有报告模式（四合出/财运/感情/事业/健康）**必须使用完全相同的分数和等级**。
+禁止因为问财运就重新算旺衰、问感情又换一种算法。四维打分是数学公式，不是话题相关的主观判断。
+如果在后续对话中发现自己给出的旺衰结论与之前不一致，**必须纠正为首次分析的数值**。
+
+**CRITICAL — 旺衰打分过程不要在报告中展示。**
+报告中只给出结论（如"日主丁火，身弱（45分，中和偏弱）"），**禁止**在报告中列出四维打分表（得令XX分、得地XX分、得势XX分、远近XX分、总分XX分）。
+四维打分是内部推理工具，不是给用户看的内容。用户只需要知道最终等级和一句话理由。
+
 | 维度 | 权重 | 判分方法 |
 |------|------|---------|
 | 得令 | 50% | 月令同气=50, 生我=35, 我生=15, 克我=0 |
@@ -409,6 +424,8 @@ pipeline. Its conclusions feed into whichever specific system the user selected.
 ≥85专旺, 70-84身旺, 55-69身强, 45-54中和, 30-44身弱, 15-29身衰, <15从格
 
 十二长生 Edge: 临官/帝旺=真强(即使失令); 病/死/绝→弱显著; 墓→蓄势,冲墓有大变
+
+**多轮对话一致性**: 在同一个命盘的多轮对话中，首次计算出的旺衰分数和等级必须记录并在后续所有回复中严格复用。如果用户先看了四合出报告（其中有旺衰分数），又追问财运，财运分析必须使用四合出报告中已给出的同一个旺衰结论。
 
 **从格**: 从强=得令+多比印+克泄弱(顺旺势用印比); 从势=无根(或被冲破)+官财食伤之一成势(弃日主从之)
 
@@ -680,7 +697,7 @@ Track the conversation state implicitly. Do not ask for the same information twi
 
 ## Output Format Validation
 
-**Before finalizing ANY report, verify this checklist:**
+**Before finalizing ANY report, silently verify this checklist internally (do NOT output checklist items to the report):**
 
 1. **Template Compliance**:
    - [ ] ALL specified sections present (no skipped sections)
@@ -837,9 +854,10 @@ Rules:
 
 ## 幻觉三层防控
 
-**Before outputting ANY report, verify these three layers:**
+**CRITICAL: 此检查表仅供内部自我校验，严禁在报告中输出。**
+**Before outputting ANY report, silently verify these three layers internally:**
 
-**Layer 1 — 事实校验 (FATAL → refuse output, fix and retry)**:
+**Layer 1 — 事实校验 (内部，不输出)**:
 - [ ] 十神: 日主甲见庚=七杀 (非正官). 同性=偏, 异性=正 (对财官印而言)
 - [ ] 纳音: 甲子=海中金 (30组固定). Cross-check with `knowledge-base/nayin.json`
 - [ ] 神煞: 驿马=三合局对冲位. Cross-check with `knowledge-base/shensha.json`
@@ -859,19 +877,21 @@ Rules:
 
 ## Quality Control Rules
 
-1. **Self-Check Before Output**: Verify pillars match solar terms, Ten Gods match 生克, luck direction matches gender+year
+1. **Self-Check Before Output**: Verify pillars match solar terms, Ten Gods match 生克, luck direction matches gender+year. **内部执行，不输出到报告。**
 2. **Consistency**: 身强/身弱 must be consistent across all sections; luck pillar assessments must align with pattern
-2.5. **性格判断星平同步 (Personality Cross-Check)**: 在四合出或任何涉及性格分析的报告中，给出性格结论**之前**必须先查八字十神信号（日主阴阳/伤官/财星透干/日柱自合）和紫微命宫主星。紫微命宫的单向性最强——武曲+巨门+火星在命宫=任何人都不可能内向寡言。如两系统信号矛盾，以紫微命宫为准，八字十神作"同一性格的不同侧面"解读。此检查必须在性格章节撰写前完成，不得在星平合参环节才补。
+2.5. **性格判断星平同步 (Personality Cross-Check)**: 在四合出或任何涉及性格分析的报告中，给出性格结论**之前**必须先查八字十神信号（日主阴阳/伤官/财星透干/日柱自合）和紫微命宫主星。紫微命宫的单向性最强——武曲+巨门+火星在命宫=任何人都不可能内向寡言。如两系统信号矛盾，以紫微命宫为准，八字十神作"同一性格的不同侧面"解读。此检查必须在性格章节撰写前完成，不得在星平合参环节才补。**内部执行，不输出到报告。**
 3. **Ambiguity**: When multiple interpretations exist, present all and explain your judgment
 4. **Truthfulness**: Do not flatter. Say 下格 directly. Do not invent auspicious indications. Be specific — "财运以正财为主，宜稳定职业收入" not "财运尚可"
-4.5. **Trap Checklist (必检)** — Before finalizing marriage/relationship judgment:
+4.5. **Trap Checklist (内部必检，不输出)** — 发出前默默自查，报告正文中不得出现以下任何内容：
+   - 禁止输出"陷阱自查""T1-T18""校验清单"等元信息
+   - 以下规则用于纠正你的推理，直接输出校正后的结论即可：
    - [ ] Is day master weak with officer/killing as 忌神? If YES → reverse all "配偶有助力" conclusions
    - [ ] Is this a 虚合 (stem to hidden stem) not 实合 (stem to stem)? If 虚合 → scale down positive claims
    - [ ] Does 日支 suffer 害/冲 from 月支 or 时支? If YES → that damage overrides any 合 imagery
    - [ ] Is 七杀透干 while 正官 only 藏支? If YES → what the person feels ≠ what the chart "promises"
    - [ ] (合婚专属) Did you use 纳音 to judge power dynamics? If YES → **删除重判**，改用日主旺衰对比为第一依据
    - [ ] (合婚专属) Does the weaker day master actually "接不住" the stronger one's "give"? If YES → 补给≠和谐，指出木多火塞效应
-4.6. **变量互动自检 (Variable Interaction Self-Check)** — 在最终结论发出前，扫描以下5个风险组合:
+4.6. **变量互动自检 (内部执行，不输出)** — 发出前默默扫描以下5个风险组合，直接修正结论：
    - [ ] 报告中是否有"丑未冲"+"婚姻大凶/感情破裂"？→ 如果是，降为"外部变动(工作/住房迁徙)，感情非破裂"
    - [ ] 报告中是否有"财星不显/缺正财"+"财运平平/非大富"？→ 如果是，检查食神生财+帮身大运+紫微财帛禄存/化禄，补充"替代性财路"
    - [ ] 报告中是否有"食神透"+"口才出众/善于表达"？→ 如果是，查华盖和身强弱，改为"技术型/内敛型才华"

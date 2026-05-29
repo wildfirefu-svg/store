@@ -1,8 +1,8 @@
 {
   "total": 50,
-  "cat_accuracy": 94.0,
+  "cat_accuracy": 96.0,
   "tag_accuracy": 44.0,
-  "practical": 98.0,
+  "practical": 100.0,
   "results": [
     {
       "query": "什么时候结婚",
@@ -398,7 +398,7 @@
       "query": "心脏要注意什么",
       "expect_cat": "疾病",
       "got_cats": [
-        "小儿关煞",
+        "疾病",
         "疾病",
         "疾病"
       ],
@@ -406,7 +406,7 @@
         "心脏"
       ],
       "got_tags_match": false,
-      "cat_match": false,
+      "cat_match": true,
       "note": "心脏五行"
     },
     {

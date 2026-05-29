@@ -162,6 +162,27 @@ _CATEGORY_ALIASES = {
     '流年': ['流年', '大运流年诀'],
 }
 
+# Semantic signal terms — when these appear in a query, the target category
+# gets an extra boost regardless of text similarity. This compensates for
+# the bigram search's weakness with domain-specific vocabulary.
+_SEMANTIC_SIGNALS = {
+    '疾病': ['心脏', '肝', '肺', '肾', '脾', '胃', '肠', '胆', '脑', '血', '骨',
+             '头痛', '咳嗽', '发烧', '癌', '糖尿病', '血压', '中风', '经脉'],
+    '婚姻': ['二婚', '再婚', '离异', '单身', '相亲'],
+    '财运': ['股票', '基金', '房产', '理财', '贷款'],
+    '官运': ['体制内', '国企', '外企', '跳槽', '辞职'],
+}
+
+
+def _semantic_signal(query):
+    """Return (target_category, extra_boost) if query contains strong semantic signals."""
+    query_text = query
+    for cat, terms in _SEMANTIC_SIGNALS.items():
+        for term in terms:
+            if term in query_text:
+                return cat, 0.25  # extra boost for matching category
+    return None, 0.0
+
 
 def _category_boost(entry_cat, query_cat):
     """Boost factor for category match (1.0 = exact, 0.7 = alias, 0.0 = unrelated)."""
@@ -184,6 +205,8 @@ def search(query, category=None, tags=None, top_k=5):
     if not category:
         category = _classify_query(query)
 
+    signal_cat, signal_boost = _semantic_signal(query)
+
     entries, _ = load_gejue(core_only=False)
     query_bi = set(_bigrams(query))
     query_text = query
@@ -203,6 +226,10 @@ def search(query, category=None, tags=None, top_k=5):
 
         # Category boost — soft, not a hard filter
         sim += _category_boost(entry.get('category', ''), category) * 0.40
+
+        # Semantic signal boost — compensates bigram weakness for domain terms
+        if signal_cat and entry.get('category', '') == signal_cat:
+            sim += signal_boost
 
         # Tag bonus — strong signal for short queries
         for t in entry.get('tags', []):

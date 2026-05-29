@@ -16,7 +16,7 @@ from collections import defaultdict
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 import asyncio, time
 from pydantic import BaseModel, Field
 
@@ -98,6 +98,60 @@ async def rate_limit_middleware(request: Request, call_next):
     timestamps.append(now)
     response = await call_next(request)
     return response
+
+
+# ============================================================
+# AUTH MIDDLEWARE — optional API key protection
+# ============================================================
+
+def _load_auth_key():
+    """Load API key from env var or local file. Empty string = auth disabled."""
+    key = os.environ.get("BAZI_API_KEY", "")
+    if key:
+        return key
+    key_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".bazi_api_key")
+    try:
+        with open(key_file, "r") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return ""
+
+_BAZI_API_KEY = _load_auth_key()
+
+# Public paths that never require auth
+_PUBLIC_PATHS = {"/api/health", "/docs", "/openapi.json", "/", "/test", "/tools"}
+
+# Paths that ALWAYS require auth when key is set
+_PROTECTED_PATHS = {"/api/chat/stream", "/api/analyze", "/api/analyze/pdf"}
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    if not _BAZI_API_KEY:
+        return await call_next(request)
+
+    path = request.url.path
+
+    # Public paths — always allow
+    if path in _PUBLIC_PATHS or path.startswith("/static/"):
+        return await call_next(request)
+
+    # Check Bearer token in Authorization header
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+        if token == _BAZI_API_KEY:
+            return await call_next(request)
+
+    # Check query parameter
+    if request.query_params.get("api_key") == _BAZI_API_KEY:
+        return await call_next(request)
+
+    return JSONResponse(
+        status_code=401,
+        content={"detail": "需要有效的 API Key。请在 Authorization 头中提供 Bearer token，或通过 ?api_key= 参数传递。"},
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 # Static files and templates
