@@ -8,8 +8,22 @@ Usage: python report_to_pdf.py input.md -o output.pdf [--template dark|modern|sc
 import argparse, re, os, sys
 from fpdf import FPDF
 
-FONT_HEADER = 'C:/Windows/Fonts/simhei.ttf'
-FONT_BODY   = 'C:/Windows/Fonts/simsun.ttc'
+FONT_CANDIDATES_HEADER = [
+    'C:/Windows/Fonts/simhei.ttf',
+    '/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc',
+    '/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc',
+]
+FONT_CANDIDATES_BODY = [
+    'C:/Windows/Fonts/simsun.ttc',
+    '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
+    '/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc',
+]
+
+def _first_existing(paths):
+    return next((p for p in paths if os.path.exists(p)), paths[0])
+
+FONT_HEADER = _first_existing(FONT_CANDIDATES_HEADER)
+FONT_BODY = _first_existing(FONT_CANDIDATES_BODY)
 A4_W, A4_H = 210, 297
 
 TEMPLATES = {

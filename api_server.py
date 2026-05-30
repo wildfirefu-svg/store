@@ -38,7 +38,13 @@ app = FastAPI(
     description="八字命理分析 REST API — 排盘、择日、流年、取名、案例检索、知识库搜索",
     version="1.0.0",
 )
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+def _cors_origins():
+    raw = os.environ.get("BAZI_CORS_ORIGINS", "")
+    if raw:
+        return [x.strip() for x in raw.split(",") if x.strip()]
+    return ["http://127.0.0.1:8000", "http://localhost:8000"]
+
+app.add_middleware(CORSMiddleware, allow_origins=_cors_origins(), allow_methods=["*"], allow_headers=["*"])
 
 # ============================================================
 # RATE LIMITER — per-IP sliding window
@@ -120,10 +126,6 @@ _BAZI_API_KEY = _load_auth_key()
 
 # Public paths that never require auth
 _PUBLIC_PATHS = {"/api/health", "/docs", "/openapi.json", "/", "/test", "/tools"}
-
-# Paths that ALWAYS require auth when key is set
-_PROTECTED_PATHS = {"/api/chat/stream", "/api/analyze", "/api/analyze/pdf"}
-
 
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
@@ -431,7 +433,7 @@ class AnalyzeRequest(BaseModel):
     chart_id: str
     mode: int = Field(1, ge=1, le=6)
     conclusions: dict = None  # Agent-generated analysis conclusions
-    template: str = "dark"    # PDF template: dark|modern|scroll|night
+    template: str = Field("dark", pattern="^(dark|modern|scroll|night)$")
 
 @app.post("/api/analyze")
 def analyze_report(req: AnalyzeRequest):
@@ -609,8 +611,28 @@ def _auto_analyze(chart):
     advice_wu = yong[0][0] if yong[0] and yong[0][0] in '金木水火土' else wu
     nayin_advice = '颜色:' + colors.get(advice_wu,'') + ' 方位:' + directions.get(advice_wu,'') + ' 行业:' + industries.get(advice_wu,'')
 
+    def _judgment(name, conclusion, confidence, evidence, counter_evidence=None):
+        return {"name": name, "conclusion": conclusion, "confidence": confidence,
+                "evidence": evidence, "counter_evidence": counter_evidence or []}
+
+    judgments = [
+        _judgment("旺衰", grade,
+            "medium" if grade == "中和" else "high",
+            [f"日主五行占比{dm_pct * 100:.0f}%", f"月令{month_zhi}({month_wu})对日主为{month_support}"],
+            ["当前算法未完整计算透干、根气远近和合化后的强弱变化"]),
+        _judgment("格局", pattern_name,
+            "medium",
+            [f"月干{month_gan}对日主为{shishen_of_month}", f"月令本气{month_main}"],
+            ["当前仅按月干/月令粗判，未完整处理变格、从格、合化和格局破救"]),
+        _judgment("用神", yongshen["assessment"],
+            "low" if grade == "中和" else "medium",
+            [f"日主{grade}", f"初步取{yong[0]}为用"],
+            ["当前用神未完全区分格局用神、调候用神、通关用神和病药用神"]),
+    ]
+
     return {
         'wangshuai': wangshuai,
+        'judgments': judgments,
         'pattern': pattern,
         'yongshen': yongshen,
         'liunian': liunian,
@@ -652,11 +674,13 @@ def analyze_pdf(req: AnalyzeRequest):
     spec.loader.exec_module(rb)
     rb.build_report(chart_tmp, req.mode, concl_tmp, md_tmp)
 
-    # Render PDF
+    # Render PDF (safe: template already validated by Pydantic pattern)
+    import subprocess
     template = req.template or 'dark'
-    ret = os.system(f'python report_to_pdf.py "{md_tmp}" -o "{pdf_tmp}" -t {template}')
-    if ret != 0:
-        raise HTTPException(500, "PDF generation failed")
+    cmd = [sys.executable, "report_to_pdf.py", md_tmp, "-o", pdf_tmp, "-t", template]
+    ret = subprocess.run(cmd, capture_output=True, text=True)
+    if ret.returncode != 0:
+        raise HTTPException(500, f"PDF generation failed: {ret.stderr[-500:]}")
 
     with open(pdf_tmp, 'rb') as f:
         pdf_bytes = f.read()

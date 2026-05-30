@@ -185,6 +185,26 @@ def render_portrait(portrait):
 # 2. MODE-SPECIFIC REPORT ASSEMBLER
 # ============================================================
 
+def render_judgments(judgments):
+    if not judgments:
+        return ""
+    lines = [
+        "## 判断依据与置信度",
+        "",
+        "| 判断 | 结论 | 置信度 | 依据 | 反证/限制 |",
+        "|---|---|---|---|---|",
+    ]
+    for item in judgments:
+        evidence = "<br>".join(item.get("evidence", []))
+        counter = "<br>".join(item.get("counter_evidence", []))
+        lines.append(
+            f"| {item.get('name', '')} | {item.get('conclusion', '')} | "
+            f"{item.get('confidence', '')} | {evidence} | {counter} |"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
 def build_mode1_report(chart, conclusions):
     """Build Mode 1 (子平真诠) report."""
     fp = chart['four_pillars']
@@ -231,6 +251,8 @@ def build_mode1_report(chart, conclusions):
 
     sections.append('## 九、命理依据溯源')
     sections.append(render_source_tracing(conclusions.get('source_tracing', [])))
+    jt = render_judgments(conclusions.get('judgments', []))
+    if jt: sections.append(jt)
 
     portrait = render_portrait(conclusions.get('portrait', {}))
     if portrait:
@@ -307,6 +329,8 @@ def build_mode2_report(chart, conclusions):
 
     s.append('## 十一、命理依据溯源')
     s.append(render_source_tracing(conclusions.get('source_tracing', [])))
+    jt = render_judgments(conclusions.get('judgments', []))
+    if jt: s.append(jt)
 
     s.append('## 十二、双系统交叉验证 (滴天髓 × 子平真诠)')
     s.append(render_cross_validation(conclusions.get('cross_validation', {}), '滴天髓', '子平真诠'))
@@ -470,6 +494,8 @@ def build_mode5_report(chart, conclusions):
 
     s.append('## 命理依据溯源')
     s.append(render_source_tracing(conclusions.get('source_tracing', [])))
+    jt = render_judgments(conclusions.get('judgments', []))
+    if jt: s.append(jt)
 
     s.append('## 免责声明')
     s.append('> 本报告中的任何「吉凶」「运势」「应期」判断均为传统命理理论在特定干支组合下的学术推演，不代表对未发生事件的断言，不构成任何形式的预测、建议或决策依据。')

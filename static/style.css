@@ -3,19 +3,19 @@
    ================================================================ */
 
 :root {
-    --ink: #1a1a1f;
+    --ink: #1C1917;
     --parchment: #f5f0e0;
     --parchment-dark: #e8dfc8;
     --parchment-light: #faf6eb;
     --cinnabar: #c43a31;
     --cinnabar-light: rgba(196,58,49,0.08);
-    --gold: #b8960c;
-    --gold-light: rgba(184,150,12,0.08);
+    --gold: #A16207;
+    --gold-light: rgba(161,98,7,0.08);
     --text-main: #2c2416;
     --text-dim: #6b6250;
     --text-faint: #9a9078;
-    --border-subtle: rgba(184,150,12,0.2);
-    --border-strong: rgba(184,150,12,0.35);
+    --border-subtle: rgba(161,98,7,0.18);
+    --border-strong: rgba(161,98,7,0.32);
     --surface-dark: rgba(245,240,224,0.06);
     --surface-hover: rgba(245,240,224,0.10);
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.15);
@@ -25,8 +25,8 @@
     --radius: 10px;
     --radius-lg: 16px;
     --radius-xl: 20px;
-    --font: "PingFang SC", "SF Pro Display", "Helvetica Neue", sans-serif;
-    --font-kai: "KaiTi", "STKaiti", "SimSun", serif;
+    --font: "Noto Sans TC", "PingFang SC", "SF Pro Display", "Helvetica Neue", sans-serif;
+    --font-kai: "Noto Serif TC", "Noto Serif TC", "KaiTi", "STKaiti", "SimSun", serif;
     --font-mono: "SF Mono", "Menlo", monospace;
 }
 
@@ -215,7 +215,9 @@ body::before {
     font-size: 13px;
     line-height: 1.6;
     max-width: 88%;
+    overflow-wrap: break-word;
     word-break: break-word;
+    white-space: pre-wrap;
 }
 .chat-msg.agent .bubble {
     background: rgba(245,240,224,0.08);
@@ -268,8 +270,42 @@ body::before {
 }
 #hehun-analyze-btn { background: var(--cinnabar); color: #fff; }
 #hehun-close-btn { background: none; color: var(--text-faint); }
+
+/* Tool bars (zeri / liunian / name) — reuse hehun-bar pattern */
+.tool-bar {
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-size: 12px;
+    background: rgba(184,150,12,0.06);
+    color: rgba(245,240,224,0.85);
+}
+.tool-bar select, .tool-bar input {
+    background: var(--surface-dark);
+    border: 1px solid var(--border-subtle);
+    color: rgba(245,240,224,0.8);
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-family: var(--font);
+}
+.tool-bar button {
+    padding: 5px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    cursor: pointer;
+    border: none;
+    font-family: var(--font);
+    font-weight: 500;
+}
+.tool-bar button:first-of-type { background: var(--cinnabar); color: #fff; margin-left: auto; }
+.tool-bar button:last-of-type { background: none; color: var(--text-faint); }
+.tool-bar .name-tab { cursor: pointer; padding: 3px 8px; border-radius: 3px; font-size: 11px; color: var(--text-faint); }
+.tool-bar .name-tab.active { color: var(--gold); background: var(--gold-light); }
 .chat-input-row { display:flex; gap:8px; padding: 10px 16px; align-items:center; }
-.chat-input-row input {
+.chat-input-row input, .chat-input-row textarea {
     flex:1;
     background: var(--surface-dark);
     border: 1px solid var(--border-subtle);
@@ -279,9 +315,12 @@ body::before {
     font-size: 13px;
     font-family: var(--font);
     transition: all 0.2s;
+    resize: none;
+    max-height: 120px;
+    line-height: 1.5;
 }
-.chat-input-row input::placeholder { color: var(--text-faint); }
-.chat-input-row input:focus { outline:none; border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-light); }
+.chat-input-row input::placeholder, .chat-input-row textarea::placeholder { color: var(--text-faint); }
+.chat-input-row input:focus, .chat-input-row textarea:focus { outline:none; border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-light); }
 .chat-input-row button {
     padding: 8px 16px;
     border-radius: var(--radius-lg);
@@ -294,15 +333,16 @@ body::before {
 }
 #chat-send-btn { background: var(--cinnabar); color: #fff; font-weight: 600; padding: 10px 22px; }
 #chat-send-btn:hover { background: #a8322a; }
-#hehun-toggle-btn, #add-mingzhu-btn {
+#hehun-toggle-btn, #zeri-toggle-btn, #liunian-toggle-btn, #name-toggle-btn, #add-mingzhu-btn {
     background: var(--surface-dark);
     border: 1px solid var(--border-subtle);
     color: var(--text-dim);
-    font-size: 15px;
-    padding: 8px 12px;
+    padding: 8px 10px;
     border-radius: var(--radius);
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 36px; min-height: 36px;
 }
-#hehun-toggle-btn:hover, #add-mingzhu-btn:hover { background: var(--surface-hover); border-color: var(--gold); }
+#hehun-toggle-btn:hover, #zeri-toggle-btn:hover, #liunian-toggle-btn:hover, #name-toggle-btn:hover, #add-mingzhu-btn:hover { background: var(--surface-hover); border-color: var(--gold); color: var(--gold); }
 
 /* ================================================================
    Column 2: 命盘展示
@@ -389,7 +429,7 @@ body::before {
 }
 .pillar-gan, .pillar-zhi {
     text-align: center; font-size: 32px; font-weight: bold; padding: 8px 0;
-    border-bottom: 1.5px solid #b8960c; font-family: "KaiTi", "STKaiti", "SimSun", serif;
+    border-bottom: 1.5px solid #b8960c; font-family: "Noto Serif TC", "KaiTi", "STKaiti", "SimSun", serif;
 }
 .pillar-zhi { border-bottom: 1px solid #b8960c; }
 .pillar-canggan {
@@ -404,7 +444,7 @@ body::before {
     text-align: center; font-size: 14px; font-weight: bold; color: #8b6914;
     padding: 8px 0; height: 42px;
     border-bottom: 1px solid #b8960c;
-    font-family: "KaiTi", "STKaiti", "SimSun", serif;
+    font-family: "Noto Serif TC", "KaiTi", "STKaiti", "SimSun", serif;
     background: rgba(139,105,20,0.03);
     display: flex; align-items: center; justify-content: center;
 }
@@ -429,7 +469,7 @@ body::before {
     width: 34px; height: 34px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-size: 15px; font-weight: bold;
-    font-family: "KaiTi", "STKaiti", serif; border: 2px solid;
+    font-family: "Noto Serif TC", "KaiTi", "STKaiti", serif; border: 2px solid;
 }
 .bazi-wuxing .wd-wood  { background: #e8f5e9; color: #2e7d32; border-color: #2e7d32; }
 .bazi-wuxing .wd-fire  { background: #ffebee; color: #c62828; border-color: #c62828; }
@@ -443,21 +483,29 @@ body::before {
 .bazi-wuxing .wuxing-count.wd-metal { color: #757575; }
 .bazi-wuxing .wuxing-count.wd-water { color: #1565c0; }
 
-/* Dayun row */
-.bazi-dayun { margin-top: 14px; padding-top: 10px; border-top: 1px solid rgba(184,150,12,0.25); }
-.bazi-dayun .dayun-row { display: flex; justify-content: center; gap: 0; flex-wrap: wrap; }
-.bazi-dayun .dayun-item {
-    width: 60px; text-align: center;
-    border: 1px solid rgba(184,150,12,0.2); background: #fdfaf0; padding: 5px 0;
+/* Dayun timeline */
+.bazi-dayun { margin-top: 16px; padding: 14px 8px 10px; border-top: 1px solid rgba(184,150,12,0.25); }
+.dayun-header { font-size: 11px; color: var(--gold); font-weight: 600; text-align: center; margin-bottom: 10px; letter-spacing: 1px; }
+.dayun-timeline { display: flex; justify-content: center; align-items: flex-end; gap: 4px; position: relative; }
+.dayun-timeline::before {
+    content: ''; position: absolute; bottom: 6px; left: 2%; right: 2%; height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(184,150,12,0.4), rgba(184,150,12,0.8), rgba(184,150,12,0.4), transparent);
 }
-.bazi-dayun .dayun-item + .dayun-item { border-left: none; }
-.bazi-dayun .dayun-age { font-size: 10px; color: #8b6914; margin-bottom: 2px; font-weight: 600; }
-.bazi-dayun .dayun-gz { font-size: 16px; font-weight: bold; font-family: "KaiTi", "STKaiti", serif; color: #2c2416; }
-.bazi-dayun .dayun-gz .wx-wood  { color: #2e7d32; } .bazi-dayun .dayun-gz .wx-fire  { color: #c62828; }
-.bazi-dayun .dayun-gz .wx-earth { color: #8b6914; } .bazi-dayun .dayun-gz .wx-metal { color: #5d5d5d; }
-.bazi-dayun .dayun-gz .wx-water { color: #1565c0; }
-.bazi-dayun .dayun-ss { font-size: 11px; color: #6a5acd; font-weight: 500; }
-.bazi-dayun .dayun-item.current { background: #fdf3e0; border-color: rgba(184,150,12,0.5); }
+.dayun-node { text-align: center; position: relative; z-index: 1; min-width: 64px; }
+.dayun-node.far-past, .dayun-node.far-future { opacity: 0.3; }
+.dayun-node.prev, .dayun-node.next { opacity: 0.6; }
+.dayun-node.current { opacity: 1; }
+.dayun-marker { font-size: 9px; color: var(--cinnabar); font-weight: 700; margin-bottom: 2px; animation: pulse-marker 1.5s ease-in-out infinite; }
+@keyframes pulse-marker { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+.dayun-ganzhi { font-size: 16px; font-weight: bold; font-family: "Noto Serif TC", "KaiTi", "STKaiti", serif; line-height: 1.3; }
+.dayun-ganzhi .wx-wood { color: #2e7d32; } .dayun-ganzhi .wx-fire { color: #c62828; }
+.dayun-ganzhi .wx-earth { color: #8b6914; } .dayun-ganzhi .wx-metal { color: #5d5d5d; }
+.dayun-ganzhi .wx-water { color: #1565c0; }
+.dayun-ages { font-size: 10px; color: var(--text-faint); margin-top: 2px; }
+.dayun-bar { height: 4px; border-radius: 2px; margin-top: 4px; background: rgba(184,150,12,0.3); }
+.dayun-bar.current { height: 8px; background: var(--gold); border-radius: 3px; }
+.dayun-node.current .dayun-ganzhi { font-size: 20px; }
+.dayun-node.current .dayun-ages { color: var(--gold); font-weight: 600; }
 
 /* ================================================================
    Ziwei — Traditional 4×4 Grid (紫微斗数命盘)
@@ -546,7 +594,7 @@ body::before {
     font-weight: bold;
     color: #5d4037;
     letter-spacing: 2px;
-    font-family: "KaiTi", "STKaiti", "SimSun", serif;
+    font-family: "Noto Serif TC", "KaiTi", "STKaiti", "SimSun", serif;
     line-height: 1.3;
     z-index: 2;
 }
@@ -601,7 +649,7 @@ body::before {
     font-weight: bold;
     color: #1a237e;
     white-space: nowrap;
-    font-family: "KaiTi", "STKaiti", "SimSun", serif;
+    font-family: "Noto Serif TC", "KaiTi", "STKaiti", "SimSun", serif;
 }
 
 /* Sihua summary bar */
@@ -676,6 +724,15 @@ body::before {
     gap: 6px;
 }
 .report-status.done { display: none; }
+.report-pdf-btn {
+    display: block; margin: 0 18px 8px; padding: 6px 14px;
+    background: var(--surface-dark); border: 1px solid var(--gold);
+    color: var(--gold); border-radius: var(--radius-sm);
+    font-size: 12px; cursor: pointer; font-family: var(--font);
+    transition: all 0.2s;
+}
+.report-pdf-btn:hover { background: var(--gold); color: var(--ink); }
+.report-pdf-btn.hidden { display: none; }
 .report-content {
     flex: 1;
     overflow-y: auto;
@@ -920,7 +977,9 @@ body::before {
         cursor: pointer;
         transition: all 0.2s;
         border-bottom: 2px solid transparent;
+        display: flex; flex-direction: column; align-items: center; gap: 2px;
     }
+    .mnav-btn svg { display: block; }
 
     .mnav-btn.active {
         color: var(--gold);

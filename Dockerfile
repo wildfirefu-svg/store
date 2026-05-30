@@ -5,6 +5,7 @@ WORKDIR /app
 # Install system deps for PDF generation (weasyprint deps optional)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python deps

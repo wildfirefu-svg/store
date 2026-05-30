@@ -21,3 +21,8 @@ _v2*
 
 # Screenshots
 *.png
+
+# Dev logs and agent state
+debug.log
+.agents/
+.codex/

@@ -148,22 +148,45 @@ const ReportTabs = {
         var tabNames = {
             'overview': '总览',
             'sihechu': '四合出',
-            'wealth': '财运专题',
-            'marriage': '感情专题',
-            'career': '事业专题',
+            'wealth': '财运',
+            'marriage': '感情',
+            'career': '事业',
             'hehun': '合婚',
             'name': '取名',
             'health': '健康',
+            'zeri': '择日',
+            'liunian': '流年',
         };
-        for (var tabId in tabNames) {
-            if (store[tabId] !== undefined || tabId === 'overview') {
-                var span = document.createElement('span');
-                span.className = 'report-tab' + (tabId === this._active ? ' active' : '');
-                span.dataset.tab = tabId;
-                span.textContent = tabNames[tabId];
-                span.onclick = function(tid) { return function() { ReportTabs.switchTo(tid); }; }(tabId);
-                container.appendChild(span);
-            }
+        // Resolve tab label: "sihechu_2" → "四合出 ②"
+        function _tabLabel(tabId) {
+            var numSuffix = '';
+            var base = tabId;
+            var m = tabId.match(/^(.+)_(\d+)$/);
+            if (m) { base = m[1]; numSuffix = ' ' + _numCircle(parseInt(m[2])); }
+            var label = tabNames[base] || base;
+            return label + numSuffix;
+        }
+        function _numCircle(n) {
+            var circles = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩','⑪','⑫','⑬','⑭','⑮'];
+            return circles[n - 1] || '(' + n + ')';
+        }
+        ReportTabs._tabNames = tabNames;
+        ReportTabs._tabLabel = _tabLabel;
+        ReportTabs._numCircle = _numCircle;
+        // Collect all tabs with content (including numbered variants)
+        var displayTabs = {};
+        if (store['overview'] !== undefined || true) displayTabs['overview'] = _tabLabel('overview');
+        for (var tid in store) {
+            if (tid === 'overview') continue;
+            if (store[tid] !== undefined) displayTabs[tid] = _tabLabel(tid);
+        }
+        for (var tabId in displayTabs) {
+            var span = document.createElement('span');
+            span.className = 'report-tab' + (tabId === this._active ? ' active' : '');
+            span.dataset.tab = tabId;
+            span.textContent = displayTabs[tabId];
+            span.onclick = function(tid) { return function() { ReportTabs.switchTo(tid); }; }(tabId);
+            container.appendChild(span);
         }
         if (correctEl) container.appendChild(correctEl);
     },
@@ -267,15 +290,27 @@ function renderBazi(chart) {
     });
     h += '</div></div>';
 
-    // 大运
+    // 大运时间轴
     if (dy.length > 0) {
-        h += '<div class="bazi-dayun"><div class="dayun-row">';
-        dy.forEach(d => {
-            const cur = d.is_current ? ' current' : '';
-            h += '<div class="dayun-item' + cur + '">';
-            h += '<div class="dayun-age">' + d.start_age + '–' + d.end_age + '</div>';
-            h += '<div class="dayun-gz">' + wxSpan(d.gan, (dm.gan_wuxing||'')) + wxSpan(d.zhi, (dm.zhi_wuxing||'')) + '</div>';
-            h += '<div class="dayun-ss">' + (d.shi_shen_gan || '') + '</div>';
+        h += '<div class="bazi-dayun"><div class="dayun-header">大运流年</div><div class="dayun-timeline">';
+        var currentIdx = -1;
+        dy.forEach(function(d, i) { if (d.is_current) currentIdx = i; });
+
+        dy.forEach(function(d, i) {
+            var cls = d.is_current ? ' current' : '';
+            var pos = '';
+            if (i === currentIdx - 1) pos = ' prev';
+            if (i === currentIdx + 1) pos = ' next';
+            if (i < currentIdx - 1) pos = ' far-past';
+            if (i > currentIdx + 1) pos = ' far-future';
+
+            h += '<div class="dayun-node' + cls + pos + '">';
+            if (d.is_current) {
+                h += '<div class="dayun-marker">▼ 当前</div>';
+            }
+            h += '<div class="dayun-ganzhi">' + wxSpan(d.gan, d.shi_shen_gan||'') + wxSpan(d.zhi, d.shi_shen_zhi||'') + '</div>';
+            h += '<div class="dayun-ages">' + d.start_age + '–' + d.end_age + '岁</div>';
+            h += '<div class="dayun-bar' + cls + '"></div>';
             h += '</div>';
         });
         h += '</div></div>';
@@ -632,6 +667,14 @@ function _sendWithStream(chartId, prompt, onSuccess) {
             }
         },
         function(text, tab) {
+            // Ensure unique tab — if tab already has content, append counter
+            var store = ReportTabs._getStore();
+            var baseTab = tab;
+            var counter = 1;
+            while (store[tab] !== undefined) {
+                counter++;
+                tab = baseTab + '_' + counter;
+            }
             currentTab = tab;
             reportBuf = text;
             showReportStreaming(tab, reportBuf);
@@ -677,18 +720,20 @@ function showReportStreaming(tab, content) {
 
 function _buildOverview() {
     var store = ReportTabs._getStore();
-    var tabNames = {sihechu:'四合出', wealth:'财运专题', marriage:'感情专题', career:'事业专题', hehun:'合婚', name:'取名', health:'健康'};
+    var baseNames = {sihechu:'四合出', wealth:'财运', marriage:'感情', career:'事业', hehun:'合婚', name:'取名', health:'健康', zeri:'择日', liunian:'流年'};
+    var getLabel = ReportTabs._tabLabel || function(t) { return t; };
     var parts = [];
-    for (var tid in tabNames) {
+    for (var tid in store) {
+        if (tid === 'overview') continue;
         if (store[tid]) {
             var h2s = store[tid].match(/^## (.+)$/gm);
             if (h2s && h2s.length > 0) {
-                parts.push('#### ' + tabNames[tid]);
+                parts.push('#### ' + getLabel(tid));
                 for (var i = 0; i < Math.min(h2s.length, 5); i++) {
                     parts.push('- ' + h2s[i].replace(/^## /, ''));
                 }
             } else {
-                parts.push('- **' + tabNames[tid] + '**：已有分析结果');
+                parts.push('- **' + getLabel(tid) + '**：已有分析结果');
             }
         }
     }
@@ -704,7 +749,29 @@ function showReportFinal(tab, content) {
     ReportTabs._renderTabs();
     document.getElementById('report-content').innerHTML = renderMarkdown(content);
     document.getElementById('report-status').classList.add('done');
+    document.getElementById('report-pdf-btn').classList.remove('hidden');
 }
+
+// ── PDF download ──
+document.getElementById('report-pdf-btn').addEventListener('click', async function() {
+    var cur = MingzhuManager.getCurrent();
+    if (!cur) { alert('请先添加命主'); return; }
+    var modeMap = {sihechu: 5, wealth: 1, marriage: 1, career: 1, health: 1, name: 1, hehun: 6};
+    var mode = modeMap[ReportTabs.getActive()] || 1;
+    try {
+        var r = await fetch(API + '/analyze/pdf', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({chart_id: cur.chart_id, mode: mode})
+        });
+        if (!r.ok) { alert('PDF生成失败'); return; }
+        var blob = await r.blob();
+        var url = window.URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = 'report_' + cur.chart_id + '.pdf';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    } catch(e) { alert('下载失败: ' + e.message); }
+});
 
 // ================================================================
 // Solar time checkbox
@@ -850,13 +917,13 @@ document.getElementById('chat-send-btn').addEventListener('click', function() {
     const text = inp.value.trim();
     if (!text) return;
     const cur = MingzhuManager.getCurrent();
-    if (!cur) { addChatMsg('agent', '请先添加命主。'); return; }
+    if (!cur) { showModal(); addChatMsg('agent', '请先添加命主并完成排盘，然后再开始分析。'); return; }
 
     // 指正模式
     if (CorrectionManager.isCorrecting()) {
         CorrectionManager.endCorrection();
         addChatMsg('user', '🔧 指正：' + text);
-        inp.value = '';
+        inp.value = ''; inp.style.height = 'auto';
         const activeTab = ReportTabs.getActive();
         const prompt = '用户指出以下分析有误，请重新审视并修正报告中对应的章节（仅修正有误部分，保留其余内容不变）：\n\n用户反馈：' + text + '\n\n当前报告标签：' + activeTab;
         _sendWithStream(cur.chart_id, prompt, function() {
@@ -868,7 +935,7 @@ document.getElementById('chat-send-btn').addEventListener('click', function() {
     // 正常模式
     const prompt = _expandPrompt(text);
     addChatMsg('user', text);
-    inp.value = '';
+    inp.value = ''; inp.style.height = 'auto';
     _sendWithStream(cur.chart_id, prompt);
 });
 
@@ -876,8 +943,17 @@ document.getElementById('chat-send-btn').addEventListener('click', function() {
 document.getElementById('correct-btn').addEventListener('click', function() {
     CorrectionManager.startCorrection();
 });
-document.getElementById('chat-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); document.getElementById('chat-send-btn').click(); }
+// Textarea auto-resize + Enter/Shift+Enter handling
+var chatInput = document.getElementById('chat-input');
+chatInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+chatInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('chat-send-btn').click();
+    }
 });
 
 // Panel
@@ -904,6 +980,183 @@ document.getElementById('hehun-analyze-btn').addEventListener('click', async fun
         }
         ReportTabs.set('hehun', m);
         ReportTabs.switchTo('hehun');
+    }
+});
+
+// ── Tool bars: zeri / liunian / name ──
+function _hideToolBars() {
+    ['zeri-bar','liunian-bar','name-bar','hehun-bar'].forEach(function(id) {
+        document.getElementById(id).classList.add('hidden');
+    });
+}
+function _showToolBar(barId) {
+    _hideToolBars();
+    document.getElementById(barId).classList.remove('hidden');
+}
+
+// Zeri (择日)
+document.getElementById('zeri-toggle-btn').addEventListener('click', function() {
+    var bar = document.getElementById('zeri-bar');
+    if (bar.classList.contains('hidden')) {
+        var now = new Date();
+        document.getElementById('zeri-year').value = now.getFullYear();
+        document.getElementById('zeri-month').value = now.getMonth() + 1;
+        _showToolBar('zeri-bar');
+    } else { bar.classList.add('hidden'); }
+});
+document.getElementById('zeri-close-btn').addEventListener('click', function() { document.getElementById('zeri-bar').classList.add('hidden'); });
+document.getElementById('zeri-analyze-btn').addEventListener('click', async function() {
+    var cur = MingzhuManager.getCurrent();
+    if (!cur) { alert('请先添加命主'); return; }
+    var y = parseInt(document.getElementById('zeri-year').value) || new Date().getFullYear();
+    var m = parseInt(document.getElementById('zeri-month').value) || new Date().getMonth() + 1;
+    var purpose = document.getElementById('zeri-purpose').value;
+    var r = await fetch(API + '/tools/zeri', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({chart_id: cur.chart_id, year: y, month: m, purpose: purpose, top_n: 5})
+    });
+    if (!r.ok) { alert('查询失败'); return; }
+    var d = await r.json();
+    var md = '# 择日结果\n\n**' + d.purpose + '** ' + d.year + '年' + d.month + '月\n\n';
+    (d.dates || []).forEach(function(dt, i) {
+        md += '### ' + (i + 1) + '. ' + dt.date + '（' + dt.weekday + '）\n';
+        md += '- 建除：' + (dt.ri_chen || '') + ' | 干支：' + (dt.ganzhi || '') + ' | 日干十神：' + (dt.shishen || '') + '\n';
+        md += '- 评分：' + dt.score + '分 | ' + (dt.jianchu || '') + '\n';
+        if (dt.detail) md += '- ' + dt.detail + '\n';
+        md += '\n';
+    });
+    ReportTabs.set('zeri', md);
+    ReportTabs.switchTo('zeri');
+});
+
+// Liunian (流年)
+document.getElementById('liunian-toggle-btn').addEventListener('click', function() {
+    var bar = document.getElementById('liunian-bar');
+    if (bar.classList.contains('hidden')) {
+        document.getElementById('liunian-year').value = new Date().getFullYear();
+        _showToolBar('liunian-bar');
+    } else { bar.classList.add('hidden'); }
+});
+document.getElementById('liunian-close-btn').addEventListener('click', function() { document.getElementById('liunian-bar').classList.add('hidden'); });
+document.getElementById('liunian-analyze-btn').addEventListener('click', async function() {
+    var cur = MingzhuManager.getCurrent();
+    if (!cur) { alert('请先添加命主'); return; }
+    var ty = parseInt(document.getElementById('liunian-year').value) || new Date().getFullYear();
+    var r = await fetch(API + '/tools/liunian', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({chart_id: cur.chart_id, target_year: ty})
+    });
+    if (!r.ok) { alert('查询失败'); return; }
+    var d = await r.json();
+    var md = '# 流年运势 ' + ty + '\n\n';
+    if (d.overview) md += '## 年运总览\n' + d.overview + '\n\n';
+    (d.months || []).forEach(function(mo) {
+        var stars = '';
+        for (var k in {career:'事业',wealth:'财运',love:'感情',health:'健康'}) {
+            var v = mo[k] || 0;
+            stars += (k === 'career' ? '事业' : k === 'wealth' ? '财运' : k === 'love' ? '感情' : '健康') + ' ';
+            for (var i = 0; i < 5; i++) stars += i < v ? '⭐' : '☆';
+            stars += '  ';
+        }
+        md += '### ' + mo.month + '月 ' + (mo.ganzhi || '') + '\n';
+        md += stars + '\n';
+        if (mo.advice) md += '- ' + mo.advice + '\n';
+        md += '\n';
+    });
+    ReportTabs.set('liunian', md);
+    ReportTabs.switchTo('liunian');
+});
+
+// Name (取名)
+document.getElementById('name-toggle-btn').addEventListener('click', function() {
+    var bar = document.getElementById('name-bar');
+    if (bar.classList.contains('hidden')) { _showToolBar('name-bar'); }
+    else { bar.classList.add('hidden'); }
+});
+document.getElementById('name-close-btn').addEventListener('click', function() { document.getElementById('name-bar').classList.add('hidden'); });
+document.getElementById('name-tab-eval').addEventListener('click', function() {
+    document.getElementById('name-tab-eval').classList.add('active');
+    document.getElementById('name-tab-gen').classList.remove('active');
+    document.getElementById('name-eval-fields').style.display = '';
+    document.getElementById('name-gen-fields').style.display = 'none';
+});
+document.getElementById('name-tab-gen').addEventListener('click', function() {
+    document.getElementById('name-tab-gen').classList.add('active');
+    document.getElementById('name-tab-eval').classList.remove('active');
+    document.getElementById('name-eval-fields').style.display = 'none';
+    document.getElementById('name-gen-fields').style.display = '';
+});
+document.getElementById('name-analyze-btn').addEventListener('click', async function() {
+    var cur = MingzhuManager.getCurrent();
+    if (!cur) { alert('请先添加命主'); return; }
+    var isEval = document.getElementById('name-tab-eval').classList.contains('active');
+    if (isEval) {
+        var name = document.getElementById('name-eval-name').value.trim();
+        var gender = document.getElementById('name-eval-gender').value;
+        if (!name) { alert('请输入姓名'); return; }
+        var r = await fetch(API + '/tools/name/eval', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({chart_id: cur.chart_id, name: name, gender: gender})
+        });
+        if (!r.ok) { alert('查询失败'); return; }
+        var d = await r.json();
+        var md = '# 名字评测：' + name + '\n\n';
+        md += '**总分：' + (d.total_score || '—') + ' / ' + (d.max_score || '—') + '**　等级：**' + (d.grade || '—') + '**\n\n';
+        md += '> ' + (d.verdict || '') + '\n\n';
+        md += '## 喜用神\n';
+        md += '喜神：' + (d.xishen || []).join('、') + '　|　忌神：' + (d.jishen || []).join('、') + '\n\n';
+        if (d.scores) {
+            md += '## 评分明细\n\n';
+            md += '| 维度 | 得分 | 满分 | 说明 |\n|---|---|---|---|\n';
+            for (var k in d.scores) {
+                var s = d.scores[k];
+                md += '| ' + k + ' | ' + (s.score || 0) + ' | ' + (s.max || '—') + ' | ' + (s.detail || '') + ' |\n';
+            }
+            md += '\n';
+        }
+        if (d.wuge) {
+            md += '## 五格数理\n\n';
+            md += '| 格 | 笔画 | 数理 | 含义 |\n|---|---|---|---|\n';
+            var wugeNames = {'天格':'天格','人格':'人格','地格':'地格','外格':'外格','总格':'总格'};
+            for (var wk in wugeNames) {
+                var w = d.wuge[wk];
+                if (w) { md += '| ' + wk + ' | ' + (w.strokes || '—') + '画 | ' + (w.shuli || '') + ' | ' + (w.shuli_meaning || '') + ' |\n'; }
+            }
+            md += '\n';
+        }
+        if (d.sancai) {
+            var sc = d.sancai;
+            md += '## 三才配置\n\n';
+            md += '**' + (sc.config || '') + '** — ' + (sc.judgment || '') + '（' + (sc.category_name || '') + '）\n\n';
+        }
+        ReportTabs.set('name', md);
+        ReportTabs.switchTo('name');
+    } else {
+        var surname = document.getElementById('name-gen-surname').value.trim();
+        var gender = document.getElementById('name-gen-gender').value;
+        if (!surname) { alert('请输入姓氏'); return; }
+        var r = await fetch(API + '/tools/name/gen', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({chart_id: cur.chart_id, surname: surname, gender: gender, top_n: 5})
+        });
+        if (!r.ok) { alert('查询失败'); return; }
+        var d = await r.json();
+        var candidates = Array.isArray(d) ? d : (d.names || d.candidates || []);
+        var md = '# 取名推荐：' + surname + '姓 ' + (gender === 'male' ? '男' : '女') + '\n\n';
+        candidates.forEach(function(n, i) {
+            var nameStr = typeof n === 'string' ? n : (n.name || n.full_name || '');
+            var score = typeof n === 'object' ? (n.score || n.total_score) : null;
+            md += '### ' + (i + 1) + '. ' + surname + nameStr + '\n';
+            if (score) md += '**评分：' + score + '分**　';
+            if (n.grade) md += '等级：' + n.grade;
+            md += '\n\n';
+            if (n.wuxing) md += '- 五行：' + (typeof n.wuxing === 'string' ? n.wuxing : JSON.stringify(n.wuxing)) + '\n';
+            if (n.reason) md += '- ' + n.reason + '\n';
+            if (n.meaning) md += '- 寓意：' + n.meaning + '\n';
+            md += '\n';
+        });
+        ReportTabs.set('name', md);
+        ReportTabs.switchTo('name');
     }
 });
 

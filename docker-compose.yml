@@ -6,6 +6,8 @@ services:
       - "8000:8000"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - BAZI_API_KEY=${BAZI_API_KEY:-}
+      - BAZI_CORS_ORIGINS=${BAZI_CORS_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
     volumes:
       - ./.anthropic_key:/app/.anthropic_key:ro
       - ./reports:/app/reports

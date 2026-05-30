@@ -130,7 +130,7 @@ def test_zeri():
               f'first 3 scores: {scores[:3]}')
 
     print(f'\n  zeri: {PASSED}/{TOTAL} passed')
-    return PASSED, TOTAL
+    assert PASSED == TOTAL, f'zeri: {PASSED}/{TOTAL} but {FAILED} failures'
 
 
 # =============================================================================
@@ -216,7 +216,7 @@ def test_liunian():
         check('2.6 Different year has 12 months', len(d2.get('months', [])) == 12)
 
     print(f'\n  liunian: {PASSED}/{TOTAL} passed')
-    return PASSED, TOTAL
+    assert PASSED == TOTAL, f'liunian: {PASSED}/{TOTAL} but {FAILED} failures'
 
 
 # =============================================================================
@@ -321,7 +321,7 @@ def test_name_analysis():
         check('3.6 Single-name has scores', 'scores' in d4)
 
     print(f'\n  name_analysis: {PASSED}/{TOTAL} passed')
-    return PASSED, TOTAL
+    assert PASSED == TOTAL, f'name_analysis: {PASSED}/{TOTAL} but {FAILED} failures'
 
 
 # =============================================================================
@@ -410,7 +410,7 @@ def test_case_retrieval():
               f'missing fields in {bm["id"]}')
 
     print(f'\n  case_retrieval: {PASSED}/{TOTAL} passed')
-    return PASSED, TOTAL
+    assert PASSED == TOTAL, f'case_retrieval: {PASSED}/{TOTAL} but {FAILED} failures'
 
 
 # =============================================================================
