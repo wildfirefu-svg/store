@@ -496,9 +496,14 @@ function apiChatStream(chartId, message, onReplyDelta, onReportDelta, onToolStar
         es.close();
     });
 
+    var gotContent = false;
+    es.addEventListener('tool', function() { gotContent = true; });
+    es.addEventListener('reply', function() { gotContent = true; });
     es.addEventListener('error', function() {
         es.close();
-        onReplyDelta('\n\n⚠️ AI 服务连接失败。请确认：\n1. 已在项目目录创建 .anthropic_key 文件\n2. API Key 有效且未过期\n3. 网络可访问 api.anthropic.com', null);
+        if (!gotContent) {
+            onReplyDelta('\n\n⚠️ AI 服务连接失败。请确认：\n1. 已在项目目录创建 .anthropic_key 文件\n2. API Key 有效且未过期\n3. 网络可访问 AI 服务', null);
+        }
         onDone(0);
     });
 }
@@ -545,7 +550,13 @@ function switchMingzhu(chartId) {
     var mz = MingzhuManager.getAll().find(function(x) { return x.chart_id === chartId; });
     ChatHistory.restore(chartId);
     ReportTabs.init(chartId);
-    document.getElementById('report-content').innerHTML = '';
+    // Show the first non-overview tab if available, otherwise overview
+    var store = ReportTabs._getStore();
+    var firstTab = 'overview';
+    for (var tid in store) {
+        if (tid !== 'overview' && store[tid] !== undefined) { firstTab = tid; break; }
+    }
+    ReportTabs.switchTo(firstTab);
     document.getElementById('bazi-table').innerHTML = '<p style="text-align:center;color:var(--text-tertiary);padding:20px">加载中…</p>';
     document.getElementById('ziwei-table').innerHTML = '';
 
@@ -667,15 +678,17 @@ function _sendWithStream(chartId, prompt, onSuccess) {
             }
         },
         function(text, tab) {
-            // Ensure unique tab — if tab already has content, append counter
-            var store = ReportTabs._getStore();
-            var baseTab = tab;
-            var counter = 1;
-            while (store[tab] !== undefined) {
-                counter++;
-                tab = baseTab + '_' + counter;
+            // On first delta: create unique tab if base name already taken
+            if (currentTab === 'overview' && tab !== 'overview') {
+                var store = ReportTabs._getStore();
+                var baseTab = tab;
+                var counter = 1;
+                while (store[tab] !== undefined) {
+                    counter++;
+                    tab = baseTab + '_' + counter;
+                }
+                currentTab = tab;
             }
-            currentTab = tab;
             reportBuf = text;
             showReportStreaming(tab, reportBuf);
         },
@@ -872,9 +885,58 @@ document.getElementById('mingzhu-submit-btn').addEventListener('click', async ()
     document.getElementById('chat-messages').innerHTML = '';
     addChatMsg('agent', '已为 <b>' + name + '</b> 排盘完毕。<br>出生：' + mz.birth + ' ' + g + ' ' + b.location + '<br>日主：<b>' + chart.day_master.gan + chart.day_master.wuxing + chart.day_master.yinyang + '</b><br><br>输入「<b>报告</b>」「<b>分析</b>」或具体问题开始解读。');
 
-    document.getElementById('report-content').innerHTML = '';
+    // Auto-generate overview
+    showReportFinal('overview', _buildAutoOverview(chart, mz));
     document.getElementById('chat-input').focus();
 });
+
+function _buildAutoOverview(chart, mz) {
+    var dm = chart.day_master, fp = chart.four_pillars, ws = chart.wuxing_stats;
+    var dy = chart.da_yun || [], ds = chart.dayun_summary || {};
+    var cp = ds.current_pillar || (dy.length > 0 ? dy[3] : {});
+
+    var md = '# 命盘总览\n\n';
+    md += '## 日主\n';
+    md += '**' + dm.gan + dm.wuxing + dm.yinyang + '**';
+    if (dm.shier_changsheng) md += '　坐' + dm.shier_changsheng;
+    md += '\n\n';
+
+    md += '## 月令\n';
+    var mp = fp.month;
+    md += mp.gan + mp.zhi + '（' + mp.gan_wuxing + mp.zhi_wuxing + '）　十神：' + (mp.shi_shen_gan || '') + '\n\n';
+
+    md += '## 五行偏枯\n';
+    var wuOrder = ['金','木','水','火','土'];
+    var wuPairs = wuOrder.map(function(w) { return [w, ws[w.toLowerCase().replace('火','huo').replace('水','shui').replace('木','mu').replace('金','jin').replace('土','tu')] || 0]; });
+    wuPairs.sort(function(a,b) { return b[1] - a[1]; });
+    var wuBars = wuPairs.map(function(p) { return p[0] + ' ' + '█'.repeat(Math.max(1, p[1])) + ' ' + p[1]; }).join('　');
+    md += wuBars + '\n';
+    if (ws.missing && ws.missing.length > 0) md += '\n⚠️ 缺：' + ws.missing.join('、') + '（参考紫微宫位补足）\n';
+    md += '\n';
+
+    md += '## 当前大运\n';
+    if (cp.gan) {
+        md += '**' + cp.gan + cp.zhi + '**　' + cp.start_age + '–' + cp.end_age + '岁（' + (cp.years || '') + '）\n';
+        md += '\n起运：' + (ds.starting_age || '?') + '岁　方向：' + (ds.direction || '') + '\n';
+    } else {
+        md += '数据缺失\n';
+    }
+    md += '\n';
+
+    md += '## 可问方向\n';
+    md += '- 💰 财运　- 💕 感情　- 💼 事业\n';
+    md += '- 🏥 健康　- 📖 学业　- 🔮 流年\n';
+    md += '- 📅 择日　- 📆 流年运势　- ✏️ 取名\n';
+    md += '\n';
+
+    md += '## 可信度说明\n';
+    md += '> 四柱排盘属于规则计算，确定性高。\n';
+    md += '> 格局/用神/大运解读属于传统命理推断，依赖时辰准确性。\n';
+    md += '> 健康/家庭/子女类判断对时辰高度敏感；时辰不准时仅作低置信参考。\n';
+    md += '> 输入「报告」获取四合出（四派综合）深度分析。\n';
+
+    return md;
+}
 
 function _expandPrompt(raw) {
     const kw = raw.replace(/\s/g, '');

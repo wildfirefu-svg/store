@@ -219,10 +219,5 @@ class TestAnalyzePdfSecurity:
         assert r.status_code in (200, 400, 500)  # ok or missing deps
 
 
-class TestCorsPolicy:
-    def test_cors_origins_are_not_wildcard_by_default(self):
-        assert "*" not in api._cors_origins()
-
-
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

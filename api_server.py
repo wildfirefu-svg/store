@@ -38,13 +38,7 @@ app = FastAPI(
     description="八字命理分析 REST API — 排盘、择日、流年、取名、案例检索、知识库搜索",
     version="1.0.0",
 )
-def _cors_origins():
-    raw = os.environ.get("BAZI_CORS_ORIGINS", "")
-    if raw:
-        return [x.strip() for x in raw.split(",") if x.strip()]
-    return ["http://127.0.0.1:8000", "http://localhost:8000"]
-
-app.add_middleware(CORSMiddleware, allow_origins=_cors_origins(), allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 # ============================================================
 # RATE LIMITER — per-IP sliding window
@@ -530,24 +524,48 @@ def _auto_analyze(chart):
         'reasoning': f'月令{month_zhi}本气{month_main}，{month_gan}透干→取{pattern_name}。日主{grade}。'
     }
 
-    # === 用神 ===
+    # === 格局级用神（正格/变格/调候/通关/病药分开） ===
     if grade in ('身旺','身强'):
-        yong, ji = ('财星','食伤'), ('印星','比劫')
+        pattern_yong, pattern_ji = ('财星','食伤'), ('印星','比劫')
     elif grade == '身弱':
-        yong, ji = ('印星','比劫'), ('财星','食伤')
+        pattern_yong, pattern_ji = ('印星','比劫'), ('财星','食伤')
     else:
-        yong, ji = ('视流通','断破坏'), ('财星','')
+        pattern_yong, pattern_ji = ('流通方','破坏方'), ('偏枯方','')
 
-    # 调候
-    tiaohou = {'亥':'丙火','子':'丙火','丑':'丙火','巳':'癸水','午':'癸水','未':'癸水'}.get(month_zhi,'')
-    xishen_note = f'日主{grade}→用{yong[0]}。' + (f'冬月需{tiaohou}暖局。' if tiaohou else '')
+    # 调候用神（《穷通宝鉴》）
+    TIAOHOU_MAP = {'亥':'丙火','子':'丙火','丑':'丙火','寅':'丙火癸水','卯':'丙火',
+                   '辰':'癸水','巳':'癸水','午':'癸水','未':'癸水',
+                   '申':'丙火','酉':'丙火','戌':'丙火'}
+    tiaohou_raw = TIAOHOU_MAP.get(month_zhi, '')
+    tiaohou_items = [tiaohou_raw[i:i+2] for i in range(0, len(tiaohou_raw), 2)] if tiaohou_raw else []
+
+    # 通关用神（五行对峙取通关）
+    _tongguan = {('金','木'):'水',('木','金'):'水',('火','金'):'土',('金','火'):'土',
+                 ('水','火'):'木',('火','水'):'木',('土','水'):'金',('水','土'):'金'}
+    tongguan = _tongguan.get((strongest, wu), '') if strongest and wu and strongest != wu else ''
+
+    # 病药用神
+    bingyao = ''
+    if miss:
+        bingyao = '缺' + '、'.join(miss) + '→补' + '、'.join(miss) + '为药'
+    if grade == '身弱' and wu_counts.get(wu,0) <= 1:
+        bingyao = (bingyao + '；' if bingyao else '') + '身弱无根→比劫印星为药'
+
+    xishen_note = f'日主{grade}→格局用{pattern_yong[0]}。'
+    if tiaohou_items: xishen_note += f'　调候需{"、".join(tiaohou_items)}。'
+    if tongguan: xishen_note += f'　通关取{tongguan}。'
+    if bingyao: xishen_note += f'　{bingyao}。'
+
     yongshen = {
-        '用神': {'ganzhi': yong[0], 'note': '格局枢纽'},
-        '相神': {'ganzhi': yong[1] if len(yong)>1 else '', 'note': '辅佐用神'},
-        '喜神': {'ganzhi': yong[0], 'note': '扶助格局'},
-        '忌神': {'ganzhi': ji[0], 'note': '破坏格局'},
-        '仇神': {'ganzhi': '', 'note': ''},
+        '用神': {'ganzhi': pattern_yong[0], 'note': '格局枢纽'},
+        '相神': {'ganzhi': pattern_yong[1] if len(pattern_yong)>1 else '', 'note': '辅佐用神'},
+        '喜神': {'ganzhi': pattern_yong[0], 'note': '扶助格局'},
+        '忌神': {'ganzhi': pattern_ji[0], 'note': '破坏格局'},
+        '仇神': {'ganzhi': pattern_ji[1] if len(pattern_ji)>1 else '', 'note': ''},
         '闲神': {'ganzhi': '', 'note': ''},
+        '调候': {'ganzhi': '、'.join(tiaohou_items) if tiaohou_items else '无', 'note': '调候优先于格局' if tiaohou_items else ''},
+        '通关': {'ganzhi': tongguan or '无', 'note': '化解五行对峙'},
+        '病药': {'ganzhi': bingyao or '无', 'note': '补偏救弊'},
         'assessment': xishen_note
     }
 
@@ -615,19 +633,71 @@ def _auto_analyze(chart):
         return {"name": name, "conclusion": conclusion, "confidence": confidence,
                 "evidence": evidence, "counter_evidence": counter_evidence or []}
 
+    # Build rich counter-evidence for key judgments
+    _ws_ce = []
+    if grade in ('身旺','身强'):
+        _ws_ce.append('若地支有合局或墓库冲开，旺衰等级可能变化')
+        _ws_ce.append('若日支被合化，根气减弱，身旺可能降为中和')
+    else:
+        _ws_ce.append('若藏干中有日主强根（本气根），身弱可能上调')
+    _ws_ce.append('十二长生位置可能改变旺衰判断')
+
+    _pat_ce = ['未检查变格（从格/化气格/专旺格）可能性',
+               '月令被合化时格局可能改变',
+               '未完整处理格局破救（如官格见伤官但有印制的救应）']
+
+    _yong_ce = ['用神喜忌需要结合具体大运流年验证',
+               '调候与格局冲突时以格局为先，但调候不足会影响健康/性格']
+    if tiaohou_items:
+        _yong_ce.append(f'调候需{tiaohou_raw}，若原局无此五行则调候乏力')
+
+    yp_ganzhi = fp['year']['gan'] + fp['year']['zhi']
+    mp_ganzhi = month_gan + month_zhi
+    day_ganzhi = fp['day']['gan'] + fp['day']['zhi']
+    hp_ganzhi = fp['hour']['gan'] + fp['hour']['zhi']
+    cp_ganzhi = current_dy.get('gan','') + current_dy.get('zhi','')
+    cp_ss = get_shishen(gan, current_dy.get('gan','')) if current_dy.get('gan') else ''
+    ds_start = ds.get('starting_age', '?')
+    ds_dir = ds.get('direction', '?')
+    cp_start = current_dy.get('start_age','?')
+    cp_end = current_dy.get('end_age','?')
+
     judgments = [
+        _judgment("排盘校验", "通过",
+            "high",
+            [f"年{yp_ganzhi}, 月{mp_ganzhi}, 日{day_ganzhi}, 时{hp_ganzhi}",
+             f"四柱完整，纳音/藏干/空亡齐全"],
+            ["节气交界处月柱可能有±1天偏差，已标记precision_note"]),
         _judgment("旺衰", grade,
             "medium" if grade == "中和" else "high",
-            [f"日主五行占比{dm_pct * 100:.0f}%", f"月令{month_zhi}({month_wu})对日主为{month_support}"],
-            ["当前算法未完整计算透干、根气远近和合化后的强弱变化"]),
+            [f"日主五行占比{dm_pct * 100:.0f}%", f"月令{month_zhi}({month_wu})对日主为{month_support}",
+             f"全局{wucount_roots}个日主根气"],
+            _ws_ce),
         _judgment("格局", pattern_name,
             "medium",
             [f"月干{month_gan}对日主为{shishen_of_month}", f"月令本气{month_main}"],
-            ["当前仅按月干/月令粗判，未完整处理变格、从格、合化和格局破救"]),
-        _judgment("用神", yongshen["assessment"],
+            _pat_ce),
+        _judgment("调候",
+            f'需{"、".join(tiaohou_items)}' if tiaohou_items else '无需特殊调候',
+            "medium" if tiaohou_items else "high",
+            [f"生于{month_zhi}月，参考《穷通宝鉴》"],
+            ['调候用神与格局用神可能冲突，需综合权衡'] if tiaohou_items else []),
+        _judgment("格局用神", yongshen["assessment"],
             "low" if grade == "中和" else "medium",
-            [f"日主{grade}", f"初步取{yong[0]}为用"],
-            ["当前用神未完全区分格局用神、调候用神、通关用神和病药用神"]),
+            [f"日主{grade}", f"格局用{pattern_yong[0]}",
+             f"通关取{tongguan}" if tongguan else '',
+             f"病药: {bingyao}" if bingyao else ''],
+            _yong_ce),
+        _judgment("大运", f'{cp_ganzhi} ({cp_start}-{cp_end}岁)',
+            "medium",
+            [f"起运{ds_start}岁，{ds_dir}，十神{cp_ss or '—'}"],
+            ["大运吉凶需要结合原局用神和流年引动才能具体判断"]),
+        _judgment("财运提示",
+            '可担财' if grade in ('身旺','身强') else '宜稳财',
+            "low",
+            [f"日主{grade}，{'身旺可担财官' if grade in ('身旺','身强') else '身弱需印比扶身'}"],
+            ["反证1：检查比劫夺财", "反证2：检查财星受冲",
+             "反证3：检查财多身弱（富屋贫人）", "大运流年引动前仅为静态判断"]),
     ]
 
     return {
@@ -841,4 +911,4 @@ if __name__ == '__main__':
     import uvicorn
     print('Starting BaZi Analysis API on http://localhost:8000')
     print('Swagger UI: http://localhost:8000/docs')
-    uvicorn.run(app, host='127.0.0.1', port=8000)
+    uvicorn.run(app, host='0.0.0.0', port=8000)

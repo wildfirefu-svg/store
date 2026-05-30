@@ -304,13 +304,14 @@ body::before {
 .tool-bar button:last-of-type { background: none; color: var(--text-faint); }
 .tool-bar .name-tab { cursor: pointer; padding: 3px 8px; border-radius: 3px; font-size: 11px; color: var(--text-faint); }
 .tool-bar .name-tab.active { color: var(--gold); background: var(--gold-light); }
-.chat-input-row { display:flex; gap:8px; padding: 10px 16px; align-items:center; }
+.chat-input-row { display:flex; gap:4px; padding: 10px 12px; align-items:center; }
 .chat-input-row input, .chat-input-row textarea {
-    flex:1;
+    flex: 1 1 0;
+    min-width: 0;
     background: var(--surface-dark);
     border: 1px solid var(--border-subtle);
     color: rgba(245,240,224,0.85);
-    padding: 10px 16px;
+    padding: 8px 12px;
     border-radius: var(--radius-lg);
     font-size: 13px;
     font-family: var(--font);
@@ -331,18 +332,18 @@ body::before {
     font-weight: 500;
     transition: all 0.2s;
 }
-#chat-send-btn { background: var(--cinnabar); color: #fff; font-weight: 600; padding: 10px 22px; }
+#chat-send-btn { background: var(--cinnabar); color: #fff; font-weight: 600; padding: 8px 14px; flex-shrink: 0; font-size: 13px; }
 #chat-send-btn:hover { background: #a8322a; }
 #hehun-toggle-btn, #zeri-toggle-btn, #liunian-toggle-btn, #name-toggle-btn, #add-mingzhu-btn {
-    background: var(--surface-dark);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-dim);
-    padding: 8px 10px;
-    border-radius: var(--radius);
+    background: none; border: none;
+    color: var(--text-faint);
+    padding: 2px 3px;
     display: inline-flex; align-items: center; justify-content: center;
-    min-width: 36px; min-height: 36px;
+    width: 24px; height: 24px; flex-shrink: 0;
+    cursor: pointer;
 }
-#hehun-toggle-btn:hover, #zeri-toggle-btn:hover, #liunian-toggle-btn:hover, #name-toggle-btn:hover, #add-mingzhu-btn:hover { background: var(--surface-hover); border-color: var(--gold); color: var(--gold); }
+#hehun-toggle-btn:hover, #zeri-toggle-btn:hover, #liunian-toggle-btn:hover, #name-toggle-btn:hover, #add-mingzhu-btn:hover { color: var(--gold); }
+#hehun-toggle-btn svg, #zeri-toggle-btn svg, #liunian-toggle-btn svg, #name-toggle-btn svg, #add-mingzhu-btn svg { width: 14px; height: 14px; }
 
 /* ================================================================
    Column 2: 命盘展示
