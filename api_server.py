@@ -47,7 +47,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 # Limits: (max_requests, window_seconds)
 _RATE_LIMITS = {
     "default": (60, 60),         # 60 req/min
-    "/api/chat/stream": (5, 60), # 5 req/min (expensive AI call)
+    "/api/chat/stream": (15, 60), # 15 req/min (expensive AI call)
     "/api/analyze/pdf": (10, 60),# 10 req/min (PDF generation)
 }
 _hits = defaultdict(list)  # ip -> [timestamps]
@@ -89,9 +89,9 @@ async def rate_limit_middleware(request: Request, call_next):
 
     if len(timestamps) >= max_req:
         retry_after = int(window - (now - timestamps[0]))
-        raise HTTPException(
+        return JSONResponse(
             status_code=429,
-            detail=f"请求过于频繁，请 {retry_after} 秒后重试",
+            content={"detail": f"请求过于频繁，请 {retry_after} 秒后重试"},
             headers={"Retry-After": str(retry_after), "X-RateLimit-Limit": str(max_req)},
         )
 

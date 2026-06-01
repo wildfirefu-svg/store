@@ -2,7 +2,7 @@
 
 Auto-detects API provider from key prefix:
   - sk-ant-* → Anthropic Messages API
-  - sk-d*     → DeepSeek (OpenAI-compatible) API
+  - otherwise → DeepSeek (OpenAI-compatible) API
 """
 import json
 import os
@@ -10,16 +10,23 @@ import urllib.request
 import urllib.error
 
 def _load_api_key():
-    """Load API key from env var or local file."""
-    key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if key:
-        return key
-    key_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".anthropic_key")
-    try:
-        with open(key_file, "r") as f:
-            return f.read().strip()
-    except FileNotFoundError:
-        return ""
+    """Load API key from env vars or local key files."""
+    for env_name in ("DEEPSEEK_API_KEY", "ANTHROPIC_API_KEY"):
+        key = os.environ.get(env_name, "").strip()
+        if key:
+            return key
+
+    root = os.path.dirname(os.path.abspath(__file__))
+    for filename in (".deepseek_key", ".anthropic_key"):
+        key_file = os.path.join(root, filename)
+        try:
+            with open(key_file, "r") as f:
+                key = f.read().strip()
+            if key:
+                return key
+        except FileNotFoundError:
+            pass
+    return ""
 
 ANTHROPIC_API_KEY = _load_api_key()
 MAX_TOKENS = 16384
@@ -28,9 +35,10 @@ MAX_TOKENS = 16384
 def _detect_provider(api_key: str):
     """Return ('anthropic'|'deepseek', base_url, model)."""
     if api_key.startswith("sk-ant"):
-        return "anthropic", "https://api.anthropic.com/v1/messages", "claude-sonnet-4-6"
-    else:
-        return "deepseek", "https://api.deepseek.com/v1/chat/completions", "deepseek-v4-pro"
+        model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+        return "anthropic", "https://api.anthropic.com/v1/messages", model
+    model = os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-pro")
+    return "deepseek", "https://api.deepseek.com/chat/completions", model
 
 
 def _load_system_prompt():
@@ -83,12 +91,18 @@ def _build_deepseek_payload(system_prompt, chart_json, user_message, model):
         {"role": "system", "content": system_prompt + chart_block},
         {"role": "user", "content": user_message},
     ]
-    return {
+    payload = {
         "model": model,
         "max_tokens": MAX_TOKENS,
         "messages": messages,
         "stream": True,
     }
+    thinking = os.environ.get("DEEPSEEK_THINKING", "disabled").strip().lower()
+    if thinking in ("enabled", "disabled"):
+        payload["thinking"] = {"type": thinking}
+        if thinking == "enabled":
+            payload["reasoning_effort"] = os.environ.get("DEEPSEEK_REASONING_EFFORT", "high")
+    return payload
 
 
 def _parse_anthropic_event(event: dict) -> dict:
@@ -105,10 +119,15 @@ def _parse_deepseek_event(event: dict) -> dict:
     if not choices:
         return {"type": "unknown"}
     delta = choices[0].get("delta", {})
-    content = delta.get("content", "")
+    content = delta.get("content")
+    reasoning = delta.get("reasoning_content")
     finish = choices[0].get("finish_reason", "")
     if finish:
         return {"type": "message_delta", "stop_reason": finish}
+    if reasoning:
+        return {"type": "reasoning_delta", "text": reasoning}
+    if content is None:
+        return {"type": "empty_delta"}
     return {"type": "text_delta", "text": content}
 
 
@@ -117,7 +136,7 @@ def stream_chat(chart_json: dict, user_message: str, conversation_history: list 
     """Generator: yields simplified SSE dicts from Anthropic or DeepSeek API."""
     key = api_key or ANTHROPIC_API_KEY
     if not key:
-        yield {"type": "error", "text": "未配置 ANTHROPIC_API_KEY。请在项目根目录创建 .anthropic_key 文件。\n\n获取方式: https://console.anthropic.com/"}
+        yield {"type": "error", "text": "未配置 AI API Key。请设置 DEEPSEEK_API_KEY，或在项目根目录创建 .deepseek_key / .anthropic_key 文件。"}
         return
 
     provider, url, default_model = _detect_provider(key)
