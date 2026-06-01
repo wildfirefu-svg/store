@@ -14,7 +14,8 @@ FONT_CANDIDATES_HEADER = [
     '/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc',
 ]
 FONT_CANDIDATES_BODY = [
-    'C:/Windows/Fonts/simsun.ttc',
+    'C:/Windows/Fonts/simkai.ttf',
+    'C:/Windows/Fonts/simfang.ttf',
     '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc',
     '/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc',
 ]
