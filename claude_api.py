@@ -42,27 +42,26 @@ def _detect_provider(api_key: str):
 
 
 def _load_system_prompt():
-    """Load the agent system prompt from the project agent definition."""
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    path = os.path.join(script_dir, ".claude", "agents", "bazi-multi-system-reader.md")
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            content = f.read()
-        if content.startswith("---"):
-            parts = content.split("---", 2)
-            if len(parts) >= 3:
-                content = parts[2].strip()
-        content += "\n\n## 输出格式强制要求\n"
-        content += "- 所有统计数据、对比信息、评分汇总、运势时间线、十神分布、五行计数、大运流年表、七维评分等，必须使用 Markdown 表格呈现\n"
-        content += "- 表格格式：\n"
-        content += "  | 列1 | 列2 | ... |\n"
-        content += "  |---|---|...|\n"
-        content += "  | 值1 | 值2 | ... |\n"
-        content += "- 禁止用纯文本逐行罗列统计数据，表格可读性远优于文字描述\n"
-        content += "- 报告中至少包含 3 张表格（如：旺衰打分表、大运流年表、七维评分汇总表）\n"
-        return content
-    except FileNotFoundError:
-        return "You are a Chinese metaphysics (八字/紫微斗数) expert assistant."
+    """Load the system prompt for API calls."""
+    return """你是一位精通中国古典命理学的玄学专家，擅长子平真诠、滴天髓、紫微斗数、盲派等多种分析体系。
+
+## 核心规则
+
+1. **直接给出结论，不要展示推理过程**。用户只关心分析结果，不需要看到你的内部思考。
+2. **禁止在回复中输出以下内容**：
+   - 知识库检索过程
+   - 工具调用信息
+   - 陷阱自查、校验清单
+   - "现在我需要…""接下来我要…""根据XX规则…"等元信息
+   - 任何形式的内部推理自言自语
+3. **简洁精炼**：结论先行，依据简要附后。每个判断控制在 2-3 句话。
+4. **诚实直接**：格局不好就说不好，不要刻意美化。不要过度展开。
+
+## 输出格式
+
+- 统计数据使用 Markdown 表格呈现
+- 使用 ⭐ 评分（1-5星）
+- 每条核心结论标注经典出处（如"《子平真诠》"）"""
 
 
 def _build_anthropic_payload(system_prompt, chart_json, user_message, model):
@@ -83,10 +82,59 @@ def _build_anthropic_payload(system_prompt, chart_json, user_message, model):
     }
 
 
+def _slim_chart(chart_json):
+    """Extract essential fields only to reduce token usage and noise."""
+    fp = chart_json.get('four_pillars', {})
+    dm = chart_json.get('day_master', {})
+    ws = chart_json.get('wuxing_stats', {})
+    ss = chart_json.get('shishen_stats', {})
+    dy = chart_json.get('da_yun', [])
+    ds = chart_json.get('dayun_summary', {})
+    ziwei = chart_json.get('ziwei', {})
+    shensha = chart_json.get('shensha', [])
+
+    # Filter shensha to named ones only (skip empty meanings)
+    shensha_names = list(set(
+        s['name'] for s in shensha if s.get('meaning', '').strip()
+    )) if isinstance(shensha, list) else []
+
+    return {
+        'four_pillars': {
+            k: {'gan': v.get('gan'), 'zhi': v.get('zhi'),
+                'gan_wuxing': v.get('gan_wuxing'), 'zhi_wuxing': v.get('zhi_wuxing'),
+                'shi_shen_gan': v.get('shi_shen_gan'), 'nayin': v.get('nayin'),
+                'cang_gan': v.get('cang_gan')}
+            for k, v in fp.items()
+        },
+        'day_master': {'gan': dm.get('gan'), 'wuxing': dm.get('wuxing'), 'yinyang': dm.get('yinyang')},
+        'wuxing_stats': ws,
+        'shishen_stats': ss,
+        'dayun_summary': ds,
+        'da_yun': [{'gan': d.get('gan'), 'zhi': d.get('zhi'), 'start_age': d.get('start_age'),
+                     'end_age': d.get('end_age'), 'is_current': d.get('is_current'),
+                     'shi_shen_gan': d.get('shi_shen_gan')} for d in dy[:5]],
+        'liu_nian': chart_json.get('liu_nian', [])[:3],
+        'shensha': shensha_names[:20],
+        'ziwei': {
+            'ming_gong': ziwei.get('basic_info', {}).get('ming_gong_gan_zhi'),
+            'shen_gong': ziwei.get('basic_info', {}).get('shen_gong_position'),
+            'si_hua': ziwei.get('si_hua'),
+            'ming_zhu': ziwei.get('basic_info', {}).get('ming_zhu'),
+            'shen_zhu': ziwei.get('basic_info', {}).get('shen_zhu'),
+        } if ziwei else {},
+        'birth_info': chart_json.get('birth_info', {}),
+        'tai_yuan': chart_json.get('tai_yuan'),
+        'ming_gong': chart_json.get('ming_gong'),
+        'shen_gong': chart_json.get('shen_gong'),
+        'nayin_wuxing': chart_json.get('nayin_wuxing'),
+    }
+
+
 def _build_deepseek_payload(system_prompt, chart_json, user_message, model):
+    slim = _slim_chart(chart_json) if chart_json else {}
     chart_block = (
-        "\n\n## Current Chart Data (JSON)\n```json\n"
-        + json.dumps(chart_json, ensure_ascii=False, indent=2)
+        "\n\n## 命盘数据\n```json\n"
+        + json.dumps(slim, ensure_ascii=False, indent=2)
         + "\n```\n"
     )
     messages = [
