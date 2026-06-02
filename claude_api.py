@@ -42,26 +42,52 @@ def _detect_provider(api_key: str):
 
 
 def _load_system_prompt():
-    """Load the system prompt for API calls."""
-    return """你是一位精通中国古典命理学的玄学专家，擅长子平真诠、滴天髓、紫微斗数、盲派等多种分析体系。
+    """Load the system prompt for API calls, with gejue injection."""
+    base = """你是一位精通中国古典命理学的玄学专家，擅长子平真诠、滴天髓、紫微斗数、盲派等多种分析体系。
 
 ## 核心规则
 
 1. **直接给出结论，不要展示推理过程**。用户只关心分析结果，不需要看到你的内部思考。
-2. **禁止在回复中输出以下内容**：
-   - 知识库检索过程
-   - 工具调用信息
-   - 陷阱自查、校验清单
-   - "现在我需要…""接下来我要…""根据XX规则…"等元信息
-   - 任何形式的内部推理自言自语
+2. **禁止在回复中输出**：知识库检索过程、工具调用信息、陷阱自查、校验清单、"现在我需要…"等自言自语。
 3. **简洁精炼**：结论先行，依据简要附后。每个判断控制在 2-3 句话。
-4. **诚实直接**：格局不好就说不好，不要刻意美化。不要过度展开。
+4. **诚实直接**：格局不好就说不好，不要刻意美化。
 
 ## 输出格式
 
+- 每条核心结论标注置信度：【高】【中】【低】
+- 不确定的结论明确说"无法确定"，不要模糊带过
 - 统计数据使用 Markdown 表格呈现
-- 使用 ⭐ 评分（1-5星）
-- 每条核心结论标注经典出处（如"《子平真诠》"）"""
+- 使用 ⭐ 评分（1-5星）标注各维度
+- 健康、家庭婚姻判断必须引用歌诀或经典依据"""
+
+    # Inject relevant gejue as domain knowledge
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    gejue_path = os.path.join(script_dir, 'knowledge-base', 'gejue_core.json')
+    try:
+        with open(gejue_path, 'r', encoding='utf-8') as f:
+            gejue_data = json.load(f)
+        entries = gejue_data.get('entries', [])
+
+        health_kw = ['疾病', '健康', '寿元', '身体', '病', '伤']
+        family_kw = ['婚姻', '夫妻', '子女', '家庭', '感情', '配偶', '桃花']
+        selected = []
+        for g in entries:
+            tags = ' '.join(g.get('tags', [])) + ' ' + g.get('category', '') + ' ' + g.get('text', '')
+            if any(kw in tags for kw in health_kw + family_kw):
+                txt = g.get('baihua', '') or g.get('text', '')
+                if len(txt) > 20:
+                    selected.append(txt[:200])
+                if len(selected) >= 20:
+                    break
+
+        if selected:
+            base += "\n\n## 经典歌诀参考（内化使用，不要逐条编号引用）\n\n"
+            for i, s in enumerate(selected):
+                base += f"- {s}\n"
+    except Exception:
+        pass
+
+    return base
 
 
 def _build_anthropic_payload(system_prompt, chart_json, user_message, model):
