@@ -636,7 +636,8 @@ function apiChatStream(chartId, message, onReplyDelta, onReportDelta, onToolStar
                 return pump();
             }).catch(function(e) {
                 if (!gotContent) {
-                    onReplyDelta('\n\n⚠️ AI 服务连接失败。请确认：\n1. 已设置 DEEPSEEK_API_KEY，或在项目目录创建 .deepseek_key / .anthropic_key 文件\n2. API Key 有效且账户余额/额度可用\n3. 当前启动后端的终端可以访问 DeepSeek/Anthropic API', null);
+                    var detail = (e && e.message) ? e.message : String(e || '');
+                    onReplyDelta('\n\n⚠️ AI 服务连接失败（' + detail + '）。\n请确认：\n1. 已设置 DEEPSEEK_API_KEY，或在项目目录创建 .deepseek_key / .anthropic_key 文件\n2. API Key 有效且账户余额/额度可用\n3. 当前启动后端的终端可以访问 DeepSeek/Anthropic API', null);
                 }
                 onDone(0);
             });
@@ -644,7 +645,8 @@ function apiChatStream(chartId, message, onReplyDelta, onReportDelta, onToolStar
         return pump();
     }).catch(function(e) {
         if (!gotContent) {
-            onReplyDelta('\n\n⚠️ AI 服务连接失败。请确认：\n1. 已设置 DEEPSEEK_API_KEY，或在项目目录创建 .deepseek_key / .anthropic_key 文件\n2. API Key 有效且账户余额/额度可用\n3. 当前启动后端的终端可以访问 DeepSeek/Anthropic API', null);
+            var detail = (e && e.message) ? e.message : String(e || '');
+            onReplyDelta('\n\n⚠️ AI 服务连接失败（' + detail + '）。\n请确认：\n1. 已设置 DEEPSEEK_API_KEY，或在项目目录创建 .deepseek_key / .anthropic_key 文件\n2. API Key 有效且账户余额/额度可用\n3. 当前启动后端的终端可以访问 DeepSeek/Anthropic API', null);
         }
         onDone(0);
     });
