@@ -72,12 +72,14 @@ def _build_anthropic_payload(system_prompt, chart_json, user_message, model):
         + json.dumps(chart_json, ensure_ascii=False, indent=2)
         + "\n```\n"
     )
+    temperature = float(os.environ.get("ANTHROPIC_TEMPERATURE", "0.3"))
     return {
         "model": model,
         "max_tokens": MAX_TOKENS,
         "system": system_prompt + chart_block,
         "messages": messages,
         "stream": True,
+        "temperature": temperature,
     }
 
 
@@ -91,11 +93,13 @@ def _build_deepseek_payload(system_prompt, chart_json, user_message, model):
         {"role": "system", "content": system_prompt + chart_block},
         {"role": "user", "content": user_message},
     ]
+    temperature = float(os.environ.get("DEEPSEEK_TEMPERATURE", "0.3"))
     payload = {
         "model": model,
         "max_tokens": MAX_TOKENS,
         "messages": messages,
         "stream": True,
+        "temperature": temperature,
     }
     thinking = os.environ.get("DEEPSEEK_THINKING", "disabled").strip().lower()
     if thinking in ("enabled", "disabled"):
