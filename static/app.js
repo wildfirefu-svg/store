@@ -847,7 +847,7 @@ function _sendWithStream(chartId, prompt, onSuccess) {
     const c = document.getElementById('chat-messages');
     const msgEl = document.createElement('div');
     msgEl.className = 'chat-msg agent';
-    msgEl.innerHTML = '<div class="sender">玄机子</div><div class="bubble"><span class="loading-spin">⏳</span> 思考中…</div>';
+    msgEl.innerHTML = '<div class="sender">玄机子</div><div class="bubble"><div class="ai-loading"><span></span><span></span><span></span></div></div>';
     c.appendChild(msgEl);
     const bubble = msgEl.querySelector('.bubble');
 
