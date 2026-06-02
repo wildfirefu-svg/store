@@ -429,9 +429,10 @@ def convert_lunar_to_solar(ld: LunarDate):
 
 @app.get("/api/chart/{chart_id}")
 def get_chart(chart_id: str):
-    """Get cached chart by ID"""
-    if chart_id in chart_cache._cache:
-        return chart_cache._cache[chart_id]
+    """Get chart by ID — from memory cache or persistent DB."""
+    chart = _get_chart(chart_id)
+    if chart:
+        return chart
     raise HTTPException(404, "Chart not found. POST /api/chart first.")
 
 class ZeriRequest(BaseModel):
@@ -446,7 +447,7 @@ class ZeriRequest(BaseModel):
 def tool_zeri(req: ZeriRequest):
     """择日 — personalized auspicious date selection"""
     chart_id = req.chart_id
-    chart = chart_cache._cache.get(chart_id) if chart_id else None
+    chart = _get_chart(chart_id) if chart_id else None
     if not chart:
         raise HTTPException(400, "Provide valid chart_id from POST /api/chart")
 
@@ -469,7 +470,7 @@ class LiunianRequest(BaseModel):
 def tool_liunian(req: LiunianRequest):
     """流年日历 — 12-month fortune calendar"""
     chart_id = req.chart_id
-    chart = chart_cache._cache.get(chart_id) if chart_id else None
+    chart = _get_chart(chart_id) if chart_id else None
     if not chart:
         raise HTTPException(400, "Provide valid chart_id")
 
@@ -492,7 +493,7 @@ class NameEvalRequest(BaseModel):
 @app.post("/api/tools/name/eval")
 def tool_name_eval(req: NameEvalRequest):
     """名字评测 — evaluate existing name against chart"""
-    chart = chart_cache._cache.get(req.chart_id) if req.chart_id else None
+    chart = _get_chart(req.chart_id) if req.chart_id else None
     if not chart:
         raise HTTPException(400, "Provide valid chart_id")
     na = _get_name_analysis()
@@ -507,7 +508,7 @@ class NameGenRequest(BaseModel):
 @app.post("/api/tools/name/gen")
 def tool_name_gen(req: NameGenRequest):
     """取名推荐 — generate name suggestions matching chart"""
-    chart = chart_cache._cache.get(req.chart_id) if req.chart_id else None
+    chart = _get_chart(req.chart_id) if req.chart_id else None
     if not chart:
         raise HTTPException(400, "Provide valid chart_id")
     na = _get_name_analysis()
@@ -520,7 +521,7 @@ class CaseSearchRequest(BaseModel):
 @app.post("/api/tools/case/search")
 def tool_case_search(req: CaseSearchRequest):
     """案例检索 — find similar benchmark cases"""
-    chart = chart_cache._cache.get(req.chart_id) if req.chart_id else None
+    chart = _get_chart(req.chart_id) if req.chart_id else None
     if not chart:
         raise HTTPException(400, "Provide valid chart_id")
     import tempfile
@@ -547,7 +548,7 @@ class AnalyzeRequest(BaseModel):
 @app.post("/api/analyze")
 def analyze_report(req: AnalyzeRequest):
     """分析并生成报告 — takes Agent conclusions JSON + chart → renders markdown"""
-    chart = chart_cache._cache.get(req.chart_id) if req.chart_id else None
+    chart = _get_chart(req.chart_id) if req.chart_id else None
     if not chart:
         raise HTTPException(400, "Provide valid chart_id")
 
@@ -836,7 +837,7 @@ def _auto_analyze(chart):
 @app.post("/api/analyze/pdf")
 def analyze_pdf(req: AnalyzeRequest):
     """生成PDF报告 — 先渲染Markdown再转PDF"""
-    chart = chart_cache._cache.get(req.chart_id) if req.chart_id else None
+    chart = _get_chart(req.chart_id) if req.chart_id else None
     if not chart:
         raise HTTPException(400, "Provide valid chart_id")
 
@@ -888,8 +889,8 @@ class HehunRequest(BaseModel):
 @app.post("/api/tools/hehun")
 def tool_hehun(req: HehunRequest):
     """合婚分析 — 双人八字配对评测"""
-    c1 = chart_cache._cache.get(req.chart_id1)
-    c2 = chart_cache._cache.get(req.chart_id2)
+    c1 = _get_chart(req.chart_id1)
+    c2 = _get_chart(req.chart_id2)
     if not c1 or not c2:
         raise HTTPException(400, "Provide two valid chart_ids from POST /api/chart")
 
@@ -916,10 +917,27 @@ def _sse_event(event_type, data):
     return f"event: {event_type}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
+def _get_chart(chart_id):
+    """Get chart from memory cache, falling back to data_store DB."""
+    chart = chart_cache._cache.get(chart_id)
+    if chart:
+        return chart
+    # Restore from persistent DB (survives server restart)
+    try:
+        db_data = data_store.get_chart(chart_id)
+        if db_data and db_data.get('chart_data'):
+            chart = db_data['chart_data']
+            chart_cache._cache[chart_id] = chart  # warm the cache
+            return chart
+    except Exception:
+        pass
+    return None
+
+
 @app.get("/api/chat/stream")
 async def chat_stream(chart_id: str, message: str):
     """SSE streaming chat — calls Anthropic API with agent system prompt + chart data."""
-    chart = chart_cache._cache.get(chart_id)
+    chart = _get_chart(chart_id)
     if not chart:
         async def err_stream():
             yield _sse_event('reply', {'text': '请先提供出生信息进行排盘。'})
