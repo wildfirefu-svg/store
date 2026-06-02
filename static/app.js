@@ -639,8 +639,14 @@ function switchMingzhu(chartId) {
     ChatHistory.restore(chartId);
     ReportTabs.init(chartId);
 
-    // Load reports from server if we have a chart
+    // Load chat history + reports from server if we have a chart
     if (mz && chartId) {
+        PersistenceSync.loadChatHistory(chartId).then(function(serverMsgs) {
+            if (serverMsgs && serverMsgs.length > 0) {
+                localStorage.setItem('bazi_chat_' + chartId, JSON.stringify(serverMsgs));
+                ChatHistory.restore(chartId);
+            }
+        }).catch(function() {});
         PersistenceSync.loadReports(chartId).then(function(reports) {
             if (reports && Object.keys(reports).length > 0) {
                 ReportTabs._cache[chartId] = Object.assign(
