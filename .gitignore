@@ -6,6 +6,7 @@ __pycache__/
 *.pyc
 .chromadb_case_index/
 bazi_kb.db
+bazi_data.db
 
 # Generated reports (contain personal data)
 reports/

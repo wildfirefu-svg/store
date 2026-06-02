@@ -8,20 +8,20 @@ const API = '/api';
 // ================================================================
 const MingzhuManager = {
     STORAGE_KEY: 'bazi_mingzhu_list',
-    getAll() { try { return JSON.parse(sessionStorage.getItem(this.STORAGE_KEY)) || []; } catch { return []; } },
+    getAll() { try { return JSON.parse(localStorage.getItem(this.STORAGE_KEY)) || []; } catch { return []; } },
     save(mz) {
         const list = this.getAll(); const idx = list.findIndex(m => m.chart_id === mz.chart_id);
         if (idx >= 0) list[idx] = mz; else list.push(mz);
-        sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(list)); return list;
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(list)); return list;
     },
     remove(chartId) {
         const list = this.getAll().filter(m => m.chart_id !== chartId);
-        sessionStorage.setItem(this.STORAGE_KEY, JSON.stringify(list));
-        if (this.getCurrent()?.chart_id === chartId) sessionStorage.removeItem('bazi_current_mingzhu');
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(list));
+        if (this.getCurrent()?.chart_id === chartId) localStorage.removeItem('bazi_current_mingzhu');
         return list;
     },
-    getCurrent() { const id = sessionStorage.getItem('bazi_current_mingzhu'); return id ? this.getAll().find(m => m.chart_id === id) || null : null; },
-    setCurrent(id) { sessionStorage.setItem('bazi_current_mingzhu', id); }
+    getCurrent() { const id = localStorage.getItem('bazi_current_mingzhu'); return id ? this.getAll().find(m => m.chart_id === id) || null : null; },
+    setCurrent(id) { localStorage.setItem('bazi_current_mingzhu', id); }
 };
 
 // ================================================================
@@ -36,14 +36,14 @@ const ChatHistory = {
 
     load(chartId) {
         if (!chartId) return [];
-        try { return JSON.parse(sessionStorage.getItem(this._key(chartId))) || []; }
+        try { return JSON.parse(localStorage.getItem(this._key(chartId))) || []; }
         catch { return []; }
     },
 
     save(chartId, messages) {
         if (!chartId) return;
         var trimmed = messages.slice(-this.MAX_MSGS);
-        try { sessionStorage.setItem(this._key(chartId), JSON.stringify(trimmed)); }
+        try { localStorage.setItem(this._key(chartId), JSON.stringify(trimmed)); }
         catch { /* storage full — silently drop */ }
     },
 
@@ -52,11 +52,13 @@ const ChatHistory = {
         var msgs = this.load(chartId);
         msgs.push({role: role, text: text, tool: tool || null});
         this.save(chartId, msgs);
+        // Also persist to server
+        PersistenceSync.saveChatMessage(chartId, role, text, tool || null);
     },
 
     remove(chartId) {
         if (!chartId) return;
-        sessionStorage.removeItem(this._key(chartId));
+        localStorage.removeItem(this._key(chartId));
     },
 
     restore(chartId) {
@@ -118,7 +120,93 @@ const CorrectionManager = {
 };
 
 // ================================================================
-// ReportTabs — dynamic report tab management
+// PersistenceSync — API-backed data persistence
+// ================================================================
+const PersistenceSync = {
+    // Fetch saved charts from server and merge into localStorage
+    async loadFromServer() {
+        try {
+            var resp = await fetch(API + '/charts');
+            if (!resp.ok) return;
+            var charts = await resp.json();
+            if (!charts || !charts.length) return;
+            var local = MingzhuManager.getAll();
+            for (var i = 0; i < charts.length; i++) {
+                var c = charts[i];
+                // Check if already in local list
+                if (!local.find(function(m) { return m.chart_id === c.chart_id; })) {
+                    // Fetch full chart data from server
+                    try {
+                        var fullResp = await fetch(API + '/charts/' + c.chart_id + '/data');
+                        if (fullResp.ok) {
+                            var full = await fullResp.json();
+                            var bi = full.birth_info || {};
+                            local.push({
+                                chart_id: c.chart_id,
+                                name: c.name || '命主',
+                                birth: (bi.year||'')+'-'+String(bi.month||'')+'-'+String(bi.day||'')+' '+String(bi.hour||'')+':'+String(bi.minute||'0'),
+                                gender: bi.gender || 'male',
+                                day_master: (full.chart_data || {}).day_master ? full.chart_data.day_master.gan + (full.chart_data.day_master.wuxing||'') : '',
+                                _chart: full.chart_data || {}
+                            });
+                        }
+                    } catch(e) { /* skip failed loads */ }
+                }
+            }
+            // Save merged list to localStorage
+            localStorage.setItem('bazi_mingzhu_list', JSON.stringify(local));
+        } catch(e) { /* server unavailable — use localStorage */ }
+    },
+
+    async saveChartToServer(chartId, name, birthInfo, chartData) {
+        try {
+            await fetch(API + '/charts/save', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({chart_id: chartId, name: name, birth_info: birthInfo, chart_data: chartData})
+            });
+        } catch(e) { /* silently fail */ }
+    },
+
+    async deleteChartFromServer(chartId) {
+        try {
+            await fetch(API + '/charts/' + chartId, {method: 'DELETE'});
+        } catch(e) { /* silently fail */ }
+    },
+
+    async saveChatMessage(chartId, role, text, tool) {
+        try {
+            await fetch(API + '/charts/' + chartId + '/history', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({role: role, text: text, tool: tool || null})
+            });
+        } catch(e) { /* silently fail */ }
+    },
+
+    async loadChatHistory(chartId) {
+        try {
+            var resp = await fetch(API + '/charts/' + chartId + '/history');
+            if (!resp.ok) return null;
+            return await resp.json();
+        } catch(e) { return null; }
+    },
+
+    async saveReport(chartId, tabId, content) {
+        try {
+            await fetch(API + '/charts/reports/save', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({chart_id: chartId, tab_id: tabId, content: content})
+            });
+        } catch(e) { /* silently fail */ }
+    },
+
+    async loadReports(chartId) {
+        try {
+            var resp = await fetch(API + '/charts/' + chartId + '/reports');
+            if (!resp.ok) return {};
+            return await resp.json();
+        } catch(e) { return {}; }
+    }
+};
 // ================================================================
 const ReportTabs = {
     _cache: {},       // chartId -> {tabId: content}
@@ -519,7 +607,7 @@ function addChatMsg(role, text, tool) {
     const safeText = role === 'user' ? _escHtml(text) : text;
     d.innerHTML = '<div class="sender">' + (role==='user'?'您':role==='system'?'系统':'玄机子') + (tool?' <span class="tool-tag">🔧 '+tool+'</span>':'') + '</div><div class="bubble">' + safeText + '</div>';
     c.appendChild(d);
-    // Persist to sessionStorage (per current mingzhu)
+    // Persist to localStorage (per current mingzhu)
     const cur = MingzhuManager.getCurrent();
     if (cur && role !== 'system') { ChatHistory.append(cur.chart_id, role, text, tool); }
     // Only scroll if user is already at bottom (within 50px)
@@ -550,17 +638,37 @@ function switchMingzhu(chartId) {
     var mz = MingzhuManager.getAll().find(function(x) { return x.chart_id === chartId; });
     ChatHistory.restore(chartId);
     ReportTabs.init(chartId);
-    // Show the first non-overview tab if available, otherwise overview
-    var store = ReportTabs._getStore();
-    var firstTab = 'overview';
-    for (var tid in store) {
-        if (tid !== 'overview' && store[tid] !== undefined) { firstTab = tid; break; }
+
+    // Load reports from server if we have a chart
+    if (mz && chartId) {
+        PersistenceSync.loadReports(chartId).then(function(reports) {
+            if (reports && Object.keys(reports).length > 0) {
+                ReportTabs._cache[chartId] = Object.assign(
+                    ReportTabs._cache[chartId] || {}, reports
+                );
+                ReportTabs._renderTabs();
+            }
+            // Show first available tab
+            var store = ReportTabs._getStore();
+            var firstTab = 'overview';
+            for (var tid in store) {
+                if (tid !== 'overview' && store[tid] !== undefined) { firstTab = tid; break; }
+            }
+            ReportTabs.switchTo(firstTab);
+        }).catch(function() {});
+    } else {
+        var store = ReportTabs._getStore();
+        var firstTab = 'overview';
+        for (var tid in store) {
+            if (tid !== 'overview' && store[tid] !== undefined) { firstTab = tid; break; }
+        }
+        ReportTabs.switchTo(firstTab);
     }
-    ReportTabs.switchTo(firstTab);
+
     document.getElementById('bazi-table').innerHTML = '<p style="text-align:center;color:var(--text-tertiary);padding:20px">加载中…</p>';
     document.getElementById('ziwei-table').innerHTML = '';
 
-    // 优先从 sessionStorage 恢复
+    // 优先从 localStorage 恢复
     if (mz && mz._chart && mz._chart.four_pillars) {
         renderFullChart(mz._chart);
         return;
@@ -569,20 +677,31 @@ function switchMingzhu(chartId) {
     // Fallback: 从 API 缓存加载
     fetch(API + '/chart/' + chartId).then(r => r.json()).then(c => {
         if (c && c.four_pillars) {
-            // 回存到 sessionStorage
+            // 回存到 localStorage
             if (mz) { mz._chart = c; MingzhuManager.save(mz); }
             renderFullChart(c);
         } else {
             document.getElementById('bazi-table').innerHTML = '<p style="color:var(--coral);text-align:center;padding:8px">命盘缓存已过期，请重新添加命主</p>';
         }
-    }).catch(() => {
-        document.getElementById('bazi-table').innerHTML = '<p style="color:var(--coral);text-align:center;padding:8px">加载失败，请重新添加</p>';
+    }).catch(function() {
+        // Also try server DB if API cache fails
+        fetch(API + '/charts/' + chartId + '/data').then(function(r2) { return r2.json(); }).then(function(full) {
+            if (full && full.chart_data && full.chart_data.four_pillars) {
+                if (mz) { mz._chart = full.chart_data; MingzhuManager.save(mz); }
+                renderFullChart(full.chart_data);
+            } else {
+                document.getElementById('bazi-table').innerHTML = '<p style="color:var(--coral);text-align:center;padding:8px">加载失败，请重新添加</p>';
+            }
+        }).catch(function() {
+            document.getElementById('bazi-table').innerHTML = '<p style="color:var(--coral);text-align:center;padding:8px">加载失败，请重新添加</p>';
+        });
     });
 }
 function deleteMingzhu(chartId) {
     if (!confirm('确定删除？')) return;
     MingzhuManager.remove(chartId);
     ChatHistory.remove(chartId);
+    PersistenceSync.deleteChartFromServer(chartId);
     const list = MingzhuManager.getAll();
     if (list.length > 0) { switchMingzhu(list[0].chart_id); } else {
         document.getElementById('chat-messages').innerHTML = '<div class="chat-welcome"><p>请添加命主</p></div>';
@@ -763,6 +882,9 @@ function showReportFinal(tab, content) {
     document.getElementById('report-content').innerHTML = renderMarkdown(content);
     document.getElementById('report-status').classList.add('done');
     document.getElementById('report-pdf-btn').classList.remove('hidden');
+    // Persist report to server
+    var cur = MingzhuManager.getCurrent();
+    if (cur) { PersistenceSync.saveReport(cur.chart_id, tab, content); }
 }
 
 // ── PDF download ──
@@ -873,6 +995,10 @@ document.getElementById('mingzhu-submit-btn').addEventListener('click', async ()
         gender: b.gender, day_master: chart.day_master.gan+chart.day_master.wuxing,
         _chart: chart };
     MingzhuManager.save(mz); MingzhuManager.setCurrent(chart.chart_id);
+    // Persist to server
+    PersistenceSync.saveChartToServer(chart.chart_id, name,
+        {year: b.year, month: b.month, day: b.day, hour: b.hour, minute: b.minute, gender: b.gender, location: b.location},
+        chart);
     ReportTabs.init(chart.chart_id);
     document.getElementById('add-mingzhu-modal').classList.add('hidden');
     refreshPanel();
@@ -1257,15 +1383,70 @@ document.querySelectorAll('.mnav-btn').forEach(function(btn) {
     });
 });
 
-// Init — restore panel + current mingzhu + chat history on page refresh
-refreshPanel();
-ReportTabs.init(MingzhuManager.getCurrent()?.chart_id || null);
-(function restoreCurrent() {
-    const cur = MingzhuManager.getCurrent();
-    if (!cur) return;
-    if (cur._chart && cur._chart.four_pillars) {
-        renderFullChart(cur._chart);
-        document.getElementById('current-mingzhu-label').textContent = '当前：' + cur.name;
+// Init — load from server, then restore panel + current mingzhu + chat history
+(async function initApp() {
+    // First, try to sync from server
+    await PersistenceSync.loadFromServer();
+    refreshPanel();
+
+    var cur = MingzhuManager.getCurrent();
+    if (!cur) {
+        // No current mingzhu selected — try to pick first available
+        var all = MingzhuManager.getAll();
+        if (all.length > 0) {
+            MingzhuManager.setCurrent(all[0].chart_id);
+            cur = all[0];
+            refreshPanel();
+        }
     }
-    ChatHistory.restore(cur.chart_id);
+
+    ReportTabs.init(cur ? cur.chart_id : null);
+
+    if (cur) {
+        // Restore chart display
+        if (cur._chart && cur._chart.four_pillars) {
+            renderFullChart(cur._chart);
+            document.getElementById('current-mingzhu-label').textContent = '当前：' + cur.name;
+        } else {
+            // Try to fetch from server
+            try {
+                var resp = await fetch(API + '/charts/' + cur.chart_id + '/data');
+                if (resp.ok) {
+                    var full = await resp.json();
+                    if (full.chart_data && full.chart_data.four_pillars) {
+                        cur._chart = full.chart_data;
+                        MingzhuManager.save(cur);
+                        renderFullChart(full.chart_data);
+                        document.getElementById('current-mingzhu-label').textContent = '当前：' + cur.name;
+                    }
+                }
+            } catch(e) { /* use whatever we have locally */ }
+        }
+
+        // Restore chat history — try server first, then localStorage
+        var serverHistory = await PersistenceSync.loadChatHistory(cur.chart_id);
+        if (serverHistory && serverHistory.length > 0) {
+            localStorage.setItem('bazi_chat_' + cur.chart_id, JSON.stringify(serverHistory));
+        }
+        ChatHistory.restore(cur.chart_id);
+
+        // Restore report tabs from server
+        try {
+            var serverReports = await PersistenceSync.loadReports(cur.chart_id);
+            if (serverReports && Object.keys(serverReports).length > 0) {
+                ReportTabs._cache[cur.chart_id] = serverReports;
+                ReportTabs._renderTabs();
+                // Show the overview or first tab
+                var store = ReportTabs._getStore();
+                var activeTab = ReportTabs._active || 'overview';
+                var content = store[activeTab];
+                if (content) {
+                    var el = document.getElementById('report-content');
+                    if (el) { el.innerHTML = renderMarkdown(content);
+                        document.getElementById('report-status').className = 'report-status done';
+                        document.getElementById('report-status').textContent = '✓ 已加载'; }
+                }
+            }
+        } catch(e) { /* skip */ }
+    }
 })();

@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 import asyncio, time
 from pydantic import BaseModel, Field
+from typing import Optional
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'knowledge-base'))
@@ -32,6 +33,7 @@ from bazi_calculator import (
 from lunar_calendar import lunar_to_solar, solar_to_lunar as _s2l
 
 from claude_api import stream_chat as _stream_claude, ANTHROPIC_API_KEY
+import data_store
 
 app = FastAPI(
     title="BaZi Analysis API",
@@ -281,9 +283,122 @@ def health():
 
 @app.post("/api/chart")
 def calculate_chart(birth: BirthInfo):
-    """排盘 — calculate full BaZi chart"""
+    """排盘 — calculate full BaZi chart, persist to local DB"""
     chart, chart_id = chart_cache.get_or_create(birth)
+    # Auto-save to local database for persistence
+    try:
+        name = birth.location or '命主'
+        data_store.save_chart(
+            chart_id=chart_id,
+            name=name,
+            birth_info={'year': birth.year, 'month': birth.month, 'day': birth.day,
+                        'hour': birth.hour, 'minute': birth.minute,
+                        'gender': birth.gender, 'location': birth.location},
+            chart_data=chart
+        )
+    except Exception:
+        pass  # don't fail the chart creation if DB save fails
     return chart
+
+
+# ============================================================
+# PERSISTENCE API — chart list, chat history, reports
+# ============================================================
+
+class SaveChartRequest(BaseModel):
+    chart_id: str
+    name: str = ""
+    birth_info: dict = {}
+    chart_data: dict = {}
+
+class ChatMessageRequest(BaseModel):
+    role: str
+    text: str
+    tool: Optional[str] = None
+
+class SaveReportRequest(BaseModel):
+    chart_id: str
+    tab_id: str
+    content: str
+
+
+@app.get("/api/charts")
+def api_list_charts():
+    """List all saved charts from local database."""
+    try:
+        return data_store.list_charts()
+    except Exception:
+        return []
+
+
+@app.get("/api/charts/{chart_id}/data")
+def api_get_chart_data(chart_id: str):
+    """Get full chart data from local database."""
+    data = data_store.get_chart(chart_id)
+    if not data:
+        raise HTTPException(404, "Chart not found in local storage")
+    return data
+
+
+@app.post("/api/charts/save")
+def api_save_chart(req: SaveChartRequest):
+    """Save/update chart in local database (for frontend sync)."""
+    try:
+        data_store.save_chart(req.chart_id, req.name, req.birth_info, req.chart_data)
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.delete("/api/charts/{chart_id}")
+def api_delete_chart(chart_id: str):
+    """Delete chart + history + reports from local database."""
+    try:
+        data_store.delete_chart(chart_id)
+        # Also clear from memory cache
+        chart_cache._cache.pop(chart_id, None)
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.get("/api/charts/{chart_id}/history")
+def api_get_chat_history(chart_id: str):
+    """Get chat history for a chart."""
+    try:
+        return data_store.get_chat_history(chart_id)
+    except Exception:
+        return []
+
+
+@app.post("/api/charts/{chart_id}/history")
+def api_append_chat_message(chart_id: str, req: ChatMessageRequest):
+    """Append a chat message to persistent storage."""
+    try:
+        data_store.append_chat_message(chart_id, req.role, req.text, req.tool)
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.get("/api/charts/{chart_id}/reports")
+def api_get_reports(chart_id: str):
+    """Get all saved report tabs for a chart."""
+    try:
+        return data_store.get_reports(chart_id)
+    except Exception:
+        return {}
+
+
+@app.post("/api/charts/reports/save")
+def api_save_report(req: SaveReportRequest):
+    """Save a report tab to persistent storage."""
+    try:
+        data_store.save_report(req.chart_id, req.tab_id, req.content)
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
 
 @app.post("/api/solar-time")
 def get_solar_time(birth: BirthInfo):
