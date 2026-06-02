@@ -220,6 +220,19 @@ const ReportTabs = {
         }
         this._active = 'overview';
         this._renderTabs();
+        // Immediately update report content for the new chart
+        var store = this._getStore();
+        var content = store['overview'] || '';
+        var el = document.getElementById('report-content');
+        var statusEl = document.getElementById('report-status');
+        if (content) {
+            if (el) el.innerHTML = renderMarkdown(content);
+            if (statusEl) { statusEl.className = 'report-status done'; statusEl.textContent = '✓ 已加载'; }
+        } else {
+            if (el) el.innerHTML = '<p class="report-placeholder">输入出生信息后，报告将在此显示</p>';
+            if (statusEl) { statusEl.className = 'report-status'; statusEl.textContent = ''; }
+            document.getElementById('report-pdf-btn').classList.add('hidden');
+        }
     },
 
     _getStore() {
@@ -636,7 +649,11 @@ function switchMingzhu(chartId) {
     }
     MingzhuManager.setCurrent(chartId); refreshPanel();
     var mz = MingzhuManager.getAll().find(function(x) { return x.chart_id === chartId; });
-    ChatHistory.restore(chartId);
+
+    // Clear chat area immediately and show loading state
+    var chatContainer = document.getElementById('chat-messages');
+    chatContainer.innerHTML = '<div class="chat-welcome"><p>正在加载 <b>' + _escHtml(mz ? mz.name : '命主') + '</b> 的数据…</p></div>';
+
     ReportTabs.init(chartId);
 
     // Load chat history + reports from server if we have a chart
@@ -644,9 +661,12 @@ function switchMingzhu(chartId) {
         PersistenceSync.loadChatHistory(chartId).then(function(serverMsgs) {
             if (serverMsgs && serverMsgs.length > 0) {
                 localStorage.setItem('bazi_chat_' + chartId, JSON.stringify(serverMsgs));
-                ChatHistory.restore(chartId);
             }
-        }).catch(function() {});
+            // Always restore from best available source (server → localStorage)
+            ChatHistory.restore(chartId);
+        }).catch(function() {
+            ChatHistory.restore(chartId);
+        });
         PersistenceSync.loadReports(chartId).then(function(reports) {
             if (reports && Object.keys(reports).length > 0) {
                 ReportTabs._cache[chartId] = Object.assign(
@@ -663,6 +683,7 @@ function switchMingzhu(chartId) {
             ReportTabs.switchTo(firstTab);
         }).catch(function() {});
     } else {
+        ChatHistory.restore(chartId);
         var store = ReportTabs._getStore();
         var firstTab = 'overview';
         for (var tid in store) {
