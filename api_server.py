@@ -48,10 +48,12 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 # Limits: (max_requests, window_seconds)
 _RATE_LIMITS = {
-    "default": (60, 60),         # 60 req/min
-    "/api/chat/stream": (15, 60), # 15 req/min (expensive AI call)
+    "default": (120, 60),        # 120 req/min (normal API)
+    "/api/chat/stream": (30, 60),# 30 req/min (AI chat)
     "/api/analyze/pdf": (10, 60),# 10 req/min (PDF generation)
 }
+# Paths exempt from rate limiting (static files, health)
+_RATE_LIMIT_EXEMPT = {"/static", "/api/health", "/", "/test", "/tools", "/favicon.ico"}
 _hits = defaultdict(list)  # ip -> [timestamps]
 _CLEAN_INTERVAL = 300  # clean stale entries every 5 min
 _last_clean = time.time()
@@ -73,11 +75,17 @@ def _clean_old_hits(now):
 
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
+    path = request.url.path
+
+    # Skip rate limiting for static files, health, etc.
+    for exempt in _RATE_LIMIT_EXEMPT:
+        if path == exempt or path.startswith(exempt + "/") or path.startswith(exempt + "?"):
+            return await call_next(request)
+
     now = time.time()
     _clean_old_hits(now)
 
     # Determine limit for this path
-    path = request.url.path
     max_req, window = _RATE_LIMITS.get("default")
     for prefix, limit in _RATE_LIMITS.items():
         if prefix != "default" and path.startswith(prefix):
