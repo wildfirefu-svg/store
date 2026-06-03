@@ -839,7 +839,7 @@ function showReport(content) {
     document.getElementById('report-content').innerHTML = renderMarkdown(content);
 }
 
-function _sendWithStream(chartId, prompt, onSuccess) {
+function _sendWithStream(chartId, prompt, onSuccess, forceTab) {
     document.getElementById('report-status').classList.remove('done');
     document.getElementById('report-content').innerHTML =
         '<div class="report-loading"><div class="skeleton-line"></div><div class="skeleton-line w70"></div><div class="skeleton-line w50"></div></div>';
@@ -854,7 +854,7 @@ function _sendWithStream(chartId, prompt, onSuccess) {
     let replyText = '';
     let currentTool = null;
     let reportBuf = '';
-    let currentTab = 'overview';
+    let currentTab = forceTab || 'overview';
     const reportStatus = document.getElementById('report-status');
 
     apiChatStream(chartId, prompt,
@@ -1225,20 +1225,21 @@ document.getElementById('hehun-analyze-btn').addEventListener('click', async fun
     const p1 = document.getElementById('hehun-p1').value;
     const p2 = document.getElementById('hehun-p2').value;
     if (p1 === p2) { alert('请选择两个不同的命主'); return; }
+    document.getElementById('hehun-bar').classList.add('hidden');
+    // Get raw data, then feed to AI for narrative report
     const r = await fetch(API + '/tools/hehun', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chart_id1: p1, chart_id2: p2 })
     });
-    if (r.ok) {
-        const d = await r.json();
-        let m = '# 合婚分析\n\n<div class="score-card"><div class="big">' + d.total + '分</div><div class="grade">' + d.grade + '</div></div>\n';
-        for (const [k, v] of Object.entries(d.scores || {})) {
-            m += '## ' + k + '\n' + (v.detail || '') + '\n\n';
-        }
-        ReportTabs.set('hehun', m);
-        ReportTabs.switchTo('hehun');
-    }
+    if (!r.ok) { alert('合婚计算失败'); return; }
+    const d = await r.json();
+    // Feed raw data to AI for detailed analysis
+    var prompt = '请根据以下合婚原始数据，生成详细分析报告。要求：1. 总体评分和等级解读 2. 日主旺衰对比分析 3. 日支关系解读 4. 配偶星交互分析 5. 各维度得分详解 6. 综合建议。使用 Markdown 表格和 ⭐ 评分。\n\n合婚数据：\n' + JSON.stringify(d, null, 2);
+    var cid = p1; // Use first person's chart for the stream
+    _sendWithStream(cid, prompt, function() {
+        ReportTabs.set('hehun', document.getElementById('report-content').innerHTML || '');
+    }, 'hehun');
 });
 
 // ── Tool bars: zeri / liunian / name ──
@@ -1300,29 +1301,18 @@ document.getElementById('liunian-analyze-btn').addEventListener('click', async f
     var cur = MingzhuManager.getCurrent();
     if (!cur) { alert('请先添加命主'); return; }
     var ty = parseInt(document.getElementById('liunian-year').value) || new Date().getFullYear();
+    document.getElementById('liunian-bar').classList.add('hidden');
     var r = await fetch(API + '/tools/liunian', {
         method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({chart_id: cur.chart_id, target_year: ty})
     });
     if (!r.ok) { alert('查询失败'); return; }
     var d = await r.json();
-    var md = '# 流年运势 ' + ty + '\n\n';
-    if (d.overview) md += '## 年运总览\n' + d.overview + '\n\n';
-    (d.months || []).forEach(function(mo) {
-        var stars = '';
-        for (var k in {career:'事业',wealth:'财运',love:'感情',health:'健康'}) {
-            var v = mo[k] || 0;
-            stars += (k === 'career' ? '事业' : k === 'wealth' ? '财运' : k === 'love' ? '感情' : '健康') + ' ';
-            for (var i = 0; i < 5; i++) stars += i < v ? '⭐' : '☆';
-            stars += '  ';
-        }
-        md += '### ' + mo.month + '月 ' + (mo.ganzhi || '') + '\n';
-        md += stars + '\n';
-        if (mo.advice) md += '- ' + mo.advice + '\n';
-        md += '\n';
-    });
-    ReportTabs.set('liunian', md);
-    ReportTabs.switchTo('liunian');
+    // Feed raw data to AI for detailed narrative
+    var prompt = '请根据以下流年数据，生成 ' + ty + ' 年详细流年运势报告。要求：1. 年运总览 2. 每个月的详细分析（事业/财运/感情/健康四维度，用 ⭐ 评分）3. 最佳月份和最需注意的月份 4. 每月注意事项和建议。使用 Markdown 表格呈现每月运势。\n\n流年数据：\n' + JSON.stringify(d, null, 2);
+    _sendWithStream(cur.chart_id, prompt, function() {
+        ReportTabs.set('liunian', document.getElementById('report-content').innerHTML || '');
+    }, 'liunian');
 });
 
 // Name (取名)
@@ -1358,37 +1348,12 @@ document.getElementById('name-analyze-btn').addEventListener('click', async func
         });
         if (!r.ok) { alert('查询失败'); return; }
         var d = await r.json();
-        var md = '# 名字评测：' + name + '\n\n';
-        md += '**总分：' + (d.total_score || '—') + ' / ' + (d.max_score || '—') + '**　等级：**' + (d.grade || '—') + '**\n\n';
-        md += '> ' + (d.verdict || '') + '\n\n';
-        md += '## 喜用神\n';
-        md += '喜神：' + (d.xishen || []).join('、') + '　|　忌神：' + (d.jishen || []).join('、') + '\n\n';
-        if (d.scores) {
-            md += '## 评分明细\n\n';
-            md += '| 维度 | 得分 | 满分 | 说明 |\n|---|---|---|---|\n';
-            for (var k in d.scores) {
-                var s = d.scores[k];
-                md += '| ' + k + ' | ' + (s.score || 0) + ' | ' + (s.max || '—') + ' | ' + (s.detail || '') + ' |\n';
-            }
-            md += '\n';
-        }
-        if (d.wuge) {
-            md += '## 五格数理\n\n';
-            md += '| 格 | 笔画 | 数理 | 含义 |\n|---|---|---|---|\n';
-            var wugeNames = {'天格':'天格','人格':'人格','地格':'地格','外格':'外格','总格':'总格'};
-            for (var wk in wugeNames) {
-                var w = d.wuge[wk];
-                if (w) { md += '| ' + wk + ' | ' + (w.strokes || '—') + '画 | ' + (w.shuli || '') + ' | ' + (w.shuli_meaning || '') + ' |\n'; }
-            }
-            md += '\n';
-        }
-        if (d.sancai) {
-            var sc = d.sancai;
-            md += '## 三才配置\n\n';
-            md += '**' + (sc.config || '') + '** — ' + (sc.judgment || '') + '（' + (sc.category_name || '') + '）\n\n';
-        }
-        ReportTabs.set('name', md);
-        ReportTabs.switchTo('name');
+        document.getElementById('name-bar').classList.add('hidden');
+        // Feed raw data to AI for narrative report
+        var prompt = '请根据以下名字评测原始数据，生成详细的名字分析报告。要求：1. 总分和等级解读 2. 五行匹配分析（名字五行 vs 八字喜用神）3. 五格数理详解 4. 三才配置解读 5. 音韵字义评价 6. 命名建议。使用 Markdown 表格呈现评分明细。\n\n姓名：' + name + '\n评测数据：\n' + JSON.stringify(d, null, 2);
+        _sendWithStream(cur.chart_id, prompt, function() {
+            ReportTabs.set('name', document.getElementById('report-content').innerHTML || '');
+        }, 'name');
     } else {
         var surname = document.getElementById('name-gen-surname').value.trim();
         var gender = document.getElementById('name-gen-gender').value;
@@ -1399,19 +1364,12 @@ document.getElementById('name-analyze-btn').addEventListener('click', async func
         });
         if (!r.ok) { alert('查询失败'); return; }
         var d = await r.json();
+        document.getElementById('name-bar').classList.add('hidden');
         var candidates = Array.isArray(d) ? d : (d.names || d.candidates || []);
-        var md = '# 取名推荐：' + surname + '姓 ' + (gender === 'male' ? '男' : '女') + '\n\n';
-        candidates.forEach(function(n, i) {
-            var nameStr = typeof n === 'string' ? n : (n.name || n.full_name || '');
-            var score = typeof n === 'object' ? (n.score || n.total_score) : null;
-            md += '### ' + (i + 1) + '. ' + surname + nameStr + '\n';
-            if (score) md += '**评分：' + score + '分**　';
-            if (n.grade) md += '等级：' + n.grade;
-            md += '\n\n';
-            if (n.wuxing) md += '- 五行：' + (typeof n.wuxing === 'string' ? n.wuxing : JSON.stringify(n.wuxing)) + '\n';
-            if (n.reason) md += '- ' + n.reason + '\n';
-            if (n.meaning) md += '- 寓意：' + n.meaning + '\n';
-            md += '\n';
+        var prompt = '请根据以下取名推荐数据，生成详细的名字推荐报告。要求：1. 推荐列表概览 2. 每个名字的五行匹配分析（对比八字喜用神）3. 每个名字的字义/音韵/寓意解读 4. 三才五格评价 5. 最终推荐排序和理由。使用 Markdown 表格对比评分。\n\n姓氏：' + surname + '　性别：' + gender + '\n推荐数据：\n' + JSON.stringify(candidates, null, 2);
+        _sendWithStream(cur.chart_id, prompt, function() {
+            ReportTabs.set('name', document.getElementById('report-content').innerHTML || '');
+        }, 'name');
         });
         ReportTabs.set('name', md);
         ReportTabs.switchTo('name');

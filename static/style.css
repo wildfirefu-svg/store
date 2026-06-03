@@ -253,7 +253,7 @@ body::before {
 .hehun-bar select {
     background: var(--surface-dark);
     border: 1px solid var(--border-subtle);
-    color: rgba(245,240,224,0.8);
+    color: var(--text-primary);
     padding: 5px 10px;
     border-radius: var(--radius-sm);
     font-size: 12px;
@@ -285,11 +285,16 @@ body::before {
 .tool-bar select, .tool-bar input {
     background: var(--surface-dark);
     border: 1px solid var(--border-subtle);
-    color: rgba(245,240,224,0.8);
+    color: var(--text-primary);
     padding: 5px 10px;
     border-radius: var(--radius-sm);
     font-size: 12px;
     font-family: var(--font);
+}
+.tool-bar select option,
+.hehun-bar select option {
+    background: #1C1917;
+    color: #F5F0E0;
 }
 .tool-bar button {
     padding: 5px 12px;
