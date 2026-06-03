@@ -944,7 +944,7 @@ def _get_chart(chart_id):
 
 @app.get("/api/chat/stream")
 async def chat_stream(chart_id: str, message: str):
-    """SSE streaming chat — calls Anthropic API with agent system prompt + chart data."""
+    """SSE streaming chat — pre-analyzes chart, searches KB, then calls AI."""
     chart = _get_chart(chart_id)
     if not chart:
         async def err_stream():
@@ -957,7 +957,23 @@ async def chat_stream(chart_id: str, message: str):
     report_text = ""
     report_tab = "overview"
 
-    # Detect report tab from message keywords
+    # ---- Pre-analysis: compute structured judgments, search KB ----
+    try:
+        conclusions = _auto_analyze(chart)
+    except Exception:
+        conclusions = {}
+
+    # Search knowledge base for relevant gejue
+    kb_gejue = []
+    topic_kw_map = {
+        'wealth': '财运 财星 投资',
+        'marriage': '婚姻 夫妻 感情 配偶',
+        'career': '事业 官运 官职 升迁',
+        'health': '健康 疾病 寿元 身体',
+        'name': '取名 姓名',
+        'sihechu': '格局 用神 旺衰 命运',
+        'overview': '命盘 格局 用神 运势',
+    }
     def _detect_tab(msg):
         if any(kw in msg for kw in ['财运','发财','投资','赚钱','破财']): return 'wealth'
         if any(kw in msg for kw in ['感情','婚姻','结婚','恋爱','桃花','夫妻']): return 'marriage'
@@ -966,10 +982,24 @@ async def chat_stream(chart_id: str, message: str):
         if any(kw in msg for kw in ['名字','取名','改名']): return 'name'
         return 'sihechu'
 
+    report_tab = _detect_tab(message)
+    kb_query = topic_kw_map.get(report_tab, '格局 用神')
+    try:
+        kb = _get_kb()
+        kb_results = kb.fulltext_search(kb_query, 5)
+        kb.close()
+        kb_gejue = [r.get('text', '')[:200] for r in kb_results if r.get('text')]
+    except Exception:
+        kb_gejue = []
+
+    # Build enriched chart with pre-analysis injected
+    enriched = dict(chart)
+    if conclusions:
+        enriched['_analysis'] = conclusions
+
     async def event_stream():
         nonlocal reply_text, report_text, report_tab
 
-        report_tab = _detect_tab(message)
         tool_name_map = {'wealth': '流年分析', 'marriage': '命盘分析', 'career': '流年分析',
                          'health': '命盘分析', 'name': '取名分析', 'sihechu': '四合出分析'}
         tool_name = tool_name_map.get(report_tab, '四合出分析')
@@ -978,9 +1008,14 @@ async def chat_stream(chart_id: str, message: str):
         yield _sse_event('reply', {'text': '正在调用玄机子 AI 分析…\n\n'})
         await asyncio.sleep(0.05)
 
+        # Add KB gejue to the user message
+        enriched_msg = message
+        if kb_gejue:
+            enriched_msg += '\n\n## 相关经典歌诀（参考）\n' + '\n'.join(f'- {g}' for g in kb_gejue[:3])
+
         in_report = False
 
-        for event in _stream_claude(chart, message):
+        for event in _stream_claude(enriched, enriched_msg):
             if event.get('type') == 'error':
                 yield _sse_event('reply', {'text': '\n\n⚠️ ' + (event.get('text') or '')})
                 fallback = _generate_fallback(chart)
