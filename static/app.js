@@ -1235,7 +1235,7 @@ document.getElementById('hehun-analyze-btn').addEventListener('click', async fun
     if (!r.ok) { alert('合婚计算失败'); return; }
     const d = await r.json();
     // Feed raw data to AI for detailed analysis
-    var prompt = '请根据以下合婚原始数据，生成详细分析报告。要求：1. 总体评分和等级解读 2. 日主旺衰对比分析 3. 日支关系解读 4. 配偶星交互分析 5. 各维度得分详解 6. 综合建议。使用 Markdown 表格和 ⭐ 评分。\n\n合婚数据：\n' + JSON.stringify(d, null, 2);
+    var prompt = '请严格按照系统提示词中的"合婚分析模板"格式，根据以下数据生成合婚报告。必须包含：总体评分表、日主旺衰对比、日支关系、优势与风险、综合建议。\n\n合婚数据：\n' + JSON.stringify(d, null, 2);
     var cid = p1; // Use first person's chart for the stream
     _sendWithStream(cid, prompt, function() {
         ReportTabs.set('hehun', document.getElementById('report-content').innerHTML || '');
@@ -1309,7 +1309,7 @@ document.getElementById('liunian-analyze-btn').addEventListener('click', async f
     if (!r.ok) { alert('查询失败'); return; }
     var d = await r.json();
     // Feed raw data to AI for detailed narrative
-    var prompt = '请根据以下流年数据，生成 ' + ty + ' 年详细流年运势报告。要求：1. 年运总览 2. 每个月的详细分析（事业/财运/感情/健康四维度，用 ⭐ 评分）3. 最佳月份和最需注意的月份 4. 每月注意事项和建议。使用 Markdown 表格呈现每月运势。\n\n流年数据：\n' + JSON.stringify(d, null, 2);
+    var prompt = '请严格按照系统提示词中的"流年分析模板"格式，根据以下数据生成' + ty + '年流年运势报告。必须包含：年运总览+年度关键词、月度运势表（12个月×5列）、最佳月份、需注意的月份、年度建议。\n\n流年数据：\n' + JSON.stringify(d, null, 2);
     _sendWithStream(cur.chart_id, prompt, function() {
         ReportTabs.set('liunian', document.getElementById('report-content').innerHTML || '');
     }, 'liunian');
@@ -1350,7 +1350,7 @@ document.getElementById('name-analyze-btn').addEventListener('click', async func
         var d = await r.json();
         document.getElementById('name-bar').classList.add('hidden');
         // Feed raw data to AI for narrative report
-        var prompt = '请根据以下名字评测原始数据，生成详细的名字分析报告。要求：1. 总分和等级解读 2. 五行匹配分析（名字五行 vs 八字喜用神）3. 五格数理详解 4. 三才配置解读 5. 音韵字义评价 6. 命名建议。使用 Markdown 表格呈现评分明细。\n\n姓名：' + name + '\n评测数据：\n' + JSON.stringify(d, null, 2);
+        var prompt = '请严格按照系统提示词中的"名字分析模板"格式，根据以下数据生成名字评测报告。必须包含：总分+等级、评分明细表（4维度）、五格数理表（5格）、五行匹配分析、建议。\n\n姓名：' + name + '\n评测数据：\n' + JSON.stringify(d, null, 2);
         _sendWithStream(cur.chart_id, prompt, function() {
             ReportTabs.set('name', document.getElementById('report-content').innerHTML || '');
         }, 'name');
@@ -1366,13 +1366,10 @@ document.getElementById('name-analyze-btn').addEventListener('click', async func
         var d = await r.json();
         document.getElementById('name-bar').classList.add('hidden');
         var candidates = Array.isArray(d) ? d : (d.names || d.candidates || []);
-        var prompt = '请根据以下取名推荐数据，生成详细的名字推荐报告。要求：1. 推荐列表概览 2. 每个名字的五行匹配分析（对比八字喜用神）3. 每个名字的字义/音韵/寓意解读 4. 三才五格评价 5. 最终推荐排序和理由。使用 Markdown 表格对比评分。\n\n姓氏：' + surname + '　性别：' + gender + '\n推荐数据：\n' + JSON.stringify(candidates, null, 2);
+        var prompt = '请严格按照系统提示词中的"名字分析模板"格式，为以下候选名字逐一评测并排序。必须包含：总排名表、每个名字的评分明细表+五格数理表+五行匹配分析。\n\n姓氏：' + surname + '　性别：' + gender + '\n候选名字：\n' + JSON.stringify(candidates, null, 2);
         _sendWithStream(cur.chart_id, prompt, function() {
             ReportTabs.set('name', document.getElementById('report-content').innerHTML || '');
         }, 'name');
-        });
-        ReportTabs.set('name', md);
-        ReportTabs.switchTo('name');
     }
 });
 
