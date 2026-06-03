@@ -6,6 +6,7 @@ Auto-detects API provider from key prefix:
 """
 import json
 import os
+import sys
 import urllib.request
 import urllib.error
 
