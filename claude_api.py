@@ -16,7 +16,11 @@ def _load_api_key():
         if key:
             return key
 
-    root = os.path.dirname(os.path.abspath(__file__))
+    # PyInstaller: key file is next to .exe, not inside _internal/
+    if getattr(sys, 'frozen', False):
+        root = os.path.dirname(sys.executable)
+    else:
+        root = os.path.dirname(os.path.abspath(__file__))
     for filename in (".deepseek_key", ".anthropic_key"):
         key_file = os.path.join(root, filename)
         try:
