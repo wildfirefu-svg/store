@@ -13,6 +13,7 @@ a = Analysis(
         ('templates', 'templates'),
         ('static', 'static'),
         ('knowledge-base', 'knowledge-base'),
+        ('prompts', 'prompts'),
     ],
     hiddenimports=[
         'uvicorn.loops.auto',
@@ -27,6 +28,7 @@ a = Analysis(
         'asyncio',
         'fpdf2',
         'importlib.util',
+        'auto_analyzer',
     ],
     hookspath=[],
     hooksconfig={},

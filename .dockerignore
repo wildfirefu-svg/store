@@ -1,6 +1,9 @@
 # Secrets
 .anthropic_key
+.deepseek_key
+.bazi_api_key
 .env
+.env.example
 
 # Python cache
 __pycache__/
@@ -8,19 +11,31 @@ __pycache__/
 *.pyo
 .pytest_cache/
 
-# Dev tools
+# Dev tools & configs
 tests/
 quality/
 .superpowers/
-.claude/skills/
+.claude/
+.codex/
+.codegraph/
+.agents/
 
-# Generated
+# Generated data (contains personal data)
 reports/
 *.pdf
+
+# Databases (built at runtime)
+*.db
+.chromadb_case_index/
 
 # Git
 .git/
 .gitignore
+
+# Build artifacts
+build/
+dist/
+*.spec
 
 # OS
 Thumbs.db
@@ -33,9 +48,12 @@ Dockerfile
 .dockerignore
 docker-compose.yml
 
-# Temp
+# Temp & debug
 *.png
+*.log
 chart_data.json
+case_retrieval_out.txt
+sihechu_conclusions.json
 _v2*
 test_*.json
 test_*.md

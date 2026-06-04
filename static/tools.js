@@ -1,5 +1,4 @@
-// Tools page logic
-const API = '/api';
+// Tools page logic — API constant from api.js
 const chartId = sessionStorage.getItem('chartId') || '';
 if (chartId) {
     document.getElementById('zeri-chart-id').value = chartId;
