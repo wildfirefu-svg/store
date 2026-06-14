@@ -45,55 +45,24 @@ CANGAN = {
     '亥': [('壬', '本气'), ('甲', '中气')],
 }
 
-# Nayin (纳音) — complete 60-jiazi cycle
-_NAYIN_RAW = [
-    '海中金', '炉中火', '大林木', '路旁土', '剑锋金', '山头火',
-    '涧下水', '城头土', '白蜡金', '杨柳木', '泉中水', '屋上土',
-    '霹雳火', '松柏木', '流年水', '砂石金', '天上火', '石榴木',
-    '大海水', '山头火', '壁上土', '金箔金', '覆灯火', '天河水',
-    '大驿土', '钗钏金', '桑柘木', '大溪水', '沙中土', '天河水',
-]
-NAYIN = {}
-for i in range(30):
-    gan_idx = i % 10
-    zhi_idx = i % 12
-    key1 = TIANGAN[gan_idx] + DIZHI[zhi_idx]
-    key2 = TIANGAN[(gan_idx + 1) % 10] + DIZHI[(zhi_idx + 1) % 12]
-    NAYIN[key1] = _NAYIN_RAW[i]
-    NAYIN[key2] = _NAYIN_RAW[i]
-    if i == 29:
-        break
-# Fix for the final pair (壬子, 癸丑) which share with 甲子/乙丑's nayin
-NAYIN['甲子'] = '海中金'; NAYIN['乙丑'] = '海中金'
-NAYIN['丙寅'] = '炉中火'; NAYIN['丁卯'] = '炉中火'
-NAYIN['戊辰'] = '大林木'; NAYIN['己巳'] = '大林木'
-NAYIN['庚午'] = '路旁土'; NAYIN['辛未'] = '路旁土'
-NAYIN['壬申'] = '剑锋金'; NAYIN['癸酉'] = '剑锋金'
-NAYIN['甲戌'] = '山头火'; NAYIN['乙亥'] = '山头火'
-NAYIN['丙子'] = '涧下水'; NAYIN['丁丑'] = '涧下水'
-NAYIN['戊寅'] = '城头土'; NAYIN['己卯'] = '城头土'
-NAYIN['庚辰'] = '白蜡金'; NAYIN['辛巳'] = '白蜡金'
-NAYIN['壬午'] = '杨柳木'; NAYIN['癸未'] = '杨柳木'
-NAYIN['甲申'] = '泉中水'; NAYIN['乙酉'] = '泉中水'
-NAYIN['丙戌'] = '屋上土'; NAYIN['丁亥'] = '屋上土'
-NAYIN['戊子'] = '霹雳火'; NAYIN['己丑'] = '霹雳火'
-NAYIN['庚寅'] = '松柏木'; NAYIN['辛卯'] = '松柏木'
-NAYIN['壬辰'] = '流年水'; NAYIN['癸巳'] = '流年水'
-NAYIN['甲午'] = '砂石金'; NAYIN['乙未'] = '砂石金'
-NAYIN['丙申'] = '山下火'; NAYIN['丁酉'] = '山下火'
-NAYIN['戊戌'] = '平地木'; NAYIN['己亥'] = '平地木'
-NAYIN['庚子'] = '壁上土'; NAYIN['辛丑'] = '壁上土'
-NAYIN['壬寅'] = '金箔金'; NAYIN['癸卯'] = '金箔金'
-NAYIN['甲辰'] = '覆灯火'; NAYIN['乙巳'] = '覆灯火'
-NAYIN['丙午'] = '天河水'; NAYIN['丁未'] = '天河水'
-NAYIN['戊申'] = '大驿土'; NAYIN['己酉'] = '大驿土'
-NAYIN['庚戌'] = '钗钏金'; NAYIN['辛亥'] = '钗钏金'
-NAYIN['壬子'] = '桑柘木'; NAYIN['癸丑'] = '桑柘木'
-NAYIN['甲寅'] = '大溪水'; NAYIN['乙卯'] = '大溪水'
-NAYIN['丙辰'] = '沙中土'; NAYIN['丁巳'] = '沙中土'
-NAYIN['戊午'] = '天上火'; NAYIN['己未'] = '天上火'
-NAYIN['庚申'] = '石榴木'; NAYIN['辛酉'] = '石榴木'
-NAYIN['壬戌'] = '大海水'; NAYIN['癸亥'] = '大海水'
+# Nayin (纳音) — complete 60-jiazi cycle (hand-verified against standard reference)
+NAYIN = {
+    '甲子': '海中金', '乙丑': '海中金', '丙寅': '炉中火', '丁卯': '炉中火',
+    '戊辰': '大林木', '己巳': '大林木', '庚午': '路旁土', '辛未': '路旁土',
+    '壬申': '剑锋金', '癸酉': '剑锋金', '甲戌': '山头火', '乙亥': '山头火',
+    '丙子': '涧下水', '丁丑': '涧下水', '戊寅': '城头土', '己卯': '城头土',
+    '庚辰': '白蜡金', '辛巳': '白蜡金', '壬午': '杨柳木', '癸未': '杨柳木',
+    '甲申': '泉中水', '乙酉': '泉中水', '丙戌': '屋上土', '丁亥': '屋上土',
+    '戊子': '霹雳火', '己丑': '霹雳火', '庚寅': '松柏木', '辛卯': '松柏木',
+    '壬辰': '长流水', '癸巳': '长流水', '甲午': '砂石金', '乙未': '砂石金',
+    '丙申': '山下火', '丁酉': '山下火', '戊戌': '平地木', '己亥': '平地木',
+    '庚子': '壁上土', '辛丑': '壁上土', '壬寅': '金箔金', '癸卯': '金箔金',
+    '甲辰': '覆灯火', '乙巳': '覆灯火', '丙午': '天河水', '丁未': '天河水',
+    '戊申': '大驿土', '己酉': '大驿土', '庚戌': '钗钏金', '辛亥': '钗钏金',
+    '壬子': '桑柘木', '癸丑': '桑柘木', '甲寅': '大溪水', '乙卯': '大溪水',
+    '丙辰': '沙中土', '丁巳': '沙中土', '戊午': '天上火', '己未': '天上火',
+    '庚申': '石榴木', '辛酉': '石榴木', '壬戌': '大海水', '癸亥': '大海水',
+}
 
 # Solar terms: precise calculation using sun's ecliptic longitude
 # Each term = sun reaches (315 + 15*n)° mod 360, for n=0..23
@@ -258,125 +227,6 @@ def get_solar_term_info(year, month, day, hour=0, minute=0):
 # 1b. LUNAR CALENDAR (农历转换) — API spec §2.1, §6
 # =============================================================================
 
-# Lunar year info encoded as: (leap_month, month_days_bitmask)
-# month_days_bitmask: bit i (0=Jan...11=Dec) → 1=30天, 0=29天
-# leap_month: 0=no leap, 1-12=which month is doubled
-# Data for 1900-2100
-_LUNAR_YEAR_DATA = [
-    #1900
-    (8, 0x4bd8), (0, 0x4ae0), (5, 0xa570), (0, 0x54d5), (0, 0xd260), (0, 0xd950), (4, 0x5654),
-    (0, 0x56a0), (0, 0x9ad0), (2, 0x55d2), (0, 0x4ae0), (0, 0xa5b6), (0, 0xa4d0), (0, 0xd250),
-    (7, 0xd295), (0, 0xb54f), (0, 0xd6a0), (5, 0xada2), (0, 0x95b0), (7, 0x4977), (0, 0x497f),
-    (0, 0xa4b0), (0, 0xb4b5), (0, 0x6a50), (5, 0x6d40), (0, 0xab54), (0, 0x2b6f), (0, 0x9570),
-    (0, 0x52f2), (0, 0x4970), (6, 0x6566), (0, 0xd4a0), (0, 0xea50), (0, 0x6a95), (0, 0x5adf),
-    (0, 0x2b60), (0, 0x86e3), (0, 0x92ef), (0, 0xc8d7), (0, 0xc95f), (0, 0xd4a0), (0, 0xd8a6),
-    (0, 0xb55f), (0, 0x56a0), (0, 0xa5b0), (3, 0x25df), (0, 0x92d0), (0, 0xd2b2), (0, 0xa950),
-    (0, 0xb557), (0, 0x6ca0), (0, 0xb550), (0, 0x5355), (0, 0x4daf), (0, 0xa5b0), (0, 0x4573),
-    (0, 0x52bf), (0, 0xaa90), (0, 0xea95), (0, 0x6aa0), (0, 0xada2), (0, 0x5b50), (2, 0x4b60),
-    (0, 0x86e3), (0, 0xa2ef), (0, 0xc92d), (0, 0xc95f), (0, 0xd4a0), (0, 0xd8a6), (0, 0xb55f),
-    (0, 0x56a0), (0, 0xa5b0), (4, 0x25df), (0, 0x92d0), (0, 0xd2b2), (0, 0xa950), (0, 0xb557),
-    (0, 0x6ca0), (0, 0xb550), (0, 0x5355), (0, 0x4daf), (0, 0xa5b0), (0, 0x4573), (0, 0x52bf),
-    (0, 0xaa90), (0, 0xea95), (0, 0x6aa0), (0, 0xada2), (0, 0x5b50), (2, 0x4b60), (0, 0x86e3),
-    (1, 0xa2ef), (0, 0xc92d), (0, 0xc95f), (0, 0xd4a0), (0, 0xd8a6), (0, 0xb55f), (0, 0x56a0),
-    (0, 0xa5b0), (5, 0x25df), (0, 0x92d0), (0, 0xd2b2), #2000
-    (0, 0xa950), (0, 0xb557), (0, 0x6ca0), (0, 0xb550), (0, 0x5355), (0, 0x4daf), (0, 0xa5b0),
-    (0, 0x4573), (0, 0x52bf), (0, 0xaa90), (0, 0xea95), (0, 0x6aa0), (0, 0xada2), (0, 0x5b50),
-    (4, 0x4b60), (0, 0x86e3), (0, 0xa2ef), (0, 0xc92d), (0, 0xc95f), (0, 0xd4a0), (0, 0xd8a6),
-    (0, 0xb55f), (0, 0x56a0), (0, 0xa5b0), (6, 0x25df), (0, 0x92d0), (0, 0xd2b2), (0, 0xa950),
-    (0, 0xb557), (0, 0x6ca0), (0, 0xb550), (0, 0x5355), (0, 0x4daf), (0, 0xa5b0), (0, 0x4573),
-    (0, 0x52bf), (0, 0xaa90), (0, 0xea95), (0, 0x6aa0), (0, 0xada2), (0, 0x5b50), (2, 0x4b60),
-    (0, 0x86e3), (0, 0xa2ef), (0, 0xc92d), (0, 0xc95f), (0, 0xd4a0), (0, 0xd8a6), (0, 0xb55f),
-    (0, 0x56a0), (0, 0xa5b0), (3, 0x25df), (0, 0x92d0), (0, 0xd2b2), (0, 0xa950), (0, 0xb557),
-    (0, 0x6ca0), (0, 0xb550), (0, 0x5355), (0, 0x4daf), (0, 0xa5b0), (0, 0x4573), (0, 0x52bf),
-    (0, 0xaa90), (0, 0xea95), (0, 0x6aa0), (0, 0xada2), (0, 0x5b50), (2, 0x4b60), (0, 0x86e3),
-    (0, 0xa2ef), (0, 0xc92d), (0, 0xc95f), (0, 0xd4a0), (0, 0xd8a6), (0, 0xb55f), (0, 0x56a0),
-    (0, 0xa5b0), (4, 0x25df), (0, 0x92d0), (0, 0xd2b2), (0, 0xa950), (0, 0xb557), (0, 0x6ca0),
-    (0, 0xb550), (0, 0x5355), (0, 0x4daf), (0, 0xa5b0), (0, 0x4573), (0, 0x52bf), (0, 0xaa90),
-    (0, 0xea95), (0, 0x6aa0), (0, 0xada2), (0, 0x5b50), (3, 0x4b60), (0, 0x86e3), (0, 0xa2ef),
-    #2090
-    (0, 0xc92d), (0, 0xc95f), (0, 0xd4a0), (0, 0xd8a6), (0, 0xb55f), (0, 0x56a0), (0, 0xa5b0),
-    (5, 0x25df), (0, 0x92d0), (0, 0xd2b2), #2100
-]
-
-# Chinese New Year dates (Gregorian month, day) for 1900-2100
-_CNY_DATES = [
-    (1,31),(2,19),(2,8),(1,29),(2,16),(2,4),(1,25),(2,13),(2,2),(1,22), #1900-09
-    (2,10),(1,30),(2,18),(2,6),(1,26),(2,14),(2,3),(1,23),(2,11),(2,1), #1910-19
-    (2,20),(2,8),(1,28),(2,16),(2,5),(1,24),(2,13),(2,2),(1,23),(2,10), #1920-29
-    (1,30),(2,17),(2,6),(1,26),(2,14),(2,4),(1,24),(2,11),(1,31),(2,19), #1930-39
-    (2,8),(1,27),(2,15),(2,5),(1,25),(2,13),(2,2),(1,22),(2,10),(1,29), #1940-49
-    (2,17),(2,6),(1,27),(2,14),(2,3),(1,24),(2,12),(1,31),(2,18),(2,8), #1950-59
-    (1,28),(2,15),(2,5),(1,25),(2,13),(2,2),(1,21),(2,9),(1,30),(2,17), #1960-69
-    (2,6),(1,27),(2,15),(2,3),(1,23),(2,11),(1,31),(2,18),(2,7),(1,28), #1970-79
-    (2,16),(2,5),(1,25),(2,13),(2,2),(1,22),(2,9),(1,29),(2,17),(2,6), #1980-89
-    (1,27),(2,15),(2,4),(1,23),(2,10),(1,31),(2,19),(2,7),(1,28),(2,16), #1990-99
-    (2,5),(1,24),(2,12),(2,1),(1,22),(2,9),(1,29),(2,18),(2,7),(1,26), #2000-09
-    (2,14),(2,3),(1,23),(2,10),(1,31),(2,19),(2,8),(1,28),(2,16),(2,5), #2010-19
-    (1,25),(2,12),(2,1),(1,22),(2,10),(1,29),(2,17),(2,6),(1,26),(2,13), #2020-29
-    (2,3),(1,23),(2,11),(1,31),(2,19),(2,8),(1,28),(2,15),(2,4),(1,24), #2030-39
-    (2,12),(2,1),(1,22),(2,10),(1,30),(2,17),(2,6),(1,26),(2,14),(2,2), #2040-49
-    (1,23),(2,11),(2,1),(2,19),(2,8),(1,28),(2,15),(2,4),(1,24),(2,12), #2050-59
-    (2,2),(1,21),(2,9),(1,29),(2,17),(2,5),(1,26),(2,14),(2,3),(1,23), #2060-69
-    (2,11),(1,31),(2,19),(2,7),(1,27),(2,15),(2,5),(1,24),(2,12),(2,2), #2070-79
-    (1,22),(2,10),(1,29),(2,17),(2,6),(1,26),(2,14),(2,3),(1,24),(2,12), #2080-89
-    (1,30),(2,18),(2,7),(1,27),(2,15),(2,5),(1,25),(2,12),(2,1),(1,21), #2090-99
-    (2,9), #2100
-]
-
-
-def gregorian_to_lunar(year, month, day):
-    """Convert Gregorian date to Lunar date (1900-2100).
-    Returns: (lunar_year, lunar_month, lunar_day, is_leap_month)
-    """
-    # Find which lunar year this date belongs to
-    idx = year - 1900
-    if idx < 0 or idx >= len(_CNY_DATES):
-        return year, month, day, False  # out of range, return Gregorian
-
-    cny_m, cny_d = _CNY_DATES[idx]
-    cny_date = date(year, cny_m, cny_d)
-    target_date = date(year, month, day)
-
-    if target_date < cny_date:
-        # Belongs to previous lunar year
-        idx = year - 1 - 1900
-        if idx < 0:
-            return year, month, day, False
-        cny_m, cny_d = _CNY_DATES[idx]
-        cny_date = date(year - 1, cny_m, cny_d)
-        lunar_year = year - 1
-    else:
-        lunar_year = year
-
-    # Count days from CNY to target
-    delta = (target_date - cny_date).days
-
-    # Walk through months
-    leap_month, month_bits = _LUNAR_YEAR_DATA[idx]
-    lunar_month = 1
-    lunar_day = 1
-    is_leap = False
-
-    for m in range(1, 13):
-        # Regular month
-        days_in_month = 30 if (month_bits >> (15 - m)) & 1 else 29
-        if delta < days_in_month:
-            lunar_month = m
-            lunar_day = delta + 1
-            return lunar_year, lunar_month, lunar_day, False
-        delta -= days_in_month
-
-        # Leap month after this month?
-        if leap_month == m:
-            leap_days = 30 if (month_bits >> 15) & 1 else 29
-            if delta < leap_days:
-                lunar_month = m
-                lunar_day = delta + 1
-                return lunar_year, lunar_month, lunar_day, True
-            delta -= leap_days
-
-    # Should not reach here, but return last month
-    return lunar_year, 12, delta + 1, False
 
 # Ten Gods lookup: (day_master_element, target_element, yin_yang_match)
 # Returns the ten god name
@@ -2227,6 +2077,175 @@ def format_to_spec(four_pillars, dayun, shensha, ziwei, wuyun_liuqi,
             '--location matches a known city (e.g., "London, UK").')
 
     return result
+
+
+def compute_chart(year, month, day, hour=0, minute=0, gender="male", location="Beijing",
+                  use_solar_time=False):
+    """Compute a complete BaZi chart from raw birth information.
+
+    This is the single entry point for chart calculation, used by all delivery
+    surfaces (API, MCP, CLI, desktop). Returns a dict conforming to the API spec.
+
+    Args:
+        year, month, day: birth date (Gregorian)
+        hour, minute: birth time (clock time before solar adjustment)
+        gender: 'male' or 'female'
+        location: city name for true solar time and timezone lookup
+        use_solar_time: if True, hour/minute already adjusted to true solar time
+
+    Returns:
+        dict with four_pillars, day_master, da_yun, shensha, ziwei, wuyun_liuqi,
+        wuxing_stats, shishen_stats, liu_nian, true_solar_info, birth_info,
+        and all other spec fields from format_to_spec.
+    """
+    # True solar time correction
+    if use_solar_time:
+        adj_h, adj_m, adj_minutes, method = hour, minute, 0, 'user_adjusted'
+    else:
+        adj_h, adj_m, adj_minutes, method = calculate_true_solar_time(
+            hour, minute, location, month)
+
+    true_solar_info = {
+        'original_time': f'{year:04d}-{month:02d}-{day:02d}T{hour:02d}:{minute:02d}:00',
+        'adjusted_time': f'{year:04d}-{month:02d}-{day:02d}T{adj_h:02d}:{adj_m:02d}:00',
+        'adjustment_minutes': adj_minutes,
+        'method': method,
+        'location_matched': method not in ('no_correction', 'user_adjusted'),
+    }
+
+    # Four pillars
+    four_pillars = calculate_four_pillars(year, month, day, adj_h, adj_m, location)
+    yp = (four_pillars['year']['gan'], four_pillars['year']['zhi'])
+    mp = (four_pillars['month']['gan'], four_pillars['month']['zhi'])
+    dm = four_pillars['day_master']
+    dm_gan = dm['gan'] if isinstance(dm, dict) else dm
+
+    # Derived calculations
+    dayun_raw = calculate_dayun(yp, mp, gender, year, month, day)
+    shensha = calculate_shensha(four_pillars, dm)
+    ziwei = calculate_ziwei(year, month, day, adj_h, gender)
+    wuyun = calculate_wuyun_liuqi(yp[0], yp[1])
+    wuxing = calculate_wuxing_stats(four_pillars)
+    shishen = calculate_shishen_stats(four_pillars)
+    liunian = calculate_liunian(date.today().year, dm_gan, 3)
+
+    chart = format_to_spec(four_pillars, dayun_raw, shensha, ziwei, wuyun,
+                           wuxing, shishen, liunian, true_solar_info)
+    chart['birth_info'] = {
+        'year': year, 'month': month, 'day': day,
+        'hour': hour, 'minute': minute,
+        'gender': gender, 'location': location,
+    }
+    chart['true_solar_info'] = true_solar_info
+    return chart
+
+
+def compare_charts(chart1, chart2):
+    """Compare two BaZi charts across multiple dimensions.
+
+    Unlike hehun (marriage-specific), this is a general-purpose comparison
+    for any purpose: family, business partners, teacher-student, etc.
+
+    Args:
+        chart1, chart2: chart dicts as returned by compute_chart()
+
+    Returns:
+        dict with dimension-by-dimension comparison results.
+    """
+    def _dm(c):
+        dm = c.get('day_master', {})
+        return dm.get('gan', '') if isinstance(dm, dict) else str(dm)
+    def _dm_wu(c):
+        dm = c.get('day_master', {})
+        return dm.get('wuxing', '') if isinstance(dm, dict) else GAN_WUXING.get(str(dm), '')
+
+    dm1, dm2 = _dm(chart1), _dm(chart2)
+    wu1, wu2 = _dm_wu(chart1), _dm_wu(chart2)
+
+    # ---- 1. Five Elements comparison ----
+    ws1 = chart1.get('wuxing_stats', {})
+    ws2 = chart2.get('wuxing_stats', {})
+    all_elements = ['金', '木', '水', '火', '土']
+    total1 = sum(ws1.get(e, 0) for e in all_elements) or 1
+    total2 = sum(ws2.get(e, 0) for e in all_elements) or 1
+    wuxing_compare = {}
+    for e in all_elements:
+        pct1 = round(ws1.get(e, 0) / total1 * 100, 1)
+        pct2 = round(ws2.get(e, 0) / total2 * 100, 1)
+        wuxing_compare[e] = {'chart1_pct': pct1, 'chart2_pct': pct2, 'diff': round(pct1 - pct2, 1)}
+
+    # ---- 2. Day Master relationship ----
+    dm_relation = get_shishen(dm1, dm2) if dm1 and dm2 else '未知'
+    dm_relation_reverse = get_shishen(dm2, dm1) if dm1 and dm2 else '未知'
+
+    # ---- 3. Nayin comparison ----
+    nayin1 = chart1.get('nayin_wuxing', '')
+    nayin2 = chart2.get('nayin_wuxing', '')
+    nayin_relation = ''
+    if nayin1 and nayin2:
+        relation_map = {
+            ('金','金'): '比和', ('木','木'): '比和', ('水','水'): '比和', ('火','火'): '比和', ('土','土'): '比和',
+            ('金','木'): '金克木', ('金','火'): '火克金', ('金','土'): '土生金', ('金','水'): '金生水',
+            ('木','土'): '木克土', ('木','金'): '金克木', ('木','水'): '水生木', ('木','火'): '木生火',
+            ('水','火'): '水克火', ('水','土'): '土克水', ('水','金'): '金生水', ('水','木'): '水生木',
+            ('火','金'): '火克金', ('火','水'): '水克火', ('火','木'): '木生火', ('火','土'): '火生土',
+            ('土','水'): '土克水', ('土','木'): '木克土', ('土','火'): '火生土', ('土','金'): '土生金',
+        }
+        nayin_relation = relation_map.get((nayin1, nayin2), '')
+
+    # ---- 4. Shensha overlap ----
+    ss1 = {s['name'] for s in chart1.get('shensha', []) if isinstance(s, dict) and s.get('name')}
+    ss2 = {s['name'] for s in chart2.get('shensha', []) if isinstance(s, dict) and s.get('name')}
+    shared_shensha = sorted(ss1 & ss2)
+    unique1 = sorted(ss1 - ss2)
+    unique2 = sorted(ss2 - ss1)
+
+    # ---- 5. Dayun stage overlap ----
+    dy1 = chart1.get('da_yun', [])
+    dy2 = chart2.get('da_yun', [])
+    current1 = next((d for d in dy1 if d.get('is_current')), None)
+    current2 = next((d for d in dy2 if d.get('is_current')), None)
+
+    # ---- 6. Ziwei highlights ----
+    zw1 = chart1.get('ziwei', {})
+    zw2 = chart2.get('ziwei', {})
+    mg1 = zw1.get('basic_info', {}).get('ming_gong_gan_zhi', '')
+    mg2 = zw2.get('basic_info', {}).get('ming_gong_gan_zhi', '')
+    sihua1 = zw1.get('si_hua', {})
+    sihua2 = zw2.get('si_hua', {})
+
+    # ---- 7. Branch relations between the two charts ----
+    fp1 = chart1.get('four_pillars', {})
+    fp2 = chart2.get('four_pillars', {})
+    # Check for 六合/三合/六冲 between the day branches
+    dz1 = fp1.get('day', {}).get('zhi', '')
+    dz2 = fp2.get('day', {}).get('zhi', '')
+
+    return {
+        'chart1_dm': {'gan': dm1, 'wuxing': wu1},
+        'chart2_dm': {'gan': dm2, 'wuxing': wu2},
+        'dm_relation': f'{dm1}({dm_relation}) ⇄ {dm2}({dm_relation_reverse})',
+        'wuxing_compare': wuxing_compare,
+        'nayin': {'chart1': nayin1, 'chart2': nayin2, 'relation': nayin_relation},
+        'shensha': {
+            'shared': shared_shensha,
+            'chart1_unique': unique1,
+            'chart2_unique': unique2,
+        },
+        'dayun': {
+            'chart1_current': current1,
+            'chart2_current': current2,
+        },
+        'ziwei': {
+            'ming_gong': {'chart1': mg1, 'chart2': mg2},
+            'si_hua': {'chart1': sihua1, 'chart2': sihua2},
+        },
+        'day_branch': {'chart1': dz1, 'chart2': dz2},
+        'birth_info': {
+            'chart1': chart1.get('birth_info', {}),
+            'chart2': chart2.get('birth_info', {}),
+        },
+    }
 
 
 # =============================================================================

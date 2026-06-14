@@ -1,0 +1,37 @@
+{
+  "$schema": "knowledge-base-spec.md §10",
+  "description": "五运六气体表 — 10天干×12地支，含天刑之年判断规则",
+  "wuyun": [
+    {"year_gan":"甲","yun":"土运","organ":"脾/胃","body_tendency":"脾胃系统偏弱，湿气重","prone_disease":"消化不良、水肿、湿痹、肌肉酸痛","adjustment":"多食燥湿食物(薏米/红豆)，运动排湿，艾灸足三里，避潮湿环境"},
+    {"year_gan":"己","yun":"土运","organ":"脾/胃","body_tendency":"脾胃虚弱，运化不足","prone_disease":"食欲不振、腹胀、消瘦、贫血","adjustment":"多食易消化食物(粥/山药)，少食多餐，艾灸中脘，忌生冷"},
+    {"year_gan":"乙","yun":"金运","organ":"肺/大肠","body_tendency":"呼吸系统先天易感，皮肤干燥","prone_disease":"感冒咳嗽、哮喘、便秘、皮肤过敏","adjustment":"多食润肺食物(梨/百合)，深呼吸锻炼，按摩合谷穴，保湿护肤"},
+    {"year_gan":"庚","yun":"金运","organ":"肺/大肠","body_tendency":"肺气偏盛，大肠燥结","prone_disease":"干咳无痰、便秘痔疮、鼻塞鼻炎","adjustment":"多喝水润燥，食蜂蜜银耳，避免辛辣，按摩迎香穴"},
+    {"year_gan":"丙","yun":"水运","organ":"肾/膀胱","body_tendency":"肾气先天偏盛，水液代谢旺盛","prone_disease":"尿频尿急、水肿、腰膝酸软、耳鸣","adjustment":"节制房事保肾精，食黑豆黑芝麻，按摩涌泉穴，保暖腰部"},
+    {"year_gan":"辛","yun":"水运","organ":"肾/膀胱","body_tendency":"肾气偏虚，水液代谢不足","prone_disease":"畏寒怕冷、夜尿多、脱发、骨质疏松","adjustment":"多食温补肾阳食物(羊肉/韭菜)，艾灸命门，泡脚，避寒保暖"},
+    {"year_gan":"丁","yun":"木运","organ":"肝/胆","body_tendency":"肝胆系统倾向明显，情绪波动大","prone_disease":"偏头痛、目赤肿痛、胆囊炎、情绪抑郁","adjustment":"多食绿色蔬菜，按揉太冲穴疏肝，保持情绪平稳，避免熬夜"},
+    {"year_gan":"壬","yun":"木运","organ":"肝/胆","body_tendency":"肝气偏弱，疏泄不足","prone_disease":"疲劳乏力、视力下降、筋脉拘挛、胆小","adjustment":"多食养肝食物(枸杞/猪肝)，适度运动，按摩肝俞，早睡养肝"},
+    {"year_gan":"戊","yun":"火运","organ":"心/小肠","body_tendency":"心火偏盛，代谢旺盛","prone_disease":"心悸失眠、口腔溃疡、小便黄赤、高血压","adjustment":"多食清心食物(莲子/苦瓜)，冥想静心，按摩内关穴，避暑降温"},
+    {"year_gan":"癸","yun":"火运","organ":"心/小肠","body_tendency":"心气偏弱，血脉不足","prone_disease":"心慌气短、面色苍白、手脚冰凉、低血压","adjustment":"多食补血食物(红枣/桂圆)，适度运动强心，按摩神门穴，保持温暖"}
+  ],
+  "liuqi": [
+    {"year_zhi":"子","liu_qi":"少阴君火","season":"夏季","external_evil":"火热之邪","health_tip":"夏季注意心血管，避免暴晒，多饮水，午睡养心"},
+    {"year_zhi":"午","liu_qi":"少阴君火","season":"夏季","external_evil":"火热之邪","health_tip":"心火易旺，保持心态平和，食苦味清心，避免剧烈运动后暴汗"},
+    {"year_zhi":"丑","liu_qi":"太阴湿土","season":"长夏","external_evil":"湿邪困脾","health_tip":"长夏注意防湿，多食健脾祛湿食物，保持居所干燥通风"},
+    {"year_zhi":"未","liu_qi":"太阴湿土","season":"长夏","external_evil":"湿邪困脾","health_tip":"脾胃易为湿困，少食油腻甜腻，多运动出汗排湿，艾灸中脘"},
+    {"year_zhi":"寅","liu_qi":"少阳相火","season":"春夏之交","external_evil":"火邪上炎","health_tip":"春夏之交注意头面上火，少食辛辣，多饮菊花茶，保持大便通畅"},
+    {"year_zhi":"申","liu_qi":"少阳相火","season":"春夏之交","external_evil":"火邪上炎","health_tip":"火气上攻易头痛目赤，按摩太阳穴，食清凉食物，避免熬夜上火"},
+    {"year_zhi":"卯","liu_qi":"阳明燥金","season":"秋季","external_evil":"燥邪伤肺","health_tip":"秋季注意润肺，多食梨百合银耳，保持空气湿润，避免烟尘"},
+    {"year_zhi":"酉","liu_qi":"阳明燥金","season":"秋季","external_evil":"燥邪伤肺","health_tip":"燥气最伤肺阴，多喝温水，皮肤保湿，食蜂蜜润燥，忌辛辣烧烤"},
+    {"year_zhi":"辰","liu_qi":"太阳寒水","season":"冬季","external_evil":"寒邪伤肾","health_tip":"冬季注意保暖护肾，多食温补食物，泡脚驱寒，避免受凉"},
+    {"year_zhi":"戌","liu_qi":"太阳寒水","season":"冬季","external_evil":"寒邪伤肾","health_tip":"寒气内侵关节痛，注意膝腿保暖，食羊肉生姜温阳，艾灸命门"},
+    {"year_zhi":"巳","liu_qi":"厥阴风木","season":"春季","external_evil":"风邪犯肝","health_tip":"春季注意防风，多食绿色蔬菜养肝，保持情绪舒畅，避免受风"},
+    {"year_zhi":"亥","liu_qi":"厥阴风木","season":"春季","external_evil":"风邪犯肝","health_tip":"风邪善行数变易致过敏，注意防风御寒，按摩风池穴，食辛散食物"}
+  ],
+  "wuxing_ke": {"木克土":true,"土克水":true,"水克火":true,"火克金":true,"金克木":true},
+  "tianxing_rule": {
+    "description": "天刑之年 = 流年五运克制命主五运之年。如命主五运为木运(丁/壬年)，流年五运为金运(乙/庚年)→金克木=天刑",
+    "severity": "high",
+    "tip": "今年注意健康，避免冒险投资和长途旅行，加强体检",
+    "check": "流年天干五运克命主年干五运即为天刑。仅八字+紫微+五运六气三重同时报警时才提示寿关。"
+  }
+}

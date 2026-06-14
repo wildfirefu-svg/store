@@ -8,10 +8,42 @@ import subprocess
 import sys
 from datetime import date
 
-_IZTRO_PYTHON = os.path.join(
-    os.environ.get("LOCALAPPDATA", ""),
-    "Programs", "Python", "Python312", "python.exe"
-)
+from config import IZTRO_TIMEOUT
+
+def _find_python():
+    """Find a Python interpreter that has iztro_py installed. Returns path or None."""
+    # Try current Python first (most reliable)
+    candidates = [sys.executable]
+
+    # Try common Python paths on Windows
+    for ver in ["312", "311", "313", "310"]:
+        candidates.append(os.path.join(
+            os.environ.get("LOCALAPPDATA", ""),
+            "Programs", "Python", f"Python{ver}", "python.exe"
+        ))
+
+    # Try plain "python" / "python3" on PATH
+    for name in ["python", "python3"]:
+        import shutil
+        found = shutil.which(name)
+        if found and found not in candidates:
+            candidates.append(found)
+
+    for py in candidates:
+        if not py or not os.path.isfile(py):
+            continue
+        try:
+            p = subprocess.run(
+                [py, "-c", "import iztro_py"],
+                capture_output=True, timeout=5,
+            )
+            if p.returncode == 0:
+                return py
+        except Exception:
+            continue
+    return None
+
+_IZTRO_PYTHON = _find_python()
 
 # ── Bridge via subprocess ──────────────────────────────────────
 
@@ -41,11 +73,13 @@ elif op == 'l2s':
 
 
 def _call_iztro(op, *args):
-    """Call iztro via Python312 subprocess. Returns parsed JSON or None on failure."""
+    """Call iztro via subprocess. Returns parsed JSON or None on failure."""
+    if _IZTRO_PYTHON is None:
+        return None
     try:
         p = subprocess.run(
             [_IZTRO_PYTHON, "-c", _IZTRO_BRIDGE, op] + [str(a) for a in args],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True, text=True, timeout=IZTRO_TIMEOUT,
             env={**os.environ, "PYTHONIOENCODING": "utf-8"},
         )
         if p.returncode == 0 and p.stdout.strip():

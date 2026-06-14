@@ -1,24 +1,59 @@
 services:
-  app:
+  api:
     build: .
     container_name: bazi-api
     ports:
-      - "8000:8000"
+      - "${BAZI_API_PORT:-8000}:${BAZI_API_PORT:-8000}"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - BAZI_API_KEY=${BAZI_API_KEY:-}
+      - BAZI_API_PORT=${BAZI_API_PORT:-8000}
       - BAZI_CORS_ORIGINS=${BAZI_CORS_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
+      - BAZI_LOG_LEVEL=${BAZI_LOG_LEVEL:-INFO}
     volumes:
       - ./.anthropic_key:/app/.anthropic_key:ro
       - ./reports:/app/reports
       - bazi_data:/app/data/charts
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:${BAZI_API_PORT:-8000}/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - bazi-net
+
+  mcp:
+    build: .
+    container_name: bazi-mcp
+    command: python -u mcp_server.py --transport sse --port ${BAZI_MCP_PORT:-8001}
+    ports:
+      - "${BAZI_MCP_PORT:-8001}:${BAZI_MCP_PORT:-8001}"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - BAZI_MCP_PORT=${BAZI_MCP_PORT:-8001}
+      - BAZI_LOG_LEVEL=${BAZI_LOG_LEVEL:-INFO}
+    volumes:
+      - ./.anthropic_key:/app/.anthropic_key:ro
+      - bazi_data:/app/data/charts
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - bazi-net
 
 volumes:
   bazi_data:
+
+networks:
+  bazi-net:
+    driver: bridge

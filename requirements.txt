@@ -1,5 +1,5 @@
-fastapi>=0.100.0
-uvicorn[standard]>=0.20.0
-pydantic>=2.0.0
-fpdf2>=2.7.0
-pywebview>=5.0
+fastapi==0.136.3
+uvicorn[standard]==0.48.0
+pydantic==2.13.4
+fpdf2==2.8.7
+pywebview==6.2.1

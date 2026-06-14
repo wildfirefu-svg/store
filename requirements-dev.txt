@@ -1,0 +1,6 @@
+# Dev/test dependencies (CI pipeline, local development)
+-r requirements.txt
+pytest>=8.0.0
+pytest-timeout>=2.0.0
+httpx>=0.27.0          # for FastAPI TestClient async support
+mcp>=1.0.0             # for MCP server integration tests

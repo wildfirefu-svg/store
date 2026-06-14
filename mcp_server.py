@@ -11,17 +11,25 @@ Usage:
     python mcp_server.py --transport sse      # SSE on http://0.0.0.0:8001/sse
 """
 
-import json, os, sys, hashlib, importlib.util, argparse
+import json, os, sys, hashlib, importlib.util, argparse, logging
 from datetime import date
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from config import MCP_PORT, LOG_LEVEL, LOG_FILE
+
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    filename=LOG_FILE or None,
+)
+logger = logging.getLogger('mcp')
+
 from mcp.server.fastmcp import FastMCP
 
 from bazi_calculator import (
-    calculate_four_pillars, calculate_dayun, calculate_shensha,
-    calculate_ziwei, calculate_wuyun_liuqi, calculate_true_solar_time,
-    calculate_liunian, calculate_wuxing_stats, format_to_spec,
+    calculate_true_solar_time, compute_chart, compare_charts,
 )
 
 # ---------------------------------------------------------------------------
@@ -32,41 +40,18 @@ mcp = FastMCP("bazi-server")
 # ---------------------------------------------------------------------------
 
 def _calc_chart(year, month, day, hour=0, minute=0, gender="male", location="Beijing"):
-    true_solar = calculate_true_solar_time(hour, minute, location, month)
-    adj_h, adj_m, adj_minutes, method = true_solar
+    return compute_chart(year, month, day, hour, minute, gender, location)
 
-    four_pillars = calculate_four_pillars(year, month, day, adj_h, adj_m, location)
-    yp = (four_pillars['year']['gan'], four_pillars['year']['zhi'])
-    mp = (four_pillars['month']['gan'], four_pillars['month']['zhi'])
-    dm = four_pillars['day_master']
 
-    dayun_raw = calculate_dayun(yp, mp, gender, year, month, day)
-    shensha = calculate_shensha(four_pillars, dm)
-    ziwei = calculate_ziwei(year, month, day, adj_h, gender)
-    wuyun = calculate_wuyun_liuqi(yp[0], yp[1])
-    wuxing = calculate_wuxing_stats(four_pillars)
-    liunian = calculate_liunian(date.today().year, dm, 3)
-
-    true_solar_info = {
-        'original_time': f'{year:04d}-{month:02d}-{day:02d}T{hour:02d}:{minute:02d}:00',
-        'adjusted_time': f'{year:04d}-{month:02d}-{day:02d}T{adj_h:02d}:{adj_m:02d}:00',
-        'adjustment_minutes': adj_minutes,
-        'method': method,
-    }
-
-    chart = format_to_spec(four_pillars, dayun_raw, shensha, ziwei, wuyun, wuxing, liunian, true_solar_info)
-    chart['birth_info'] = {
-        'year': year, 'month': month, 'day': day,
-        'hour': hour, 'minute': minute,
-        'gender': gender, 'location': location,
-    }
-    return chart
-
+_tool_cache = {}
 
 def _import_tool(module_name, file_path):
+    if module_name in _tool_cache:
+        return _tool_cache[module_name]
     spec = importlib.util.spec_from_file_location(module_name, file_path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    _tool_cache[module_name] = mod
     return mod
 
 
@@ -271,16 +256,17 @@ def bazi_case_search(
         json.dump(chart, f, ensure_ascii=False)
         tmp = f.name
 
-    cr = _get_case_retrieval()
-    if hasattr(cr, 'CaseRetriever'):
-        retriever = cr.CaseRetriever()
-        results = retriever.retrieve(tmp, top_n, mode='auto')
-    else:
-        features = cr.extract_case_features(tmp)
-        results = cr.simple_match(features, top_n)
-
-    os.unlink(tmp)
-    return json.dumps(results, ensure_ascii=False, indent=2)
+    try:
+        cr = _get_case_retrieval()
+        if hasattr(cr, 'CaseRetriever'):
+            retriever = cr.CaseRetriever()
+            results = retriever.retrieve(tmp, top_n, mode='auto')
+        else:
+            features = cr.extract_case_features(tmp)
+            results = cr.simple_match(features, top_n)
+        return json.dumps(results, ensure_ascii=False, indent=2)
+    finally:
+        os.unlink(tmp)
 
 
 @mcp.tool()
@@ -307,6 +293,26 @@ def bazi_kb_stats() -> str:
     kb.close()
     return json.dumps(stats, ensure_ascii=False, indent=2)
 
+
+@mcp.tool()
+def bazi_compare(
+    year1: int, month1: int, day1: int, hour1: int = 0, minute1: int = 0,
+    gender1: str = "male", location1: str = "Beijing",
+    year2: int = 0, month2: int = 0, day2: int = 0, hour2: int = 0, minute2: int = 0,
+    gender2: str = "male", location2: str = "Beijing",
+) -> str:
+    """通用命盘对比 — 多维度比较两个八字命盘。
+
+    对比五行分布、日主关系、纳音关系、神煞交集、大运阶段、紫微斗数等维度。
+    不限合婚用途，可用于合作伙伴、亲子关系等任意两人命盘的对比分析。
+
+    需要提供两个人的完整出生信息。
+    """
+    c1 = _calc_chart(year1, month1, day1, hour1, minute1, gender1, location1)
+    c2 = _calc_chart(year2, month2, day2, hour2, minute2, gender2, location2)
+    result = compare_charts(c1, c2)
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
 # ---------------------------------------------------------------------------
 # entry
 # ---------------------------------------------------------------------------
@@ -318,13 +324,13 @@ if __name__ == '__main__':
         help='Transport protocol (default: stdio)'
     )
     parser.add_argument(
-        '--port', type=int, default=8001,
-        help='SSE listen port (default: 8001)'
+        '--port', type=int, default=MCP_PORT,
+        help=f'SSE listen port (default: {MCP_PORT})'
     )
     args = parser.parse_args()
 
     if args.transport == 'sse':
-        print(f'BaZi MCP Server starting on http://0.0.0.0:{args.port}/sse')
+        logger.info(f'BaZi MCP Server starting on http://0.0.0.0:{args.port}/sse')
         mcp.settings.host = '0.0.0.0'
         mcp.settings.port = args.port
         mcp.run(transport='sse')

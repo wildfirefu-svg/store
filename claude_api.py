@@ -9,9 +9,20 @@ import os
 import sys
 import urllib.request
 import urllib.error
+import logging
+
+from config import MAX_TOKENS, DEFAULT_TEMPERATURE, DEEPSEEK_THINKING, LOG_LEVEL, LOG_FILE, API_RETRIES
+
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    filename=LOG_FILE or None,
+)
+logger = logging.getLogger('claude')
 
 def _load_api_key():
-    """Load API key from env vars or local key files."""
+    """Load API key: env vars > external key file. Returns '' if not configured."""
     for env_name in ("DEEPSEEK_API_KEY", "ANTHROPIC_API_KEY"):
         key = os.environ.get(env_name, "").strip()
         if key:
@@ -34,7 +45,6 @@ def _load_api_key():
     return ""
 
 ANTHROPIC_API_KEY = _load_api_key()
-MAX_TOKENS = 16384
 
 
 def _detect_provider(api_key: str):
@@ -50,10 +60,18 @@ _SYSTEM_PROMPT_CACHE = None
 _GEJUE_CACHE = None
 
 
+def _get_data_dir():
+    """Get directory for data files — works for dev and PyInstaller onedir bundle."""
+    if getattr(sys, 'frozen', False):
+        # sys._MEIPASS = _internal/ dir in onedir mode
+        return getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+    return os.path.dirname(os.path.abspath(__file__))
+
+
 def _load_gejue_from_disk():
     """Load and filter gejue_core.json. Returns gejue string or empty string."""
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    gejue_path = os.path.join(script_dir, 'knowledge-base', 'gejue_core.json')
+    data_dir = _get_data_dir()
+    gejue_path = os.path.join(data_dir, 'knowledge-base', 'gejue_core.json')
     try:
         with open(gejue_path, 'r', encoding='utf-8') as f:
             gejue_data = json.load(f)
@@ -87,8 +105,8 @@ def _load_system_prompt():
     if _SYSTEM_PROMPT_CACHE is not None:
         return _SYSTEM_PROMPT_CACHE
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    prompts_dir = os.path.join(script_dir, 'prompts')
+    data_dir = _get_data_dir()
+    prompts_dir = os.path.join(data_dir, 'prompts')
 
     parts = []
     file_order = ['core_rules.md', 'mode1_general.md', 'mode2_hehun.md',
@@ -121,7 +139,7 @@ def _build_anthropic_payload(system_prompt, chart_json, user_message, model):
         + json.dumps(chart_json, ensure_ascii=False, indent=2)
         + "\n```\n"
     )
-    temperature = float(os.environ.get("ANTHROPIC_TEMPERATURE", "0.3"))
+    temperature = float(os.environ.get("ANTHROPIC_TEMPERATURE", str(DEFAULT_TEMPERATURE)))
     return {
         "model": model,
         "max_tokens": MAX_TOKENS,
@@ -191,7 +209,7 @@ def _build_deepseek_payload(system_prompt, chart_json, user_message, model):
         {"role": "system", "content": system_prompt + chart_block},
         {"role": "user", "content": user_message},
     ]
-    temperature = float(os.environ.get("DEEPSEEK_TEMPERATURE", "0.3"))
+    temperature = float(os.environ.get("DEEPSEEK_TEMPERATURE", str(DEFAULT_TEMPERATURE)))
     payload = {
         "model": model,
         "max_tokens": MAX_TOKENS,
@@ -199,7 +217,7 @@ def _build_deepseek_payload(system_prompt, chart_json, user_message, model):
         "stream": True,
         "temperature": temperature,
     }
-    thinking = os.environ.get("DEEPSEEK_THINKING", "disabled").strip().lower()
+    thinking = os.environ.get("DEEPSEEK_THINKING", DEEPSEEK_THINKING).strip().lower()
     if thinking in ("enabled", "disabled"):
         payload["thinking"] = {"type": thinking}
         if thinking == "enabled":
@@ -261,7 +279,7 @@ def stream_chat(chart_json: dict, user_message: str, conversation_history: list 
         }
         parser = _parse_deepseek_event
 
-    for attempt in range(2):
+    for attempt in range(API_RETRIES):
         try:
             req = urllib.request.Request(
                 url,
@@ -292,17 +310,21 @@ def stream_chat(chart_json: dict, user_message: str, conversation_history: list 
                                 continue
             return
         except urllib.error.HTTPError as e:
-            body = e.read().decode("utf-8", errors="replace")[:300]
+            body = e.read().decode("utf-8", errors="replace")[:1000]
             if e.code == 429 and attempt == 0:
                 import time
+                logger.warning(f"API rate limited (429), retrying after 2s...")
                 time.sleep(2)
                 continue
+            logger.error(f"API HTTP {e.code}: {body}")
             yield {"type": "error", "text": f"API 错误 {e.code}: {body}"}
             return
         except (OSError, Exception) as e:
             if attempt == 0:
                 import time
+                logger.warning(f"Connection error, retrying: {e}")
                 time.sleep(1)
                 continue
-            yield {"type": "error", "text": f"连接错误: {str(e)[:300]}"}
+            logger.error(f"Connection failed after retries: {e}")
+            yield {"type": "error", "text": f"连接错误: {str(e)[:1000]}"}
             return

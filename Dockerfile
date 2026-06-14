@@ -36,10 +36,13 @@ WORKDIR /app
 # Copy application (excluding items in .dockerignore)
 COPY . .
 
-# Build knowledge base (SQLite FTS5) — non-fatal if it fails
+# Build knowledge base (SQLite FTS5) — must succeed for full functionality
 RUN python -c "import sys; sys.path.insert(0, 'knowledge-base'); \
     from bazi_kb import BaziKnowledgeBase; \
-    kb = BaziKnowledgeBase(); kb.build(); kb.close()" 2>/dev/null || true
+    kb = BaziKnowledgeBase(); \
+    kb.build(); \
+    print(f'KB built: {kb.stats()}'); \
+    kb.close()"
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/api/health || exit 1

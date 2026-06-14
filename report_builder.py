@@ -205,6 +205,191 @@ def render_judgments(judgments):
     return "\n".join(lines)
 
 
+# ============================================================
+# 1b. LIUNIAN DETAILED REPORT RENDERERS (mode 7)
+# ============================================================
+
+def _stars(n):
+    """Convert 1-5 score to star string."""
+    n = max(1, min(5, int(n)))
+    return '★' * n + '☆' * (5 - n)
+
+
+def render_liunian_overview(overview, liunian_info, dayun_info):
+    """Render 年运总览 section."""
+    lines = []
+    lines.append('## 一、年运总览\n')
+
+    # Liunian stem-branch interpretation
+    lg = liunian_info.get('ganzhi', '')
+    ls = liunian_info.get('shishen', '')
+    dy = dayun_info or {}
+    dy_ganzhi = f'{dy.get("gan","")}{dy.get("zhi","")}' if dy else ''
+    lines.append(f'流年**{lg}**，十神为**{ls}**。')
+    if dy_ganzhi:
+        lines.append(f'当前正行**{dy_ganzhi}**大运（{dy.get("start_age","?")}-{dy.get("end_age","?")}岁）。')
+    lines.append('')
+
+    # Star ratings table
+    avg = overview.get('avg_scores', {})
+    lines.append('| 维度 | 评分 |')
+    lines.append('|------|------|')
+    for dim in ['career', 'wealth', 'love', 'health']:
+        score = avg.get(dim, 0)
+        label = {'career': '事业', 'wealth': '财运', 'love': '感情', 'health': '健康'}[dim]
+        lines.append(f'| {label} | {_stars(score)} |')
+    total = sum(avg.values()) / max(len(avg), 1)
+    lines.append(f'| **综合** | **{_stars(round(total))}** |')
+    lines.append('')
+
+    # Key themes
+    themes = overview.get('key_themes', [])
+    if themes:
+        lines.append('**年度主题：** ' + '、'.join(themes))
+        lines.append('')
+    return '\n'.join(lines)
+
+
+def render_liunian_monthly_table(months):
+    """Render 逐月详解 12-month detailed table."""
+    lines = []
+    lines.append('## 二、逐月详解\n')
+    lines.append('| 月 | 干支 | 十神 | 评分 | 事业 | 财运 | 感情 | 健康 | 神煞 | 宜 | 忌 |')
+    lines.append('|------|------|------|------|------|------|------|------|------|----|----|')
+    for m in months:
+        sz = _stars(m.get('overall_score', 3))
+        shensha = ','.join(m.get('shensha', [])[:2]) or '—'
+        yi = ','.join(m.get('yi', [])[:2]) or '—'
+        ji = ','.join(m.get('ji', [])[:2]) or '—'
+        lines.append(
+            f'| {m.get("month","")} | {m.get("ganzhi","")} | {m.get("shishen","")} | '
+            f'{sz} | {_stars(m.get("career",{}).get("score",3))} | '
+            f'{_stars(m.get("wealth",{}).get("score",3))} | '
+            f'{_stars(m.get("love",{}).get("score",3))} | '
+            f'{_stars(m.get("health",{}).get("score",3))} | '
+            f'{shensha} | {yi} | {ji} |')
+    lines.append('')
+    return '\n'.join(lines)
+
+
+def render_liunian_quarterly(months, overview):
+    """Render 季度运势 section."""
+    lines = []
+    lines.append('## 三、季度运势\n')
+    q_labels = [('春', 1, 3), ('夏', 4, 6), ('秋', 7, 9), ('冬', 10, 12)]
+    best_month = overview.get('best_month', {}).get('month', '')
+    worst_month = overview.get('worst_month', {}).get('month', '')
+
+    lines.append('| 季度 | 月份 | 平均评分 | 亮点月 | 需注意 |')
+    lines.append('|------|------|---------|--------|--------|')
+    for qname, start, end in q_labels:
+        qm = [m for m in months if start <= m.get('month', 0) <= end]
+        if not qm:
+            continue
+        avg = sum(m.get('overall_score', 50) for m in qm) / len(qm)
+        highlights = [str(m['month']) for m in qm if str(m.get('month','')) == str(best_month)]
+        cautions = [str(m['month']) for m in qm if str(m.get('month','')) == str(worst_month)]
+        lines.append(f'| {qname} | {start}-{end}月 | {_stars(round(avg))} | '
+                     f'{",".join(highlights) if highlights else "—"}月 | '
+                     f'{",".join(cautions) if cautions else "—"}月 |')
+    lines.append('')
+    return '\n'.join(lines)
+
+
+def render_liunian_best_months(months, overview):
+    """Render 最佳月份 section."""
+    lines = []
+    lines.append('## 四、最佳月份详解\n')
+    good = overview.get('good_months', [])[:3]
+    if not good:
+        # Fallback: top 3 by overall_score
+        sorted_months = sorted(months, key=lambda m: m.get('overall_score', 0), reverse=True)
+        good = [m['month'] for m in sorted_months[:3]]
+    for mn in good:
+        m = next((x for x in months if x.get('month') == mn), None)
+        if m:
+            interactions = '、'.join(m.get('interactions', [])) or '无特殊冲合'
+            lines.append(f'1. **{mn}月（{m.get("ganzhi","")}，{m.get("shishen","")}）**')
+            lines.append(f'   综合评分 {m.get("overall_score","")}，{interactions}。')
+            if m.get('career', {}).get('notes'):
+                lines.append(f'   事业：{m["career"]["notes"]}')
+            if m.get('wealth', {}).get('notes'):
+                lines.append(f'   财运：{m["wealth"]["notes"]}')
+            lines.append('')
+    return '\n'.join(lines)
+
+
+def render_liunian_caution_months(months, overview):
+    """Render 高风险月份 section."""
+    lines = []
+    lines.append('## 五、高风险月份与化解\n')
+    caution = overview.get('caution_months', [])[:3]
+    if not caution:
+        sorted_months = sorted(months, key=lambda m: m.get('overall_score', 100))
+        caution = [m['month'] for m in sorted_months[:2]]
+    for mn in caution:
+        m = next((x for x in months if x.get('month') == mn), None)
+        if m:
+            risks = '、'.join(m.get('interactions', [])) or '评分偏低'
+            lines.append(f'1. **{mn}月（{m.get("ganzhi","")}，{m.get("shishen","")}）**')
+            lines.append(f'   风险：{risks}。')
+            lines.append(f'   化解：保持低调，避免重大决策。可参考宜忌调整日常安排。')
+            lines.append('')
+    return '\n'.join(lines)
+
+
+def render_liunian_recommendations(recommendations):
+    """Render 年度建言 section."""
+    lines = []
+    lines.append('## 六、年度建言\n')
+    if isinstance(recommendations, list):
+        for i, r in enumerate(recommendations):
+            if isinstance(r, dict):
+                lines.append(f'{i+1}. **【{r.get("priority","建议")}】** {r.get("text","")}')
+            else:
+                lines.append(f'{i+1}. {str(r)}')
+    else:
+        lines.append(str(recommendations))
+    lines.append('')
+    return '\n'.join(lines)
+
+
+def build_mode7_report(chart, conclusions):
+    """Build Mode 7 (流年详批) report.
+
+    Expects conclusions to have:
+        - overview: from generate_year_calendar() output
+        - months: list of 12 month dicts
+        - liunian_info: {ganzhi, shishen}
+        - dayun_info: current dayun pillar dict
+        - recommendations: list of advice items
+    """
+    fp = chart['four_pillars']
+    dm = chart.get('day_master', {})
+    bi = chart.get('birth_info', {})
+    dm_gan = dm.get('gan', '') if isinstance(dm, dict) else str(dm)
+
+    overview = conclusions.get('overview', {})
+    months = conclusions.get('months', [])
+    liunian_info = conclusions.get('liunian_info', {})
+    dayun_info = conclusions.get('dayun_info') or conclusions.get('current_dayun', {})
+    recommendations = conclusions.get('recommendations', [])
+    target_year = conclusions.get('target_year', bi.get('year', date.today().year))
+
+    bdate = f'{bi.get("year","")}-{bi.get("month",""):02d}-{bi.get("day",""):02d}' if bi.get('year') else '未知'
+
+    s = []
+    s.append(f'# 【{target_year}年 流年详批报告】\n')
+    s.append(f'命主：{bdate} 出生 | 日主{dm_gan}（{dm.get("wuxing","")}）\n')
+    s.append(render_liunian_overview(overview, liunian_info, dayun_info))
+    s.append(render_liunian_monthly_table(months))
+    s.append(render_liunian_quarterly(months, overview))
+    s.append(render_liunian_best_months(months, overview))
+    s.append(render_liunian_caution_months(months, overview))
+    s.append(render_liunian_recommendations(recommendations))
+    return '\n'.join(s)
+
+
 def build_mode1_report(chart, conclusions):
     """Build Mode 1 (子平真诠) report."""
     fp = chart['four_pillars']
@@ -580,6 +765,7 @@ REPORT_BUILDERS = {
     4: build_mode4_report,
     5: build_mode5_report,
     6: build_mode6_report,
+    7: build_mode7_report,
 }
 
 

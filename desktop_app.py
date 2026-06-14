@@ -8,6 +8,17 @@ import sys
 import os
 import threading
 import time
+import logging
+
+from config import LOG_LEVEL, LOG_FILE, API_PORT
+
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    filename=LOG_FILE or None,
+)
+logger = logging.getLogger('desktop')
 
 
 def _get_base_path():
@@ -25,7 +36,7 @@ sys.path.insert(0, BASE_PATH)
 if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
     import shutil
     meipass = sys._MEIPASS
-    for subdir in ('templates', 'static', 'knowledge-base'):
+    for subdir in ('templates', 'static', 'knowledge-base', 'prompts'):
         src = os.path.join(meipass, subdir)
         dst = os.path.join(BASE_PATH, subdir)
         if os.path.exists(src) and not os.path.exists(dst):
@@ -36,7 +47,7 @@ import uvicorn
 from api_server import app
 
 HOST = "127.0.0.1"
-PORT = 8000
+PORT = API_PORT
 
 
 def start_server():
@@ -51,13 +62,17 @@ def main():
 
     # Wait for server to be ready
     url = f"http://{HOST}:{PORT}"
+    server_ready = False
     for _ in range(30):
         try:
             import urllib.request
             urllib.request.urlopen(url + "/api/health", timeout=1)
+            server_ready = True
             break
         except Exception:
             time.sleep(0.3)
+    if not server_ready:
+        logger.error(f"Server failed to start on {url} after 9 seconds")
 
     # Create desktop window
     window = webview.create_window(

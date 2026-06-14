@@ -14,6 +14,7 @@ __pycache__/
 # Dev tools & configs
 tests/
 quality/
+.github/
 .superpowers/
 .claude/
 .codex/

@@ -9,54 +9,81 @@ Usage:
     Open http://localhost:8000/docs for Swagger UI.
 """
 
-import json, os, sys, hashlib, importlib.util
+import json, os, sys, hashlib, importlib.util, threading, logging
 from datetime import date
 from collections import defaultdict
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
-import asyncio, time
-from pydantic import BaseModel, Field
+from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse, Response
+import asyncio, time, calendar
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
+from contextlib import asynccontextmanager
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'knowledge-base'))
 
 from bazi_calculator import (
-    calculate_four_pillars, calculate_dayun, calculate_shensha,
-    calculate_ziwei, calculate_wuyun_liuqi, calculate_true_solar_time,
-    calculate_liunian, calculate_wuxing_stats, calculate_shishen_stats, format_to_spec,
-    GAN_WUXING, GAN_YINYANG, ZHI_WUXING, NAYIN, get_shishen,
+    calculate_true_solar_time, compute_chart,
 )
 from lunar_calendar import lunar_to_solar, solar_to_lunar as _s2l
 from auto_analyzer import auto_analyze as _auto_analyze
 
 from claude_api import stream_chat as _stream_claude, ANTHROPIC_API_KEY
 import data_store
+from config import (
+    API_PORT, CORS_ORIGIN_LIST, CORS_ORIGINS,
+    RATE_LIMITS, RATE_LIMIT_EXEMPT, RATE_LIMIT_CLEAN_INTERVAL,
+    CHART_CACHE_SIZE, MAX_BODY_SIZE, LOG_LEVEL, LOG_FILE,
+)
+
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    filename=LOG_FILE or None,
+)
+logger = logging.getLogger('api')
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup and shutdown lifecycle."""
+    logger.info(f'BaZi Analysis API starting')
+    yield
+    # Shutdown
+    logger.info("Shutting down...")
+    chart_cache._cache.clear()
+    with _pdf_jobs_lock:
+        for job in list(_pdf_jobs.values()):
+            path = job.get('pdf_path', '')
+            if path and os.path.isfile(path):
+                try: os.unlink(path)
+                except Exception: pass
+        _pdf_jobs.clear()
+    logger.info("Shutdown complete.")
+
 
 app = FastAPI(
     title="BaZi Analysis API",
     description="八字命理分析 REST API — 排盘、择日、流年、取名、案例检索、知识库搜索",
     version="1.0.0",
+    lifespan=lifespan,
 )
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGIN_LIST if CORS_ORIGIN_LIST else ["*"],
+                    allow_methods=["*"], allow_headers=["*"])
 
 # ============================================================
 # RATE LIMITER — per-IP sliding window
 # ============================================================
 
-# Limits: (max_requests, window_seconds)
-_RATE_LIMITS = {
-    "default": (120, 60),        # 120 req/min (normal API)
-    "/api/chat/stream": (30, 60),# 30 req/min (AI chat)
-    "/api/analyze/pdf": (10, 60),# 10 req/min (PDF generation)
-}
-# Paths exempt from rate limiting (static files, health)
-_RATE_LIMIT_EXEMPT = {"/static", "/api/health", "/", "/test", "/tools", "/favicon.ico"}
+# Limits loaded from config.py (env-overridable)
+_RATE_LIMITS = RATE_LIMITS
+_RATE_LIMIT_EXEMPT = RATE_LIMIT_EXEMPT
 _hits = defaultdict(list)  # ip -> [timestamps]
-_CLEAN_INTERVAL = 300  # clean stale entries every 5 min
+_hits_lock = threading.Lock()
+_CLEAN_INTERVAL = RATE_LIMIT_CLEAN_INTERVAL
 _last_clean = time.time()
 
 
@@ -65,13 +92,14 @@ def _clean_old_hits(now):
     if now - _last_clean < _CLEAN_INTERVAL:
         return
     _last_clean = now
-    stale = []
-    for ip, timestamps in _hits.items():
-        timestamps[:] = [t for t in timestamps if now - t < 120]
-        if not timestamps:
-            stale.append(ip)
-    for ip in stale:
-        del _hits[ip]
+    with _hits_lock:
+        stale = []
+        for ip, timestamps in _hits.items():
+            timestamps[:] = [t for t in timestamps if now - t < 120]
+            if not timestamps:
+                stale.append(ip)
+        for ip in stale:
+            del _hits[ip]
 
 
 @app.middleware("http")
@@ -95,18 +123,21 @@ async def rate_limit_middleware(request: Request, call_next):
 
     # Client IP
     ip = request.client.host if request.client else "unknown"
-    timestamps = _hits[ip]
-    timestamps[:] = [t for t in timestamps if now - t < window]
+    with _hits_lock:
+        timestamps = _hits[ip]
+        timestamps[:] = [t for t in timestamps if now - t < window]
 
-    if len(timestamps) >= max_req:
-        retry_after = int(window - (now - timestamps[0]))
-        return JSONResponse(
-            status_code=429,
-            content={"detail": f"请求过于频繁，请 {retry_after} 秒后重试"},
-            headers={"Retry-After": str(retry_after), "X-RateLimit-Limit": str(max_req)},
-        )
+        if len(timestamps) >= max_req:
+            retry_after = int(window - (now - timestamps[0]))
+            _inc_metric('rate_limit_hits')
+            return JSONResponse(
+                status_code=429,
+                content={"detail": f"请求过于频繁，请 {retry_after} 秒后重试"},
+                headers={"Retry-After": str(retry_after), "X-RateLimit-Limit": str(max_req)},
+            )
 
-    timestamps.append(now)
+        timestamps.append(now)
+    _inc_metric('requests_total')
     response = await call_next(request)
     return response
 
@@ -161,6 +192,26 @@ async def auth_middleware(request: Request, call_next):
     )
 
 
+# ---- Request body size limit (DoS protection) ----
+@app.middleware("http")
+async def body_size_limit_middleware(request: Request, call_next):
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            length = int(content_length)
+        except ValueError:
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Invalid Content-Length header"},
+            )
+        if length > MAX_BODY_SIZE:
+            return JSONResponse(
+                status_code=413,
+                content={"detail": f"请求体过大，最大允许 {MAX_BODY_SIZE // 1024} KB"},
+            )
+    return await call_next(request)
+
+
 # Static files and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -178,6 +229,18 @@ class BirthInfo(BaseModel):
     location: str = Field("Beijing")
     use_solar_time: bool = Field(False, description="If True, birth.hour/minute already adjusted to true solar time, skip server adjustment")
 
+    @field_validator('day')
+    @classmethod
+    def validate_day(cls, v, info):
+        """Reject impossible dates like February 30."""
+        month = info.data.get('month')
+        year = info.data.get('year')
+        if month and year:
+            max_day = calendar.monthrange(year, month)[1]
+            if v > max_day:
+                raise ValueError(f'{year}年{month}月最多{max_day}天，不能是{v}日')
+        return v
+
 class ChartCache:
     def __init__(self, max_size=128):
         self._cache = {}
@@ -192,57 +255,40 @@ class ChartCache:
         if key in self._cache:
             return self._cache[key], key
 
-        if birth.use_solar_time:
-            adj_h, adj_m, adj_minutes, method = birth.hour, birth.minute, 0, 'user_adjusted'
-        else:
-            true_solar = calculate_true_solar_time(birth.hour, birth.minute, birth.location, birth.month)
-            adj_h, adj_m, adj_minutes, method = true_solar
-        true_solar_info = {
-            'original_time': f'{birth.year:04d}-{birth.month:02d}-{birth.day:02d}T{birth.hour:02d}:{birth.minute:02d}:00',
-            'adjusted_time': f'{birth.year:04d}-{birth.month:02d}-{birth.day:02d}T{adj_h:02d}:{adj_m:02d}:00',
-            'adjustment_minutes': adj_minutes,
-            'method': method,
-        }
-
-        four_pillars = calculate_four_pillars(birth.year, birth.month, birth.day, adj_h, adj_m, birth.location)
-        yp = (four_pillars['year']['gan'], four_pillars['year']['zhi'])
-        mp = (four_pillars['month']['gan'], four_pillars['month']['zhi'])
-        dm = four_pillars['day_master']
-
-        dayun_raw = calculate_dayun(yp, mp, birth.gender, birth.year, birth.month, birth.day)
-        shensha = calculate_shensha(four_pillars, dm)
-        ziwei = calculate_ziwei(birth.year, birth.month, birth.day, adj_h, birth.gender)
-        wuyun = calculate_wuyun_liuqi(yp[0], yp[1])
-        wuxing = calculate_wuxing_stats(four_pillars)
-        shishen = calculate_shishen_stats(four_pillars)
-        liunian = calculate_liunian(date.today().year, dm, 3)
-
-        chart = format_to_spec(four_pillars, dayun_raw, shensha, ziwei, wuyun, wuxing, shishen, liunian, true_solar_info)
+        chart = compute_chart(
+            birth.year, birth.month, birth.day,
+            birth.hour, birth.minute, birth.gender, birth.location,
+            use_solar_time=birth.use_solar_time,
+        )
         chart['chart_id'] = key
-        chart['birth_info'] = {
-            'year': birth.year, 'month': birth.month, 'day': birth.day,
-            'hour': birth.hour, 'minute': birth.minute,
-            'gender': birth.gender, 'location': birth.location,
-        }
 
         if len(self._cache) >= self._max_size:
             self._cache.pop(next(iter(self._cache)))
         self._cache[key] = chart
         return chart, key
 
-chart_cache = ChartCache()
+chart_cache = ChartCache(max_size=CHART_CACHE_SIZE)
 
 # ============================================================
 # HELPERS: Import knowledge-base modules (hyphenated dirs)
 # ============================================================
 
+_tool_cache = {}
+
 def _import_tool(module_name, file_path):
-    kb_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'knowledge-base')
-    if kb_dir not in sys.path:
-        sys.path.insert(0, kb_dir)
+    """Cached lazy import for any module. Adds file's parent dir to sys.path."""
+    if module_name in _tool_cache:
+        return _tool_cache[module_name]
+    # Ensure the module's parent directory is on sys.path for relative imports
+    parent_dir = os.path.dirname(os.path.abspath(file_path))
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
     spec = importlib.util.spec_from_file_location(module_name, file_path)
+    if spec is None:
+        raise ImportError(f"Cannot find module {module_name} at {file_path}")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
+    _tool_cache[module_name] = mod
     return mod
 
 def _get_zeri():
@@ -290,10 +336,60 @@ def frontend_tools():
 def health():
     return {"status": "ok", "version": "1.0.0"}
 
+
+# ============================================================
+# PROMETHEUS METRICS
+# ============================================================
+
+_metrics = {
+    'requests_total': 0,
+    'rate_limit_hits': 0,
+    'charts_created': 0,
+    'charts_cached': 0,
+    'pdf_jobs_total': 0,
+    'pdf_jobs_active': 0,
+}
+_metrics_lock = threading.Lock()
+
+def _inc_metric(name, delta=1):
+    with _metrics_lock:
+        _metrics[name] = _metrics.get(name, 0) + delta
+
+
+@app.get("/api/metrics")
+def metrics():
+    """Prometheus-compatible metrics endpoint."""
+    with _metrics_lock:
+        req_total = _metrics['requests_total']
+        rl_hits = _metrics['rate_limit_hits']
+        charts = _metrics['charts_created']
+        cached = len(chart_cache._cache)
+        pdf_total = _metrics['pdf_jobs_total']
+        pdf_active = len(_pdf_jobs)
+    lines = [
+        '# HELP bazi_requests_total Total HTTP requests served',
+        '# TYPE bazi_requests_total counter',
+        f'bazi_requests_total {req_total}',
+        '# HELP bazi_rate_limit_hits_total Total rate limit rejections',
+        '# TYPE bazi_rate_limit_hits_total counter',
+        f'bazi_rate_limit_hits_total {rl_hits}',
+        '# HELP bazi_charts_created_total Total charts created',
+        '# TYPE bazi_charts_created_total counter',
+        f'bazi_charts_created_total {charts}',
+        '# HELP bazi_charts_cached Current charts in memory cache',
+        '# TYPE bazi_charts_cached gauge',
+        f'bazi_charts_cached {cached}',
+        '# HELP bazi_pdf_jobs_active Current active PDF generation jobs',
+        '# TYPE bazi_pdf_jobs_active gauge',
+        f'bazi_pdf_jobs_active {pdf_active}',
+    ]
+    return Response('\n'.join(lines) + '\n', media_type='text/plain')
+
 @app.post("/api/chart")
 def calculate_chart(birth: BirthInfo):
     """排盘 — calculate full BaZi chart, persist to local DB"""
     chart, chart_id = chart_cache.get_or_create(birth)
+    _inc_metric('charts_created')
     # Auto-save to local database for persistence
     try:
         name = birth.location or '命主'
@@ -305,8 +401,8 @@ def calculate_chart(birth: BirthInfo):
                         'gender': birth.gender, 'location': birth.location},
             chart_data=chart
         )
-    except Exception:
-        pass  # don't fail the chart creation if DB save fails
+    except Exception as e:
+        logger.warning(f"Failed to persist chart {chart_id}: {e}", exc_info=True)
     return chart
 
 
@@ -354,6 +450,8 @@ def api_save_chart(req: SaveChartRequest):
     """Save/update chart in local database (for frontend sync)."""
     try:
         data_store.save_chart(req.chart_id, req.name, req.birth_info, req.chart_data)
+        # Invalidate memory cache so next read gets updated data
+        chart_cache._cache.pop(req.chart_id, None)
         return {"status": "ok"}
     except Exception as e:
         raise HTTPException(500, str(e))
@@ -537,20 +635,21 @@ def tool_case_search(req: CaseSearchRequest):
     with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:
         json.dump(chart, f, ensure_ascii=False)
         tmp = f.name
-    top_n = req.top_n
-    cr = _get_case_retrieval()
-    retriever = cr.CaseRetriever() if hasattr(cr, 'CaseRetriever') else None
-    if retriever:
-        results = retriever.retrieve(tmp, top_n, mode='auto')
-    else:
-        results = cr.simple_match(cr.extract_case_features(tmp), top_n)
-
-    os.unlink(tmp)
-    return results
+    try:
+        top_n = req.top_n
+        cr = _get_case_retrieval()
+        retriever = cr.CaseRetriever() if hasattr(cr, 'CaseRetriever') else None
+        if retriever:
+            results = retriever.retrieve(tmp, top_n, mode='auto')
+        else:
+            results = cr.simple_match(cr.extract_case_features(tmp), top_n)
+        return results
+    finally:
+        os.unlink(tmp)
 
 class AnalyzeRequest(BaseModel):
     chart_id: str
-    mode: int = Field(1, ge=1, le=6)
+    mode: int = Field(1, ge=1, le=7)
     conclusions: dict = None  # Agent-generated analysis conclusions
     template: str = Field("dark", pattern="^(dark|modern|scroll|night)$")
 
@@ -577,63 +676,137 @@ def analyze_report(req: AnalyzeRequest):
     with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as f:
         report_tmp = f.name
 
-    import importlib.util
-    spec = importlib.util.spec_from_file_location('report_builder', 'report_builder.py')
-    rb = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(rb)
-    rb.build_report(chart_tmp, req.mode, concl_tmp, report_tmp)
+    try:
+        rb = _import_tool('report_builder', 'report_builder.py')
+        rb.build_report(chart_tmp, req.mode, concl_tmp, report_tmp)
 
-    with open(report_tmp, 'r', encoding='utf-8') as f:
-        report_md = f.read()
+        with open(report_tmp, 'r', encoding='utf-8') as f:
+            report_md = f.read()
 
-    os.unlink(chart_tmp); os.unlink(concl_tmp); os.unlink(report_tmp)
-    return {'mode': req.mode, 'report': report_md}
+        return {'mode': req.mode, 'report': report_md}
+    finally:
+        os.unlink(chart_tmp); os.unlink(concl_tmp); os.unlink(report_tmp)
+
+
+# ============================================================
+# ASYNC PDF JOB SYSTEM
+# ============================================================
+
+_pdf_jobs = {}           # job_id -> {status, pdf_path, filename, error, created_at}
+_pdf_jobs_lock = threading.Lock()
+_PDF_JOB_TTL = 3600      # auto-clean jobs older than 1 hour
+
+
+def _clean_old_pdf_jobs(now):
+    with _pdf_jobs_lock:
+        stale = [jid for jid, j in _pdf_jobs.items()
+                 if now - j.get('created_at', now) > _PDF_JOB_TTL]
+        for jid in stale:
+            path = _pdf_jobs[jid].get('pdf_path', '')
+            if path and os.path.isfile(path):
+                try: os.unlink(path)
+                except: pass
+            del _pdf_jobs[jid]
+
+
+def _run_pdf_job(job_id, chart, conclusions, mode, template):
+    """Run PDF generation in a thread (blocking I/O + subprocess)."""
+    import tempfile, subprocess
+    chart_tmp = concl_tmp = md_tmp = pdf_tmp = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:
+            json.dump(chart, f, ensure_ascii=False)
+            chart_tmp = f.name
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:
+            json.dump(conclusions, f, ensure_ascii=False)
+            concl_tmp = f.name
+        md_tmp = os.path.join(tempfile.gettempdir(), f'report_{job_id}.md')
+        pdf_tmp = os.path.join(tempfile.gettempdir(), f'report_{job_id}.pdf')
+
+        rb = _import_tool('report_builder', 'report_builder.py')
+        rb.build_report(chart_tmp, mode, concl_tmp, md_tmp)
+
+        cmd = [sys.executable, "report_to_pdf.py", md_tmp, "-o", pdf_tmp, "-t", template or 'dark']
+        ret = subprocess.run(cmd, capture_output=True, text=True)
+        if ret.returncode != 0:
+            raise RuntimeError(ret.stderr[-500:])
+
+        with _pdf_jobs_lock:
+            _pdf_jobs[job_id] = {
+                'status': 'done',
+                'pdf_path': pdf_tmp,
+                'filename': f'report_{job_id}.pdf',
+                'created_at': _pdf_jobs.get(job_id, {}).get('created_at', time.time()),
+            }
+    except Exception as e:
+        with _pdf_jobs_lock:
+            _pdf_jobs[job_id] = {
+                'status': 'error',
+                'error': str(e)[:500],
+                'created_at': _pdf_jobs.get(job_id, {}).get('created_at', time.time()),
+            }
+        for fp in [pdf_tmp]:
+            if fp and os.path.isfile(fp):
+                try: os.unlink(fp)
+                except: pass
+    finally:
+        for fp in [chart_tmp, concl_tmp, md_tmp]:
+            if fp and os.path.isfile(fp):
+                try: os.unlink(fp)
+                except: pass
+
 
 @app.post("/api/analyze/pdf")
-def analyze_pdf(req: AnalyzeRequest):
-    """生成PDF报告 — 先渲染Markdown再转PDF"""
+async def analyze_pdf_async(req: AnalyzeRequest):
+    """生成PDF报告（异步）— 立即返回 job_id，不阻塞请求"""
     chart = _get_chart(req.chart_id) if req.chart_id else None
     if not chart:
         raise HTTPException(400, "Provide valid chart_id")
 
-    import tempfile
-    # Write chart
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:
-        json.dump(chart, f, ensure_ascii=False)
-        chart_tmp = f.name
     conclusions = req.conclusions or _auto_analyze(chart)
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:
-        json.dump(conclusions, f, ensure_ascii=False)
-        concl_tmp = f.name
-    md_tmp = os.path.join(tempfile.gettempdir(), f'report_{req.chart_id}.md')
-    pdf_tmp = os.path.join(tempfile.gettempdir(), f'report_{req.chart_id}.pdf')
+    job_id = hashlib.md5(f"{req.chart_id}{time.time()}".encode()).hexdigest()[:12]
 
-    # Render markdown
-    import importlib.util
-    spec = importlib.util.spec_from_file_location('report_builder', 'report_builder.py')
-    rb = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(rb)
-    rb.build_report(chart_tmp, req.mode, concl_tmp, md_tmp)
+    now = time.time()
+    _clean_old_pdf_jobs(now)
+    with _pdf_jobs_lock:
+        _pdf_jobs[job_id] = {'status': 'processing', 'created_at': now}
 
-    # Render PDF (safe: template already validated by Pydantic pattern)
-    import subprocess
-    template = req.template or 'dark'
-    cmd = [sys.executable, "report_to_pdf.py", md_tmp, "-o", pdf_tmp, "-t", template]
-    ret = subprocess.run(cmd, capture_output=True, text=True)
-    if ret.returncode != 0:
-        raise HTTPException(500, f"PDF generation failed: {ret.stderr[-500:]}")
+    loop = asyncio.get_event_loop()
+    _inc_metric('pdf_jobs_total')
+    loop.run_in_executor(None, _run_pdf_job, job_id, chart, conclusions, req.mode, req.template)
 
-    with open(pdf_tmp, 'rb') as f:
-        pdf_bytes = f.read()
+    return {'job_id': job_id, 'status': 'processing',
+            'check_url': f'/api/jobs/{job_id}'}
 
-    # Cleanup
-    for f in [chart_tmp, concl_tmp, md_tmp, pdf_tmp]:
-        try: os.unlink(f)
-        except: pass
 
-    from fastapi.responses import Response
-    return Response(content=pdf_bytes, media_type='application/pdf',
-                    headers={'Content-Disposition': f'attachment; filename=report_{req.chart_id}.pdf'})
+@app.get("/api/jobs/{job_id}")
+def job_status(job_id: str):
+    """查询 PDF 生成任务状态"""
+    with _pdf_jobs_lock:
+        job = _pdf_jobs.get(job_id)
+    if not job:
+        raise HTTPException(404, "Job not found or expired")
+    return {'job_id': job_id, 'status': job['status'],
+            'error': job.get('error'),
+            'download_url': f'/api/jobs/{job_id}/download' if job['status'] == 'done' else None}
+
+
+@app.get("/api/jobs/{job_id}/download")
+def job_download(job_id: str):
+    """下载已完成的 PDF 报告"""
+    with _pdf_jobs_lock:
+        job = _pdf_jobs.get(job_id)
+    if not job:
+        raise HTTPException(404, "Job not found or expired")
+    if job['status'] != 'done':
+        raise HTTPException(409, f"Job not ready (status: {job['status']})")
+    if not job.get('pdf_path') or not os.path.isfile(job['pdf_path']):
+        raise HTTPException(500, "PDF file missing")
+
+    from fastapi.responses import FileResponse
+    return FileResponse(job['pdf_path'], media_type='application/pdf',
+                        filename=job.get('filename', f'report_{job_id}.pdf'))
+
 
 class HehunRequest(BaseModel):
     chart_id1: str
@@ -652,19 +825,33 @@ def tool_hehun(req: HehunRequest):
     import tempfile
     t1 = os.path.join(tempfile.gettempdir(), f'hehun_c1_{req.chart_id1}.json')
     t2 = os.path.join(tempfile.gettempdir(), f'hehun_c2_{req.chart_id2}.json')
-    json.dump(c1, open(t1, 'w', encoding='utf-8'), ensure_ascii=False)
-    json.dump(c2, open(t2, 'w', encoding='utf-8'), ensure_ascii=False)
+    try:
+        json.dump(c1, open(t1, 'w', encoding='utf-8'), ensure_ascii=False)
+        json.dump(c2, open(t2, 'w', encoding='utf-8'), ensure_ascii=False)
 
-    import importlib.util
-    spec = importlib.util.spec_from_file_location('hehun', 'knowledge-base/hehun.py')
-    hh = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(hh)
-    result = hh.hehun_analysis(t1, t2, req.gender1, req.gender2)
+        hh = _import_tool('hehun', 'knowledge-base/hehun.py')
+        result = hh.hehun_analysis(t1, t2, req.gender1, req.gender2)
+        return result
+    finally:
+        for f in [t1, t2]:
+            try: os.unlink(f)
+            except: pass
 
-    for f in [t1, t2]:
-        try: os.unlink(f)
-        except: pass
-    return result
+
+class CompareRequest(BaseModel):
+    chart_id1: str
+    chart_id2: str
+
+@app.post("/api/tools/compare")
+def tool_compare(req: CompareRequest):
+    """通用命盘对比 — 多维度比较两个八字命盘（不限合婚）"""
+    c1 = _get_chart(req.chart_id1)
+    c2 = _get_chart(req.chart_id2)
+    if not c1 or not c2:
+        raise HTTPException(400, "Provide two valid chart_ids")
+
+    from bazi_calculator import compare_charts
+    return compare_charts(c1, c2)
 
 
 def _sse_event(event_type, data):
@@ -672,20 +859,28 @@ def _sse_event(event_type, data):
     return f"event: {event_type}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
+_chart_fetch_lock = threading.Lock()
+
 def _get_chart(chart_id):
     """Get chart from memory cache, falling back to data_store DB."""
     chart = chart_cache._cache.get(chart_id)
     if chart:
         return chart
     # Restore from persistent DB (survives server restart)
-    try:
-        db_data = data_store.get_chart(chart_id)
-        if db_data and db_data.get('chart_data'):
-            chart = db_data['chart_data']
-            chart_cache._cache[chart_id] = chart  # warm the cache
+    # Use lock to prevent concurrent duplicate DB fetches for the same key
+    with _chart_fetch_lock:
+        # Double-check: another request may have fetched and cached while we waited
+        chart = chart_cache._cache.get(chart_id)
+        if chart:
             return chart
-    except Exception:
-        pass
+        try:
+            db_data = data_store.get_chart(chart_id)
+            if db_data and db_data.get('chart_data'):
+                chart = db_data['chart_data']
+                chart_cache._cache[chart_id] = chart  # warm the cache
+                return chart
+        except Exception:
+            pass
     return None
 
 
@@ -700,8 +895,6 @@ async def chat_stream(chart_id: str, message: str):
         return StreamingResponse(err_stream(), media_type="text/event-stream",
                                  headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
-    reply_text = ""
-    report_text = ""
     report_tab = "overview"
 
     # ---- Pre-analysis: compute structured judgments, search KB ----
@@ -720,6 +913,7 @@ async def chat_stream(chart_id: str, message: str):
         'name': '取名 姓名',
         'sihechu': '格局 用神 旺衰 命运',
         'overview': '命盘 格局 用神 运势',
+        'liunian': '流年 太岁 运势 吉凶',
     }
     def _detect_tab(msg):
         if any(kw in msg for kw in ['财运','发财','投资','赚钱','破财']): return 'wealth'
@@ -727,6 +921,7 @@ async def chat_stream(chart_id: str, message: str):
         if any(kw in msg for kw in ['事业','工作','官运','升职','跳槽','创业']): return 'career'
         if any(kw in msg for kw in ['健康','疾病','身体']): return 'health'
         if any(kw in msg for kw in ['名字','取名','改名']): return 'name'
+        if any(kw in msg for kw in ['流年','今年','明年','2025','2026','2027','2028','生肖运']): return 'liunian'
         return 'sihechu'
 
     report_tab = _detect_tab(message)
@@ -745,10 +940,12 @@ async def chat_stream(chart_id: str, message: str):
         enriched['_analysis'] = conclusions
 
     async def event_stream():
-        nonlocal reply_text, report_text, report_tab
+        reply_text = ""
+        report_text = ""
 
         tool_name_map = {'wealth': '流年分析', 'marriage': '命盘分析', 'career': '流年分析',
-                         'health': '命盘分析', 'name': '取名分析', 'sihechu': '四合出分析'}
+                         'health': '命盘分析', 'name': '取名分析', 'sihechu': '四合出分析',
+                         'liunian': '流年详批'}
         tool_name = tool_name_map.get(report_tab, '四合出分析')
 
         yield _sse_event('tool', {'name': tool_name})
@@ -832,6 +1029,6 @@ def kb_stats():
 
 if __name__ == '__main__':
     import uvicorn
-    print('Starting BaZi Analysis API on http://localhost:8000')
-    print('Swagger UI: http://localhost:8000/docs')
-    uvicorn.run(app, host='0.0.0.0', port=8000)
+    logger.info(f'Starting BaZi Analysis API on http://localhost:{API_PORT}')
+    logger.info(f'Swagger UI: http://localhost:{API_PORT}/docs')
+    uvicorn.run(app, host='0.0.0.0', port=API_PORT)

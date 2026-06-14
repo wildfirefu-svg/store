@@ -1,0 +1,414 @@
+{
+  "$schema": "knowledge-base-spec.md §11",
+  "description": "常见病药速查库 — 盲派病药说核心数据，30+种常见病",
+  "entries": [
+    {
+      "disease": "财多身弱",
+      "symptom": "富屋贫人，为财所困，体力不济",
+      "medicine": {
+        "primary": "印星（正印/偏印）",
+        "secondary": "比肩劫财（帮身）",
+        "timing": "行印比大运→脱贫致富"
+      },
+      "examples": [
+        "正财格身弱无比劫印绶，行壬癸印运时脱贫"
+      ]
+    },
+    {
+      "disease": "杀重攻身",
+      "symptom": "压力巨大，小人缠身，精神紧张",
+      "medicine": {
+        "primary": "印星（化杀为权）",
+        "secondary": "食神伤官（制杀）",
+        "timing": "行印运→转危为安；行食伤运→以力制力"
+      },
+      "examples": [
+        "七杀格身弱，杀无制，行印运则化杀为权"
+      ]
+    },
+    {
+      "disease": "杀重有食伤",
+      "symptom": "有制杀之机但力量不足",
+      "medicine": {
+        "primary": "食伤（制杀成名）",
+        "secondary": "印星（辅助化杀）",
+        "timing": "行食伤运→以力制力成名"
+      },
+      "examples": [
+        "七杀格带食神，行食神运时制杀成名"
+      ]
+    },
+    {
+      "disease": "印多灭食",
+      "symptom": "才华被埋没，困局难脱",
+      "medicine": {
+        "primary": "财星（破印解困）",
+        "secondary": "比劫（克制印星）",
+        "timing": "行财运→才华得展"
+      },
+      "examples": [
+        "印绶格印重，食神被印克，行财运时破印解困"
+      ]
+    },
+    {
+      "disease": "食伤过旺",
+      "symptom": "才华过剩不专，精力分散",
+      "medicine": {
+        "primary": "印星（约束归正）",
+        "secondary": "财星（疏导转化）",
+        "timing": "行印运→才华有序"
+      },
+      "examples": [
+        "食神格食重身弱，行印运时才华得到约束"
+      ]
+    },
+    {
+      "disease": "寒局无暖",
+      "symptom": "性格阴冷，行运不顺，健康隐患",
+      "medicine": {
+        "primary": "丙火（暖局）",
+        "secondary": "丁火（辅助暖局）",
+        "timing": "行丙运→逢暖即发"
+      },
+      "examples": [
+        "冬月生无火调候，行丙午运时事业焕发"
+      ]
+    },
+    {
+      "disease": "燥局无润",
+      "symptom": "急躁冲动，婚姻不美，心脑血管病",
+      "medicine": {
+        "primary": "癸水（润局）",
+        "secondary": "壬水（辅助润局）",
+        "timing": "行癸运→调和生发"
+      },
+      "examples": [
+        "夏月生无水调候，行癸运时性格平和"
+      ]
+    },
+    {
+      "disease": "五行缺一",
+      "symptom": "偏枯不圆，性格偏颇",
+      "medicine": {
+        "primary": "补所缺五行",
+        "secondary": "通关五行",
+        "timing": "行缺行之运→人生补全"
+      },
+      "examples": [
+        "五行缺金，行金运时补齐短板"
+      ]
+    },
+    {
+      "disease": "刑冲过多",
+      "symptom": "动荡不安，六亲不睦",
+      "medicine": {
+        "primary": "合（以合解冲）",
+        "secondary": "通关五行",
+        "timing": "行合运→矛盾化解"
+      },
+      "examples": [
+        "命局多冲，行六合之运时矛盾化解"
+      ]
+    },
+    {
+      "disease": "财多身弱(无印比)",
+      "symptom": "同上但无印比可扶",
+      "medicine": {
+        "primary": "官杀（泄财）",
+        "secondary": "--",
+        "timing": "行官杀运→财富入官"
+      },
+      "examples": [
+        "财多无印比，有官杀可行财运转官贵"
+      ]
+    },
+    {
+      "disease": "身旺无依",
+      "symptom": "身旺无比劫印绶帮扶，孤独无依",
+      "medicine": {
+        "primary": "比劫印绶",
+        "secondary": "食伤泄秀",
+        "timing": "行印比运得助"
+      },
+      "examples": [
+        "身旺无比劫，行比劫运时得朋友相助"
+      ]
+    },
+    {
+      "disease": "官杀混杂",
+      "symptom": "志向分散，多做少成，压力山大",
+      "medicine": {
+        "primary": "去官留杀或去杀留官",
+        "secondary": "印星化解",
+        "timing": "合去一种官杀时格局转清"
+      },
+      "examples": [
+        "官杀并透，一比劫合去七杀，格局转清"
+      ]
+    },
+    {
+      "disease": "伤官见官",
+      "symptom": "官非口舌，仕途受阻，与上司冲突",
+      "medicine": {
+        "primary": "财星通关（伤官生财→财生官）",
+        "secondary": "印制伤官",
+        "timing": "行财运通关化解"
+      },
+      "examples": [
+        "伤官见官有财通关，伤官生财→财生官"
+      ]
+    },
+    {
+      "disease": "财破印",
+      "symptom": "因财损名，学业受阻，为钱放弃原则",
+      "medicine": {
+        "primary": "比劫制财护印",
+        "secondary": "官杀泄财",
+        "timing": "行比劫运时护印得名"
+      },
+      "examples": [
+        "财克印有比劫制财护印，名利两全"
+      ]
+    },
+    {
+      "disease": "枭神夺食",
+      "symptom": "怀才不遇，被抢功，创意被压制",
+      "medicine": {
+        "primary": "财星制偏印",
+        "secondary": "比劫泄偏印生食神",
+        "timing": "行财运时破枭解夺"
+      },
+      "examples": [
+        "偏印夺食有财星制之，创意得展"
+      ]
+    },
+    {
+      "disease": "食神泄身太过",
+      "symptom": "精力过度消耗，体力不支，心有余力不足",
+      "medicine": {
+        "primary": "印星约束食神",
+        "secondary": "比劫分担",
+        "timing": "行印运时食神得制精力恢复"
+      },
+      "examples": [
+        "食神格身弱，行印运时精力充沛"
+      ]
+    },
+    {
+      "disease": "财多身弱(有官杀)",
+      "symptom": "富屋贫人，为财所困，还有官杀压力",
+      "medicine": {
+        "primary": "印星化官杀生身",
+        "secondary": "比劫帮身",
+        "timing": "行印比运时身强任财"
+      },
+      "examples": [
+        "财多身弱有官杀，印运化杀生身"
+      ]
+    },
+    {
+      "disease": "火炎土燥",
+      "symptom": "皮肤病，湿疹过敏，性格急躁",
+      "medicine": {
+        "primary": "癸水润燥",
+        "secondary": "壬水辅助",
+        "timing": "行水运时润燥调候"
+      },
+      "examples": [
+        "全局火土过旺无水，行癸运润燥"
+      ]
+    },
+    {
+      "disease": "金寒水冷",
+      "symptom": "关节痛，风湿痹症，性格阴冷",
+      "medicine": {
+        "primary": "丙火暖局",
+        "secondary": "丁火辅助",
+        "timing": "行火运时寒气消散"
+      },
+      "examples": [
+        "全局金水无火，行丙运暖局"
+      ]
+    },
+    {
+      "disease": "木多火塞",
+      "symptom": "木多火熄，才华不得施展，心灰意冷",
+      "medicine": {
+        "primary": "金修剪木",
+        "secondary": "火加强",
+        "timing": "行金运时修剪过多木气"
+      },
+      "examples": [
+        "木过旺火被塞，行庚运砍伐木气得解"
+      ]
+    },
+    {
+      "disease": "土重金埋",
+      "symptom": "土多埋金，才能被压制，怀才不遇",
+      "medicine": {
+        "primary": "木疏土",
+        "secondary": "金透出土",
+        "timing": "行木运时破土出金"
+      },
+      "examples": [
+        "土过旺金被埋，行甲运破土金出"
+      ]
+    },
+    {
+      "disease": "水多木漂",
+      "symptom": "水多木浮，漂泊不定，无根之木",
+      "medicine": {
+        "primary": "土筑堤防水",
+        "secondary": "金生水化",
+        "timing": "行土运时木得根基"
+      },
+      "examples": [
+        "水过旺木漂浮，行戊运筑堤木定"
+      ]
+    },
+    {
+      "disease": "比劫夺财",
+      "symptom": "合作破财，朋友借钱不还，合伙被坑",
+      "medicine": {
+        "primary": "官杀制比劫护财",
+        "secondary": "食伤泄比劫生财",
+        "timing": "行官运时比劫被制"
+      },
+      "examples": [
+        "比劫夺财，有官星护财不破"
+      ]
+    },
+    {
+      "disease": "日主坐绝",
+      "symptom": "元气衰微，百病丛生，精神萎靡",
+      "medicine": {
+        "primary": "印星生扶",
+        "secondary": "比劫帮身",
+        "timing": "行印运时元气恢复"
+      },
+      "examples": [
+        "日坐绝地，行印运时生机焕发"
+      ]
+    },
+    {
+      "disease": "用神被冲",
+      "symptom": "核心优势被破坏，运势急转直下",
+      "medicine": {
+        "primary": "合以解冲",
+        "secondary": "通关五行",
+        "timing": "行合运或通关五行运"
+      },
+      "examples": [
+        "用神被冲，逢六合之运解冲"
+      ]
+    },
+    {
+      "disease": "忌神得禄",
+      "symptom": "忌神猖獗，处处受制，难以施展",
+      "medicine": {
+        "primary": "克制忌神",
+        "secondary": "泄化忌神",
+        "timing": "克制忌神之大运"
+      },
+      "examples": [
+        "忌神坐临官帝旺，须强力制化"
+      ]
+    },
+    {
+      "disease": "孤阳不长",
+      "symptom": "纯阳无阴，刚极易折，婚姻不美",
+      "medicine": {
+        "primary": "补阴柔五行",
+        "secondary": "水木调济",
+        "timing": "行阴柔五行运时得调和"
+      },
+      "examples": [
+        "全局纯阳，行癸运得阴柔调和"
+      ]
+    },
+    {
+      "disease": "孤阴不生",
+      "symptom": "纯阴无阳，阴柔过度，缺乏阳气",
+      "medicine": {
+        "primary": "补阳刚五行",
+        "secondary": "火木调济",
+        "timing": "行阳刚五行运时得调和"
+      },
+      "examples": [
+        "全局纯阴，行丙运得阳刚补足"
+      ]
+    },
+    {
+      "disease": "身弱官杀重",
+      "symptom": "压力叠加，双重压制，濒临崩溃",
+      "medicine": {
+        "primary": "印星化官杀",
+        "secondary": "食伤制官杀",
+        "timing": "行印运优先化解"
+      },
+      "examples": [
+        "官杀并透又身弱，印化官杀为权"
+      ]
+    },
+    {
+      "disease": "用神虚浮无根",
+      "symptom": "看似有救实则无力，关键时候掉链子",
+      "medicine": {
+        "primary": "大运通根",
+        "secondary": "流年补根",
+        "timing": "行通根之运时用神得力"
+      },
+      "examples": [
+        "用神透干无根，运逢地支通根时得力"
+      ]
+    },
+    {
+      "disease": "身旺无泄",
+      "symptom": "精力过剩无处发泄，好动不安，惹是生非",
+      "medicine": {
+        "primary": "食伤泄秀",
+        "secondary": "财星消耗",
+        "timing": "行食伤运时才华得展"
+      },
+      "examples": [
+        "身旺无比劫但有食伤泄秀，技艺立身"
+      ]
+    },
+    {
+      "disease": "印星过旺",
+      "symptom": "依赖心重，行动力弱，纸上谈兵",
+      "medicine": {
+        "primary": "财星破印",
+        "secondary": "食伤耗印",
+        "timing": "行财运时破印行动"
+      },
+      "examples": [
+        "印过旺有财星破印，理论付诸实践"
+      ]
+    },
+    {
+      "disease": "全局无财",
+      "symptom": "不擅理财，对钱无感，淡泊名利",
+      "medicine": {
+        "primary": "大运补财",
+        "secondary": "食伤生财",
+        "timing": "行财运时开始关注财富"
+      },
+      "examples": [
+        "四柱无财，行财运时突然富起来"
+      ]
+    },
+    {
+      "disease": "全局无官",
+      "symptom": "无拘无束，不喜体制，自由散漫",
+      "medicine": {
+        "primary": "大运补官",
+        "secondary": "财星生官",
+        "timing": "行官运时渐入体制"
+      },
+      "examples": [
+        "四柱无官，行官运时开始掌权"
+      ]
+    }
+  ]
+}
