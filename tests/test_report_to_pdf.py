@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Unit tests for report_to_pdf.py — font detection, template validation, PDF generation."""
 
-import os, sys, tempfile, pytest
+import base64, os, sys, tempfile, pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -99,6 +99,10 @@ class TestParseMarkdown:
         ])
         assert any(b[0] == 'table' for b in blocks)
 
+    def test_parses_image(self):
+        blocks = rp.parse_markdown_to_blocks(['![五行图](test_chart.png)'])
+        assert ('image', {'alt': '五行图', 'path': 'test_chart.png'}) in blocks
+
 
 class TestGeneratePDF:
     def test_generates_pdf_from_minimal_markdown(self):
@@ -153,5 +157,25 @@ class TestGeneratePDF:
             assert os.path.getsize(pdf_path) > 200
         finally:
             for p in [md_path, pdf_path]:
+                if os.path.isfile(p):
+                    os.unlink(p)
+
+    def test_generates_pdf_with_image(self):
+        png_path = os.path.join(tempfile.gettempdir(), 'test_chart_image.png')
+        md_path = os.path.join(tempfile.gettempdir(), 'test_image.md')
+        pdf_path = os.path.join(tempfile.gettempdir(), 'test_image.pdf')
+        png_bytes = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=')
+
+        with open(png_path, 'wb') as f:
+            f.write(png_bytes)
+        with open(md_path, 'w', encoding='utf-8') as f:
+            f.write(f'# 图表报告\n\n![五行图]({png_path})\n')
+
+        try:
+            rp.generate_pdf(md_path, pdf_path, template='dark')
+            assert os.path.isfile(pdf_path)
+            assert os.path.getsize(pdf_path) > 200
+        finally:
+            for p in [png_path, md_path, pdf_path]:
                 if os.path.isfile(p):
                     os.unlink(p)

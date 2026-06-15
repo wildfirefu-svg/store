@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客户管理 · 玄机子</title>
+    <link rel="stylesheet" href="/static/css/base.css?v=20260613a">
+    <style>
+        body { background: #f7f3eb; color: #2b2118; }
+        .page { max-width: 1280px; margin: 0 auto; padding: 24px; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 320px 1fr; gap: 20px; }
+        .card { background: #fffaf1; border: 1px solid #decfb8; border-radius: 16px; padding: 16px; box-shadow: 0 8px 24px rgba(90,60,30,.08); }
+        .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+        input, select, textarea, button { border: 1px solid #cdbb9f; border-radius: 8px; padding: 8px 10px; background: #fff; }
+        button { cursor: pointer; background: #6b3f1d; color: #fff; border-color: #6b3f1d; }
+        button.secondary { background: #fff; color: #6b3f1d; }
+        textarea { grid-column: 1 / -1; min-height: 64px; }
+        .client-item { width: 100%; display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; background: #fff; color: #2b2118; border-color: #decfb8; text-align: left; }
+        .client-item span { color: #7c6a55; font-size: 12px; }
+        .empty { color: #8c7b67; padding: 12px 0; }
+        .detail-head { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+        .timeline-item { border-top: 1px solid #decfb8; padding: 14px 0; }
+        .timeline-meta { color: #8c7b67; font-size: 12px; }
+        pre { white-space: pre-wrap; background: #f3eadc; padding: 10px; border-radius: 8px; max-height: 240px; overflow: auto; }
+        .feedback-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+        .feedback-controls input { min-width: 160px; }
+        .feedback-status { color: #7c6a55; font-size: 12px; }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <div class="topbar">
+            <div>
+                <h1>客户管理</h1>
+                <p>客户档案、命盘关联、分析时间线与反馈记录。</p>
+            </div>
+            <a href="/" class="secondary">返回分析台</a>
+        </div>
+        <section class="grid">
+            <aside class="card">
+                <h2>客户列表</h2>
+                <input id="search" placeholder="搜索客户" style="width:100%; box-sizing:border-box;">
+                <div id="client-list"></div>
+                <h2>新建客户</h2>
+                <form id="client-form" class="form-grid">
+                    <input name="name" placeholder="姓名" required>
+                    <select name="gender"><option value="">性别</option><option value="male">男</option><option value="female">女</option></select>
+                    <input name="birth_year" type="number" placeholder="年">
+                    <input name="birth_month" type="number" placeholder="月">
+                    <input name="birth_day" type="number" placeholder="日">
+                    <input name="birth_hour" type="number" placeholder="时">
+                    <input name="birth_minute" type="number" placeholder="分">
+                    <input name="birth_location" placeholder="地点" value="Beijing">
+                    <input name="tags" placeholder="标签，用逗号分隔" style="grid-column:1/-1;">
+                    <textarea name="notes" placeholder="备注"></textarea>
+                    <button type="submit" style="grid-column:1/-1;">创建客户</button>
+                </form>
+            </aside>
+            <section class="card">
+                <div class="detail-head">
+                    <div>
+                        <h2 id="detail-title">未选择客户</h2>
+                        <p id="detail-meta"></p>
+                        <p id="detail-notes"></p>
+                    </div>
+                    <button id="delete-client" class="secondary" type="button">删除客户</button>
+                </div>
+                <h3>关联命盘</h3>
+                <form id="link-chart-form" class="feedback-controls">
+                    <input id="chart-id" placeholder="输入 chart_id">
+                    <button type="submit">关联</button>
+                </form>
+                <div id="chart-list"></div>
+                <h3>分析时间线</h3>
+                <div id="timeline"></div>
+            </section>
+        </section>
+    </main>
+    <script type="module" src="/static/clients.js"></script>
+</body>
+</html>

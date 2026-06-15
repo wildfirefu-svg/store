@@ -38,3 +38,16 @@ def test_deepseek_parser_handles_reasoning_content():
 def test_deepseek_parser_handles_text_content():
     event = {"choices": [{"delta": {"content": "答案"}, "finish_reason": None}]}
     assert claude_api._parse_deepseek_event(event) == {"type": "text_delta", "text": "答案"}
+
+
+def test_stream_chat_accepts_system_prompt_without_api_key(monkeypatch):
+    monkeypatch.setattr(claude_api, "ANTHROPIC_API_KEY", "")
+    events = list(claude_api.stream_chat({}, "hello", system_prompt="custom system"))
+    assert events
+    assert events[0]["type"] == "error"
+
+
+def test_anthropic_payload_uses_custom_system_prompt():
+    payload = claude_api._build_anthropic_payload("custom system", {"chart": "data"}, "hello", "claude-test")
+    assert payload["system"].startswith("custom system")
+    assert payload["messages"] == [{"role": "user", "content": "hello"}]

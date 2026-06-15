@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>命理卡片 · 玄机子</title>
+    <style>
+        body { margin: 0; background: #f7efe1; color: #3b2618; font-family: system-ui, sans-serif; }
+        main { max-width: 980px; margin: 0 auto; padding: 24px; display: grid; grid-template-columns: 280px 1fr; gap: 24px; }
+        label { display: block; margin-top: 12px; font-weight: 600; }
+        input, button { width: 100%; box-sizing: border-box; margin-top: 6px; padding: 10px; border-radius: 8px; border: 1px solid #cdbb9f; }
+        button { background: #6b3f1d; color: #fff; cursor: pointer; }
+        canvas { width: 100%; max-width: 750px; border: 1px solid #cdbb9f; background: #fff; }
+        .panel { background: #fffaf1; border: 1px solid #decfb8; border-radius: 16px; padding: 16px; }
+        .status { color: #7c6a55; margin-top: 12px; }
+        a { color: #6b3f1d; }
+        @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <main>
+        <section class="panel">
+            <h1>命理卡片</h1>
+            <p><a href="/">返回分析台</a></p>
+            <label>chart_id</label>
+            <input id="chart-id" placeholder="输入命盘 chart_id">
+            <label>命理师姓名</label>
+            <input id="teacher-name" placeholder="王老师">
+            <label>联系方式</label>
+            <input id="teacher-contact" placeholder="微信 / 电话">
+            <label>品牌口号</label>
+            <input id="brand-slogan" placeholder="以命理为镜，见趋势与选择">
+            <button id="generate-card">生成卡片</button>
+            <button id="download-card">下载 PNG</button>
+            <div id="status" class="status"></div>
+        </section>
+        <section>
+            <canvas id="card-canvas" width="750" height="1000"></canvas>
+        </section>
+    </main>
+    <script src="/static/js/card.js"></script>
+</body>
+</html>

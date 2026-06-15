@@ -12,6 +12,7 @@ import json
 import os
 import sqlite3
 import threading
+import uuid
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bazi_data.db")
 
@@ -59,6 +60,59 @@ def init_db():
                     PRIMARY KEY (chart_id, tab_id),
                     FOREIGN KEY (chart_id) REFERENCES charts(chart_id) ON DELETE CASCADE
                 );
+                CREATE TABLE IF NOT EXISTS clients (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    gender TEXT CHECK(gender IN ('male', 'female')),
+                    birth_year INTEGER,
+                    birth_month INTEGER,
+                    birth_day INTEGER,
+                    birth_hour INTEGER,
+                    birth_minute INTEGER DEFAULT 0,
+                    birth_location TEXT DEFAULT 'Beijing',
+                    tags TEXT NOT NULL DEFAULT '[]',
+                    notes TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+                );
+                CREATE TABLE IF NOT EXISTS client_charts (
+                    client_id TEXT NOT NULL,
+                    chart_id TEXT NOT NULL,
+                    relation TEXT NOT NULL DEFAULT 'primary',
+                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                    PRIMARY KEY (client_id, chart_id),
+                    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+                    FOREIGN KEY (chart_id) REFERENCES charts(chart_id) ON DELETE CASCADE
+                );
+                CREATE TABLE IF NOT EXISTS analyses (
+                    id TEXT PRIMARY KEY,
+                    client_id TEXT,
+                    chart_id TEXT NOT NULL,
+                    analysis_type TEXT NOT NULL,
+                    topic TEXT NOT NULL DEFAULT 'sihechu',
+                    question TEXT NOT NULL DEFAULT '',
+                    ai_text TEXT NOT NULL DEFAULT '',
+                    structured_summary TEXT NOT NULL DEFAULT '{}',
+                    report_tab TEXT,
+                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL,
+                    FOREIGN KEY (chart_id) REFERENCES charts(chart_id) ON DELETE CASCADE
+                );
+                CREATE TABLE IF NOT EXISTS feedback (
+                    id TEXT PRIMARY KEY,
+                    analysis_id TEXT NOT NULL,
+                    dimension TEXT NOT NULL,
+                    judgment_text TEXT NOT NULL,
+                    is_accurate INTEGER NOT NULL CHECK(is_accurate IN (0, 1)),
+                    user_comment TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                    FOREIGN KEY (analysis_id) REFERENCES analyses(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_clients_updated ON clients(updated_at);
+                CREATE INDEX IF NOT EXISTS idx_client_charts_client ON client_charts(client_id);
+                CREATE INDEX IF NOT EXISTS idx_analyses_client ON analyses(client_id, created_at);
+                CREATE INDEX IF NOT EXISTS idx_analyses_chart ON analyses(chart_id, created_at);
+                CREATE INDEX IF NOT EXISTS idx_feedback_analysis ON feedback(analysis_id);
             """)
             conn.commit()
         finally:
@@ -221,6 +275,281 @@ def delete_report(chart_id, tab_id):
                 (chart_id, tab_id)
             )
             conn.commit()
+        finally:
+            conn.close()
+
+
+# ============================================================
+# Professional Workflow CRUD
+# ============================================================
+
+def _new_id(prefix):
+    return f"{prefix}_{uuid.uuid4().hex[:16]}"
+
+
+def _json_loads(value, default):
+    try:
+        return json.loads(value) if value else default
+    except Exception:
+        return default
+
+
+def _client_from_row(row):
+    if not row:
+        return None
+    d = dict(row)
+    d['tags'] = _json_loads(d.get('tags'), [])
+    return d
+
+
+def _analysis_from_row(row):
+    if not row:
+        return None
+    d = dict(row)
+    d['structured_summary'] = _json_loads(d.get('structured_summary'), {})
+    return d
+
+
+def create_client(data):
+    client_id = data.get('id') or _new_id('client')
+    tags = data.get('tags') or []
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            conn.execute(
+                """INSERT INTO clients (
+                    id, name, gender, birth_year, birth_month, birth_day, birth_hour,
+                    birth_minute, birth_location, tags, notes
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    client_id,
+                    data.get('name') or '',
+                    data.get('gender'),
+                    data.get('birth_year'),
+                    data.get('birth_month'),
+                    data.get('birth_day'),
+                    data.get('birth_hour'),
+                    data.get('birth_minute', 0),
+                    data.get('birth_location', 'Beijing'),
+                    json.dumps(tags, ensure_ascii=False),
+                    data.get('notes', ''),
+                )
+            )
+            conn.commit()
+            row = conn.execute("SELECT * FROM clients WHERE id = ?", (client_id,)).fetchone()
+            return _client_from_row(row)
+        finally:
+            conn.close()
+
+
+def list_clients(search='', tag=''):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            if search:
+                rows = conn.execute(
+                    "SELECT * FROM clients WHERE name LIKE ? ORDER BY updated_at DESC",
+                    (f"%{search}%",)
+                ).fetchall()
+            else:
+                rows = conn.execute("SELECT * FROM clients ORDER BY updated_at DESC").fetchall()
+            clients = [_client_from_row(r) for r in rows]
+            if tag:
+                clients = [c for c in clients if tag in c.get('tags', [])]
+            return clients
+        finally:
+            conn.close()
+
+
+def get_client(client_id):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            row = conn.execute("SELECT * FROM clients WHERE id = ?", (client_id,)).fetchone()
+            return _client_from_row(row)
+        finally:
+            conn.close()
+
+
+def update_client(client_id, data):
+    allowed = {
+        'name', 'gender', 'birth_year', 'birth_month', 'birth_day', 'birth_hour',
+        'birth_minute', 'birth_location', 'tags', 'notes'
+    }
+    updates = []
+    values = []
+    for key in allowed:
+        if key in data:
+            updates.append(f"{key} = ?")
+            value = json.dumps(data[key], ensure_ascii=False) if key == 'tags' else data[key]
+            values.append(value)
+    if not updates:
+        return get_client(client_id)
+    updates.append("updated_at = datetime('now','localtime')")
+    values.append(client_id)
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            conn.execute(f"UPDATE clients SET {', '.join(updates)} WHERE id = ?", values)
+            conn.commit()
+            row = conn.execute("SELECT * FROM clients WHERE id = ?", (client_id,)).fetchone()
+            return _client_from_row(row)
+        finally:
+            conn.close()
+
+
+def delete_client(client_id):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            conn.execute("DELETE FROM clients WHERE id = ?", (client_id,))
+            conn.commit()
+        finally:
+            conn.close()
+
+
+def link_client_chart(client_id, chart_id, relation='primary'):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            conn.execute(
+                """INSERT OR REPLACE INTO client_charts (client_id, chart_id, relation)
+                   VALUES (?, ?, ?)""",
+                (client_id, chart_id, relation)
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+
+def unlink_client_chart(client_id, chart_id):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            conn.execute("DELETE FROM client_charts WHERE client_id = ? AND chart_id = ?", (client_id, chart_id))
+            conn.commit()
+        finally:
+            conn.close()
+
+
+def list_client_charts(client_id):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            rows = conn.execute(
+                """SELECT c.chart_id, c.name, c.birth_info, c.created_at, c.updated_at, cc.relation
+                   FROM client_charts cc
+                   JOIN charts c ON c.chart_id = cc.chart_id
+                   WHERE cc.client_id = ?
+                   ORDER BY cc.created_at DESC""",
+                (client_id,)
+            ).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+
+def save_analysis(client_id, chart_id, analysis_type, topic, question, ai_text, structured_summary=None, report_tab=None):
+    analysis_id = _new_id('analysis')
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            conn.execute(
+                """INSERT INTO analyses (
+                    id, client_id, chart_id, analysis_type, topic, question,
+                    ai_text, structured_summary, report_tab
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    analysis_id,
+                    client_id,
+                    chart_id,
+                    analysis_type,
+                    topic,
+                    question,
+                    ai_text,
+                    json.dumps(structured_summary or {}, ensure_ascii=False),
+                    report_tab,
+                )
+            )
+            conn.commit()
+            row = conn.execute("SELECT * FROM analyses WHERE id = ?", (analysis_id,)).fetchone()
+            return _analysis_from_row(row)
+        finally:
+            conn.close()
+
+
+def get_analysis(analysis_id):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            row = conn.execute("SELECT * FROM analyses WHERE id = ?", (analysis_id,)).fetchone()
+            return _analysis_from_row(row)
+        finally:
+            conn.close()
+
+
+def list_client_analyses(client_id):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            rows = conn.execute(
+                "SELECT * FROM analyses WHERE client_id = ? ORDER BY created_at DESC",
+                (client_id,)
+            ).fetchall()
+            return [_analysis_from_row(r) for r in rows]
+        finally:
+            conn.close()
+
+
+def list_chart_analyses(chart_id):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            rows = conn.execute(
+                "SELECT * FROM analyses WHERE chart_id = ? ORDER BY created_at DESC",
+                (chart_id,)
+            ).fetchall()
+            return [_analysis_from_row(r) for r in rows]
+        finally:
+            conn.close()
+
+
+def save_feedback(analysis_id, dimension, judgment_text, is_accurate, user_comment=''):
+    feedback_id = _new_id('feedback')
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            conn.execute(
+                """INSERT INTO feedback (
+                    id, analysis_id, dimension, judgment_text, is_accurate, user_comment
+                ) VALUES (?, ?, ?, ?, ?, ?)""",
+                (feedback_id, analysis_id, dimension, judgment_text, 1 if is_accurate else 0, user_comment)
+            )
+            conn.commit()
+            row = conn.execute("SELECT * FROM feedback WHERE id = ?", (feedback_id,)).fetchone()
+            return dict(row)
+        finally:
+            conn.close()
+
+
+def get_feedback_stats():
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            rows = conn.execute(
+                """SELECT dimension, COUNT(*) AS total, SUM(is_accurate) AS accurate
+                   FROM feedback GROUP BY dimension"""
+            ).fetchall()
+            dimension_accuracy = {}
+            for row in rows:
+                total = row['total'] or 0
+                accurate = row['accurate'] or 0
+                dimension_accuracy[row['dimension']] = {
+                    'total': total,
+                    'accurate': accurate,
+                    'accuracy': round(accurate / total, 3) if total else 0,
+                }
+            return {'dimension_accuracy': dimension_accuracy}
         finally:
             conn.close()
 

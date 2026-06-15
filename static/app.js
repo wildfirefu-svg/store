@@ -11,6 +11,7 @@ import { renderBaziTable } from './js/render-bazi.js';
 import { renderZiweiTable, renderFullChart } from './js/render-ziwei.js';
 import { ReportTabs, addChatMsg, refreshPanel, switchMingzhu, deleteMingzhu, showModal } from './js/ui.js';
 import { _sendWithStream, showReportFinal } from './js/stream.js';
+import { BaZiCharts } from './js/charts.js';
 
 // ── 辅助函数 ──
 function _hideToolBars() {
@@ -187,14 +188,32 @@ document.getElementById('report-pdf-btn').addEventListener('click', async functi
     } catch(e) { alert('下载失败: ' + e.message); }
 });
 
+document.getElementById('visualization-btn').addEventListener('click', async function() {
+    var cur = MingzhuManager.getCurrent();
+    if (!cur) { alert('请先添加命主'); return; }
+    var el = document.getElementById('report-content');
+    el.innerHTML = '<div class="chart-grid"><div class="chart-card"><div id="viz-wuxing" class="chart-container"></div></div><div class="chart-card"><div id="viz-shishen" class="chart-container"></div></div><div class="chart-card"><div id="viz-dayun" class="chart-container"></div></div><div class="chart-card"><div id="viz-liunian" class="chart-container"></div></div></div>';
+    try {
+        var r = await fetch(API + '/charts/' + cur.chart_id + '/visualization');
+        if (!r.ok) throw new Error('图表数据加载失败');
+        var data = await r.json();
+        BaZiCharts.renderWuxingRadar(document.getElementById('viz-wuxing'), data.wuxing || {});
+        BaZiCharts.renderShishenPie(document.getElementById('viz-shishen'), data.shishen || {});
+        BaZiCharts.renderDayunTrend(document.getElementById('viz-dayun'), data.dayun || []);
+        BaZiCharts.renderLiunianBar(document.getElementById('viz-liunian'), data.liunian || []);
+    } catch (e) {
+        el.innerHTML = '<p class="report-placeholder">' + e.message + '</p>';
+    }
+});
+
 // ── Solar time checkbox ──
-let _solarOriginal = null;
+window._solarOriginal = null;
 document.getElementById('solar-time-check').addEventListener('change', async function() {
     const hEl = document.getElementById('pick-hour'), mEl = document.getElementById('pick-minute');
     if (this.checked) {
         const h = parseInt(hEl.value) || 0;
         const m = parseInt(mEl.value) || 0;
-        _solarOriginal = { hour: h, minute: m };
+        window._solarOriginal = { hour: h, minute: m };
         const y = parseInt(document.getElementById('pick-year').value) || 2000;
         const mo = parseInt(document.getElementById('pick-month').value) || 1;
         const loc = document.getElementById('mingzhu-location').value || '北京';
@@ -209,9 +228,9 @@ document.getElementById('solar-time-check').addEventListener('change', async fun
             }
         } catch(e) { console.error('solar-time fetch error:', e); }
     } else {
-        if (_solarOriginal) {
-            hEl.value = _solarOriginal.hour; mEl.value = _solarOriginal.minute;
-            _solarOriginal = null;
+        if (window._solarOriginal) {
+            hEl.value = window._solarOriginal.hour; mEl.value = window._solarOriginal.minute;
+            window._solarOriginal = null;
         }
     }
 });

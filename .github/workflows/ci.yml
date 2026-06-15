@@ -56,6 +56,10 @@ jobs:
           python -m pytest tests/ -v --tb=short --timeout=120 2>&1 || true
           echo "Tests completed (see output above)"
 
+      - name: LLM report quality smoke test
+        run: |
+          python quality/llm_quality_test.py
+
       - name: Verify Docker build
         run: |
           docker build -t xuanjizi-test .

@@ -252,7 +252,7 @@ def _parse_deepseek_event(event: dict) -> dict:
 
 
 def stream_chat(chart_json: dict, user_message: str, conversation_history: list = None,
-                api_key: str = "", model: str = ""):
+                api_key: str = "", model: str = "", system_prompt: str = None):
     """Generator: yields simplified SSE dicts from Anthropic or DeepSeek API."""
     key = api_key or ANTHROPIC_API_KEY
     if not key:
@@ -261,7 +261,7 @@ def stream_chat(chart_json: dict, user_message: str, conversation_history: list 
 
     provider, url, default_model = _detect_provider(key)
     mdl = model or default_model
-    system = _load_system_prompt()
+    system = system_prompt if system_prompt is not None else _load_system_prompt()
 
     if provider == "anthropic":
         payload = _build_anthropic_payload(system, chart_json, user_message, mdl)

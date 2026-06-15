@@ -599,6 +599,23 @@ def simple_match(query_features, top_n=5):
     ]
 
 
+def format_case_for_prompt(case):
+    name = case.get('name') or case.get('id') or '未知案例'
+    category = case.get('category') or ''
+    similarity = case.get('similarity')
+    key_tags = case.get('key_tags') or ''
+    text = case.get('text') or case.get('summary') or case.get('description') or ''
+    similarity_text = f'{similarity:.2f}' if isinstance(similarity, (int, float)) else str(similarity or '')
+    return '\n'.join([
+        '【参考案例】',
+        f'姓名：{name}',
+        f'类别：{category}',
+        f'相似度：{similarity_text}',
+        f'关键标签：{key_tags}',
+        f'要点：{text[:800]}',
+    ])
+
+
 # =============================================================================
 # 5. CaseRetriever — unified retrieval with ChromaDB + simple fallback
 # =============================================================================

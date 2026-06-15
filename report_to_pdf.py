@@ -338,6 +338,28 @@ class BaziReportPDF(FPDF):
         self.set_y(y0+block_h+2)
         self.set_text_color(*self._c('body'))
 
+    def draw_image(self, image):
+        path = image.get('path') if isinstance(image, dict) else str(image)
+        alt = image.get('alt', '') if isinstance(image, dict) else ''
+        if not path or not os.path.isfile(path):
+            self.draw_paragraph(alt or path or '')
+            return
+        usable_w = self.w - self.l_margin - self.r_margin
+        img_w = min(usable_w, 150)
+        img_h = 85
+        if self.get_y() + img_h + 10 > self.h - self.b_margin:
+            self.add_page()
+        x = self.l_margin + (usable_w - img_w) / 2
+        y = self.get_y()
+        self.image(path, x=x, y=y, w=img_w)
+        self.set_y(y + img_h + 4)
+        if alt:
+            self.set_font(self._b_font, '', 7.5)
+            self.set_text_color(*self._c('muted'))
+            self.cell(0, 5, strip_formatting(alt), align='C')
+            self.ln(6)
+        self.set_text_color(*self._c('body'))
+
 
 def strip_formatting(text):
     text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
@@ -354,6 +376,9 @@ def parse_markdown_to_blocks(lines):
     while i < len(lines):
         line = lines[i]
         if not line.strip(): blocks.append(('blank', None)); i += 1; continue
+        image_match = re.match(r'^!\[(.*?)\]\((.*?)\)\s*$', line.strip())
+        if image_match:
+            blocks.append(('image', {'alt': image_match.group(1), 'path': image_match.group(2)})); i += 1; continue
         if line.strip().startswith('```'):
             code_lines = []; i += 1
             while i < len(lines) and not lines[i].strip().startswith('```'):
@@ -403,6 +428,7 @@ def generate_pdf(md_path, pdf_path, template='dark'):
             pdf.draw_disclaimer(content) if '免责声明' in content else pdf.draw_paragraph(content)
         elif btype == 'code':
             pdf.draw_bazi_chart(content) if '年柱' in content and '月柱' in content else pdf.draw_code_block(content)
+        elif btype == 'image': pdf.draw_image(content)
         elif btype == 'table': pdf.draw_table(content)
         elif btype == 'hr': pdf.draw_hr()
         elif btype == 'bullet': pdf.draw_bullet(content)

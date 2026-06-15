@@ -32,6 +32,7 @@ from lunar_calendar import lunar_to_solar, solar_to_lunar as _s2l
 from auto_analyzer import auto_analyze as _auto_analyze
 
 from claude_api import stream_chat as _stream_claude, ANTHROPIC_API_KEY
+from prompt_engine import PromptEngine
 import data_store
 from config import (
     API_PORT, CORS_ORIGIN_LIST, CORS_ORIGINS,
@@ -427,6 +428,39 @@ class SaveReportRequest(BaseModel):
     content: str
 
 
+class ClientCreate(BaseModel):
+    name: str
+    gender: Optional[str] = Field(None, pattern="^(male|female)$")
+    birth_year: Optional[int] = Field(None, ge=1900, le=2100)
+    birth_month: Optional[int] = Field(None, ge=1, le=12)
+    birth_day: Optional[int] = Field(None, ge=1, le=31)
+    birth_hour: Optional[int] = Field(None, ge=0, le=23)
+    birth_minute: Optional[int] = Field(0, ge=0, le=59)
+    birth_location: Optional[str] = "Beijing"
+    tags: list[str] = []
+    notes: str = ""
+
+
+class ClientUpdate(BaseModel):
+    name: Optional[str] = None
+    gender: Optional[str] = Field(None, pattern="^(male|female)$")
+    birth_year: Optional[int] = Field(None, ge=1900, le=2100)
+    birth_month: Optional[int] = Field(None, ge=1, le=12)
+    birth_day: Optional[int] = Field(None, ge=1, le=31)
+    birth_hour: Optional[int] = Field(None, ge=0, le=23)
+    birth_minute: Optional[int] = Field(None, ge=0, le=59)
+    birth_location: Optional[str] = None
+    tags: Optional[list[str]] = None
+    notes: Optional[str] = None
+
+
+class FeedbackCreate(BaseModel):
+    dimension: str
+    judgment_text: str
+    is_accurate: bool
+    user_comment: str = ""
+
+
 @app.get("/api/charts")
 def api_list_charts():
     """List all saved charts from local database."""
@@ -505,6 +539,150 @@ def api_save_report(req: SaveReportRequest):
         return {"status": "ok"}
     except Exception as e:
         raise HTTPException(500, str(e))
+
+
+@app.get("/api/clients")
+def api_list_clients(search: str = "", tag: str = ""):
+    return {"clients": data_store.list_clients(search=search, tag=tag)}
+
+
+@app.post("/api/clients")
+def api_create_client(req: ClientCreate):
+    return data_store.create_client(req.model_dump())
+
+
+@app.get("/api/clients/{client_id}")
+def api_get_client(client_id: str):
+    client = data_store.get_client(client_id)
+    if not client:
+        raise HTTPException(404, "Client not found")
+    return client
+
+
+@app.put("/api/clients/{client_id}")
+def api_update_client(client_id: str, req: ClientUpdate):
+    client = data_store.update_client(client_id, req.model_dump(exclude_unset=True))
+    if not client:
+        raise HTTPException(404, "Client not found")
+    return client
+
+
+@app.delete("/api/clients/{client_id}")
+def api_delete_client(client_id: str):
+    data_store.delete_client(client_id)
+    return {"ok": True}
+
+
+@app.post("/api/clients/{client_id}/charts/{chart_id}")
+def api_link_client_chart(client_id: str, chart_id: str):
+    if not data_store.get_client(client_id):
+        raise HTTPException(404, "Client not found")
+    if not data_store.get_chart(chart_id):
+        raise HTTPException(404, "Chart not found")
+    data_store.link_client_chart(client_id, chart_id)
+    return {"ok": True}
+
+
+@app.delete("/api/clients/{client_id}/charts/{chart_id}")
+def api_unlink_client_chart(client_id: str, chart_id: str):
+    data_store.unlink_client_chart(client_id, chart_id)
+    return {"ok": True}
+
+
+@app.get("/api/clients/{client_id}/charts")
+def api_list_client_charts(client_id: str):
+    if not data_store.get_client(client_id):
+        raise HTTPException(404, "Client not found")
+    return {"charts": data_store.list_client_charts(client_id)}
+
+
+@app.get("/api/clients/{client_id}/analyses")
+def api_list_client_analyses(client_id: str):
+    if not data_store.get_client(client_id):
+        raise HTTPException(404, "Client not found")
+    return {"analyses": data_store.list_client_analyses(client_id)}
+
+
+def _build_visualization_data(chart):
+    wuxing_raw = chart.get('wuxing_stats') or chart.get('wu_counts') or {}
+    wuxing = {
+        '金': wuxing_raw.get('金', wuxing_raw.get('jin', 0)),
+        '木': wuxing_raw.get('木', wuxing_raw.get('mu', 0)),
+        '水': wuxing_raw.get('水', wuxing_raw.get('shui', 0)),
+        '火': wuxing_raw.get('火', wuxing_raw.get('huo', 0)),
+        '土': wuxing_raw.get('土', wuxing_raw.get('tu', 0)),
+    }
+    shishen = {}
+    four_pillars = chart.get('four_pillars') or {}
+    for pillar in four_pillars.values():
+        if not isinstance(pillar, dict):
+            continue
+        for key in ('shi_shen_gan', 'shi_shen_zhi', 'ten_god', 'shishen'):
+            value = pillar.get(key)
+            if value:
+                shishen[value] = shishen.get(value, 0) + 1
+    dayun = []
+    for item in chart.get('da_yun') or chart.get('dayun') or []:
+        if not isinstance(item, dict):
+            continue
+        gan_zhi = item.get('gan_zhi') or ''.join([str(item.get('gan', '')), str(item.get('zhi', ''))])
+        dayun.append({
+            'age': item.get('start_age') or item.get('age') or 0,
+            'gan_zhi': gan_zhi,
+            'score': item.get('score', item.get('luck_score', 0)),
+        })
+    liunian = []
+    for item in chart.get('liu_nian') or chart.get('liunian') or chart.get('yearly_fortune') or []:
+        if not isinstance(item, dict):
+            continue
+        gan_zhi = item.get('gan_zhi') or ''.join([str(item.get('gan', '')), str(item.get('zhi', ''))])
+        liunian.append({
+            'year': item.get('year') or 0,
+            'gan_zhi': gan_zhi,
+            'score': item.get('score', item.get('luck_score', 0)),
+        })
+    return {'wuxing': wuxing, 'shishen': shishen, 'dayun': dayun, 'liunian': liunian}
+
+
+@app.get("/api/charts/{chart_id}/visualization")
+def api_chart_visualization(chart_id: str):
+    chart = _get_chart(chart_id)
+    if not chart:
+        raise HTTPException(404, "Chart not found")
+    return _build_visualization_data(chart)
+
+
+@app.get("/api/charts/{chart_id}/analyses")
+def api_list_chart_analyses(chart_id: str):
+    if not data_store.get_chart(chart_id):
+        raise HTTPException(404, "Chart not found")
+    return {"analyses": data_store.list_chart_analyses(chart_id)}
+
+
+@app.get("/api/analyses/{analysis_id}")
+def api_get_analysis(analysis_id: str):
+    analysis = data_store.get_analysis(analysis_id)
+    if not analysis:
+        raise HTTPException(404, "Analysis not found")
+    return analysis
+
+
+@app.post("/api/analyses/{analysis_id}/feedback")
+def api_save_feedback(analysis_id: str, req: FeedbackCreate):
+    if not data_store.get_analysis(analysis_id):
+        raise HTTPException(404, "Analysis not found")
+    return data_store.save_feedback(
+        analysis_id=analysis_id,
+        dimension=req.dimension,
+        judgment_text=req.judgment_text,
+        is_accurate=req.is_accurate,
+        user_comment=req.user_comment,
+    )
+
+
+@app.get("/api/feedback/stats")
+def api_feedback_stats():
+    return data_store.get_feedback_stats()
 
 
 @app.post("/api/solar-time")
@@ -952,14 +1130,18 @@ async def chat_stream(chart_id: str, message: str):
         yield _sse_event('reply', {'text': '正在调用玄机子 AI 分析…\n\n'})
         await asyncio.sleep(0.05)
 
-        # Add KB gejue to the user message
-        enriched_msg = message
+        system_prompt, enriched_msg = PromptEngine().assemble(
+            chart=enriched,
+            pre_analysis=conclusions,
+            topic=report_tab,
+            question=message,
+        )
         if kb_gejue:
             enriched_msg += '\n\n## 相关经典歌诀（参考）\n' + '\n'.join(f'- {g}' for g in kb_gejue[:3])
 
         in_report = False
 
-        for event in _stream_claude(enriched, enriched_msg):
+        for event in _stream_claude(enriched, enriched_msg, system_prompt=system_prompt):
             if event.get('type') == 'error':
                 yield _sse_event('reply', {'text': '\n\n⚠️ ' + (event.get('text') or '')})
                 fallback = _generate_fallback(chart)
@@ -987,7 +1169,22 @@ async def chat_stream(chart_id: str, message: str):
                 if stop_reason == 'max_tokens':
                     yield _sse_event('reply', {'text': '\n\n⚠️ 报告因长度限制被截断，可输入"继续"获取后续内容。'})
 
-        yield _sse_event('done', {'corrections': 0})
+        analysis_id = None
+        try:
+            analysis = data_store.save_analysis(
+                client_id=None,
+                chart_id=chart_id,
+                analysis_type='chat',
+                topic=report_tab,
+                question=message,
+                ai_text=report_text or reply_text,
+                structured_summary={'local_analysis': conclusions},
+                report_tab=report_tab,
+            )
+            analysis_id = analysis.get('id')
+        except Exception:
+            analysis_id = None
+        yield _sse_event('done', {'corrections': 0, 'analysis_id': analysis_id})
 
     return StreamingResponse(event_stream(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

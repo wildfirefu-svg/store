@@ -112,5 +112,111 @@ class TestReports:
         data_store.delete_chart(cid)
 
 
+
+class TestClients:
+    def test_client_crud(self):
+        client = data_store.create_client({
+            'name': '客户测试',
+            'gender': 'male',
+            'birth_year': 1990,
+            'birth_month': 5,
+            'birth_day': 12,
+            'birth_hour': 8,
+            'tags': ['事业'],
+            'notes': '初次咨询',
+        })
+        try:
+            assert client['id']
+            assert client['name'] == '客户测试'
+            assert client['tags'] == ['事业']
+
+            clients = data_store.list_clients(search='客户测试')
+            assert any(c['id'] == client['id'] for c in clients)
+
+            fetched = data_store.get_client(client['id'])
+            assert fetched['name'] == '客户测试'
+
+            updated = data_store.update_client(client['id'], {'name': '客户测试更新', 'tags': ['事业', 'VIP']})
+            assert updated['name'] == '客户测试更新'
+            assert updated['tags'] == ['事业', 'VIP']
+        finally:
+            data_store.delete_client(client['id'])
+            assert data_store.get_client(client['id']) is None
+
+    def test_client_chart_link(self):
+        cid = 'test_client_chart_001'
+        data_store.save_chart(cid, '关联命盘', {}, {'day_master': {'gan': '甲'}})
+        client = data_store.create_client({'name': '关联客户'})
+        try:
+            data_store.link_client_chart(client['id'], cid)
+            charts = data_store.list_client_charts(client['id'])
+            assert any(c['chart_id'] == cid for c in charts)
+            data_store.unlink_client_chart(client['id'], cid)
+            charts = data_store.list_client_charts(client['id'])
+            assert all(c['chart_id'] != cid for c in charts)
+        finally:
+            data_store.delete_client(client['id'])
+            data_store.delete_chart(cid)
+
+
+class TestAnalysesAndFeedback:
+    def test_save_and_list_analysis(self):
+        cid = 'test_analysis_chart_001'
+        data_store.save_chart(cid, '分析命盘', {}, {'day_master': {'gan': '乙'}})
+        client = data_store.create_client({'name': '分析客户'})
+        try:
+            data_store.link_client_chart(client['id'], cid)
+            analysis = data_store.save_analysis(
+                client_id=client['id'],
+                chart_id=cid,
+                analysis_type='chat',
+                topic='sihechu',
+                question='请分析事业',
+                ai_text='## 核心判断\n测试分析',
+                structured_summary={'score': 0.8},
+                report_tab='sihechu',
+            )
+
+            fetched = data_store.get_analysis(analysis['id'])
+            assert fetched['question'] == '请分析事业'
+            assert fetched['structured_summary']['score'] == 0.8
+
+            by_client = data_store.list_client_analyses(client['id'])
+            by_chart = data_store.list_chart_analyses(cid)
+            assert any(a['id'] == analysis['id'] for a in by_client)
+            assert any(a['id'] == analysis['id'] for a in by_chart)
+        finally:
+            data_store.delete_client(client['id'])
+            data_store.delete_chart(cid)
+
+    def test_save_feedback_and_stats(self):
+        cid = 'test_feedback_chart_001'
+        data_store.save_chart(cid, '反馈命盘', {}, {'day_master': {'gan': '丙'}})
+        client = data_store.create_client({'name': '反馈客户'})
+        try:
+            analysis = data_store.save_analysis(
+                client_id=client['id'],
+                chart_id=cid,
+                analysis_type='chat',
+                topic='career',
+                question='事业如何',
+                ai_text='事业判断',
+            )
+            feedback = data_store.save_feedback(
+                analysis_id=analysis['id'],
+                dimension='career',
+                judgment_text='适合专业路线',
+                is_accurate=True,
+                user_comment='准确',
+            )
+            assert feedback['id']
+            stats = data_store.get_feedback_stats()
+            assert 'career' in stats['dimension_accuracy']
+            assert stats['dimension_accuracy']['career']['total'] >= 1
+        finally:
+            data_store.delete_client(client['id'])
+            data_store.delete_chart(cid)
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
