@@ -21,6 +21,33 @@ logging.basicConfig(
 )
 logger = logging.getLogger('claude')
 
+def _load_dotenv():
+    """Lightweight .env loader (no external dep). Reads KEY=VALUE pairs from
+    project_root/.env into os.environ without overriding existing values.
+    Lines starting with '#' are ignored. Quoted values are unquoted."""
+    if getattr(sys, 'frozen', False):
+        root = os.path.dirname(sys.executable)
+    else:
+        root = os.path.dirname(os.path.abspath(__file__))
+    env_path = os.path.join(root, ".env")
+    try:
+        with open(env_path, "r", encoding="utf-8") as f:
+            raw = f.read()
+    except (FileNotFoundError, OSError):
+        return
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip()
+        if (value.startswith('"') and value.endswith('"')) or (value.startswith("'") and value.endswith("'")):
+            value = value[1:-1]
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
 def _load_api_key():
     """Load API key: env vars > external key file. Returns '' if not configured."""
     for env_name in ("DEEPSEEK_API_KEY", "ANTHROPIC_API_KEY"):
@@ -44,6 +71,8 @@ def _load_api_key():
             pass
     return ""
 
+
+_load_dotenv()
 ANTHROPIC_API_KEY = _load_api_key()
 
 
@@ -54,6 +83,25 @@ def _detect_provider(api_key: str):
         return "anthropic", "https://api.anthropic.com/v1/messages", model
     model = os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-pro")
     return "deepseek", "https://api.deepseek.com/chat/completions", model
+
+
+def _log_ai_config():
+    """Emit a one-shot startup banner so operators can see which AI provider
+    and model are actually loaded, and surface obvious key issues."""
+    key = ANTHROPIC_API_KEY
+    if not key:
+        logger.warning("AI key not configured — set DEEPSEEK_API_KEY/ANTHROPIC_API_KEY or place .deepseek_key/.anthropic_key next to api_server.py")
+        return
+    provider, _, model = _detect_provider(key)
+    prefix = key[:7] + "***"
+    logger.info("AI configured: provider=%s model=%s key_prefix=%s key_len=%d", provider, model, prefix, len(key))
+    if not key.startswith("sk-"):
+        logger.warning("AI key does not start with 'sk-'; this looks suspicious")
+    elif provider == "deepseek" and len(key) < 32:
+        logger.warning("DeepSeek key length=%d looks unusually short; verify it is the full key", len(key))
+
+
+_log_ai_config()
 
 
 _SYSTEM_PROMPT_CACHE = None

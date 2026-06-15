@@ -90,6 +90,11 @@ class TestToolBars:
     @pytest.fixture(autouse=True)
     def ensure_mingzhu(self, page):
         """Ensure at least one mingzhu exists for toolbar tests."""
+        # Give the front-end time to load mingzhu list from the server
+        try:
+            page.wait_for_selector(".mingzhu-card", timeout=4000)
+        except Exception:
+            pass
         cards = page.locator(".mingzhu-card").all()
         if len(cards) == 0:
             page.click("#add-mingzhu-btn")
@@ -97,7 +102,20 @@ class TestToolBars:
             page.fill("#mingzhu-name", "工具栏测试")
             page.fill("#mingzhu-location", "北京")
             page.click("#mingzhu-submit-btn")
-            page.wait_for_timeout(3000)
+            # Wait for the modal to actually close after submission. The
+            # auto overview generation makes this flow unusually long.
+            try:
+                page.wait_for_function(
+                    "() => document.getElementById('add-mingzhu-modal').classList.contains('hidden')",
+                    timeout=60000,
+                )
+            except Exception:
+                pass
+        # Defensive: force-close modal if any earlier test left it open
+        page.evaluate(
+            "() => { const m = document.getElementById('add-mingzhu-modal'); if (m) m.remove(); }"
+        )
+        page.wait_for_timeout(400)
 
     def test_zeri_toolbar_opens(self, page):
         """择日工具栏可以打开"""
