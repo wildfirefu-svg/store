@@ -62,13 +62,15 @@ body::before {
    ================================================================ */
 .app-container {
     display: grid;
-    grid-template-columns: 200px 30fr 30fr 40fr;
+    grid-template-columns: 200px minmax(0, 30fr) minmax(0, 30fr) minmax(0, 40fr);
     height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
     position: relative;
     z-index: 1;
 }
 .app-container.panel-collapsed {
-    grid-template-columns: 32px 30fr 30fr 40fr;
+    grid-template-columns: 32px minmax(0, 30fr) minmax(0, 30fr) minmax(0, 40fr);
 }
 
 /* ================================================================
@@ -104,6 +106,32 @@ body::before {
 @keyframes cursor-blink {
     0%, 100% { opacity: 1; }
     50% { opacity: 0; }
+}
+
+@media (max-width: 768px) {
+    .app-container,
+    .app-container.panel-collapsed {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr);
+        padding-bottom: 58px;
+    }
+    .mingzhu-panel,
+    .chat-column,
+    .chart-column,
+    .report-column {
+        grid-column: 1;
+        grid-row: 1;
+        height: calc(100vh - 58px);
+        max-height: calc(100vh - 58px);
+        min-height: 0;
+    }
+    .mobile-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 58px;
+    }
 }
 
 

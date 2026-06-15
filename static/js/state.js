@@ -32,8 +32,21 @@ export const PersistenceSync = {
             var resp = await fetch(API + '/charts');
             if (!resp.ok) return;
             var charts = await resp.json();
-            if (!charts || !charts.length) return;
+            charts = Array.isArray(charts) ? charts : [];
+            var serverIds = new Set(charts.map(function(c) { return c.chart_id; }));
             var local = MingzhuManager.getAll();
+            // Drop any local mingzhu that no longer exists on the server.
+            var pruned = local.filter(function(m) { return serverIds.has(m.chart_id); });
+            if (pruned.length !== local.length) {
+                localStorage.setItem('bazi_mingzhu_list', JSON.stringify(pruned));
+                local = pruned;
+            }
+            // If a previously selected mingzhu was pruned, clear the pointer.
+            var currentId = localStorage.getItem('bazi_current_mingzhu');
+            if (currentId && !serverIds.has(currentId)) {
+                localStorage.removeItem('bazi_current_mingzhu');
+            }
+            // Pull any server mingzhu that the local cache is missing.
             for (var i = 0; i < charts.length; i++) {
                 var c = charts[i];
                 if (!local.find(function(m) { return m.chart_id === c.chart_id; })) {
