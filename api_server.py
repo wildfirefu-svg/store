@@ -117,15 +117,18 @@ async def rate_limit_middleware(request: Request, call_next):
 
     # Determine limit for this path
     max_req, window = _RATE_LIMITS.get("default")
+    limit_key = "default"
     for prefix, limit in _RATE_LIMITS.items():
         if prefix != "default" and path.startswith(prefix):
             max_req, window = limit
+            limit_key = prefix
             break
 
     # Client IP
     ip = request.client.host if request.client else "unknown"
+    hit_key = f"{ip}:{limit_key}"
     with _hits_lock:
-        timestamps = _hits[ip]
+        timestamps = _hits[hit_key]
         timestamps[:] = [t for t in timestamps if now - t < window]
 
         if len(timestamps) >= max_req:

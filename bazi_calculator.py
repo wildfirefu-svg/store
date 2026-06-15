@@ -2179,8 +2179,14 @@ def compare_charts(chart1, chart2):
     dm_relation_reverse = get_shishen(dm2, dm1) if dm1 and dm2 else '未知'
 
     # ---- 3. Nayin comparison ----
-    nayin1 = chart1.get('nayin_wuxing', '')
-    nayin2 = chart2.get('nayin_wuxing', '')
+    def _day_nayin_wuxing(chart):
+        value = chart.get('nayin_wuxing', '')
+        if isinstance(value, dict):
+            return value.get('day') or value.get('year') or ''
+        return value
+
+    nayin1 = _day_nayin_wuxing(chart1)
+    nayin2 = _day_nayin_wuxing(chart2)
     nayin_relation = ''
     if nayin1 and nayin2:
         relation_map = {

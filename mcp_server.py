@@ -230,7 +230,13 @@ def bazi_name_gen(
     """
     chart = _calc_chart(year, month, day, hour, minute, gender, location)
     na = _get_name_analysis()
-    result = na.generate_names(surname, chart, gender, top_n)
+    names = na.generate_names(surname, chart, gender, top_n)
+    result = {
+        'surname': surname,
+        'gender': gender,
+        'count': len(names) if isinstance(names, list) else 0,
+        'names': names if isinstance(names, list) else [],
+    }
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
