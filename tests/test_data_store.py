@@ -218,5 +218,77 @@ class TestAnalysesAndFeedback:
             data_store.delete_chart(cid)
 
 
+class TestModelOutputs:
+    def test_save_and_get_model_output(self):
+        cid = 'test_model_output_chart_001'
+        data_store.save_chart(cid, '模型输出命盘', {}, {'day_master': {'gan': '戊'}})
+        client = data_store.create_client({'name': '模型输出客户'})
+        try:
+            analysis = data_store.save_analysis(
+                client_id=client['id'],
+                chart_id=cid,
+                analysis_type='chat',
+                topic='career',
+                question='请分析事业',
+                ai_text='事业分析',
+            )
+            payload = {
+                'analysis_id': analysis['id'],
+                'chart_id': cid,
+                'client_id': client['id'],
+                'provider': 'deepseek',
+                'model': 'deepseek-v4-pro',
+                'method': 'structured',
+                'prompt_version': 'srp_v1',
+                'reasoning_protocol': 'xuanjizi_srp_v1',
+                'domain': 'career',
+                'question': '请分析事业',
+                'input_hash': 'abc123',
+                'raw_prompt': 'prompt text',
+                'raw_output': 'answer text',
+                'parsed_answer': None,
+                'structured_reasoning_json': {'confidence': 0.7},
+                'latency_ms': 1234,
+                'token_estimate': 1000,
+                'cost_estimate': 0.01,
+            }
+            saved = data_store.save_model_output(**payload)
+            assert saved['id']
+            loaded = data_store.get_model_output(saved['id'])
+            assert loaded['model'] == 'deepseek-v4-pro'
+            assert loaded['structured_reasoning_json']['confidence'] == 0.7
+            assert loaded['client_id'] == client['id']
+        finally:
+            data_store.delete_client(client['id'])
+            data_store.delete_chart(cid)
+
+    def test_list_model_outputs_limit_is_defensive(self):
+        assert isinstance(data_store.list_model_outputs(limit=None), list)
+        assert isinstance(data_store.list_model_outputs(limit='bad'), list)
+        assert isinstance(data_store.list_model_outputs(limit=999), list)
+        assert isinstance(data_store.list_model_outputs(limit=0), list)
+
+    def test_list_model_outputs_for_chart(self):
+        cid = 'test_model_output_chart_002'
+        data_store.save_chart(cid, '模型输出列表', {}, {'day_master': {'gan': '己'}})
+        try:
+            saved = data_store.save_model_output(
+                chart_id=cid,
+                provider='deepseek',
+                model='deepseek-v4-pro',
+                method='structured',
+                prompt_version='srp_v1',
+                reasoning_protocol='xuanjizi_srp_v1',
+                domain='wealth',
+                question='财运如何',
+                raw_output='财运回答',
+                structured_reasoning_json={'domain': 'wealth'},
+            )
+            items = data_store.list_model_outputs(chart_id=cid)
+            assert any(x['id'] == saved['id'] for x in items)
+        finally:
+            data_store.delete_chart(cid)
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

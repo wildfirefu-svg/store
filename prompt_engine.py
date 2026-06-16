@@ -11,6 +11,10 @@ SYSTEM_PROMPTS = {
 
 
 class PromptEngine:
+    def __init__(self, prompt_version="srp_v1", reasoning_protocol="xuanjizi_srp_v1"):
+        self.prompt_version = prompt_version
+        self.reasoning_protocol = reasoning_protocol
+
     def assemble(self, chart, pre_analysis=None, topic="sihechu", question=""):
         system_prompt = self.build_system_prompt(topic)
         domain_knowledge = self.build_domain_knowledge(chart, topic)
@@ -18,7 +22,15 @@ class PromptEngine:
         return system_prompt, f"{domain_knowledge}\n\n---\n\n{dynamic_context}"
 
     def build_system_prompt(self, topic):
-        return SYSTEM_PROMPTS.get(topic, SYSTEM_PROMPTS["sihechu"])
+        base_prompt = SYSTEM_PROMPTS.get(topic, SYSTEM_PROMPTS["sihechu"])
+        protocol_text = self._load_structured_reasoning_protocol()
+        return "\n\n".join([
+            base_prompt,
+            f"Prompt版本：{self.prompt_version}",
+            f"推理协议：{self.reasoning_protocol}",
+            "请遵循以下结构化推理协议完成分析：",
+            protocol_text,
+        ])
 
     def build_domain_knowledge(self, chart, topic):
         cases = self.retrieve_similar_cases(chart)
@@ -49,6 +61,24 @@ class PromptEngine:
             return [module.format_case_for_prompt(case) for case in results[:3]]
         except Exception:
             return []
+
+    def _load_structured_reasoning_protocol(self):
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        prompt_path = os.path.join(base_dir, "prompts", "structured_reasoning_v1.md")
+        try:
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                return f.read()
+        except Exception:
+            return "\n".join([
+                "# Xuanjizi-SRP-v1 结构化推理协议",
+                "命盘基础扫描",
+                "结构关系识别",
+                "强弱与冲突定级",
+                "领域映射",
+                "事件映射",
+                "用户可读表达",
+                "不做绝对化预测",
+            ])
 
     def _load_case_retrieval_module(self):
         base_dir = os.path.dirname(os.path.abspath(__file__))

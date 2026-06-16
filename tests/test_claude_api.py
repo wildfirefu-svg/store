@@ -10,6 +10,14 @@ def test_detects_deepseek_for_non_anthropic_key():
     assert model == os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-pro")
 
 
+def test_get_ai_config_exposes_safe_metadata():
+    cfg = claude_api.get_ai_config()
+    assert "provider" in cfg
+    assert "model" in cfg
+    assert "key_configured" in cfg
+    assert "key" not in cfg
+
+
 def test_deepseek_payload_disables_thinking_by_default(monkeypatch):
     monkeypatch.delenv("DEEPSEEK_THINKING", raising=False)
     payload = claude_api._build_deepseek_payload("system", {"chart": "data"}, "hello", "deepseek-v4-pro")

@@ -101,6 +101,15 @@ def _log_ai_config():
         logger.warning("DeepSeek key length=%d looks unusually short; verify it is the full key", len(key))
 
 
+def get_ai_config():
+    provider, _, model = _detect_provider(ANTHROPIC_API_KEY or "")
+    return {
+        "provider": provider,
+        "model": model,
+        "key_configured": bool(ANTHROPIC_API_KEY),
+    }
+
+
 _log_ai_config()
 
 

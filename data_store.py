@@ -108,11 +108,39 @@ def init_db():
                     created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
                     FOREIGN KEY (analysis_id) REFERENCES analyses(id) ON DELETE CASCADE
                 );
+                CREATE TABLE IF NOT EXISTS model_outputs (
+                    id TEXT PRIMARY KEY,
+                    analysis_id TEXT,
+                    chart_id TEXT,
+                    client_id TEXT,
+                    provider TEXT,
+                    model TEXT,
+                    method TEXT,
+                    prompt_version TEXT,
+                    reasoning_protocol TEXT,
+                    domain TEXT,
+                    question TEXT,
+                    input_hash TEXT,
+                    raw_prompt TEXT,
+                    raw_output TEXT,
+                    parsed_answer TEXT,
+                    structured_reasoning_json TEXT,
+                    latency_ms INTEGER,
+                    token_estimate INTEGER,
+                    cost_estimate REAL,
+                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                    FOREIGN KEY (analysis_id) REFERENCES analyses(id) ON DELETE SET NULL,
+                    FOREIGN KEY (chart_id) REFERENCES charts(chart_id) ON DELETE CASCADE,
+                    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL
+                );
                 CREATE INDEX IF NOT EXISTS idx_clients_updated ON clients(updated_at);
                 CREATE INDEX IF NOT EXISTS idx_client_charts_client ON client_charts(client_id);
                 CREATE INDEX IF NOT EXISTS idx_analyses_client ON analyses(client_id, created_at);
                 CREATE INDEX IF NOT EXISTS idx_analyses_chart ON analyses(chart_id, created_at);
                 CREATE INDEX IF NOT EXISTS idx_feedback_analysis ON feedback(analysis_id);
+                CREATE INDEX IF NOT EXISTS idx_model_outputs_chart_id ON model_outputs(chart_id);
+                CREATE INDEX IF NOT EXISTS idx_model_outputs_analysis_id ON model_outputs(analysis_id);
+                CREATE INDEX IF NOT EXISTS idx_model_outputs_prompt_version ON model_outputs(prompt_version);
             """)
             conn.commit()
         finally:
@@ -307,6 +335,14 @@ def _analysis_from_row(row):
         return None
     d = dict(row)
     d['structured_summary'] = _json_loads(d.get('structured_summary'), {})
+    return d
+
+
+def _model_output_from_row(row):
+    if not row:
+        return None
+    d = dict(row)
+    d['structured_reasoning_json'] = _json_loads(d.get('structured_reasoning_json'), {})
     return d
 
 
@@ -541,6 +577,76 @@ def save_feedback(analysis_id, dimension, judgment_text, is_accurate, user_comme
             conn.commit()
             row = conn.execute("SELECT * FROM feedback WHERE id = ?", (feedback_id,)).fetchone()
             return dict(row)
+        finally:
+            conn.close()
+
+
+def save_model_output(analysis_id=None, chart_id=None, client_id=None, provider=None, model=None,
+                      method=None, prompt_version=None, reasoning_protocol=None, domain=None,
+                      question='', input_hash='', raw_prompt='', raw_output='', parsed_answer=None,
+                      structured_reasoning_json=None, latency_ms=None, token_estimate=None,
+                      cost_estimate=None):
+    output_id = _new_id('model_output')
+    structured_reasoning_json = structured_reasoning_json if structured_reasoning_json is not None else {}
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            conn.execute(
+                """INSERT INTO model_outputs (
+                    id, analysis_id, chart_id, client_id, provider, model, method,
+                    prompt_version, reasoning_protocol, domain, question, input_hash,
+                    raw_prompt, raw_output, parsed_answer, structured_reasoning_json,
+                    latency_ms, token_estimate, cost_estimate
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    output_id, analysis_id, chart_id, client_id, provider, model, method,
+                    prompt_version, reasoning_protocol, domain, question, input_hash,
+                    raw_prompt, raw_output, parsed_answer,
+                    json.dumps(structured_reasoning_json, ensure_ascii=False),
+                    latency_ms, token_estimate, cost_estimate,
+                ),
+            )
+            conn.commit()
+            row = conn.execute("SELECT * FROM model_outputs WHERE id = ?", (output_id,)).fetchone()
+            return _model_output_from_row(row)
+        finally:
+            conn.close()
+
+
+def get_model_output(output_id):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            row = conn.execute("SELECT * FROM model_outputs WHERE id = ?", (output_id,)).fetchone()
+            return _model_output_from_row(row)
+        finally:
+            conn.close()
+
+
+def list_model_outputs(chart_id=None, analysis_id=None, limit=50):
+    try:
+        limit = int(limit or 50)
+    except (TypeError, ValueError):
+        limit = 50
+    limit = max(1, min(limit, 200))
+    sql = "SELECT * FROM model_outputs"
+    conditions = []
+    params = []
+    if chart_id:
+        conditions.append("chart_id = ?")
+        params.append(chart_id)
+    if analysis_id:
+        conditions.append("analysis_id = ?")
+        params.append(analysis_id)
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
+    sql += " ORDER BY created_at DESC, id DESC LIMIT ?"
+    params.append(limit)
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            rows = conn.execute(sql, tuple(params)).fetchall()
+            return [_model_output_from_row(r) for r in rows]
         finally:
             conn.close()
 

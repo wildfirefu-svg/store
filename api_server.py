@@ -31,6 +31,7 @@ from bazi_calculator import (
 from lunar_calendar import lunar_to_solar, solar_to_lunar as _s2l
 from auto_analyzer import auto_analyze as _auto_analyze
 
+import claude_api
 from claude_api import stream_chat as _stream_claude, ANTHROPIC_API_KEY
 from prompt_engine import PromptEngine
 import data_store
@@ -669,6 +670,27 @@ def api_card_data(chart_id: str):
     return saved
 
 
+@app.get("/api/charts/{chart_id}/model-outputs")
+def api_list_chart_model_outputs(
+    chart_id: str,
+    limit: int = Query(50, ge=1, le=200),
+    include_raw: bool = Query(False),
+):
+    if not data_store.get_chart(chart_id):
+        raise HTTPException(404, "Chart not found")
+    outputs = data_store.list_model_outputs(chart_id=chart_id, limit=limit)
+    if include_raw:
+        return outputs
+    safe_outputs = []
+    for item in outputs:
+        safe = dict(item)
+        safe.pop('raw_prompt', None)
+        safe.pop('raw_output', None)
+        safe.pop('structured_reasoning_json', None)
+        safe_outputs.append(safe)
+    return safe_outputs
+
+
 @app.get("/api/charts/{chart_id}/analyses")
 def api_list_chart_analyses(chart_id: str):
     if not data_store.get_chart(chart_id):
@@ -1151,7 +1173,8 @@ async def chat_stream(chart_id: str, message: str):
         yield _sse_event('reply', {'text': '正在调用玄机子 AI 分析…\n\n'})
         await asyncio.sleep(0.05)
 
-        system_prompt, enriched_msg = PromptEngine().assemble(
+        prompt_engine = PromptEngine()
+        system_prompt, enriched_msg = prompt_engine.assemble(
             chart=enriched,
             pre_analysis=conclusions,
             topic=report_tab,
@@ -1204,6 +1227,35 @@ async def chat_stream(chart_id: str, message: str):
                 report_tab=report_tab,
             )
             analysis_id = analysis.get('id')
+            try:
+                ai_cfg = claude_api.get_ai_config()
+                input_hash = hashlib.sha256(
+                    json.dumps({
+                        'chart_id': chart_id,
+                        'message': message,
+                        'report_tab': report_tab,
+                        'prompt_version': prompt_engine.prompt_version,
+                    }, ensure_ascii=False, sort_keys=True).encode('utf-8')
+                ).hexdigest()
+                data_store.save_model_output(
+                    analysis_id=analysis_id,
+                    chart_id=chart_id,
+                    client_id=_client_id,
+                    provider=ai_cfg.get('provider'),
+                    model=ai_cfg.get('model'),
+                    method='structured',
+                    prompt_version=prompt_engine.prompt_version,
+                    reasoning_protocol=prompt_engine.reasoning_protocol,
+                    domain=report_tab,
+                    question=message,
+                    input_hash=input_hash,
+                    raw_prompt=enriched_msg[:4000],
+                    raw_output=report_text or reply_text,
+                    parsed_answer=None,
+                    structured_reasoning_json={'local_analysis': conclusions, 'confidence': None},
+                )
+            except Exception as e:
+                logger.warning("Failed to save model output for chart %s analysis %s: %s", chart_id, analysis_id, e, exc_info=True)
         except Exception:
             analysis_id = None
         yield _sse_event('done', {'corrections': 0, 'analysis_id': analysis_id})

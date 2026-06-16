@@ -219,5 +219,58 @@ class TestAnalyzePdfSecurity:
         assert r.status_code in (200, 400, 500)  # ok or missing deps
 
 
+class TestModelOutputsApi:
+    def test_list_model_outputs_for_chart_api(self):
+        cid = _get_chart_id()
+        saved = api.data_store.save_model_output(
+            chart_id=cid,
+            provider='deepseek',
+            model='deepseek-v4-pro',
+            method='structured',
+            prompt_version='srp_v1',
+            reasoning_protocol='xuanjizi_srp_v1',
+            domain='career',
+            question='请分析事业',
+            raw_output='测试输出',
+            structured_reasoning_json={'confidence': 0.7},
+        )
+        r = client.get(f'/api/charts/{cid}/model-outputs')
+        assert r.status_code == 200
+        data = r.json()
+        assert isinstance(data, list)
+        item = next(x for x in data if x['id'] == saved['id'])
+        assert 'raw_prompt' not in item
+        assert 'raw_output' not in item
+        assert 'structured_reasoning_json' not in item
+
+        raw = client.get(f'/api/charts/{cid}/model-outputs', params={'include_raw': 'true'}).json()
+        raw_item = next(x for x in raw if x['id'] == saved['id'])
+        assert raw_item['raw_output'] == '测试输出'
+
+
+class TestChatStreamModelOutputs:
+    def test_chat_stream_saves_model_output(self, monkeypatch):
+        cid = _get_chart_id()
+
+        def fake_stream(chart, message, system_prompt=None):
+            yield {'type': 'text_delta', 'text': '# 事业分析\n命理依据：测试输出'}
+            yield {'type': 'message_delta', 'stop_reason': 'end_turn'}
+
+        monkeypatch.setattr(api, '_stream_claude', fake_stream)
+        r = client.get('/api/chat/stream', params={'chart_id': cid, 'message': '请分析事业'})
+        assert r.status_code == 200
+        assert 'event: done' in r.text
+
+        outputs = api.data_store.list_model_outputs(chart_id=cid)
+        assert outputs
+        output = outputs[0]
+        assert output['provider']
+        assert output['model']
+        assert output['prompt_version'] == 'srp_v1'
+        assert output['reasoning_protocol'] == 'xuanjizi_srp_v1'
+        assert '请分析事业' in output['question']
+        assert output['raw_output']
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

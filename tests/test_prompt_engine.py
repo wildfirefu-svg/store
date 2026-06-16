@@ -55,6 +55,26 @@ def test_prompt_engine_uses_default_topic_for_unknown_topic():
     assert "请进行综合分析" in user_prompt
 
 
+def test_prompt_engine_exposes_version_metadata():
+    engine = PromptEngine(prompt_version="srp_v1", reasoning_protocol="xuanjizi_srp_v1")
+    assert engine.prompt_version == "srp_v1"
+    assert engine.reasoning_protocol == "xuanjizi_srp_v1"
+
+
+def test_prompt_engine_srp_prompt_contains_required_stages():
+    system_prompt, _ = PromptEngine(
+        prompt_version="srp_v1",
+        reasoning_protocol="xuanjizi_srp_v1",
+    ).assemble(
+        chart=_sample_chart(),
+        pre_analysis=_sample_pre_analysis(),
+        topic="career",
+        question="请分析事业",
+    )
+    for text in ["命盘基础扫描", "结构关系识别", "强弱与冲突定级", "领域映射", "事件映射", "用户可读表达"]:
+        assert text in system_prompt
+
+
 def test_prompt_engine_formats_domain_knowledge(monkeypatch):
     engine = PromptEngine()
     monkeypatch.setattr(engine, "retrieve_similar_cases", lambda chart: ["【参考案例】\n姓名：测试"])
