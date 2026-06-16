@@ -8,6 +8,7 @@ import { API } from './api.js';
 import { renderMarkdown, _escHtml } from './markdown.js';
 import { renderBaziTable } from './render-bazi.js';
 import { renderZiweiTable, renderFullChart } from './render-ziwei.js';
+import { renderTimeline } from './timeline.js';
 export { _escHtml };
 
 // ── ReportTabs ──
@@ -127,24 +128,10 @@ export const ReportTabs = {
 
     _renderVisualization() {
         var el = document.getElementById('report-content');
-        var store = this._getStore();
-        var data = store['visualization'];
-        if (!data) {
-            this._fetchAndRenderVisualization();
-            return;
-        }
-        el.innerHTML = '<div class="chart-grid">'
-            + '<div class="chart-card"><div id="viz-wuxing" class="chart-container"></div></div>'
-            + '<div class="chart-card"><div id="viz-shishen" class="chart-container"></div></div>'
-            + '<div class="chart-card"><div id="viz-dayun" class="chart-container"></div></div>'
-            + '<div class="chart-card"><div id="viz-liunian" class="chart-container"></div></div>'
-            + '</div>';
-        if (window.BaZiCharts) {
-            window.BaZiCharts.renderWuxingRadar(document.getElementById('viz-wuxing'), data.wuxing || {});
-            window.BaZiCharts.renderShishenPie(document.getElementById('viz-shishen'), data.shishen || {});
-            window.BaZiCharts.renderDayunTrend(document.getElementById('viz-dayun'), data.dayun || []);
-            window.BaZiCharts.renderLiunianBar(document.getElementById('viz-liunian'), data.liunian || []);
-        }
+        var cur = MingzhuManager.getCurrent();
+        if (!cur) { el.innerHTML = '<p class="report-placeholder">请先添加命主</p>'; return; }
+        el.innerHTML = '<div id="life-timeline-container" class="life-timeline-container"></div>';
+        renderTimeline(document.getElementById('life-timeline-container'), cur.chart_id);
     },
 
     async _fetchAndRenderVisualization() {

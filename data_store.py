@@ -189,6 +189,23 @@ def init_db():
                 );
                 CREATE INDEX IF NOT EXISTS idx_benchmark_runs_dataset ON benchmark_runs(dataset);
                 CREATE INDEX IF NOT EXISTS idx_benchmark_runs_model ON benchmark_runs(model);
+                CREATE TABLE IF NOT EXISTS life_events (
+                    id TEXT PRIMARY KEY,
+                    chart_id TEXT NOT NULL,
+                    client_id TEXT,
+                    event_date TEXT,
+                    event_year INTEGER,
+                    domain TEXT NOT NULL DEFAULT 'unknown',
+                    title TEXT NOT NULL DEFAULT '',
+                    description TEXT NOT NULL DEFAULT '',
+                    impact_level INTEGER NOT NULL DEFAULT 3,
+                    source TEXT NOT NULL DEFAULT 'user',
+                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                    FOREIGN KEY (chart_id) REFERENCES charts(chart_id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_life_events_chart ON life_events(chart_id);
+                CREATE INDEX IF NOT EXISTS idx_life_events_year ON life_events(event_year);
+                CREATE INDEX IF NOT EXISTS idx_life_events_domain ON life_events(domain);
             """)
             conn.commit()
         finally:
@@ -898,6 +915,75 @@ def list_benchmark_runs(dataset=None, model=None, limit=20):
         try:
             rows = conn.execute(sql, tuple(params)).fetchall()
             return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+
+# ============================================================
+# Life Events CRUD
+# ============================================================
+
+def save_life_event(id, chart_id, client_id=None, event_date=None, event_year=None,
+                    domain='unknown', title='', description='', impact_level=3, source='user'):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            conn.execute(
+                """INSERT OR REPLACE INTO life_events (
+                    id, chart_id, client_id, event_date, event_year, domain,
+                    title, description, impact_level, source
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (id, chart_id, client_id, event_date, event_year, domain,
+                 title, description, impact_level, source),
+            )
+            conn.commit()
+            row = conn.execute("SELECT * FROM life_events WHERE id = ?", (id,)).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def get_life_event(event_id):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            row = conn.execute("SELECT * FROM life_events WHERE id = ?", (event_id,)).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def list_life_events(chart_id, domain=None, year=None, limit=100):
+    try:
+        limit = int(limit or 100)
+    except (TypeError, ValueError):
+        limit = 100
+    limit = max(1, min(limit, 200))
+    sql = "SELECT * FROM life_events WHERE chart_id = ?"
+    params = [chart_id]
+    if domain:
+        sql += " AND domain = ?"
+        params.append(domain)
+    if year is not None:
+        sql += " AND event_year = ?"
+        params.append(year)
+    sql += " ORDER BY event_year ASC, created_at ASC LIMIT ?"
+    params.append(limit)
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            rows = conn.execute(sql, tuple(params)).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+
+def delete_life_event(event_id):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            conn.execute("DELETE FROM life_events WHERE id = ?", (event_id,))
+            conn.commit()
         finally:
             conn.close()
 

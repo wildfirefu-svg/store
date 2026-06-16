@@ -425,3 +425,78 @@ class TestBenchmarkRuns:
         assert any(r['id'] == 'run-list-001' for r in runs)
         runs_filtered = data_store.list_benchmark_runs(dataset='baziqa_mini_v1')
         assert any(r['id'] == 'run-list-001' for r in runs_filtered)
+
+
+class TestLifeEvents:
+    def test_save_and_get_life_event(self):
+        cid = 'test_le_chart_001'
+        data_store.save_chart(cid, 'Timeline测试', {}, {})
+        try:
+            payload = {
+                'id': 'event-001',
+                'chart_id': cid,
+                'client_id': None,
+                'event_date': '2020-03-15',
+                'event_year': 2020,
+                'domain': 'career',
+                'title': '入职新公司',
+                'description': '加入某互联网公司担任产品经理',
+                'impact_level': 4,
+                'source': 'user',
+            }
+            saved = data_store.save_life_event(**payload)
+            assert saved['id'] == 'event-001'
+            assert saved['domain'] == 'career'
+            assert saved['impact_level'] == 4
+            loaded = data_store.get_life_event('event-001')
+            assert loaded is not None
+            assert loaded['title'] == '入职新公司'
+        finally:
+            data_store.delete_chart(cid)
+
+    def test_list_life_events_for_chart(self):
+        cid = 'test_le_chart_002'
+        data_store.save_chart(cid, 'Timeline列表测试', {}, {})
+        try:
+            data_store.save_life_event(
+                id='event-list-001',
+                chart_id=cid,
+                event_year=2021,
+                domain='wealth',
+                title='投资理财',
+                impact_level=3,
+                source='user',
+            )
+            data_store.save_life_event(
+                id='event-list-002',
+                chart_id=cid,
+                event_year=2022,
+                domain='career',
+                title='升职',
+                impact_level=5,
+                source='user',
+            )
+            items = data_store.list_life_events(chart_id=cid)
+            assert len(items) >= 2
+            items_wealth = data_store.list_life_events(chart_id=cid, domain='wealth')
+            assert all(e['domain'] == 'wealth' for e in items_wealth)
+        finally:
+            data_store.delete_chart(cid)
+
+    def test_delete_life_event(self):
+        cid = 'test_le_chart_003'
+        data_store.save_chart(cid, '删除事件测试', {}, {})
+        try:
+            data_store.save_life_event(
+                id='event-del-001',
+                chart_id=cid,
+                event_year=2020,
+                domain='health',
+                title='体检',
+                impact_level=2,
+                source='user',
+            )
+            data_store.delete_life_event('event-del-001')
+            assert data_store.get_life_event('event-del-001') is None
+        finally:
+            data_store.delete_chart(cid)

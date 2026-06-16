@@ -691,6 +691,196 @@ def api_list_chart_model_outputs(
     return safe_outputs
 
 
+class LifeEventCreate(BaseModel):
+    event_year: Optional[int] = None
+    event_date: Optional[str] = None
+    domain: str = 'unknown'
+    title: str = ''
+    description: str = ''
+    impact_level: int = Field(3, ge=1, le=5)
+    source: str = 'user'
+
+
+def _build_timeline_data(chart):
+    chart_id = chart['chart_id']
+    chart_data = chart.get('chart_data', {})
+
+    birth_info = chart.get('birth_info', {})
+    birth_year = birth_info.get('year', 1990)
+    gender = birth_info.get('gender', 'male')
+
+    dayun = []
+    for item in chart_data.get('da_yun') or chart_data.get('dayun') or []:
+        if not isinstance(item, dict):
+            continue
+        gan_zhi = item.get('gan_zhi') or ''.join([str(item.get('gan', '')), str(item.get('zhi', ''))])
+        start_age = item.get('start_age') or item.get('age') or 0
+        end_age = start_age + 9
+        dayun.append({
+            'age': start_age,
+            'end_age': end_age,
+            'gan_zhi': gan_zhi,
+            'score': float(item.get('score', item.get('luck_score', 0))),
+        })
+
+    liunian = []
+    for item in chart_data.get('liu_nian') or chart_data.get('liunian') or chart_data.get('yearly_fortune') or []:
+        if not isinstance(item, dict):
+            continue
+        gan_zhi = item.get('gan_zhi') or ''.join([str(item.get('gan', '')), str(item.get('zhi', ''))])
+        liunian.append({
+            'year': item.get('year') or 0,
+            'gan_zhi': gan_zhi,
+            'score': float(item.get('score', item.get('luck_score', 0))),
+        })
+
+    user_events = data_store.list_life_events(chart_id=chart_id)
+
+    model_outputs = data_store.list_model_outputs(chart_id=chart_id, limit=100)
+    event_mappings_by_year = defaultdict(list)
+    for mo in model_outputs:
+        sjr = mo.get('structured_reasoning_json', {})
+        if isinstance(sjr, dict):
+            for em in sjr.get('event_mappings', []):
+                if isinstance(em, dict) and 'period' in em:
+                    year_str = em.get('period', '')
+                    try:
+                        year = int(str(year_str).split('-')[0])
+                        event_mappings_by_year[year].append(em)
+                    except (ValueError, IndexError):
+                        pass
+
+    future_warnings = _generate_future_warnings(birth_year, dayun, liunian)
+
+    return {
+        'chart_id': chart_id,
+        'birth_year': birth_year,
+        'gender': gender,
+        'dayun': dayun,
+        'liunian': liunian,
+        'user_events': user_events,
+        'event_mappings_by_year': dict(event_mappings_by_year),
+        'domains': ['career', 'wealth', 'relationship', 'health', 'family', 'personality', 'study', 'annual_fortune'],
+        'future_warnings': future_warnings,
+    }
+
+
+def _generate_future_warnings(birth_year, dayun, liunian):
+    warnings = []
+    current_year = date.today().year
+    future_years = [y for y in range(current_year, current_year + 6)]
+
+    liunian_by_year = {ln['year']: ln for ln in liunian}
+
+    for dy in dayun:
+        start_age = dy.get('age', 0)
+        end_age = dy.get('end_age', start_age + 9)
+        for fy in future_years:
+            fy_age = fy - birth_year
+            if abs(fy_age - start_age) <= 1 or abs(fy_age - end_age) <= 1:
+                warnings.append({
+                    'year': fy,
+                    'domain': 'annual_fortune',
+                    'warning_type': 'dayun_transition',
+                    'message': f'大运转换期（年龄{fy_age}岁），可能有较大变化，建议提前准备',
+                    'urgency': 'medium',
+                })
+
+    zangans = ['', '子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+    birth_zhi = None
+    for item in liunian:
+        gz = item.get('gan_zhi', '')
+        if len(gz) == 2:
+            birth_zhi = gz[1]
+            break
+
+    for fy in future_years:
+        ln = liunian_by_year.get(fy, {})
+        gz = ln.get('gan_zhi', '')
+        if len(gz) == 2:
+            liu_zhi = gz[1]
+            if birth_zhi and liu_zhi:
+                try:
+                    birth_idx = zangans.index(birth_zhi)
+                    liu_idx = zangans.index(liu_zhi)
+                    diff = abs(birth_idx - liu_idx)
+                    if diff in (6,):
+                        warnings.append({
+                            'year': fy,
+                            'domain': 'annual_fortune',
+                            'warning_type': 'taiyue_chong',
+                            'message': f'今年冲{birth_zhi}（{birth_zhi}年出生），宜低调谨慎',
+                            'urgency': 'high',
+                        })
+                except ValueError:
+                    pass
+
+        score = ln.get('score', 0.5)
+        if score > 0.8:
+            warnings.append({
+                'year': fy,
+                'domain': 'annual_fortune',
+                'warning_type': 'score_peak',
+                'message': f'今年运势较强（大运{gz}），可积极把握机会',
+                'urgency': 'low',
+            })
+        elif score < 0.3:
+            warnings.append({
+                'year': fy,
+                'domain': 'annual_fortune',
+                'warning_type': 'score_low',
+                'message': f'今年运势偏弱，宜保守观望，避免重大决策',
+                'urgency': 'medium',
+            })
+
+    return warnings
+
+
+@app.get("/api/charts/{chart_id}/timeline")
+def api_timeline(chart_id: str):
+    chart = _get_chart(chart_id)
+    if not chart:
+        raise HTTPException(404, "Chart not found")
+    return _build_timeline_data(chart)
+
+
+@app.post("/api/charts/{chart_id}/life-events")
+def api_create_life_event(chart_id: str, event: LifeEventCreate):
+    if not _get_chart(chart_id):
+        raise HTTPException(404, "Chart not found")
+    client_id = data_store.get_client_for_chart(chart_id)
+    import uuid
+    event_id = f"evt_{uuid.uuid4().hex[:12]}"
+    return data_store.save_life_event(
+        id=event_id,
+        chart_id=chart_id,
+        client_id=client_id,
+        event_year=event.event_year,
+        event_date=event.event_date,
+        domain=event.domain,
+        title=event.title,
+        description=event.description,
+        impact_level=event.impact_level,
+        source=event.source,
+    )
+
+
+@app.get("/api/charts/{chart_id}/life-events")
+def api_list_life_events(chart_id: str, domain: str = None):
+    if not _get_chart(chart_id):
+        raise HTTPException(404, "Chart not found")
+    return data_store.list_life_events(chart_id=chart_id, domain=domain)
+
+
+@app.delete("/api/life-events/{event_id}")
+def api_delete_life_event(event_id: str):
+    event = data_store.get_life_event(event_id)
+    if not event:
+        raise HTTPException(404, "Life event not found")
+    data_store.delete_life_event(event_id)
+    return {"deleted": True}
+
+
 @app.get("/api/charts/{chart_id}/analyses")
 def api_list_chart_analyses(chart_id: str):
     if not data_store.get_chart(chart_id):
