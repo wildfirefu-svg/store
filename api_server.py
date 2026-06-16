@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse, Response, PlainTextResponse, FileResponse
 import asyncio, time, calendar
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal
 from contextlib import asynccontextmanager
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -697,21 +697,20 @@ def api_list_chart_model_outputs(
 
 
 class LifeEventCreate(BaseModel):
-    event_year: Optional[int] = None
-    event_date: Optional[str] = None
-    domain: str = 'unknown'
-    title: str = ''
-    description: str = ''
+    event_year: int = Field(..., ge=1900, le=2100)
+    event_date: Optional[str] = Field(None, max_length=32)
+    domain: Literal['career', 'wealth', 'relationship', 'health', 'family', 'personality', 'study', 'annual_fortune'] = 'career'
+    title: str = Field(..., min_length=1, max_length=100)
+    description: str = Field('', max_length=2000)
     impact_level: int = Field(3, ge=1, le=5)
-    source: str = 'user'
 
 
 class ConversationSummaryCreate(BaseModel):
-    summary_type: str = 'general'
-    summary_text: str = ''
-    key_facts: List[str] = []
-    preference: Dict[str, Any] = {}
-    source_output_ids: List[str] = []
+    summary_type: Literal['general', 'trusted_advisor'] = 'general'
+    summary_text: str = Field('', max_length=2000)
+    key_facts: List[str] = Field(default_factory=list, max_length=20)
+    preference: Dict[str, Any] = Field(default_factory=dict)
+    source_output_ids: List[str] = Field(default_factory=list, max_length=20)
 
 
 def _build_timeline_data(chart):
@@ -874,7 +873,7 @@ def api_create_life_event(chart_id: str, event: LifeEventCreate):
         title=event.title,
         description=event.description,
         impact_level=event.impact_level,
-        source=event.source,
+        source='user',
     )
 
 
@@ -894,11 +893,18 @@ def api_delete_life_event(event_id: str):
     return {"deleted": True}
 
 
+def _safe_conversation_summary(item):
+    safe = dict(item)
+    safe.pop('client_id', None)
+    safe.pop('source_output_ids_json', None)
+    return safe
+
+
 @app.get('/api/charts/{chart_id}/conversation-summaries')
-def api_list_conversation_summaries(chart_id: str, summary_type: str = None):
+def api_list_conversation_summaries(chart_id: str, summary_type: Optional[Literal['general', 'trusted_advisor']] = None):
     if not _get_chart(chart_id):
         raise HTTPException(404, 'Chart not found')
-    return data_store.list_conversation_summaries(chart_id, summary_type=summary_type)
+    return [_safe_conversation_summary(x) for x in data_store.list_conversation_summaries(chart_id, summary_type=summary_type)]
 
 
 @app.post('/api/charts/{chart_id}/conversation-summaries')
@@ -907,7 +913,7 @@ def api_create_conversation_summary(chart_id: str, payload: ConversationSummaryC
         raise HTTPException(404, 'Chart not found')
     import uuid
     client_id = data_store.get_client_for_chart(chart_id)
-    return data_store.save_conversation_summary(
+    saved = data_store.save_conversation_summary(
         id=f"sum_{uuid.uuid4().hex[:12]}",
         chart_id=chart_id,
         client_id=client_id,
@@ -917,6 +923,7 @@ def api_create_conversation_summary(chart_id: str, payload: ConversationSummaryC
         preference_json=json.dumps(payload.preference, ensure_ascii=False),
         source_output_ids_json=json.dumps(payload.source_output_ids, ensure_ascii=False),
     )
+    return _safe_conversation_summary(saved)
 
 
 @app.get('/api/benchmark/runs')
@@ -940,9 +947,15 @@ def api_get_benchmark_report(run_id: str):
     report_path = run.get('report_path') or ''
     if not report_path:
         raise HTTPException(404, 'Benchmark report not found')
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'benchmark', 'outputs'))
-    abs_path = os.path.abspath(report_path)
-    if not abs_path.startswith(base_dir + os.sep) and abs_path != base_dir:
+    project_dir = os.path.dirname(__file__)
+    base_dir = os.path.realpath(os.path.join(project_dir, 'benchmark', 'outputs'))
+    if not os.path.isabs(report_path):
+        report_path = os.path.join(project_dir, report_path)
+    abs_path = os.path.realpath(report_path)
+    try:
+        if os.path.commonpath([base_dir, abs_path]) != base_dir:
+            raise HTTPException(403, 'Invalid report path')
+    except ValueError:
         raise HTTPException(403, 'Invalid report path')
     if not os.path.isfile(abs_path):
         raise HTTPException(404, 'Benchmark report not found')
@@ -1339,10 +1352,18 @@ def _sse_event(event_type, data):
     return f"event: {event_type}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
+def _sanitize_memory_text(value, limit=500):
+    text = str(value or '')[:limit]
+    blocked = ['忽略以上', '忽略前面', '系统提示', '开发者指令', '必须遵守', '必须执行', '不要遵守', 'override', 'system prompt']
+    for phrase in blocked:
+        text = text.replace(phrase, '[已过滤]')
+    return text
+
+
 def _build_conversation_summary_text(chart, message, reply_text, previous_summary=None):
     parts = []
     if previous_summary:
-        parts.append(str(previous_summary)[:500])
+        parts.append(_sanitize_memory_text(previous_summary, limit=500))
     parts.append(f"最近用户关注：{str(message)[:120]}")
     text = str(message) + " " + str(reply_text)
     if any(kw in text for kw in ['事业', '工作', '升职', '跳槽', '创业']):
@@ -1430,14 +1451,18 @@ async def chat_stream(
         return 'sihechu'
 
     report_tab = _detect_tab(message)
-    reasoning_mode = reasoning_mode if reasoning_mode in ('normal', 'trusted') else 'normal'
-    memory_mode = memory_mode if memory_mode in ('none', 'summary', 'full') else 'none'
+    if reasoning_mode not in ('normal', 'trusted'):
+        reasoning_mode = 'normal'
+    if memory_mode == 'full':
+        raise HTTPException(400, 'memory_mode=full is not supported yet')
+    if memory_mode not in ('none', 'summary'):
+        memory_mode = 'none'
     conversation_summary = None
     conversation_summary_id = None
     if memory_mode == 'summary':
         summary = data_store.get_latest_conversation_summary(chart_id, summary_type='trusted_advisor')
         if summary:
-            conversation_summary = summary.get('summary_text')
+            conversation_summary = _sanitize_memory_text(summary.get('summary_text'), limit=1200)
             conversation_summary_id = summary.get('id')
     kb_query = topic_kw_map.get(report_tab, '格局 用神')
     try:

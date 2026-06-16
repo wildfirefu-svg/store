@@ -111,3 +111,51 @@ def test_report_contains_trust_metadata():
     assert '协议' in report
     assert '依据覆盖' in report
     assert '安全边界' in report
+
+
+def test_report_treats_zero_stability_as_zero_score():
+    from benchmark.reports.generate_report import generate_markdown_report
+
+    result = {
+        "run_id": "run_zero_stability",
+        "dataset": "test",
+        "provider": "test",
+        "model": "test",
+        "prompt_version": "v1",
+        "reasoning_protocol": "rp1",
+        "choice_accuracy": {"total": 10, "correct": 10, "accuracy": 1.0, "by_domain": {}},
+        "evidence_score": 1.0,
+        "stability_score": 0.0,
+        "safety_score": 1.0,
+        "case_details": [],
+    }
+    report = generate_markdown_report(result)
+    assert '| Stability | 0% |' in report
+    assert 'N/A (单次运行)' not in report
+
+
+def test_report_escapes_markdown_table_cells():
+    from benchmark.reports.generate_report import generate_markdown_report
+
+    result = {
+        "run_id": "run_pipe",
+        "dataset": "data|set",
+        "provider": "deep|seek",
+        "model": "model\nname",
+        "prompt_version": "v|1",
+        "reasoning_protocol": "rp|1",
+        "choice_accuracy": {
+            "total": 1,
+            "correct": 0,
+            "accuracy": 0.0,
+            "by_domain": {"career|x": {"total": 1, "correct": 0, "accuracy": 0.0}},
+        },
+        "evidence_score": 0.0,
+        "stability_score": None,
+        "safety_score": 1.0,
+        "case_details": [],
+    }
+    report = generate_markdown_report(result)
+    assert 'career\\|x' in report
+    assert 'deep\\|seek' in report
+    assert 'model name' in report

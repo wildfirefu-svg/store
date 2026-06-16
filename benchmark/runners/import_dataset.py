@@ -35,8 +35,9 @@ def import_dataset(jsonl_path):
 
         existing = data_store.get_benchmark_case(case_id)
         if existing:
-            print(f"Skipping existing case: {case_id}")
-            continue
+            print(f"Updating existing case: {case_id}")
+        else:
+            imported_cases += 1
 
         data_store.save_benchmark_case(
             id=case_id,
@@ -50,7 +51,6 @@ def import_dataset(jsonl_path):
             anonymized=1,
             license_note='Internal BaziQA Mini Dataset',
         )
-        imported_cases += 1
 
         question_id = f"q_{case_id}"
         options_json = json.dumps(case.get('options', []), ensure_ascii=False)
@@ -58,17 +58,17 @@ def import_dataset(jsonl_path):
 
         existing_q = data_store.get_benchmark_question(question_id)
         if not existing_q:
-            data_store.save_benchmark_question(
-                id=question_id,
-                case_id=case_id,
-                domain=case.get('domain', 'unknown'),
-                question=case.get('question', ''),
-                options_json=options_json,
-                answer=case.get('answer', ''),
-                expected_evidence_json=expected_evidence_json,
-                difficulty=case.get('difficulty', 'medium'),
-            )
             imported_questions += 1
+        data_store.save_benchmark_question(
+            id=question_id,
+            case_id=case_id,
+            domain=case.get('domain', 'unknown'),
+            question=case.get('question', ''),
+            options_json=options_json,
+            answer=case.get('answer', ''),
+            expected_evidence_json=expected_evidence_json,
+            difficulty=case.get('difficulty', 'medium'),
+        )
 
     return imported_cases, imported_questions
 

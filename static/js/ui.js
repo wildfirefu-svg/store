@@ -8,7 +8,7 @@ import { API } from './api.js';
 import { renderMarkdown, _escHtml } from './markdown.js';
 import { renderBaziTable } from './render-bazi.js';
 import { renderZiweiTable, renderFullChart } from './render-ziwei.js';
-import { renderTimeline } from './timeline.js';
+import { renderLifeChartTimeline } from './timeline.js';
 export { _escHtml };
 
 // ── ReportTabs ──
@@ -131,7 +131,7 @@ export const ReportTabs = {
         var cur = MingzhuManager.getCurrent();
         if (!cur) { el.innerHTML = '<p class="report-placeholder">请先添加命主</p>'; return; }
         el.innerHTML = '<div id="life-timeline-container" class="life-timeline-container"></div>';
-        renderTimeline(document.getElementById('life-timeline-container'), cur.chart_id);
+        renderLifeChartTimeline(document.getElementById('life-timeline-container'), cur.chart_id);
     },
 
     async _fetchAndRenderVisualization() {

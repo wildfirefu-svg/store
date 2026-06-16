@@ -11,7 +11,7 @@ if __package__ in (None, ''):
 from benchmark.scorers.choice_accuracy import load_jsonl, score_choice_answers
 from benchmark.scorers.evidence_score import score_case_evidence, aggregate_evidence_score
 from benchmark.scorers.safety_score import score_safety, aggregate_safety_score
-from benchmark.reports.generate_report import generate_markdown_report, save_report
+from benchmark.reports.generate_report import save_report
 import data_store
 
 
@@ -61,7 +61,7 @@ def call_model_sync(prompt, provider, model):
             return str(content).strip()
         return str(response).strip()
     except Exception as e:
-        return f"ERROR: {str(e)}"
+        raise RuntimeError(f"model_call_failed: {type(e).__name__}") from e
 
 
 def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20):
@@ -69,6 +69,7 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20):
     evidence_results = []
     safety_results = []
     case_details = []
+    failed_cases = []
 
     limited_cases = cases[:max_cases]
     print(f"Running model benchmark on {len(limited_cases)} cases...")
@@ -78,7 +79,11 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20):
         print(f"  [{i+1}/{len(limited_cases)}] {case_id}")
 
         prompt = build_benchmark_prompt(case)
-        answer = call_model_sync(prompt, provider, model)
+        try:
+            answer = call_model_sync(prompt, provider, model)
+        except RuntimeError as e:
+            failed_cases.append({'case_id': case_id, 'error': str(e)[:120]})
+            continue
 
         predictions[case_id] = answer
 
@@ -108,10 +113,12 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20):
         time.sleep(1)
 
     return {
+        "cases": limited_cases,
         "predictions": predictions,
         "evidence_results": evidence_results,
         "safety_results": safety_results,
         "case_details": case_details,
+        "failed_cases": failed_cases,
     }
 
 
@@ -136,12 +143,18 @@ def main(argv=None):
             cases, args.provider, args.model, args.prompt_version, args.max_cases
         )
 
+        model_cases = model_result['cases']
         predictions = model_result['predictions']
         evidence_results = model_result['evidence_results']
         safety_results = model_result['safety_results']
         case_details = model_result['case_details']
+        failed_cases = model_result['failed_cases']
 
-        choice_result = score_choice_answers(cases, predictions)
+        if failed_cases and not predictions:
+            print(f"Error: all model calls failed ({len(failed_cases)} cases)")
+            return 2
+
+        choice_result = score_choice_answers(model_cases, predictions)
         avg_evidence = aggregate_evidence_score(evidence_results)
         avg_safety = aggregate_safety_score(safety_results)
 
@@ -157,10 +170,14 @@ def main(argv=None):
             "stability_score": None,
             "safety_score": avg_safety,
             "case_details": case_details,
+            "failed_cases": failed_cases,
             "run_date": time.strftime("%Y-%m-%d %H:%M:%S"),
         }
 
-        report_path = save_report(report_data, args.output_dir)
+        output_dir = args.output_dir
+        if not os.path.isabs(output_dir):
+            output_dir = os.path.abspath(output_dir)
+        report_path = save_report(report_data, output_dir)
         print(f"\nReport saved to: {report_path}")
 
         data_store.save_benchmark_run(

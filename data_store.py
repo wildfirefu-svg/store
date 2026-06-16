@@ -28,6 +28,13 @@ def _get_conn():
     return conn
 
 
+def _ensure_columns(conn, table, columns):
+    existing = {row['name'] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+    for name, definition in columns.items():
+        if name not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {definition}")
+
+
 def init_db():
     """Create tables if they don't exist."""
     with _conn_lock:
@@ -219,9 +226,19 @@ def init_db():
                     updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
                     FOREIGN KEY (chart_id) REFERENCES charts(chart_id) ON DELETE CASCADE
                 );
-                CREATE INDEX IF NOT EXISTS idx_conversation_summaries_chart ON conversation_summaries(chart_id);
-                CREATE INDEX IF NOT EXISTS idx_conversation_summaries_type ON conversation_summaries(summary_type);
             """)
+            _ensure_columns(conn, 'conversation_summaries', {
+                'client_id': 'TEXT',
+                'summary_type': "TEXT NOT NULL DEFAULT 'general'",
+                'summary_text': "TEXT NOT NULL DEFAULT ''",
+                'key_facts_json': "TEXT NOT NULL DEFAULT '[]'",
+                'preference_json': "TEXT NOT NULL DEFAULT '{}'",
+                'source_output_ids_json': "TEXT NOT NULL DEFAULT '[]'",
+                'created_at': "TEXT NOT NULL DEFAULT ''",
+                'updated_at': "TEXT NOT NULL DEFAULT ''",
+            })
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_conversation_summaries_chart ON conversation_summaries(chart_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_conversation_summaries_type ON conversation_summaries(summary_type)")
             conn.commit()
         finally:
             conn.close()

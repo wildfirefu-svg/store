@@ -1,6 +1,18 @@
 import os
 
 
+def _md_text(value, limit=None):
+    text = str(value if value is not None else '')
+    text = text.replace('\r', ' ').replace('\n', ' ')
+    if limit is not None:
+        text = text[:limit]
+    return text
+
+
+def _md_cell(value, limit=None):
+    return _md_text(value, limit=limit).replace('|', '\\|')
+
+
 def generate_markdown_report(result):
     run_id = result.get("run_id", "unknown")
     dataset = result.get("dataset", "unknown")
@@ -10,7 +22,7 @@ def generate_markdown_report(result):
     reasoning_protocol = result.get("reasoning_protocol", "unknown")
     choice_acc = result.get("choice_accuracy", {})
     evidence_score = result.get("evidence_score", 0.0)
-    stability_score = result.get("stability_score", 0.0)
+    stability_score = result.get("stability_score")
     safety_score = result.get("safety_score", 0.0)
     case_details = result.get("case_details", [])
 
@@ -22,7 +34,7 @@ def generate_markdown_report(result):
     overall_score = (
         0.30 * accuracy
         + 0.25 * evidence_score
-        + 0.20 * (stability_score if stability_score else accuracy)
+        + 0.20 * (accuracy if stability_score is None else stability_score)
         + 0.15 * safety_score
         + 0.10 * (1.0 if total >= 5 else 0.5)
     )
@@ -30,11 +42,11 @@ def generate_markdown_report(result):
     lines = []
     lines.append("# 玄机子 BaziQA Benchmark Report")
     lines.append("")
-    lines.append(f"**Run ID:** {run_id}")
-    lines.append(f"**Dataset:** {dataset}")
-    lines.append(f"**Date:** {result.get('run_date', '')}")
-    lines.append(f"**Model:** {provider} {model}")
-    lines.append(f"**Prompt:** {prompt_version} / {reasoning_protocol}")
+    lines.append(f"**Run ID:** {_md_text(run_id)}")
+    lines.append(f"**Dataset:** {_md_text(dataset)}")
+    lines.append(f"**Date:** {_md_text(result.get('run_date', ''))}")
+    lines.append(f"**Model:** {_md_text(provider)} {_md_text(model)}")
+    lines.append(f"**Prompt:** {_md_text(prompt_version)} / {_md_text(reasoning_protocol)}")
     lines.append("")
     lines.append("---")
     lines.append("")
@@ -44,7 +56,7 @@ def generate_markdown_report(result):
     lines.append("|---|---|")
     lines.append(f"| Choice Accuracy | {round(accuracy * 100)}% ({correct}/{total}) |")
     lines.append(f"| Evidence Coverage | {round(evidence_score * 100)}% |")
-    lines.append(f"| Stability | {round(stability_score * 100)}% |" if stability_score else f"| Stability | N/A (单次运行) |")
+    lines.append(f"| Stability | {round(stability_score * 100)}% |" if stability_score is not None else f"| Stability | N/A (单次运行) |")
     lines.append(f"| Safety | {round(safety_score * 100)}% |")
     lines.append(f"| **Overall** | **{round(overall_score * 100)}%** |")
     lines.append("")
@@ -59,7 +71,7 @@ def generate_markdown_report(result):
             d_total = stats.get("total", 0)
             d_correct = stats.get("correct", 0)
             d_acc = stats.get("accuracy", 0.0)
-            lines.append(f"| {domain} | {round(d_acc * 100)}% ({d_correct}/{d_total}) | {d_total} |")
+            lines.append(f"| {_md_cell(domain)} | {round(d_acc * 100)}% ({d_correct}/{d_total}) | {d_total} |")
     else:
         lines.append("_暂无领域细分数据_")
     lines.append("")
@@ -75,7 +87,7 @@ def generate_markdown_report(result):
         lines.append("## 领域短板")
         lines.append("")
         for domain, acc in weak_domains:
-            lines.append(f"- {domain}: {round(acc * 100)}% ← 需关注")
+            lines.append(f"- {_md_text(domain)}: {round(acc * 100)}% ← 需关注")
         lines.append("")
         lines.append("---")
         lines.append("")
@@ -86,15 +98,15 @@ def generate_markdown_report(result):
         for detail in case_details[:10]:
             case_id = detail.get("case_id", "")
             domain = detail.get("domain", "")
-            question = detail.get("question", "")[:80]
-            expected = detail.get("expected_answer", "")
-            predicted = detail.get("predicted_answer", "")
+            question = _md_text(detail.get("question", ""), limit=80)
+            expected = _md_text(detail.get("expected_answer", ""), limit=80)
+            predicted = _md_text(detail.get("predicted_answer", ""), limit=80)
             correct = detail.get("correct", False)
             ev_coverage = detail.get("evidence_coverage", 0.0)
             safety = detail.get("safety_score", 0.0)
 
-            lines.append(f"### case_id: {case_id}")
-            lines.append(f"- **Domain:** {domain}")
+            lines.append(f"### case_id: {_md_text(case_id, limit=80)}")
+            lines.append(f"- **Domain:** {_md_text(domain, limit=80)}")
             lines.append(f"- **Question:** {question}")
             lines.append(f"- **Expected:** {expected} | **Predicted:** {predicted} {'✓' if correct else '✗'}")
             lines.append(f"- **Evidence Coverage:** {round(ev_coverage * 100)}%")
@@ -107,9 +119,9 @@ def generate_markdown_report(result):
     lines.append("")
     lines.append("| 项目 | 内容 |")
     lines.append("|---|---|")
-    lines.append(f"| 模型 | {provider} {model} |")
-    lines.append(f"| Prompt版本 | {prompt_version} |")
-    lines.append(f"| 推理协议 | {reasoning_protocol} |")
+    lines.append(f"| 模型 | {_md_cell(provider)} {_md_cell(model)} |")
+    lines.append(f"| Prompt版本 | {_md_cell(prompt_version)} |")
+    lines.append(f"| 推理协议 | {_md_cell(reasoning_protocol)} |")
     lines.append(f"| 依据覆盖 | {round(evidence_score * 100)}% |")
     lines.append(f"| 安全边界 | {'已启用' if safety_score is not None else '未知'} |")
     lines.append(f"| 生成时间 | {result.get('run_date', '')} |")

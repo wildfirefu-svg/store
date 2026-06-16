@@ -2,6 +2,7 @@
 """Tests for data_store.py — SQLite persistence layer."""
 import os
 import sys
+import sqlite3
 import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -564,3 +565,23 @@ class TestConversationSummaries:
             assert len(data_store.list_conversation_summaries(chart_id=cid, limit=999)) <= 100
         finally:
             data_store.delete_chart(cid)
+
+    def test_init_db_migrates_partial_conversation_summaries_table(self, tmp_path, monkeypatch):
+        db_path = tmp_path / 'partial_summary.db'
+        conn = sqlite3.connect(db_path)
+        conn.execute('CREATE TABLE conversation_summaries (id TEXT PRIMARY KEY, chart_id TEXT NOT NULL)')
+        conn.commit()
+        conn.close()
+
+        monkeypatch.setattr(data_store, 'DB_PATH', str(db_path))
+        data_store.init_db()
+
+        conn = sqlite3.connect(db_path)
+        try:
+            columns = {row[1] for row in conn.execute('PRAGMA table_info(conversation_summaries)').fetchall()}
+        finally:
+            conn.close()
+        assert 'summary_text' in columns
+        assert 'key_facts_json' in columns
+        assert 'preference_json' in columns
+        assert 'source_output_ids_json' in columns

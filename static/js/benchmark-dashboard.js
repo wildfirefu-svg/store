@@ -10,7 +10,21 @@ const els = {
 
 function pct(value) {
     if (value === null || value === undefined || value === '') return '--';
-    return `${Math.round(Number(value) * 100)}%`;
+    const n = Number(value);
+    return Number.isFinite(n) ? `${Math.round(n * 100)}%` : '--';
+}
+
+function text(value) {
+    if (value === null || value === undefined) return '';
+    return String(value);
+}
+
+function setEmptyState(message) {
+    els.runs.textContent = '';
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.textContent = message;
+    els.runs.appendChild(empty);
 }
 
 function renderCards(run) {
@@ -21,34 +35,50 @@ function renderCards(run) {
     els.safety.textContent = pct(run.safety_score);
 }
 
-function runMeta(run) {
-    const model = [run.provider, run.model].filter(Boolean).join(' / ') || 'unknown model';
-    const prompt = [run.prompt_version, run.reasoning_protocol].filter(Boolean).join(' / ') || 'unknown prompt';
-    return `${model}<br>${prompt}<br>${run.n_cases || 0} cases · ${run.created_at || ''}`;
+function appendLine(parent, value) {
+    if (parent.childNodes.length) parent.appendChild(document.createElement('br'));
+    parent.appendChild(document.createTextNode(text(value)));
+}
+
+function buildRunItem(run) {
+    const item = document.createElement('div');
+    item.className = 'run-item';
+    item.dataset.runId = text(run.id);
+
+    const idEl = document.createElement('div');
+    idEl.className = 'run-id';
+    idEl.textContent = text(run.id);
+    item.appendChild(idEl);
+
+    const metaEl = document.createElement('div');
+    metaEl.className = 'run-meta';
+    appendLine(metaEl, [run.provider, run.model].filter(Boolean).join(' / ') || 'unknown model');
+    appendLine(metaEl, [run.prompt_version, run.reasoning_protocol].filter(Boolean).join(' / ') || 'unknown prompt');
+    appendLine(metaEl, `${run.n_cases || 0} cases · ${text(run.created_at)}`);
+    item.appendChild(metaEl);
+
+    const scoreEl = document.createElement('div');
+    scoreEl.className = 'run-meta';
+    scoreEl.textContent = `Accuracy ${pct(run.accuracy)} · Evidence ${pct(run.evidence_score)} · Safety ${pct(run.safety_score)}`;
+    item.appendChild(scoreEl);
+
+    item.addEventListener('click', () => {
+        document.querySelectorAll('.run-item').forEach(x => x.classList.remove('active'));
+        item.classList.add('active');
+        renderCards(run);
+        loadReport(run.id);
+    });
+    return item;
 }
 
 function renderRunList(runs) {
     if (!runs.length) {
-        els.runs.innerHTML = '<div class="empty-state">暂无 benchmark run</div>';
+        setEmptyState('暂无 benchmark run');
         return;
     }
-    els.runs.innerHTML = '';
+    els.runs.textContent = '';
     for (const run of runs) {
-        const item = document.createElement('div');
-        item.className = 'run-item';
-        item.dataset.runId = run.id;
-        item.innerHTML = `
-            <div class="run-id">${run.id}</div>
-            <div class="run-meta">${runMeta(run)}</div>
-            <div class="run-meta">Accuracy ${pct(run.accuracy)} · Evidence ${pct(run.evidence_score)} · Safety ${pct(run.safety_score)}</div>
-        `;
-        item.addEventListener('click', () => {
-            document.querySelectorAll('.run-item').forEach(x => x.classList.remove('active'));
-            item.classList.add('active');
-            renderCards(run);
-            loadReport(run.id);
-        });
-        els.runs.appendChild(item);
+        els.runs.appendChild(buildRunItem(run));
     }
     const first = els.runs.querySelector('.run-item');
     if (first) first.click();
@@ -62,7 +92,7 @@ function renderWeakDomains(text) {
 async function loadReport(runId) {
     els.report.textContent = '加载报告中...';
     try {
-        const resp = await fetch(`/api/benchmark/report/${runId}`);
+        const resp = await fetch(`/api/benchmark/report/${encodeURIComponent(runId)}`);
         if (!resp.ok) {
             els.report.textContent = `报告不可用：HTTP ${resp.status}`;
             els.weakDomains.textContent = '';
@@ -84,7 +114,7 @@ async function loadRuns() {
         renderCards(runs[0]);
         renderRunList(runs);
     } catch (err) {
-        els.runs.innerHTML = `<div class="empty-state">加载失败：${err.message}</div>`;
+        setEmptyState(`加载失败：${err.message}`);
     }
 }
 

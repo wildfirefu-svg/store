@@ -1,31 +1,72 @@
 import { API } from './api.js';
 
-export async function renderTimeline(container, chartId) {
-    try {
-        const [timelineResp, eventsResp] = await Promise.all([
-            fetch(`${API}/charts/${chartId}/timeline`),
-            fetch(`${API}/charts/${chartId}/life-events`),
-        ]);
+function esc(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    }[ch]));
+}
 
+
+export function renderTimeline(container, analyses, onFeedbackSubmitted) {
+    if (!Array.isArray(analyses)) {
+        return renderLifeChartTimeline(container, analyses);
+    }
+    container.innerHTML = '';
+    if (!analyses.length) {
+        container.innerHTML = '<div class="empty">暂无分析记录</div>';
+        return;
+    }
+    for (const item of analyses) {
+        const row = document.createElement('div');
+        row.className = 'timeline-item';
+        const title = document.createElement('strong');
+        title.textContent = item.topic || item.analysis_type || '分析记录';
+        const meta = document.createElement('span');
+        meta.textContent = item.created_at ? ` · ${item.created_at}` : '';
+        const body = document.createElement('div');
+        body.className = 'timeline-summary';
+        body.textContent = item.summary || item.content || item.ai_text || '';
+        row.appendChild(title);
+        row.appendChild(meta);
+        row.appendChild(body);
+        container.appendChild(row);
+    }
+}
+
+
+export async function renderLifeChartTimeline(container, chartId) {
+    try {
+        const timelineResp = await fetch(`${API}/charts/${encodeURIComponent(chartId)}/timeline`);
         if (!timelineResp.ok) throw new Error('Timeline data load failed');
 
         const timeline = await timelineResp.json();
-        const userEvents = timelineResp.ok && timeline.user_events ? timeline.user_events : [];
+        const userEvents = timeline.user_events || [];
         const eventMappings = timeline.event_mappings_by_year || {};
         const futureWarnings = timeline.future_warnings || [];
         const domains = timeline.domains || [];
         const birthYear = timeline.birth_year || 1990;
-        const gender = timeline.gender || 'male';
 
         renderLifeTimeline(container, timeline, userEvents, eventMappings, futureWarnings, domains, birthYear);
 
     } catch (err) {
-        container.innerHTML = `<p class="report-placeholder">加载失败: ${err.message}</p>`;
+        container.textContent = '';
+        const p = document.createElement('p');
+        p.className = 'report-placeholder';
+        p.textContent = `加载失败: ${err.message}`;
+        container.appendChild(p);
     }
 }
 
 
 export async function renderLifeTimeline(container, timelineData, userEvents, eventMappingsByYear, futureWarnings, domains, birthYear) {
+    if (container._timelineCleanup) {
+        container._timelineCleanup();
+        container._timelineCleanup = null;
+    }
     const dayun = timelineData.dayun || [];
     const liunian = timelineData.liunian || [];
 
@@ -118,7 +159,12 @@ export async function renderLifeTimeline(container, timelineData, userEvents, ev
         }
     });
 
-    window.addEventListener('resize', () => myChart.resize());
+    const resizeHandler = () => myChart.resize();
+    window.addEventListener('resize', resizeHandler);
+    container._timelineCleanup = () => {
+        window.removeEventListener('resize', resizeHandler);
+        if (myChart && !myChart.isDisposed?.()) myChart.dispose();
+    };
 }
 
 
@@ -201,7 +247,7 @@ function buildKLineOption(timelineData, userEvents, eventMappingsByYear, birthYe
                     html += '<div style="margin-top:4px;border-top:1px solid #eee;padding-top:4px">';
                     for (const ev of evs) {
                         const color = domainColors[ev.domain] || '#888';
-                        html += `<span style="color:${color};font-size:11px">◆</span> ${ev.title} (${ev.domain})<br/>`;
+                        html += `<span style="color:${color};font-size:11px">◆</span> ${esc(ev.title)} (${esc(ev.domain)})<br/>`;
                     }
                     html += '</div>';
                 }
@@ -337,13 +383,15 @@ function renderYearDetail(panel, year, timelineData, userEvents, eventMappingsBy
 
     let html = `<div class="year-detail-header">
         <strong>${year}年</strong> <span style="color:#999;font-size:12px">（年龄 ${age}岁）</span>
-        <span style="float:right;color:#666;font-size:12px">${ln.gan_zhi || ''} · 评分 ${ln.score ? (ln.score * 100).toFixed(0) + '%' : 'N/A'}</span>
+        <span style="float:right;color:#666;font-size:12px">${esc(ln.gan_zhi || '')} · 评分 ${ln.score !== undefined && ln.score !== null ? (ln.score * 100).toFixed(0) + '%' : 'N/A'}</span>
     </div>`;
 
     if (mappings.length) {
         html += '<div class="year-detail-section"><strong>命理分析</strong>';
         for (const m of mappings) {
-            html += `<div class="em-item">${m.domain ? `<span class="em-domain">${m.domain}</span>` : ''}${m.tendency || m.event || ''} <span style="color:#999;font-size:11px">置信:${m.confidence ? (m.confidence * 100).toFixed(0) + '%' : 'N/A'}</span></div>`;
+            const domain = m.domain ? `<span class="em-domain">${esc(m.domain)}</span>` : '';
+            const confidence = m.confidence !== undefined && m.confidence !== null ? (m.confidence * 100).toFixed(0) + '%' : 'N/A';
+            html += `<div class="em-item">${domain}${esc(m.tendency || m.event || '')} <span style="color:#999;font-size:11px">置信:${confidence}</span></div>`;
         }
         html += '</div>';
     }
@@ -351,7 +399,7 @@ function renderYearDetail(panel, year, timelineData, userEvents, eventMappingsBy
     if (evs.length) {
         html += '<div class="year-detail-section"><strong>真实事件</strong>';
         for (const ev of evs) {
-            html += `<div class="ev-item"><span class="ev-domain">${ev.domain}</span>${ev.title} <span style="color:#999;font-size:11px">影响${ev.impact_level}级</span></div>`;
+            html += `<div class="ev-item"><span class="ev-domain">${esc(ev.domain)}</span>${esc(ev.title)} <span style="color:#999;font-size:11px">影响${esc(ev.impact_level)}级</span></div>`;
         }
         html += '</div>';
     }
@@ -359,7 +407,8 @@ function renderYearDetail(panel, year, timelineData, userEvents, eventMappingsBy
     if (warnings.length) {
         html += '<div class="year-detail-section"><strong>关键提示</strong>';
         for (const w of warnings) {
-            html += `<div class="warning-item urgency-${w.urgency || 'low'}">${w.message}</div>`;
+            const urgency = ['low', 'medium', 'high'].includes(w.urgency) ? w.urgency : 'low';
+            html += `<div class="warning-item urgency-${urgency}">${esc(w.message)}</div>`;
         }
         html += '</div>';
     }
@@ -435,7 +484,7 @@ function createAddEventModal(container, chartId, onSuccess) {
                     </div>
                     <div class="form-group">
                         <label>描述</label>
-                        <textarea id="ev-desc" rows="3" placeholder="详细描述（可选）"></textarea>
+                        <textarea id="ev-desc" rows="3" maxlength="2000" placeholder="详细描述（可选）"></textarea>
                     </div>
                     <div class="form-group">
                         <label>影响等级（1-5）</label>
@@ -462,7 +511,6 @@ function createAddEventModal(container, chartId, onSuccess) {
                 title: overlay.querySelector('#ev-title').value,
                 description: overlay.querySelector('#ev-desc').value,
                 impact_level: parseInt(overlay.querySelector('#ev-impact').value),
-                source: 'user',
             };
 
             try {
@@ -510,12 +558,14 @@ function renderFutureWarnings(container, warnings) {
     if (!next5.length) return;
 
     el.innerHTML = `<div class="warnings-title">未来5年关键节点</div>
-        ${next5.map(w => `
-            <div class="warning-badge urgency-${w.urgency || 'low'}">
-                <span class="warning-year">${w.year}年</span>
-                <span class="warning-msg">${w.message}</span>
-            </div>
-        `).join('')}`;
+        ${next5.map(w => {
+            const urgency = ['low', 'medium', 'high'].includes(w.urgency) ? w.urgency : 'low';
+            return `
+            <div class="warning-badge urgency-${urgency}">
+                <span class="warning-year">${esc(w.year)}年</span>
+                <span class="warning-msg">${esc(w.message)}</span>
+            </div>`;
+        }).join('')}`;
 }
 
 
