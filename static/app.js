@@ -192,6 +192,12 @@ document.getElementById('visualization-btn').addEventListener('click', function(
     ReportTabs.switchTo('visualization');
 });
 
+document.getElementById('share-card-btn').addEventListener('click', function() {
+    var cur = MingzhuManager.getCurrent();
+    if (!cur) { alert('请先添加命主'); return; }
+    window.open('/card?id=' + encodeURIComponent(cur.chart_id), '_blank');
+});
+
 // ── Solar time checkbox ──
 window._solarOriginal = null;
 document.getElementById('solar-time-check').addEventListener('change', async function() {

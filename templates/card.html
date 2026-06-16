@@ -37,7 +37,7 @@
     var chartId = params.get('id');
     if (!chartId) { document.getElementById('card-name').textContent = '未指定命主'; return; }
 
-    fetch('/api/charts/' + chartId + '/data')
+    fetch('/api/card/' + chartId)
         .then(function(r) { return r.ok ? r.json() : Promise.reject('加载失败'); })
         .then(function(data) {
             var c = data.chart_data || {};

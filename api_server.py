@@ -165,7 +165,7 @@ def _load_auth_key():
 _BAZI_API_KEY = _load_auth_key()
 
 # Public paths that never require auth
-_PUBLIC_PATHS = {"/api/health", "/docs", "/openapi.json", "/", "/test", "/tools"}
+_PUBLIC_PATHS = {"/api/health", "/docs", "/openapi.json", "/", "/test", "/tools", "/card"}
 
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
@@ -659,6 +659,14 @@ def api_chart_visualization(chart_id: str):
     if not chart:
         raise HTTPException(404, "Chart not found")
     return _build_visualization_data(chart)
+
+
+@app.get("/api/card/{chart_id}")
+def api_card_data(chart_id: str):
+    saved = data_store.get_chart(chart_id)
+    if not saved:
+        raise HTTPException(404, "Chart not found")
+    return saved
 
 
 @app.get("/api/charts/{chart_id}/analyses")

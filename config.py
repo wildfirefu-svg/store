@@ -33,7 +33,7 @@ for entry in _RATE_LIMIT_RAW.split():
 # Paths exempt from rate limiting (comma-separated)
 RATE_LIMIT_EXEMPT_RAW = os.environ.get(
     "BAZI_RATE_LIMIT_EXEMPT",
-    "/static,/api/health,/,/test,/tools,/favicon.ico"
+    "/static,/api/health,/,/test,/tools,/card,/api/card,/favicon.ico"
 )
 RATE_LIMIT_EXEMPT = set(p.strip() for p in RATE_LIMIT_EXEMPT_RAW.split(",") if p.strip())
 
