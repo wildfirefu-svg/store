@@ -292,3 +292,136 @@ class TestModelOutputs:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+class TestBenchmarkCases:
+    def test_save_and_get_benchmark_case(self):
+        payload = {
+            'id': 'case-test-001',
+            'source': 'baziqa_mini',
+            'person_id': 'p001',
+            'name': '命主测试',
+            'profile_json': '{"gender": "male", "birth_year": 1990}',
+            'chart_input_json': '{"year": 1990, "month": 3}',
+            'chart_result_json': '{"sun": "甲"}',
+            'verified_events_json': '[]',
+            'anonymized': 1,
+            'license_note': 'Internal',
+        }
+        saved = data_store.save_benchmark_case(**payload)
+        assert saved['id'] == 'case-test-001'
+        assert saved['source'] == 'baziqa_mini'
+        assert saved['anonymized'] == 1
+        loaded = data_store.get_benchmark_case('case-test-001')
+        assert loaded is not None
+        assert loaded['name'] == '命主测试'
+
+    def test_list_benchmark_cases(self):
+        saved = data_store.save_benchmark_case(
+            id='case-list-001',
+            source='internal',
+            person_id='p002',
+            name='列表测试',
+            profile_json='{}',
+            chart_input_json='{}',
+            chart_result_json='{}',
+        )
+        cases = data_store.list_benchmark_cases()
+        assert any(c['id'] == 'case-list-001' for c in cases)
+        cases_filtered = data_store.list_benchmark_cases(source='internal')
+        assert any(c['id'] == 'case-list-001' for c in cases_filtered)
+
+
+class TestBenchmarkQuestions:
+    def test_save_and_get_benchmark_question(self):
+        data_store.save_benchmark_case(
+            id='case-q-test-001',
+            source='baziqa_mini',
+            person_id='p003',
+            name='问题测试',
+            profile_json='{}',
+            chart_input_json='{}',
+            chart_result_json='{}',
+        )
+        payload = {
+            'id': 'q-test-001',
+            'case_id': 'case-q-test-001',
+            'domain': 'career',
+            'question': '事业发展方向？',
+            'options_json': '["A. 选项1", "B. 选项2", "C. 选项3", "D. 选项4"]',
+            'answer': 'A',
+            'expected_evidence_json': '["官星有力"]',
+            'difficulty': 'medium',
+        }
+        saved = data_store.save_benchmark_question(**payload)
+        assert saved['id'] == 'q-test-001'
+        assert saved['domain'] == 'career'
+        loaded = data_store.get_benchmark_question('q-test-001')
+        assert loaded is not None
+        assert loaded['answer'] == 'A'
+
+    def test_list_benchmark_questions(self):
+        data_store.save_benchmark_case(
+            id='case-q-list-001',
+            source='internal',
+            person_id='p004',
+            name='列表问题测试',
+            profile_json='{}',
+            chart_input_json='{}',
+            chart_result_json='{}',
+        )
+        data_store.save_benchmark_question(
+            id='q-list-001',
+            case_id='case-q-list-001',
+            domain='wealth',
+            question='财运如何？',
+            options_json='["A", "B", "C", "D"]',
+            answer='B',
+            expected_evidence_json='[]',
+            difficulty='easy',
+        )
+        questions = data_store.list_benchmark_questions(case_id='case-q-list-001')
+        assert any(q['id'] == 'q-list-001' for q in questions)
+
+
+class TestBenchmarkRuns:
+    def test_save_and_get_benchmark_run(self):
+        payload = {
+            'id': 'run-test-001',
+            'dataset': 'baziqa_mini_v1',
+            'provider': 'deepseek',
+            'model': 'deepseek-v4-pro',
+            'method': 'structured',
+            'prompt_version': 'srp_v1',
+            'reasoning_protocol': 'xuanjizi_srp_v1',
+            'n_cases': 15,
+            'n_questions': 15,
+            'accuracy': 0.67,
+            'evidence_score': 0.72,
+            'stability_score': 0.85,
+            'safety_score': 0.95,
+            'report_path': 'benchmark/outputs/run_test_001.md',
+        }
+        saved = data_store.save_benchmark_run(**payload)
+        assert saved['accuracy'] == 0.67
+        assert saved['evidence_score'] == 0.72
+        loaded = data_store.get_benchmark_run('run-test-001')
+        assert loaded is not None
+        assert loaded['model'] == 'deepseek-v4-pro'
+        assert loaded['stability_score'] == 0.85
+
+    def test_list_benchmark_runs(self):
+        data_store.save_benchmark_run(
+            id='run-list-001',
+            dataset='baziqa_mini_v1',
+            provider='deepseek',
+            model='deepseek-v4-pro',
+            method='structured',
+            n_cases=5,
+            n_questions=5,
+            accuracy=0.8,
+        )
+        runs = data_store.list_benchmark_runs()
+        assert any(r['id'] == 'run-list-001' for r in runs)
+        runs_filtered = data_store.list_benchmark_runs(dataset='baziqa_mini_v1')
+        assert any(r['id'] == 'run-list-001' for r in runs_filtered)

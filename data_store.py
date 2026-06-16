@@ -141,6 +141,54 @@ def init_db():
                 CREATE INDEX IF NOT EXISTS idx_model_outputs_chart_id ON model_outputs(chart_id);
                 CREATE INDEX IF NOT EXISTS idx_model_outputs_analysis_id ON model_outputs(analysis_id);
                 CREATE INDEX IF NOT EXISTS idx_model_outputs_prompt_version ON model_outputs(prompt_version);
+                CREATE TABLE IF NOT EXISTS benchmark_cases (
+                    id TEXT PRIMARY KEY,
+                    source TEXT NOT NULL DEFAULT 'internal',
+                    person_id TEXT,
+                    name TEXT NOT NULL DEFAULT '',
+                    profile_json TEXT NOT NULL DEFAULT '{}',
+                    chart_input_json TEXT NOT NULL DEFAULT '{}',
+                    chart_result_json TEXT NOT NULL DEFAULT '{}',
+                    verified_events_json TEXT NOT NULL DEFAULT '[]',
+                    anonymized INTEGER NOT NULL DEFAULT 1,
+                    license_note TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+                );
+                CREATE INDEX IF NOT EXISTS idx_benchmark_cases_source ON benchmark_cases(source);
+                CREATE TABLE IF NOT EXISTS benchmark_questions (
+                    id TEXT PRIMARY KEY,
+                    case_id TEXT NOT NULL,
+                    domain TEXT NOT NULL DEFAULT 'unknown',
+                    question TEXT NOT NULL DEFAULT '',
+                    options_json TEXT NOT NULL DEFAULT '[]',
+                    answer TEXT NOT NULL DEFAULT '',
+                    expected_evidence_json TEXT NOT NULL DEFAULT '[]',
+                    difficulty TEXT NOT NULL DEFAULT 'medium',
+                    evaluator_notes TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                    FOREIGN KEY (case_id) REFERENCES benchmark_cases(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_benchmark_questions_case ON benchmark_questions(case_id);
+                CREATE INDEX IF NOT EXISTS idx_benchmark_questions_domain ON benchmark_questions(domain);
+                CREATE TABLE IF NOT EXISTS benchmark_runs (
+                    id TEXT PRIMARY KEY,
+                    dataset TEXT NOT NULL,
+                    provider TEXT NOT NULL DEFAULT '',
+                    model TEXT NOT NULL DEFAULT '',
+                    method TEXT NOT NULL DEFAULT 'structured',
+                    prompt_version TEXT NOT NULL DEFAULT '',
+                    reasoning_protocol TEXT NOT NULL DEFAULT '',
+                    n_cases INTEGER NOT NULL DEFAULT 0,
+                    n_questions INTEGER NOT NULL DEFAULT 0,
+                    accuracy REAL,
+                    evidence_score REAL,
+                    stability_score REAL,
+                    safety_score REAL,
+                    report_path TEXT NOT NULL DEFAULT '',
+                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+                );
+                CREATE INDEX IF NOT EXISTS idx_benchmark_runs_dataset ON benchmark_runs(dataset);
+                CREATE INDEX IF NOT EXISTS idx_benchmark_runs_model ON benchmark_runs(model);
             """)
             conn.commit()
         finally:
@@ -669,6 +717,187 @@ def get_feedback_stats():
                     'accuracy': round(accurate / total, 3) if total else 0,
                 }
             return {'dimension_accuracy': dimension_accuracy}
+        finally:
+            conn.close()
+
+
+# ============================================================
+# Benchmark CRUD
+# ============================================================
+
+def save_benchmark_case(id, source='internal', person_id=None, name='',
+                        profile_json='{}', chart_input_json='{}', chart_result_json='{}',
+                        verified_events_json='[]', anonymized=1, license_note=''):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            conn.execute(
+                """INSERT OR REPLACE INTO benchmark_cases (
+                    id, source, person_id, name, profile_json, chart_input_json,
+                    chart_result_json, verified_events_json, anonymized, license_note
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (id, source, person_id, name, profile_json, chart_input_json,
+                 chart_result_json, verified_events_json, anonymized, license_note),
+            )
+            conn.commit()
+            row = conn.execute("SELECT * FROM benchmark_cases WHERE id = ?", (id,)).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def get_benchmark_case(case_id):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            row = conn.execute("SELECT * FROM benchmark_cases WHERE id = ?", (case_id,)).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def list_benchmark_cases(source=None, limit=50):
+    try:
+        limit = int(limit or 50)
+    except (TypeError, ValueError):
+        limit = 50
+    limit = max(1, min(limit, 200))
+    sql = "SELECT * FROM benchmark_cases"
+    conditions = []
+    params = []
+    if source:
+        conditions.append("source = ?")
+        params.append(source)
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
+    sql += " ORDER BY created_at DESC LIMIT ?"
+    params.append(limit)
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            rows = conn.execute(sql, tuple(params)).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+
+def save_benchmark_question(id, case_id, domain='unknown', question='', options_json='[]',
+                            answer='', expected_evidence_json='[]', difficulty='medium',
+                            evaluator_notes=''):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            conn.execute(
+                """INSERT OR REPLACE INTO benchmark_questions (
+                    id, case_id, domain, question, options_json, answer,
+                    expected_evidence_json, difficulty, evaluator_notes
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (id, case_id, domain, question, options_json, answer,
+                 expected_evidence_json, difficulty, evaluator_notes),
+            )
+            conn.commit()
+            row = conn.execute("SELECT * FROM benchmark_questions WHERE id = ?", (id,)).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def get_benchmark_question(question_id):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            row = conn.execute("SELECT * FROM benchmark_questions WHERE id = ?", (question_id,)).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def list_benchmark_questions(case_id=None, domain=None, limit=50):
+    try:
+        limit = int(limit or 50)
+    except (TypeError, ValueError):
+        limit = 50
+    limit = max(1, min(limit, 200))
+    sql = "SELECT * FROM benchmark_questions"
+    conditions = []
+    params = []
+    if case_id:
+        conditions.append("case_id = ?")
+        params.append(case_id)
+    if domain:
+        conditions.append("domain = ?")
+        params.append(domain)
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
+    sql += " ORDER BY created_at DESC LIMIT ?"
+    params.append(limit)
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            rows = conn.execute(sql, tuple(params)).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+
+def save_benchmark_run(id, dataset, provider='', model='', method='structured',
+                       prompt_version='', reasoning_protocol='', n_cases=0, n_questions=0,
+                       accuracy=None, evidence_score=None, stability_score=None,
+                       safety_score=None, report_path=''):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            conn.execute(
+                """INSERT OR REPLACE INTO benchmark_runs (
+                    id, dataset, provider, model, method, prompt_version,
+                    reasoning_protocol, n_cases, n_questions, accuracy,
+                    evidence_score, stability_score, safety_score, report_path
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (id, dataset, provider, model, method, prompt_version,
+                 reasoning_protocol, n_cases, n_questions, accuracy,
+                 evidence_score, stability_score, safety_score, report_path),
+            )
+            conn.commit()
+            row = conn.execute("SELECT * FROM benchmark_runs WHERE id = ?", (id,)).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def get_benchmark_run(run_id):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            row = conn.execute("SELECT * FROM benchmark_runs WHERE id = ?", (run_id,)).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def list_benchmark_runs(dataset=None, model=None, limit=20):
+    try:
+        limit = int(limit or 20)
+    except (TypeError, ValueError):
+        limit = 20
+    limit = max(1, min(limit, 100))
+    sql = "SELECT * FROM benchmark_runs"
+    conditions = []
+    params = []
+    if dataset:
+        conditions.append("dataset = ?")
+        params.append(dataset)
+    if model:
+        conditions.append("model = ?")
+        params.append(model)
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
+    sql += " ORDER BY created_at DESC LIMIT ?"
+    params.append(limit)
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            rows = conn.execute(sql, tuple(params)).fetchall()
+            return [dict(r) for r in rows]
         finally:
             conn.close()
 
