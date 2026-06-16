@@ -98,3 +98,30 @@ def test_prompt_engine_extracts_case_features():
     assert features["dm_wu"] == "火"
     assert features["month_zhi"] == "丑"
     assert features["strongest_wu"] in {"木", "火", "土"}
+
+
+def test_prompt_engine_trusted_mode_contains_required_sections():
+    system_prompt, _ = PromptEngine(reasoning_mode='trusted').assemble(
+        chart=_sample_chart(),
+        pre_analysis=_sample_pre_analysis(),
+        topic='career',
+        question='请分析事业',
+    )
+    assert '命理依据' in system_prompt
+    assert '现实解释' in system_prompt
+    assert '谨慎建议' in system_prompt
+    assert '可行动步骤' in system_prompt
+    assert '不做绝对化预测' in system_prompt
+
+
+def test_prompt_engine_accepts_conversation_summary():
+    system_prompt, _ = PromptEngine(
+        reasoning_mode='trusted',
+        conversation_summary='用户关注事业转型',
+    ).assemble(
+        chart=_sample_chart(),
+        pre_analysis=_sample_pre_analysis(),
+        topic='career',
+        question='请分析事业',
+    )
+    assert '用户关注事业转型' in system_prompt

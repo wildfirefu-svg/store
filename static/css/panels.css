@@ -294,6 +294,9 @@
 }
 #chat-send-btn { background: var(--cinnabar); color: #fff; font-weight: 600; padding: 8px 14px; flex-shrink: 0; font-size: 13px; }
 #chat-send-btn:hover { background: #a8322a; }
+.trusted-mode-toggle { display:flex; align-items:center; gap:4px; flex-shrink:0; padding:6px 8px; border:1px solid var(--border-subtle); border-radius:8px; color:var(--text-muted); font-size:12px; cursor:pointer; background:rgba(255,255,255,0.04); }
+.trusted-mode-toggle input { width:auto; margin:0; accent-color:var(--gold); }
+.trusted-mode-toggle:has(input:checked) { color:var(--gold); border-color:var(--gold); background:var(--gold-light); }
 #hehun-toggle-btn, #zeri-toggle-btn, #liunian-toggle-btn, #name-toggle-btn, #add-mingzhu-btn {
     background: none; border: none;
     color: var(--text-faint);

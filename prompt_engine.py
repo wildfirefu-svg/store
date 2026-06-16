@@ -11,9 +11,11 @@ SYSTEM_PROMPTS = {
 
 
 class PromptEngine:
-    def __init__(self, prompt_version="srp_v1", reasoning_protocol="xuanjizi_srp_v1"):
+    def __init__(self, prompt_version="srp_v1", reasoning_protocol="xuanjizi_srp_v1", reasoning_mode="normal", conversation_summary=None):
         self.prompt_version = prompt_version
         self.reasoning_protocol = reasoning_protocol
+        self.reasoning_mode = reasoning_mode
+        self.conversation_summary = conversation_summary
 
     def assemble(self, chart, pre_analysis=None, topic="sihechu", question=""):
         system_prompt = self.build_system_prompt(topic)
@@ -24,13 +26,29 @@ class PromptEngine:
     def build_system_prompt(self, topic):
         base_prompt = SYSTEM_PROMPTS.get(topic, SYSTEM_PROMPTS["sihechu"])
         protocol_text = self._load_structured_reasoning_protocol()
-        return "\n\n".join([
+        parts = [
             base_prompt,
             f"Prompt版本：{self.prompt_version}",
             f"推理协议：{self.reasoning_protocol}",
             "请遵循以下结构化推理协议完成分析：",
             protocol_text,
-        ])
+        ]
+        if self.reasoning_mode == "trusted":
+            parts.append("\n".join([
+                "可信顾问模式要求：",
+                "回答必须包含以下四段：",
+                "1. 命理依据",
+                "2. 现实解释",
+                "3. 谨慎建议",
+                "4. 可行动步骤",
+                "不做绝对化预测，不替用户做医疗、投资、婚姻等重大决策。",
+            ]))
+        if self.conversation_summary:
+            parts.append("\n".join([
+                "命主长期咨询摘要：",
+                str(self.conversation_summary),
+            ]))
+        return "\n\n".join(parts)
 
     def build_domain_knowledge(self, chart, topic):
         cases = self.retrieve_similar_cases(chart)

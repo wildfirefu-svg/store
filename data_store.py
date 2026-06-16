@@ -206,6 +206,21 @@ def init_db():
                 CREATE INDEX IF NOT EXISTS idx_life_events_chart ON life_events(chart_id);
                 CREATE INDEX IF NOT EXISTS idx_life_events_year ON life_events(event_year);
                 CREATE INDEX IF NOT EXISTS idx_life_events_domain ON life_events(domain);
+                CREATE TABLE IF NOT EXISTS conversation_summaries (
+                    id TEXT PRIMARY KEY,
+                    chart_id TEXT NOT NULL,
+                    client_id TEXT,
+                    summary_type TEXT NOT NULL DEFAULT 'general',
+                    summary_text TEXT NOT NULL DEFAULT '',
+                    key_facts_json TEXT NOT NULL DEFAULT '[]',
+                    preference_json TEXT NOT NULL DEFAULT '{}',
+                    source_output_ids_json TEXT NOT NULL DEFAULT '[]',
+                    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+                    FOREIGN KEY (chart_id) REFERENCES charts(chart_id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_conversation_summaries_chart ON conversation_summaries(chart_id);
+                CREATE INDEX IF NOT EXISTS idx_conversation_summaries_type ON conversation_summaries(summary_type);
             """)
             conn.commit()
         finally:
@@ -986,6 +1001,68 @@ def delete_life_event(event_id):
             conn.commit()
         finally:
             conn.close()
+
+
+# ============================================================
+# Conversation Summaries CRUD
+# ============================================================
+
+def save_conversation_summary(id, chart_id, client_id=None, summary_type='general',
+                              summary_text='', key_facts_json='[]', preference_json='{}',
+                              source_output_ids_json='[]'):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            conn.execute(
+                """INSERT OR REPLACE INTO conversation_summaries (
+                    id, chart_id, client_id, summary_type, summary_text,
+                    key_facts_json, preference_json, source_output_ids_json, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now','localtime'))""",
+                (id, chart_id, client_id, summary_type, summary_text,
+                 key_facts_json, preference_json, source_output_ids_json),
+            )
+            conn.commit()
+            row = conn.execute("SELECT * FROM conversation_summaries WHERE id = ?", (id,)).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def get_conversation_summary(summary_id):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            row = conn.execute("SELECT * FROM conversation_summaries WHERE id = ?", (summary_id,)).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+
+def list_conversation_summaries(chart_id, summary_type=None, limit=20):
+    try:
+        limit = int(20 if limit is None else limit)
+    except (TypeError, ValueError):
+        limit = 20
+    limit = max(1, min(limit, 100))
+    sql = "SELECT * FROM conversation_summaries WHERE chart_id = ?"
+    params = [chart_id]
+    if summary_type:
+        sql += " AND summary_type = ?"
+        params.append(summary_type)
+    sql += " ORDER BY updated_at DESC, created_at DESC LIMIT ?"
+    params.append(limit)
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            rows = conn.execute(sql, tuple(params)).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+
+def get_latest_conversation_summary(chart_id, summary_type=None):
+    items = list_conversation_summaries(chart_id=chart_id, summary_type=summary_type, limit=1)
+    return items[0] if items else None
 
 
 # Auto-initialize on import

@@ -16,10 +16,10 @@ from collections import defaultdict
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse, Response, PlainTextResponse, FileResponse
 import asyncio, time, calendar
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from contextlib import asynccontextmanager
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -321,6 +321,11 @@ def frontend_index():
     """首页 — 八字排盘输入"""
     with open("templates/index.html", "r", encoding="utf-8") as f:
         return f.read()
+
+@app.get('/benchmark')
+def frontend_benchmark():
+    return FileResponse(os.path.join('static', 'benchmark.html'))
+
 
 @app.get("/test", response_class=HTMLResponse)
 def frontend_test():
@@ -701,6 +706,14 @@ class LifeEventCreate(BaseModel):
     source: str = 'user'
 
 
+class ConversationSummaryCreate(BaseModel):
+    summary_type: str = 'general'
+    summary_text: str = ''
+    key_facts: List[str] = []
+    preference: Dict[str, Any] = {}
+    source_output_ids: List[str] = []
+
+
 def _build_timeline_data(chart):
     chart_id = chart['chart_id']
     chart_data = chart.get('chart_data', {})
@@ -879,6 +892,62 @@ def api_delete_life_event(event_id: str):
         raise HTTPException(404, "Life event not found")
     data_store.delete_life_event(event_id)
     return {"deleted": True}
+
+
+@app.get('/api/charts/{chart_id}/conversation-summaries')
+def api_list_conversation_summaries(chart_id: str, summary_type: str = None):
+    if not _get_chart(chart_id):
+        raise HTTPException(404, 'Chart not found')
+    return data_store.list_conversation_summaries(chart_id, summary_type=summary_type)
+
+
+@app.post('/api/charts/{chart_id}/conversation-summaries')
+def api_create_conversation_summary(chart_id: str, payload: ConversationSummaryCreate):
+    if not _get_chart(chart_id):
+        raise HTTPException(404, 'Chart not found')
+    import uuid
+    client_id = data_store.get_client_for_chart(chart_id)
+    return data_store.save_conversation_summary(
+        id=f"sum_{uuid.uuid4().hex[:12]}",
+        chart_id=chart_id,
+        client_id=client_id,
+        summary_type=payload.summary_type,
+        summary_text=payload.summary_text,
+        key_facts_json=json.dumps(payload.key_facts, ensure_ascii=False),
+        preference_json=json.dumps(payload.preference, ensure_ascii=False),
+        source_output_ids_json=json.dumps(payload.source_output_ids, ensure_ascii=False),
+    )
+
+
+@app.get('/api/benchmark/runs')
+def api_list_benchmark_runs(dataset: str = None, model: str = None, limit: int = Query(20, ge=1, le=100)):
+    return data_store.list_benchmark_runs(dataset=dataset, model=model, limit=limit)
+
+
+@app.get('/api/benchmark/runs/{run_id}')
+def api_get_benchmark_run(run_id: str):
+    run = data_store.get_benchmark_run(run_id)
+    if not run:
+        raise HTTPException(404, 'Benchmark run not found')
+    return run
+
+
+@app.get('/api/benchmark/report/{run_id}')
+def api_get_benchmark_report(run_id: str):
+    run = data_store.get_benchmark_run(run_id)
+    if not run:
+        raise HTTPException(404, 'Benchmark run not found')
+    report_path = run.get('report_path') or ''
+    if not report_path:
+        raise HTTPException(404, 'Benchmark report not found')
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'benchmark', 'outputs'))
+    abs_path = os.path.abspath(report_path)
+    if not abs_path.startswith(base_dir + os.sep) and abs_path != base_dir:
+        raise HTTPException(403, 'Invalid report path')
+    if not os.path.isfile(abs_path):
+        raise HTTPException(404, 'Benchmark report not found')
+    with open(abs_path, 'r', encoding='utf-8') as f:
+        return PlainTextResponse(f.read(), media_type='text/markdown; charset=utf-8')
 
 
 @app.get("/api/charts/{chart_id}/analyses")
@@ -1270,6 +1339,26 @@ def _sse_event(event_type, data):
     return f"event: {event_type}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
+def _build_conversation_summary_text(chart, message, reply_text, previous_summary=None):
+    parts = []
+    if previous_summary:
+        parts.append(str(previous_summary)[:500])
+    parts.append(f"最近用户关注：{str(message)[:120]}")
+    text = str(message) + " " + str(reply_text)
+    if any(kw in text for kw in ['事业', '工作', '升职', '跳槽', '创业']):
+        topic = 'career'
+    elif any(kw in text for kw in ['财运', '赚钱', '投资', '破财']):
+        topic = 'wealth'
+    elif any(kw in text for kw in ['婚姻', '感情', '恋爱', '桃花']):
+        topic = 'relationship'
+    elif any(kw in text for kw in ['健康', '身体', '疾病']):
+        topic = 'health'
+    else:
+        topic = 'overview'
+    parts.append(f"最近回答主题：{topic}")
+    return "\n".join(parts)
+
+
 _chart_fetch_lock = threading.Lock()
 
 def _get_chart(chart_id):
@@ -1296,7 +1385,12 @@ def _get_chart(chart_id):
 
 
 @app.get("/api/chat/stream")
-async def chat_stream(chart_id: str, message: str):
+async def chat_stream(
+    chart_id: str,
+    message: str,
+    reasoning_mode: str = Query('normal'),
+    memory_mode: str = Query('none'),
+):
     """SSE streaming chat — pre-analyzes chart, searches KB, then calls AI."""
     chart = _get_chart(chart_id)
     if not chart:
@@ -1336,6 +1430,15 @@ async def chat_stream(chart_id: str, message: str):
         return 'sihechu'
 
     report_tab = _detect_tab(message)
+    reasoning_mode = reasoning_mode if reasoning_mode in ('normal', 'trusted') else 'normal'
+    memory_mode = memory_mode if memory_mode in ('none', 'summary', 'full') else 'none'
+    conversation_summary = None
+    conversation_summary_id = None
+    if memory_mode == 'summary':
+        summary = data_store.get_latest_conversation_summary(chart_id, summary_type='trusted_advisor')
+        if summary:
+            conversation_summary = summary.get('summary_text')
+            conversation_summary_id = summary.get('id')
     kb_query = topic_kw_map.get(report_tab, '格局 用神')
     try:
         kb = _get_kb()
@@ -1363,7 +1466,7 @@ async def chat_stream(chart_id: str, message: str):
         yield _sse_event('reply', {'text': '正在调用玄机子 AI 分析…\n\n'})
         await asyncio.sleep(0.05)
 
-        prompt_engine = PromptEngine()
+        prompt_engine = PromptEngine(reasoning_mode=reasoning_mode, conversation_summary=conversation_summary)
         system_prompt, enriched_msg = prompt_engine.assemble(
             chart=enriched,
             pre_analysis=conclusions,
@@ -1417,6 +1520,7 @@ async def chat_stream(chart_id: str, message: str):
                 report_tab=report_tab,
             )
             analysis_id = analysis.get('id')
+            saved_model_output = None
             try:
                 ai_cfg = claude_api.get_ai_config()
                 input_hash = hashlib.sha256(
@@ -1425,9 +1529,11 @@ async def chat_stream(chart_id: str, message: str):
                         'message': message,
                         'report_tab': report_tab,
                         'prompt_version': prompt_engine.prompt_version,
+                        'reasoning_mode': reasoning_mode,
+                        'memory_mode': memory_mode,
                     }, ensure_ascii=False, sort_keys=True).encode('utf-8')
                 ).hexdigest()
-                data_store.save_model_output(
+                saved_model_output = data_store.save_model_output(
                     analysis_id=analysis_id,
                     chart_id=chart_id,
                     client_id=_client_id,
@@ -1442,10 +1548,35 @@ async def chat_stream(chart_id: str, message: str):
                     raw_prompt=enriched_msg[:4000],
                     raw_output=report_text or reply_text,
                     parsed_answer=None,
-                    structured_reasoning_json={'local_analysis': conclusions, 'confidence': None},
+                    structured_reasoning_json={
+                        'local_analysis': conclusions,
+                        'confidence': None,
+                        'reasoning_mode': reasoning_mode,
+                        'memory_mode': memory_mode,
+                        'conversation_summary_id': conversation_summary_id,
+                    },
                 )
             except Exception as e:
                 logger.warning("Failed to save model output for chart %s analysis %s: %s", chart_id, analysis_id, e, exc_info=True)
+            if reasoning_mode == 'trusted':
+                try:
+                    import uuid
+                    summary_text = _build_conversation_summary_text(
+                        chart, message, report_text or reply_text, previous_summary=conversation_summary
+                    )
+                    source_ids = [saved_model_output.get('id')] if saved_model_output else []
+                    data_store.save_conversation_summary(
+                        id=f"sum_{uuid.uuid4().hex[:12]}",
+                        chart_id=chart_id,
+                        client_id=_client_id,
+                        summary_type='trusted_advisor',
+                        summary_text=summary_text,
+                        key_facts_json=json.dumps([str(message)[:120]], ensure_ascii=False),
+                        preference_json=json.dumps({'reasoning_mode': 'trusted', 'memory_mode': memory_mode}, ensure_ascii=False),
+                        source_output_ids_json=json.dumps(source_ids, ensure_ascii=False),
+                    )
+                except Exception as e:
+                    logger.warning("Failed to save conversation summary for chart %s: %s", chart_id, e, exc_info=True)
         except Exception:
             analysis_id = None
         yield _sse_event('done', {'corrections': 0, 'analysis_id': analysis_id})

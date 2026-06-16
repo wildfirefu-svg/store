@@ -29,6 +29,12 @@ export function _sendWithStream(chartId, prompt, onSuccess, forceTab) {
     let currentTab = forceTab || 'overview';
     const reportStatus = document.getElementById('report-status');
 
+    const trusted = document.getElementById('trusted-mode-toggle')?.checked;
+    const streamOptions = {
+        reasoning_mode: trusted ? 'trusted' : 'normal',
+        memory_mode: trusted ? 'summary' : 'none'
+    };
+
     apiChatStream(chartId, prompt,
         function(delta, tool) {
             if (tool) currentTool = tool;
@@ -69,7 +75,7 @@ export function _sendWithStream(chartId, prompt, onSuccess, forceTab) {
             // Finalize: remove cursor, set content with line breaks
             bubble.innerHTML = (replyText || '分析完成，请查看右侧报告。').replace(/\n/g, '<br>');
             bubble._streamReady = false;
-            reportStatus.innerHTML = '✅ 分析完成';
+            reportStatus.innerHTML = trusted ? '✅ 可信推理完成' : '✅ 分析完成';
             if (reportBuf) showReportFinal(currentTab, reportBuf);
             if (currentTool) {
                 const sender = msgEl.querySelector('.sender');
@@ -78,7 +84,8 @@ export function _sendWithStream(chartId, prompt, onSuccess, forceTab) {
             var correctBtn = document.getElementById('correct-btn');
             if (correctBtn) correctBtn.style.display = 'inline-block';
             if (onSuccess) onSuccess();
-        }
+        },
+        streamOptions
     );
 }
 

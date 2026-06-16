@@ -271,6 +271,138 @@ class TestChatStreamModelOutputs:
         assert '请分析事业' in output['question']
         assert output['raw_output']
 
+    def test_chat_stream_trusted_mode_saves_metadata(self, monkeypatch):
+        cid = _get_chart_id()
+        api.data_store.save_conversation_summary(
+            id='sum-chat-001',
+            chart_id=cid,
+            summary_type='trusted_advisor',
+            summary_text='用户关注事业转型',
+        )
+
+        def fake_stream(chart, message, system_prompt=None):
+            assert '命理依据' in system_prompt
+            assert '用户关注事业转型' in system_prompt
+            yield {'type': 'text_delta', 'text': '# 可信事业分析\n命理依据：测试输出'}
+            yield {'type': 'message_delta', 'stop_reason': 'end_turn'}
+
+        monkeypatch.setattr(api, '_stream_claude', fake_stream)
+        r = client.get('/api/chat/stream', params={
+            'chart_id': cid,
+            'message': '事业如何',
+            'reasoning_mode': 'trusted',
+            'memory_mode': 'summary',
+        })
+        assert r.status_code == 200
+        assert 'event: done' in r.text
+
+        outputs = api.data_store.list_model_outputs(chart_id=cid)
+        assert outputs
+        meta = outputs[0]['structured_reasoning_json']
+        assert meta['reasoning_mode'] == 'trusted'
+        assert meta['memory_mode'] == 'summary'
+        assert meta['conversation_summary_id'] == 'sum-chat-001'
+
+    def test_chat_stream_trusted_mode_creates_conversation_summary(self, monkeypatch):
+        cid = _get_chart_id()
+
+        def fake_stream(chart, message, system_prompt=None):
+            yield {'type': 'text_delta', 'text': '# 可信事业分析\n命理依据：测试输出'}
+            yield {'type': 'message_delta', 'stop_reason': 'end_turn'}
+
+        monkeypatch.setattr(api, '_stream_claude', fake_stream)
+        r = client.get('/api/chat/stream', params={
+            'chart_id': cid,
+            'message': '事业如何',
+            'reasoning_mode': 'trusted',
+            'memory_mode': 'summary',
+        })
+        assert r.status_code == 200
+        assert 'event: done' in r.text
+
+        summaries = api.data_store.list_conversation_summaries(cid, summary_type='trusted_advisor')
+        assert summaries
+        assert '事业如何' in summaries[0]['summary_text']
+
+
+class TestBenchmarkApi:
+    def test_list_benchmark_runs_api(self):
+        api.data_store.save_benchmark_run(
+            id='api-bench-run-001',
+            dataset='baziqa_mini_v1.jsonl',
+            provider='deepseek',
+            model='deepseek-v4-pro',
+            n_cases=20,
+            n_questions=20,
+            accuracy=0.75,
+            evidence_score=0.66,
+            stability_score=0.8,
+            safety_score=1.0,
+            report_path='',
+        )
+        r = client.get('/api/benchmark/runs')
+        assert r.status_code == 200
+        assert any(x['id'] == 'api-bench-run-001' for x in r.json())
+
+    def test_get_benchmark_run_api(self):
+        api.data_store.save_benchmark_run(
+            id='api-bench-run-002',
+            dataset='baziqa_mini_v1.jsonl',
+            provider='deepseek',
+            model='deepseek-v4-pro',
+            accuracy=0.75,
+        )
+        r = client.get('/api/benchmark/runs/api-bench-run-002')
+        assert r.status_code == 200
+        assert r.json()['accuracy'] == 0.75
+
+    def test_get_benchmark_report_api(self):
+        report_path = os.path.join(os.getcwd(), 'benchmark', 'outputs', 'test_report_api.md')
+        os.makedirs(os.path.dirname(report_path), exist_ok=True)
+        with open(report_path, 'w', encoding='utf-8') as f:
+            f.write('# Report\n\nOK')
+        api.data_store.save_benchmark_run(
+            id='api-bench-run-003',
+            dataset='baziqa_mini_v1.jsonl',
+            provider='deepseek',
+            model='deepseek-v4-pro',
+            report_path=report_path,
+        )
+        r = client.get('/api/benchmark/report/api-bench-run-003')
+        assert r.status_code == 200
+        assert '# Report' in r.text
+
+
+class TestConversationSummariesApi:
+    def test_list_conversation_summaries_api(self):
+        cid = _get_chart_id()
+        api.data_store.save_conversation_summary(
+            id='api-sum-001',
+            chart_id=cid,
+            summary_type='trusted_advisor',
+            summary_text='关注事业',
+            key_facts_json='[]',
+            preference_json='{}',
+            source_output_ids_json='[]',
+        )
+        r = client.get(f'/api/charts/{cid}/conversation-summaries')
+        assert r.status_code == 200
+        assert any(x['id'] == 'api-sum-001' for x in r.json())
+
+    def test_create_conversation_summary_api(self):
+        cid = _get_chart_id()
+        r = client.post(f'/api/charts/{cid}/conversation-summaries', json={
+            'summary_type': 'trusted_advisor',
+            'summary_text': '用户偏好实际建议',
+            'key_facts': ['偏好实际建议'],
+            'preference': {'tone': 'practical'},
+            'source_output_ids': [],
+        })
+        assert r.status_code == 200
+        data = r.json()
+        assert data['summary_text'] == '用户偏好实际建议'
+        assert data['summary_type'] == 'trusted_advisor'
+
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

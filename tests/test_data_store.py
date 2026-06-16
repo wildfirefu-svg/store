@@ -500,3 +500,67 @@ class TestLifeEvents:
             assert data_store.get_life_event('event-del-001') is None
         finally:
             data_store.delete_chart(cid)
+
+class TestConversationSummaries:
+    def test_save_and_get_conversation_summary(self):
+        cid = 'summary-chart-001'
+        data_store.save_chart(cid, '总结测试', {}, {})
+        try:
+            saved = data_store.save_conversation_summary(
+                id='sum-001',
+                chart_id=cid,
+                client_id=None,
+                summary_type='trusted_advisor',
+                summary_text='用户关注事业和财运，偏好谨慎建议。',
+                key_facts_json='["关注事业", "关注财运"]',
+                preference_json='{"tone": "practical"}',
+                source_output_ids_json='[]',
+            )
+            assert saved['id'] == 'sum-001'
+            assert saved['summary_type'] == 'trusted_advisor'
+            loaded = data_store.get_conversation_summary('sum-001')
+            assert loaded is not None
+            assert loaded['summary_text'].startswith('用户关注')
+        finally:
+            data_store.delete_chart(cid)
+
+    def test_list_and_get_latest_conversation_summary(self):
+        cid = 'summary-chart-002'
+        data_store.save_chart(cid, '总结列表测试', {}, {})
+        try:
+            data_store.save_conversation_summary(
+                id='sum-list-001',
+                chart_id=cid,
+                summary_type='general',
+                summary_text='普通总结',
+            )
+            data_store.save_conversation_summary(
+                id='sum-list-002',
+                chart_id=cid,
+                summary_type='trusted_advisor',
+                summary_text='可信总结',
+            )
+            items = data_store.list_conversation_summaries(chart_id=cid, limit=10)
+            assert any(x['id'] == 'sum-list-002' for x in items)
+            latest = data_store.get_latest_conversation_summary(chart_id=cid, summary_type='trusted_advisor')
+            assert latest is not None
+            assert latest['id'] == 'sum-list-002'
+        finally:
+            data_store.delete_chart(cid)
+
+    def test_list_conversation_summaries_limit_is_defensive(self):
+        cid = 'summary-chart-003'
+        data_store.save_chart(cid, '总结限制测试', {}, {})
+        try:
+            for i in range(3):
+                data_store.save_conversation_summary(
+                    id=f'sum-limit-{i}',
+                    chart_id=cid,
+                    summary_type='trusted_advisor',
+                    summary_text=f'总结{i}',
+                )
+            assert len(data_store.list_conversation_summaries(chart_id=cid, limit='bad')) >= 1
+            assert len(data_store.list_conversation_summaries(chart_id=cid, limit=0)) == 1
+            assert len(data_store.list_conversation_summaries(chart_id=cid, limit=999)) <= 100
+        finally:
+            data_store.delete_chart(cid)

@@ -86,3 +86,28 @@ def test_save_report(tmp_path):
     report_path = save_report(result, output_dir=str(tmp_path))
     assert report_path.endswith("run_run_save_test.md")
     assert (tmp_path / "run_run_save_test.md").exists()
+
+
+def test_report_contains_trust_metadata():
+    from benchmark.reports.generate_report import generate_markdown_report
+
+    result = {
+        "run_id": "run_trust",
+        "dataset": "baziqa_mini_v1",
+        "provider": "deepseek",
+        "model": "deepseek-v4-pro",
+        "prompt_version": "srp_v1",
+        "reasoning_protocol": "xuanjizi_srp_v1",
+        "choice_accuracy": {"total": 1, "correct": 1, "accuracy": 1.0, "by_domain": {}},
+        "evidence_score": 0.72,
+        "stability_score": 0.85,
+        "safety_score": 0.95,
+        "case_details": [],
+        "run_date": "2026-06-16 12:00:00",
+    }
+    report = generate_markdown_report(result)
+    assert '本报告生成信息' in report
+    assert '模型' in report
+    assert '协议' in report
+    assert '依据覆盖' in report
+    assert '安全边界' in report

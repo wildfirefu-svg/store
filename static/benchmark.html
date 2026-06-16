@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>玄机子 Benchmark Dashboard</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/panels.css">
+    <style>
+        body { background: #f6f3ee; color: #2f2a24; }
+        .benchmark-shell { max-width: 1180px; margin: 0 auto; padding: 28px 18px 48px; }
+        .benchmark-header { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 22px; }
+        .benchmark-header h1 { margin: 0; font-size: 28px; letter-spacing: .02em; }
+        .benchmark-subtitle { color: #7a6f63; margin-top: 6px; }
+        .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 22px; }
+        .metric-card { background: #fff; border: 1px solid rgba(90,70,45,.12); border-radius: 16px; padding: 18px; box-shadow: 0 10px 24px rgba(80,60,30,.06); }
+        .metric-label { color: #806f5d; font-size: 13px; margin-bottom: 8px; }
+        .metric-value { font-size: 26px; font-weight: 700; color: #2f2a24; }
+        .benchmark-layout { display: grid; grid-template-columns: 360px 1fr; gap: 18px; }
+        .panel { background: #fff; border: 1px solid rgba(90,70,45,.12); border-radius: 16px; padding: 16px; box-shadow: 0 10px 24px rgba(80,60,30,.06); }
+        .run-list { display: flex; flex-direction: column; gap: 10px; max-height: 620px; overflow: auto; }
+        .run-item { border: 1px solid rgba(90,70,45,.12); border-radius: 12px; padding: 12px; cursor: pointer; background: #fffdf9; }
+        .run-item:hover, .run-item.active { border-color: #b8860b; background: #fff8e7; }
+        .run-id { font-weight: 700; color: #3b3025; }
+        .run-meta { font-size: 12px; color: #7a6f63; margin-top: 5px; line-height: 1.5; }
+        .report-preview { white-space: pre-wrap; background: #1f1d1a; color: #f4ead8; border-radius: 12px; padding: 18px; min-height: 540px; overflow: auto; font-family: Consolas, Monaco, monospace; font-size: 13px; line-height: 1.6; }
+        .weak-domains { margin: 14px 0; color: #7a4b00; font-size: 13px; }
+        .empty-state { color: #8c8175; padding: 24px; text-align: center; }
+        @media (max-width: 900px) {
+            .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .benchmark-layout { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <main class="benchmark-shell">
+        <header class="benchmark-header">
+            <div>
+                <h1>玄机子 Benchmark Dashboard</h1>
+                <div class="benchmark-subtitle">内部质量看板：准确率、依据覆盖、稳定性与安全边界</div>
+            </div>
+            <a href="/" class="btn-secondary">返回主应用</a>
+        </header>
+
+        <section class="metric-grid">
+            <div class="metric-card"><div class="metric-label">Choice Accuracy</div><div class="metric-value" id="metric-accuracy">--</div></div>
+            <div class="metric-card"><div class="metric-label">Evidence Coverage</div><div class="metric-value" id="metric-evidence">--</div></div>
+            <div class="metric-card"><div class="metric-label">Stability</div><div class="metric-value" id="metric-stability">--</div></div>
+            <div class="metric-card"><div class="metric-label">Safety</div><div class="metric-value" id="metric-safety">--</div></div>
+        </section>
+
+        <section class="benchmark-layout">
+            <aside class="panel">
+                <h2>Benchmark Runs</h2>
+                <div id="run-list" class="run-list"><div class="empty-state">加载中...</div></div>
+            </aside>
+            <section class="panel">
+                <h2>Markdown Report</h2>
+                <div id="weak-domains" class="weak-domains"></div>
+                <pre id="report-preview" class="report-preview">请选择一次 benchmark run 查看报告。</pre>
+            </section>
+        </section>
+    </main>
+    <script type="module" src="/static/js/benchmark-dashboard.js"></script>
+</body>
+</html>

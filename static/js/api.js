@@ -9,8 +9,11 @@ export async function apiCreateChart(birth) {
 }
 
 
-export function apiChatStream(chartId, message, onReplyDelta, onReportDelta, onToolStart, onDone) {
+export function apiChatStream(chartId, message, onReplyDelta, onReportDelta, onToolStart, onDone, options) {
     var params = new URLSearchParams({chart_id: chartId, message: message});
+    options = options || {};
+    if (options.reasoning_mode) params.set('reasoning_mode', options.reasoning_mode);
+    if (options.memory_mode) params.set('memory_mode', options.memory_mode);
     var url = '/api/chat/stream?' + params;
     var gotContent = false;
     var aborted = false;
