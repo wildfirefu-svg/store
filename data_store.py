@@ -432,6 +432,19 @@ def unlink_client_chart(client_id, chart_id):
             conn.close()
 
 
+def get_client_for_chart(chart_id):
+    with _conn_lock:
+        conn = _get_conn()
+        try:
+            row = conn.execute(
+                "SELECT client_id FROM client_charts WHERE chart_id = ? LIMIT 1",
+                (chart_id,),
+            ).fetchone()
+            return row["client_id"] if row else None
+        finally:
+            conn.close()
+
+
 def list_client_charts(client_id):
     with _conn_lock:
         conn = _get_conn()

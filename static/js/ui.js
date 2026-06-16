@@ -60,6 +60,7 @@ export const ReportTabs = {
             'health': '健康',
             'zeri': '择日',
             'liunian': '流年',
+            'visualization': '图表',
         };
         function _tabLabel(tabId) {
             var numSuffix = '';
@@ -78,8 +79,9 @@ export const ReportTabs = {
         ReportTabs._numCircle = _numCircle;
         var displayTabs = {};
         if (store['overview'] !== undefined || true) displayTabs['overview'] = _tabLabel('overview');
+        if (ReportTabs._currentChart) displayTabs['visualization'] = _tabLabel('visualization');
         for (var tid in store) {
-            if (tid === 'overview') continue;
+            if (tid === 'overview' || tid === 'visualization') continue;
             if (store[tid] !== undefined) displayTabs[tid] = _tabLabel(tid);
         }
         for (var tabId in displayTabs) {
@@ -116,8 +118,48 @@ export const ReportTabs = {
                 }
             }
         }
-        if (content !== undefined) {
+        if (tabId === 'visualization') {
+            this._renderVisualization();
+        } else if (content !== undefined) {
             document.getElementById('report-content').innerHTML = renderMarkdown(content);
+        }
+    },
+
+    _renderVisualization() {
+        var el = document.getElementById('report-content');
+        var store = this._getStore();
+        var data = store['visualization'];
+        if (!data) {
+            this._fetchAndRenderVisualization();
+            return;
+        }
+        el.innerHTML = '<div class="chart-grid">'
+            + '<div class="chart-card"><div id="viz-wuxing" class="chart-container"></div></div>'
+            + '<div class="chart-card"><div id="viz-shishen" class="chart-container"></div></div>'
+            + '<div class="chart-card"><div id="viz-dayun" class="chart-container"></div></div>'
+            + '<div class="chart-card"><div id="viz-liunian" class="chart-container"></div></div>'
+            + '</div>';
+        if (window.BaZiCharts) {
+            window.BaZiCharts.renderWuxingRadar(document.getElementById('viz-wuxing'), data.wuxing || {});
+            window.BaZiCharts.renderShishenPie(document.getElementById('viz-shishen'), data.shishen || {});
+            window.BaZiCharts.renderDayunTrend(document.getElementById('viz-dayun'), data.dayun || []);
+            window.BaZiCharts.renderLiunianBar(document.getElementById('viz-liunian'), data.liunian || []);
+        }
+    },
+
+    async _fetchAndRenderVisualization() {
+        var el = document.getElementById('report-content');
+        el.innerHTML = '<p class="report-placeholder">加载图表数据…</p>';
+        var cur = MingzhuManager.getCurrent();
+        if (!cur) { el.innerHTML = '<p class="report-placeholder">请先添加命主</p>'; return; }
+        try {
+            var r = await fetch(API + '/charts/' + cur.chart_id + '/visualization');
+            if (!r.ok) throw new Error('图表数据加载失败');
+            var data = await r.json();
+            this.set('visualization', data);
+            this._renderVisualization();
+        } catch (e) {
+            el.innerHTML = '<p class="report-placeholder">' + _escHtml(e.message) + '</p>';
         }
     },
 

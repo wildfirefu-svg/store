@@ -5,7 +5,7 @@ Supports 4 templates: dark (default), modern, scroll, night.
 Usage: python report_to_pdf.py input.md -o output.pdf [--template dark|modern|scroll|night]
 """
 
-import argparse, re, os, sys
+import argparse, re, os, sys, tempfile
 from fpdf import FPDF
 
 FONT_CANDIDATES_HEADER = [
@@ -401,7 +401,7 @@ def parse_markdown_to_blocks(lines):
     return blocks
 
 
-def generate_pdf(md_path, pdf_path, template='dark'):
+def generate_pdf(md_path, pdf_path, template='dark', chart_data=None):
     with open(md_path, 'r', encoding='utf-8') as f: lines = f.readlines()
     blocks = parse_markdown_to_blocks(lines)
     pdf = BaziReportPDF(template)
@@ -433,6 +433,35 @@ def generate_pdf(md_path, pdf_path, template='dark'):
         elif btype == 'hr': pdf.draw_hr()
         elif btype == 'bullet': pdf.draw_bullet(content)
 
+    if chart_data:
+        try:
+            from chart_to_image import generate_chart_images
+            import shutil
+            img_dir = tempfile.mkdtemp(prefix="bazi_pdf_chart_")
+            paths = generate_chart_images(chart_data, img_dir)
+            chart_titles = {'wuxing': '五行分布', 'shishen': '十神分布', 'dayun': '大运趋势', 'liunian': '流年运势'}
+            pdf.add_page()
+            pdf.draw_section('可视化图表', level=1)
+            for name in ('wuxing', 'shishen', 'dayun', 'liunian'):
+                p = paths.get(name)
+                if p and os.path.exists(p):
+                    pdf.draw_section(chart_titles.get(name, name), level=2)
+                    img_w = A4_W - pdf.l_margin - pdf.r_margin
+                    if name in ('wuxing', 'shishen'):
+                        img_w = min(img_w, 100)
+                    else:
+                        img_w = min(img_w, 160)
+                    if pdf.get_y() + 70 > A4_H - pdf.b_margin:
+                        pdf.add_page()
+                    pdf.image(p, x=pdf.l_margin, w=img_w)
+                    pdf.ln(4)
+            try:
+                shutil.rmtree(img_dir, ignore_errors=True)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
     pdf.output(pdf_path)
     print(f'PDF generated [{template}]: {pdf_path}')
 
@@ -443,9 +472,16 @@ def main():
     parser.add_argument('-o', '--output', default=None)
     parser.add_argument('-t', '--template', choices=['dark','modern','scroll','night'], default='dark',
                        help='Template style (default: dark)')
+    parser.add_argument('--chart-data', default=None,
+                       help='Path to JSON file with visualization data (wuxing/shishen/dayun/liunian)')
     args = parser.parse_args()
     if args.output is None: args.output = os.path.splitext(args.input)[0] + '.pdf'
-    generate_pdf(args.input, args.output, args.template)
+    chart_data = None
+    if args.chart_data and os.path.exists(args.chart_data):
+        import json
+        with open(args.chart_data, 'r', encoding='utf-8') as f:
+            chart_data = json.load(f)
+    generate_pdf(args.input, args.output, args.template, chart_data=chart_data)
 
 if __name__ == '__main__':
     main()

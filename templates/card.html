@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>命理卡片 — 玄机子</title>
+    <link rel="stylesheet" href="/static/css/card.css">
+</head>
+<body>
+<div id="card-container">
+    <div id="bazi-card" class="bazi-card">
+        <div class="card-header">
+            <div class="card-brand">玄机子</div>
+            <div class="card-subtitle">命理分析</div>
+        </div>
+        <div class="card-body">
+            <div class="card-name" id="card-name">—</div>
+            <div class="card-birth" id="card-birth">—</div>
+            <div class="card-dayun" id="card-dayun">—</div>
+            <div class="card-pillars" id="card-pillars"></div>
+            <div class="card-wuxing" id="card-wuxing"></div>
+            <div class="card-pattern" id="card-pattern"></div>
+        </div>
+        <div class="card-footer">
+            <span class="card-date" id="card-date"></span>
+            <span class="card-watermark">玄机子·八字命理</span>
+        </div>
+    </div>
+    <div class="card-actions">
+        <button id="card-save-btn" title="保存为图片">保存图片</button>
+        <button id="card-back-btn" title="返回主页面">返回</button>
+    </div>
+</div>
+<script>
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    var chartId = params.get('id');
+    if (!chartId) { document.getElementById('card-name').textContent = '未指定命主'; return; }
+
+    fetch('/api/charts/' + chartId + '/data')
+        .then(function(r) { return r.ok ? r.json() : Promise.reject('加载失败'); })
+        .then(function(data) {
+            var c = data.chart_data || {};
+            var b = data.birth_info || {};
+            document.getElementById('card-name').textContent = data.name || '命主';
+            var gender = b.gender === 'male' ? '男' : b.gender === 'female' ? '女' : '';
+            document.getElementById('card-birth').textContent =
+                (b.year || '') + '年' + (b.month || '') + '月' + (b.day || '') + '日 ' +
+                (b.hour || '') + ':' + String(b.minute || 0).padStart(2, '0') + ' ' + gender;
+
+            var dm = c.day_master || {};
+            document.getElementById('card-dayun').textContent =
+                '日主：' + (dm.gan || '') + (dm.wuxing || '') + (dm.yinyang || '');
+
+            var fp = c.four_pillars || {};
+            var pillarsEl = document.getElementById('card-pillars');
+            pillarsEl.innerHTML = '';
+            var order = ['year', 'month', 'day', 'hour'];
+            var labels = ['年柱', '月柱', '日柱', '时柱'];
+            for (var i = 0; i < order.length; i++) {
+                var p = fp[order[i]] || {};
+                var div = document.createElement('div');
+                div.className = 'pillar-item';
+                div.innerHTML = '<div class="pillar-label">' + labels[i] + '</div>' +
+                    '<div class="pillar-gan">' + (p.gan || '') + '</div>' +
+                    '<div class="pillar-zhi">' + (p.zhi || '') + '</div>';
+                pillarsEl.appendChild(div);
+            }
+
+            var ws = c.wuxing_stats || {};
+            var wuxingEl = document.getElementById('card-wuxing');
+            wuxingEl.innerHTML = '';
+            var wuxingNames = ['金', '木', '水', '火', '土'];
+            var total = 0;
+            for (var j = 0; j < wuxingNames.length; j++) total += (ws[wuxingNames[j]] || 0);
+            total = total || 1;
+            for (var k = 0; k < wuxingNames.length; k++) {
+                var val = ws[wuxingNames[k]] || 0;
+                var pct = Math.round(val / total * 100);
+                var bar = document.createElement('div');
+                bar.className = 'wuxing-bar';
+                bar.innerHTML = '<span class="wx-name">' + wuxingNames[k] + '</span>' +
+                    '<div class="wx-track"><div class="wx-fill" style="width:' + pct + '%"></div></div>' +
+                    '<span class="wx-pct">' + pct + '%</span>';
+                wuxingEl.appendChild(bar);
+            }
+
+            document.getElementById('card-pattern').textContent =
+                c.pattern ? '格局：' + c.pattern : '';
+
+            document.getElementById('card-date').textContent =
+                new Date().toLocaleDateString('zh-CN');
+        })
+        .catch(function(e) {
+            document.getElementById('card-name').textContent = '加载失败';
+        });
+
+    document.getElementById('card-back-btn').addEventListener('click', function() {
+        window.location.href = '/';
+    });
+
+    document.getElementById('card-save-btn').addEventListener('click', function() {
+        var card = document.getElementById('bazi-card');
+        var hint = document.createElement('div');
+        hint.className = 'save-hint';
+        hint.textContent = '请按 Ctrl+S 保存页面，或使用截图工具保存卡片';
+        card.appendChild(hint);
+        setTimeout(function() { hint.remove(); }, 3000);
+    });
+})();
+</script>
+</body>
+</html>

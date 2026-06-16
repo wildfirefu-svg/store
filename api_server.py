@@ -332,6 +332,12 @@ def frontend_tools():
     with open("templates/tools.html", "r", encoding="utf-8") as f:
         return f.read()
 
+@app.get("/card", response_class=HTMLResponse)
+def frontend_card():
+    """命理卡片页面"""
+    with open("templates/card.html", "r", encoding="utf-8") as f:
+        return f.read()
+
 # ============================================================
 # API ENDPOINTS
 # ============================================================
@@ -893,7 +899,7 @@ def _clean_old_pdf_jobs(now):
 def _run_pdf_job(job_id, chart, conclusions, mode, template):
     """Run PDF generation in a thread (blocking I/O + subprocess)."""
     import tempfile, subprocess
-    chart_tmp = concl_tmp = md_tmp = pdf_tmp = None
+    chart_tmp = concl_tmp = md_tmp = pdf_tmp = viz_tmp = None
     try:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:
             json.dump(chart, f, ensure_ascii=False)
@@ -901,13 +907,17 @@ def _run_pdf_job(job_id, chart, conclusions, mode, template):
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:
             json.dump(conclusions, f, ensure_ascii=False)
             concl_tmp = f.name
+        viz_data = _build_visualization_data(chart)
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:
+            json.dump(viz_data, f, ensure_ascii=False)
+            viz_tmp = f.name
         md_tmp = os.path.join(tempfile.gettempdir(), f'report_{job_id}.md')
         pdf_tmp = os.path.join(tempfile.gettempdir(), f'report_{job_id}.pdf')
 
         rb = _import_tool('report_builder', 'report_builder.py')
         rb.build_report(chart_tmp, mode, concl_tmp, md_tmp)
 
-        cmd = [sys.executable, "report_to_pdf.py", md_tmp, "-o", pdf_tmp, "-t", template or 'dark']
+        cmd = [sys.executable, "report_to_pdf.py", md_tmp, "-o", pdf_tmp, "-t", template or 'dark', "--chart-data", viz_tmp]
         ret = subprocess.run(cmd, capture_output=True, text=True)
         if ret.returncode != 0:
             raise RuntimeError(ret.stderr[-500:])
@@ -931,7 +941,7 @@ def _run_pdf_job(job_id, chart, conclusions, mode, template):
                 try: os.unlink(fp)
                 except: pass
     finally:
-        for fp in [chart_tmp, concl_tmp, md_tmp]:
+        for fp in [chart_tmp, concl_tmp, md_tmp, viz_tmp]:
             if fp and os.path.isfile(fp):
                 try: os.unlink(fp)
                 except: pass
@@ -1174,8 +1184,9 @@ async def chat_stream(chart_id: str, message: str):
 
         analysis_id = None
         try:
+            _client_id = data_store.get_client_for_chart(chart_id)
             analysis = data_store.save_analysis(
-                client_id=None,
+                client_id=_client_id,
                 chart_id=chart_id,
                 analysis_type='chat',
                 topic=report_tab,

@@ -188,22 +188,8 @@ document.getElementById('report-pdf-btn').addEventListener('click', async functi
     } catch(e) { alert('下载失败: ' + e.message); }
 });
 
-document.getElementById('visualization-btn').addEventListener('click', async function() {
-    var cur = MingzhuManager.getCurrent();
-    if (!cur) { alert('请先添加命主'); return; }
-    var el = document.getElementById('report-content');
-    el.innerHTML = '<div class="chart-grid"><div class="chart-card"><div id="viz-wuxing" class="chart-container"></div></div><div class="chart-card"><div id="viz-shishen" class="chart-container"></div></div><div class="chart-card"><div id="viz-dayun" class="chart-container"></div></div><div class="chart-card"><div id="viz-liunian" class="chart-container"></div></div></div>';
-    try {
-        var r = await fetch(API + '/charts/' + cur.chart_id + '/visualization');
-        if (!r.ok) throw new Error('图表数据加载失败');
-        var data = await r.json();
-        BaZiCharts.renderWuxingRadar(document.getElementById('viz-wuxing'), data.wuxing || {});
-        BaZiCharts.renderShishenPie(document.getElementById('viz-shishen'), data.shishen || {});
-        BaZiCharts.renderDayunTrend(document.getElementById('viz-dayun'), data.dayun || []);
-        BaZiCharts.renderLiunianBar(document.getElementById('viz-liunian'), data.liunian || []);
-    } catch (e) {
-        el.innerHTML = '<p class="report-placeholder">' + e.message + '</p>';
-    }
+document.getElementById('visualization-btn').addEventListener('click', function() {
+    ReportTabs.switchTo('visualization');
 });
 
 // ── Solar time checkbox ──
