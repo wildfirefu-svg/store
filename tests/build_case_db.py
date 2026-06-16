@@ -217,8 +217,8 @@ for c in uniq:
 
 print(f'=== 真实命例库 ===')
 print(f'Total cases: {len(uniq)}')
-print(f'Male: {db[\"stats\"][\"male\"]}, Female: {db[\"stats\"][\"female\"]}')
-print(f'Year range: {min(c[\"year\"] for c in uniq)}-{max(c[\"year\"] for c in uniq)}')
+print(f"Male: {db['stats']['male']}, Female: {db['stats']['female']}")
+print(f"Year range: {min(c['year'] for c in uniq)}-{max(c['year'] for c in uniq)}")
 print(f'Tags:')
 for k,v in tags_count.most_common():
     print(f'  {k}: {v}')
