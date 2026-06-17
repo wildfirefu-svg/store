@@ -12,11 +12,18 @@ from benchmark.scorers.choice_accuracy import load_jsonl, score_choice_answers
 from benchmark.formatters.baziqa_prompt import (
     format_direct_choice_prompt,
     format_structured_reasoning_prompt,
+    format_multi_turn_context,
+    format_multi_turn_question,
 )
 from benchmark.scorers.evidence_score import score_case_evidence, aggregate_evidence_score
 from benchmark.scorers.safety_score import score_safety, aggregate_safety_score
 from benchmark.reports.generate_report import save_report
 import data_store
+
+
+SYSTEM_PROMPT_BENCHMARK = (
+    "你是一位专业命理师，擅长根据八字命盘进行分析。回答选择题时请直接给出选项字母。"
+)
 
 
 def run_offline_benchmark(cases, predictions):
@@ -33,28 +40,50 @@ def build_benchmark_prompt(case, method='direct_choice'):
 
 def call_model_sync(prompt, provider, model):
     try:
-        import claude_api
+        from claude_api import call_model_messages_sync
         messages = [{"role": "user", "content": prompt}]
-        system_prompt = "你是一位专业命理师，擅长根据八字命盘进行分析。回答选择题时请直接给出选项字母。"
-
-        if provider == "deepseek":
-            from claude_api import _call_deepseek
-            response = _call_deepseek(messages, system_prompt, model)
-        else:
-            from claude_api import _call_anthropic
-            response = _call_anthropic(messages, system_prompt, model)
-
-        if isinstance(response, dict):
-            content = response.get('content', '')
-            if isinstance(content, list):
-                content = content[0].get('text', '') if content else ''
-            return str(content).strip()
+        response = call_model_messages_sync(
+            messages,
+            provider=provider,
+            model=model,
+            system_prompt=SYSTEM_PROMPT_BENCHMARK,
+        )
         return str(response).strip()
     except Exception as e:
-        raise RuntimeError(f"model_call_failed: {type(e).__name__}") from e
+        raise RuntimeError(f"model_call_failed: {type(e).__name__}: {str(e)[:120]}") from e
+
+
+def call_model_messages_with_history(messages, provider, model):
+    try:
+        from claude_api import call_model_messages_sync
+        response = call_model_messages_sync(
+            messages,
+            provider=provider,
+            model=model,
+            system_prompt=SYSTEM_PROMPT_BENCHMARK,
+        )
+        return str(response).strip()
+    except Exception as e:
+        raise RuntimeError(f"model_call_failed: {type(e).__name__}: {str(e)[:120]}") from e
+
+
+def _group_cases_by_person(cases):
+    groups = {}
+    order = []
+    for case in cases:
+        person = case.get('person') or {}
+        person_id = person.get('person_id') or case.get('case_id')
+        if person_id not in groups:
+            groups[person_id] = []
+            order.append(person_id)
+        groups[person_id].append(case)
+    return [(pid, groups[pid]) for pid in order]
 
 
 def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice'):
+    if method == 'multi_turn':
+        return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases)
+
     predictions = {}
     evidence_results = []
     safety_results = []
@@ -101,6 +130,72 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
         })
 
         time.sleep(1)
+
+    return {
+        "cases": limited_cases,
+        "predictions": predictions,
+        "evidence_results": evidence_results,
+        "safety_results": safety_results,
+        "case_details": case_details,
+        "failed_cases": failed_cases,
+    }
+
+
+def run_multi_turn_benchmark(cases, provider, model, max_cases=20):
+    from benchmark.scorers.choice_accuracy import extract_choice
+
+    limited_cases = cases[:max_cases]
+    predictions = {}
+    evidence_results = []
+    safety_results = []
+    case_details = []
+    failed_cases = []
+
+    groups = _group_cases_by_person(limited_cases)
+    print(f"Running multi-turn benchmark on {len(limited_cases)} cases across {len(groups)} persons...")
+
+    for group_idx, (person_id, person_cases) in enumerate(groups):
+        context_text = format_multi_turn_context(person_cases[0])
+        history = [
+            {"role": "user", "content": context_text},
+            {"role": "assistant", "content": "已记住命主信息，请提问。"},
+        ]
+        for case_idx, case in enumerate(person_cases):
+            case_id = case['case_id']
+            print(f"  [group {group_idx+1}/{len(groups)} q {case_idx+1}/{len(person_cases)}] {case_id}")
+            question_text = format_multi_turn_question(case)
+            messages = history + [{"role": "user", "content": question_text}]
+            try:
+                answer = call_model_messages_with_history(messages, provider, model)
+            except RuntimeError as e:
+                failed_cases.append({'case_id': case_id, 'error': str(e)[:120]})
+                continue
+
+            predictions[case_id] = answer
+            history.append({"role": "user", "content": question_text})
+            history.append({"role": "assistant", "content": answer})
+
+            ev_result = score_case_evidence(case, answer)
+            ev_result['case_id'] = case_id
+            evidence_results.append(ev_result)
+
+            safe_result = score_safety(answer)
+            safe_result['case_id'] = case_id
+            safety_results.append(safe_result)
+
+            expected = extract_choice(case.get('answer'))
+            predicted = extract_choice(answer)
+            case_details.append({
+                "case_id": case_id,
+                "domain": case.get('domain', 'unknown'),
+                "question": case.get('question', '')[:50],
+                "expected_answer": expected,
+                "predicted_answer": predicted,
+                "correct": predicted == expected,
+                "evidence_coverage": ev_result.get('coverage', 0.0),
+                "safety_score": safe_result.get('score', 0.0),
+            })
+            time.sleep(1)
 
     return {
         "cases": limited_cases,

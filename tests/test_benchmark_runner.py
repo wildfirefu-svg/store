@@ -100,3 +100,62 @@ def test_build_prompt_supports_structured_reasoning():
     prompt = run_benchmark.build_benchmark_prompt(case, method='structured_reasoning')
     assert '第一阶段：量化扫描' in prompt
     assert '答案：A/B/C/D' in prompt
+
+
+
+def test_multi_turn_groups_questions_by_person(monkeypatch):
+    from benchmark.runners import run_benchmark
+
+    cases = [
+        {
+            'case_id': 'p1-q1',
+            'domain': 'career',
+            'person': {'person_id': 'p1', 'name': '甲', 'gender': 'male', 'birth': {'year': 1990, 'month': 1, 'day': 1, 'hour': 9, 'minute': 0, 'place': '北京'}},
+            'question': '事业如何？',
+            'options': ['A. 稳定', 'B. 投机', 'C. 不工作', 'D. 随机'],
+            'answer': 'A',
+        },
+        {
+            'case_id': 'p1-q2',
+            'domain': 'wealth',
+            'person': {'person_id': 'p1', 'name': '甲', 'gender': 'male', 'birth': {'year': 1990, 'month': 1, 'day': 1, 'hour': 9, 'minute': 0, 'place': '北京'}},
+            'question': '财运如何？',
+            'options': ['A. 稳定', 'B. 投机', 'C. 一般', 'D. 较差'],
+            'answer': 'B',
+        },
+        {
+            'case_id': 'p2-q1',
+            'domain': 'health',
+            'person': {'person_id': 'p2', 'name': '乙', 'gender': 'female', 'birth': {'year': 1992, 'month': 2, 'day': 2, 'hour': 10, 'minute': 0, 'place': '上海'}},
+            'question': '健康如何？',
+            'options': ['A. 良好', 'B. 一般', 'C. 偏弱', 'D. 重病'],
+            'answer': 'A',
+        },
+    ]
+
+    captured = []
+
+    def fake_call(messages, provider, model):
+        captured.append(list(messages))
+        return cases[len(captured) - 1]['answer']
+
+    monkeypatch.setattr(run_benchmark, 'call_model_messages_with_history', fake_call)
+    monkeypatch.setattr(run_benchmark.time, 'sleep', lambda *_: None)
+
+    result = run_benchmark.run_model_benchmark(
+        cases, 'deepseek', 'deepseek-v4-pro', 'prompt_v1',
+        max_cases=10, method='multi_turn',
+    )
+
+    assert result['predictions'] == {'p1-q1': 'A', 'p1-q2': 'B', 'p2-q1': 'A'}
+    assert len(captured) == 3
+    # 第二轮 messages 应包含上一轮的 user/assistant 历史
+    second_turn_roles = [m['role'] for m in captured[1]]
+    assert second_turn_roles.count('assistant') >= 2
+    assert second_turn_roles.count('user') >= 2
+    # 第二轮最后一条是当前问题
+    assert '财运' in captured[1][-1]['content']
+    # 切到 p2 时不应携带 p1 的历史
+    third_turn_user = [m['content'] for m in captured[2] if m['role'] == 'user']
+    assert not any('事业如何' in c for c in third_turn_user)
+    assert any('健康如何' in c for c in third_turn_user)

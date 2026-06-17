@@ -440,6 +440,23 @@ class TestBenchmarkApi:
         r = client.get('/api/benchmark/report/api-bench-run-004')
         assert r.status_code == 403
 
+    def test_get_benchmark_run_returns_aggregate_json_dict(self):
+        api.data_store.save_benchmark_run(
+            id='api-bench-run-aggregate',
+            dataset='baziqa_mini_v1.jsonl',
+            provider='deepseek',
+            model='deepseek-v4-pro',
+            method='structured_reasoning',
+            accuracy=0.4,
+            aggregate_json='{"by_year":{"2025":{"total":40,"correct":12,"accuracy":0.3}},"by_domain":{"career":{"accuracy":0.5}},"failed_cases":[]}',
+        )
+        r = client.get('/api/benchmark/runs/api-bench-run-aggregate')
+        assert r.status_code == 200
+        body = r.json()
+        assert isinstance(body['aggregate_json'], dict)
+        assert body['aggregate_json']['by_year']['2025']['accuracy'] == 0.3
+        assert body['aggregate_json']['by_domain']['career']['accuracy'] == 0.5
+
 
 class TestConversationSummariesApi:
     def test_list_conversation_summaries_api(self):

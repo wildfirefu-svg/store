@@ -110,6 +110,69 @@ def get_ai_config():
     }
 
 
+def call_model_messages_sync(messages, provider=None, model=None, system_prompt=None, timeout=180):
+    """同步调用模型补全接口，支持 multi-turn messages。"""
+    key = ANTHROPIC_API_KEY
+    if not key:
+        raise RuntimeError("AI key not configured")
+
+    detected_provider, url, default_model = _detect_provider(key)
+    provider = provider or detected_provider
+    model = model or default_model
+    sys_text = system_prompt if system_prompt is not None else ""
+
+    if provider == "anthropic":
+        payload = {
+            "model": model,
+            "max_tokens": MAX_TOKENS,
+            "system": sys_text,
+            "messages": [{"role": m["role"], "content": m["content"]} for m in messages],
+            "stream": False,
+        }
+        headers = {
+            "x-api-key": key,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json",
+        }
+        endpoint = url
+    else:
+        chat_messages = []
+        if sys_text:
+            chat_messages.append({"role": "system", "content": sys_text})
+        chat_messages.extend({"role": m["role"], "content": m["content"]} for m in messages)
+        payload = {
+            "model": model,
+            "max_tokens": MAX_TOKENS,
+            "messages": chat_messages,
+            "stream": False,
+        }
+        headers = {
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+        }
+        endpoint = url
+
+    req = urllib.request.Request(
+        endpoint,
+        data=json.dumps(payload).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        body = resp.read().decode("utf-8", errors="replace")
+
+    data = json.loads(body)
+    if provider == "anthropic":
+        for block in data.get("content", []) or []:
+            if block.get("type") == "text":
+                return block.get("text", "")
+        return ""
+    choices = data.get("choices", []) or []
+    if not choices:
+        return ""
+    return choices[0].get("message", {}).get("content", "") or ""
+
+
 _log_ai_config()
 
 
