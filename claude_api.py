@@ -399,7 +399,8 @@ def stream_chat(chart_json: dict, user_message: str, conversation_history: list 
         }
         parser = _parse_deepseek_event
 
-    for attempt in range(API_RETRIES):
+    attempts = max(1, API_RETRIES)
+    for attempt in range(attempts):
         try:
             req = urllib.request.Request(
                 url,
@@ -431,7 +432,7 @@ def stream_chat(chart_json: dict, user_message: str, conversation_history: list 
             return
         except urllib.error.HTTPError as e:
             body = e.read().decode("utf-8", errors="replace")[:1000]
-            if e.code == 429 and attempt == 0:
+            if e.code == 429 and attempt == 0 and attempts > 1:
                 import time
                 logger.warning(f"API rate limited (429), retrying after 2s...")
                 time.sleep(2)
@@ -440,7 +441,7 @@ def stream_chat(chart_json: dict, user_message: str, conversation_history: list 
             yield {"type": "error", "text": f"API 错误 {e.code}: {body}"}
             return
         except (OSError, Exception) as e:
-            if attempt == 0:
+            if attempt == 0 and attempts > 1:
                 import time
                 logger.warning(f"Connection error, retrying: {e}")
                 time.sleep(1)

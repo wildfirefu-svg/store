@@ -59,3 +59,26 @@ def test_anthropic_payload_uses_custom_system_prompt():
     payload = claude_api._build_anthropic_payload("custom system", {"chart": "data"}, "hello", "claude-test")
     assert payload["system"].startswith("custom system")
     assert payload["messages"] == [{"role": "user", "content": "hello"}]
+
+
+
+def test_stream_chat_yields_error_when_retries_zero(monkeypatch):
+    import urllib.error
+    import claude_api
+
+    monkeypatch.setattr(claude_api, 'ANTHROPIC_API_KEY', 'sk-fake-99999999')
+    monkeypatch.setattr(claude_api, 'API_RETRIES', 0)
+
+    def fake_urlopen(*args, **kwargs):
+        raise urllib.error.HTTPError('https://x', 401, 'Unauthorized', None, _fp_for_message())
+
+    def _fp_for_message():
+        from io import BytesIO
+        return BytesIO(b'invalid api key')
+
+    monkeypatch.setattr(claude_api.urllib.request, 'urlopen', fake_urlopen)
+
+    events = list(claude_api.stream_chat({}, 'hi'))
+    assert events, 'expected at least one event when retries=0'
+    assert events[-1]['type'] == 'error'
+    assert '401' in events[-1]['text']
