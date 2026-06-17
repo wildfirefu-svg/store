@@ -1,0 +1,33 @@
+[
+  {
+    "person_id": "fixture_celebrity_P001",
+    "name": "Fixture Celebrity",
+    "profile": {
+      "birth": {
+        "year": 1980,
+        "month": 5,
+        "day": 6,
+        "hour": 12,
+        "minute": 0,
+        "place": "Shanghai, China",
+        "approximate": false
+      },
+      "gender": "male"
+    },
+    "categories": {
+      "事业": ["2005年进入重要事业阶段", "2015年事业转型"],
+      "财富": ["2018年财富显著增长"],
+      "感情": ["2010年结婚"],
+      "健康": ["2020年公开健康事件"],
+      "六亲": ["1999年家庭迁居"]
+    },
+    "questions": [
+      {
+        "question_id": "fixture_celebrity_P001-Q1",
+        "question": "此人在哪一年结婚？",
+        "options": ["A. 2009", "B. 2010", "C. 2011", "D. 2012"],
+        "answer": "B"
+      }
+    ]
+  }
+]

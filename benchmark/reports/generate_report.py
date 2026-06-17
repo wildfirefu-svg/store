@@ -13,11 +13,24 @@ def _md_cell(value, limit=None):
     return _md_text(value, limit=limit).replace('|', '\\|')
 
 
+def _format_accuracy_table(title, buckets):
+    lines = [f"## {title}", "", "| Key | Total | Correct | Accuracy |", "|---|---:|---:|---:|"]
+    for key, item in sorted((buckets or {}).items()):
+        total = item.get("total", 0)
+        correct = item.get("correct", 0)
+        accuracy = item.get("accuracy", 0.0)
+        lines.append(f"| {_md_cell(key)} | {total} | {correct} | {accuracy:.1%} |")
+    if not buckets:
+        lines.append("| N/A | 0 | 0 | 0.0% |")
+    return "\n".join(lines)
+
+
 def generate_markdown_report(result):
     run_id = result.get("run_id", "unknown")
     dataset = result.get("dataset", "unknown")
     provider = result.get("provider", "unknown")
     model = result.get("model", "unknown")
+    method = result.get("method", "unknown")
     prompt_version = result.get("prompt_version", "unknown")
     reasoning_protocol = result.get("reasoning_protocol", "unknown")
     choice_acc = result.get("choice_accuracy", {})
@@ -30,6 +43,7 @@ def generate_markdown_report(result):
     total = choice_acc.get("total", 0)
     correct = choice_acc.get("correct", 0)
     by_domain = choice_acc.get("by_domain", {})
+    by_year = choice_acc.get("by_year", {})
 
     overall_score = (
         0.30 * accuracy
@@ -46,6 +60,7 @@ def generate_markdown_report(result):
     lines.append(f"**Dataset:** {_md_text(dataset)}")
     lines.append(f"**Date:** {_md_text(result.get('run_date', ''))}")
     lines.append(f"**Model:** {_md_text(provider)} {_md_text(model)}")
+    lines.append(f"**Method:** {_md_text(method)}")
     lines.append(f"**Prompt:** {_md_text(prompt_version)} / {_md_text(reasoning_protocol)}")
     lines.append("")
     lines.append("---")
@@ -59,6 +74,14 @@ def generate_markdown_report(result):
     lines.append(f"| Stability | {round(stability_score * 100)}% |" if stability_score is not None else f"| Stability | N/A (单次运行) |")
     lines.append(f"| Safety | {round(safety_score * 100)}% |")
     lines.append(f"| **Overall** | **{round(overall_score * 100)}%** |")
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append(_format_accuracy_table("Accuracy by Year", by_year))
+    lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append(_format_accuracy_table("Accuracy by Domain", by_domain))
     lines.append("")
     lines.append("---")
     lines.append("")
@@ -120,6 +143,7 @@ def generate_markdown_report(result):
     lines.append("| 项目 | 内容 |")
     lines.append("|---|---|")
     lines.append(f"| 模型 | {_md_cell(provider)} {_md_cell(model)} |")
+    lines.append(f"| 方法 | {_md_cell(method)} |")
     lines.append(f"| Prompt版本 | {_md_cell(prompt_version)} |")
     lines.append(f"| 推理协议 | {_md_cell(reasoning_protocol)} |")
     lines.append(f"| 依据覆盖 | {round(evidence_score * 100)}% |")

@@ -428,6 +428,24 @@ class TestBenchmarkRuns:
         assert any(r['id'] == 'run-list-001' for r in runs_filtered)
 
 
+
+    def test_save_benchmark_run_with_aggregate_json(self):
+        saved = data_store.save_benchmark_run(
+            id='run-agg-001',
+            dataset='baziqa_contest8',
+            provider='deepseek',
+            model='deepseek-v4-pro',
+            method='structured_reasoning',
+            n_cases=200,
+            n_questions=200,
+            accuracy=0.38,
+            aggregate_json='{"by_year":{"2025":{"accuracy":0.3}},"by_domain":{"career":{"accuracy":0.5}}}',
+        )
+
+        loaded = data_store.get_benchmark_run('run-agg-001')
+        assert loaded['aggregate_json']['by_year']['2025']['accuracy'] == 0.3
+        assert saved['aggregate_json']['by_domain']['career']['accuracy'] == 0.5
+
 class TestLifeEvents:
     def test_save_and_get_life_event(self):
         cid = 'test_le_chart_001'

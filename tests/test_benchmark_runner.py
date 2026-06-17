@@ -68,3 +68,35 @@ def test_run_model_benchmark_tracks_failures(monkeypatch):
     result = run_benchmark.run_model_benchmark(cases, 'deepseek', 'model', 'v1', max_cases=1)
     assert result['predictions'] == {}
     assert result['failed_cases'][0]['case_id'] == 'q1'
+
+
+
+def test_build_prompt_supports_direct_choice():
+    from benchmark.runners import run_benchmark
+
+    case = {
+        'case_id': 'q1',
+        'domain': 'career',
+        'person': {'name': '命主', 'gender': 'male', 'birth': {'year': 1990, 'month': 1, 'day': 1, 'hour': 9, 'minute': 0, 'place': '北京'}},
+        'question': '事业如何？',
+        'options': ['A. 稳定', 'B. 投机', 'C. 不工作', 'D. 随机'],
+    }
+
+    prompt = run_benchmark.build_benchmark_prompt(case, method='direct_choice')
+    assert '请直接回答选项字母' in prompt
+
+
+def test_build_prompt_supports_structured_reasoning():
+    from benchmark.runners import run_benchmark
+
+    case = {
+        'case_id': 'q1',
+        'domain': 'career',
+        'person': {'name': '命主', 'gender': 'male', 'birth': {'year': 1990, 'month': 1, 'day': 1, 'hour': 9, 'minute': 0, 'place': '北京'}},
+        'question': '事业如何？',
+        'options': ['A. 稳定', 'B. 投机', 'C. 不工作', 'D. 随机'],
+    }
+
+    prompt = run_benchmark.build_benchmark_prompt(case, method='structured_reasoning')
+    assert '第一阶段：量化扫描' in prompt
+    assert '答案：A/B/C/D' in prompt

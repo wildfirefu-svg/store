@@ -50,3 +50,19 @@ def test_baziqa_mini_dataset_format_is_valid():
         assert c['question']
         assert c['options']
         assert c['answer'] in ['A', 'B', 'C', 'D']
+
+
+
+def test_score_choice_answers_breaks_down_by_year():
+    cases = [
+        {'case_id': 'q1', 'source_year': '2021', 'answer': 'A'},
+        {'case_id': 'q2', 'source_year': '2021', 'answer': 'B'},
+        {'case_id': 'q3', 'source_year': '2022', 'answer': 'C'},
+    ]
+    preds = {'q1': 'A', 'q2': 'C', 'q3': 'C'}
+
+    result = score_choice_answers(cases, preds)
+
+    assert result['by_year']['2021']['total'] == 2
+    assert result['by_year']['2021']['correct'] == 1
+    assert result['by_year']['2022']['accuracy'] == 1.0

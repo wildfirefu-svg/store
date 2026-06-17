@@ -9,6 +9,10 @@ if __package__ in (None, ''):
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from benchmark.scorers.choice_accuracy import load_jsonl, score_choice_answers
+from benchmark.formatters.baziqa_prompt import (
+    format_direct_choice_prompt,
+    format_structured_reasoning_prompt,
+)
 from benchmark.scorers.evidence_score import score_case_evidence, aggregate_evidence_score
 from benchmark.scorers.safety_score import score_safety, aggregate_safety_score
 from benchmark.reports.generate_report import save_report
@@ -19,26 +23,12 @@ def run_offline_benchmark(cases, predictions):
     return score_choice_answers(cases, predictions)
 
 
-def build_benchmark_prompt(case):
-    person = case.get('person', {})
-    birth = person.get('birth', {})
-    options = case.get('options', [])
-
-    prompt_lines = []
-    prompt_lines.append("你是一位专业命理师。请根据以下命盘信息回答选择题。")
-    prompt_lines.append("")
-    prompt_lines.append(f"命主信息：出生于 {birth.get('year')}年{birth.get('month')}月{birth.get('day')}日{birth.get('hour')}时")
-    prompt_lines.append(f"地点：{birth.get('place', '')}")
-    prompt_lines.append("")
-    prompt_lines.append(f"问题：{case.get('question', '')}")
-    prompt_lines.append("")
-    prompt_lines.append("选项：")
-    for opt in options:
-        prompt_lines.append(f"- {opt}")
-    prompt_lines.append("")
-    prompt_lines.append("请直接给出答案选项（如 A/B/C/D），不要解释。")
-
-    return "\n".join(prompt_lines)
+def build_benchmark_prompt(case, method='direct_choice'):
+    if method == 'structured_reasoning':
+        return format_structured_reasoning_prompt(case)
+    if method in ('direct_choice', 'multi_turn'):
+        return format_direct_choice_prompt(case)
+    raise ValueError(f"Unsupported benchmark method: {method}")
 
 
 def call_model_sync(prompt, provider, model):
@@ -64,7 +54,7 @@ def call_model_sync(prompt, provider, model):
         raise RuntimeError(f"model_call_failed: {type(e).__name__}") from e
 
 
-def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20):
+def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice'):
     predictions = {}
     evidence_results = []
     safety_results = []
@@ -78,7 +68,7 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20):
         case_id = case['case_id']
         print(f"  [{i+1}/{len(limited_cases)}] {case_id}")
 
-        prompt = build_benchmark_prompt(case)
+        prompt = build_benchmark_prompt(case, method=method)
         try:
             answer = call_model_sync(prompt, provider, model)
         except RuntimeError as e:
@@ -132,6 +122,7 @@ def main(argv=None):
     parser.add_argument('--prompt-version', default='srp_v1', help='Prompt version')
     parser.add_argument('--output-dir', default='benchmark/outputs', help='Report output directory')
     parser.add_argument('--max-cases', type=int, default=20, help='Max cases to run (model mode)')
+    parser.add_argument('--method', default='direct_choice', choices=['direct_choice', 'multi_turn', 'structured_reasoning'])
     args = parser.parse_args(argv)
 
     cases = load_jsonl(args.dataset)
@@ -140,7 +131,7 @@ def main(argv=None):
         run_id = str(uuid.uuid4().hex[:8])
 
         model_result = run_model_benchmark(
-            cases, args.provider, args.model, args.prompt_version, args.max_cases
+            cases, args.provider, args.model, args.prompt_version, args.max_cases, method=args.method
         )
 
         model_cases = model_result['cases']
@@ -163,8 +154,9 @@ def main(argv=None):
             "dataset": os.path.basename(args.dataset),
             "provider": args.provider,
             "model": args.model,
+            "method": args.method,
             "prompt_version": args.prompt_version,
-            "reasoning_protocol": "xuanjizi_srp_v1",
+            "reasoning_protocol": "baziqa_srp_v1" if args.method == 'structured_reasoning' else "xuanjizi_srp_v1",
             "choice_accuracy": choice_result,
             "evidence_score": avg_evidence,
             "stability_score": None,
@@ -177,6 +169,12 @@ def main(argv=None):
         output_dir = args.output_dir
         if not os.path.isabs(output_dir):
             output_dir = os.path.abspath(output_dir)
+        aggregate_json = json.dumps({
+            "by_year": choice_result.get("by_year", {}),
+            "by_domain": choice_result.get("by_domain", {}),
+            "failed_cases": failed_cases,
+        }, ensure_ascii=False)
+
         report_path = save_report(report_data, output_dir)
         print(f"\nReport saved to: {report_path}")
 
@@ -185,9 +183,9 @@ def main(argv=None):
             dataset=os.path.basename(args.dataset),
             provider=args.provider,
             model=args.model,
-            method='structured',
+            method=args.method,
             prompt_version=args.prompt_version,
-            reasoning_protocol='xuanjizi_srp_v1',
+            reasoning_protocol=report_data['reasoning_protocol'],
             n_cases=len(case_details),
             n_questions=len(case_details),
             accuracy=choice_result['accuracy'],
@@ -195,6 +193,7 @@ def main(argv=None):
             stability_score=None,
             safety_score=avg_safety,
             report_path=report_path,
+            aggregate_json=aggregate_json,
         )
 
         print(f"\nBenchmark run saved to database (id={run_id})")

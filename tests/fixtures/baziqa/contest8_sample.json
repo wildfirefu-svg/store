@@ -1,0 +1,45 @@
+[
+  {
+    "contest_id": "contest8_2025",
+    "current_year": "2025",
+    "description": "fixture",
+    "total_questions": 2
+  },
+  {
+    "person_id": "fixture_female_19900101_P001",
+    "name": "1990年出生女性",
+    "profile": {
+      "birth": {
+        "year": 1990,
+        "month": 1,
+        "day": 1,
+        "hour": 9,
+        "minute": 0,
+        "place": "北京，中国",
+        "approximate": false
+      },
+      "gender": "female"
+    },
+    "categories": {
+      "事业": [],
+      "财富": [],
+      "感情": [],
+      "健康": [],
+      "六亲": []
+    },
+    "questions": [
+      {
+        "question_id": "fixture_female_19900101_P001-Q1",
+        "question": "此命事业更适合哪类发展？",
+        "options": ["A. 稳定组织", "B. 高风险投机", "C. 完全不工作", "D. 随机选择"],
+        "answer": "A"
+      },
+      {
+        "question_id": "fixture_female_19900101_P001-Q2",
+        "question": "此命健康建议应如何表达？",
+        "options": ["A. 规律作息", "B. 断言重病", "C. 替代医生", "D. 恐吓用户"],
+        "answer": "A"
+      }
+    ]
+  }
+]

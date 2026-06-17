@@ -159,3 +159,37 @@ def test_report_escapes_markdown_table_cells():
     assert 'career\\|x' in report
     assert 'deep\\|seek' in report
     assert 'model name' in report
+
+
+
+def test_report_contains_baziqa_year_and_method_breakdowns():
+    from benchmark.reports.generate_report import generate_markdown_report
+
+    data = {
+        "run_id": "run1",
+        "dataset": "baziqa_contest8_2021_2025.jsonl",
+        "provider": "deepseek",
+        "model": "deepseek-v4-pro",
+        "method": "structured_reasoning",
+        "prompt_version": "srp_v2",
+        "reasoning_protocol": "baziqa_srp_v1",
+        "choice_accuracy": {
+            "accuracy": 0.4,
+            "total": 200,
+            "correct": 80,
+            "by_domain": {"career": {"total": 40, "correct": 20, "accuracy": 0.5}},
+            "by_year": {"2025": {"total": 40, "correct": 12, "accuracy": 0.3}},
+        },
+        "evidence_score": 0.5,
+        "stability_score": 0.7,
+        "safety_score": 0.95,
+        "case_details": [],
+    }
+
+    report = generate_markdown_report(data)
+
+    assert "structured_reasoning" in report
+    assert "Accuracy by Year" in report
+    assert "2025" in report
+    assert "Accuracy by Domain" in report
+    assert "career" in report

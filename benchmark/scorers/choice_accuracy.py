@@ -35,8 +35,12 @@ def _case_id(case):
     return case.get('case_id') or case.get('id') or case.get('question_id')
 
 
-def _empty_domain_bucket():
+def _empty_bucket():
     return {'total': 0, 'correct': 0, 'missing': 0, 'accuracy': 0.0}
+
+
+def _empty_domain_bucket():
+    return _empty_bucket()
 
 
 def score_choice_answers(cases, predictions):
@@ -45,6 +49,7 @@ def score_choice_answers(cases, predictions):
     missing = []
     invalid_cases = []
     by_domain = {}
+    by_year = {}
     for case in cases:
         cid = _case_id(case)
         expected = extract_choice(case.get('answer'))
@@ -52,24 +57,30 @@ def score_choice_answers(cases, predictions):
             invalid_cases.append(cid)
             continue
         domain = case.get('domain') or 'unknown'
-        bucket = by_domain.setdefault(domain, _empty_domain_bucket())
+        year = str(case.get('source_year') or 'unknown')
+        bucket = by_domain.setdefault(domain, _empty_bucket())
+        year_bucket = by_year.setdefault(year, _empty_bucket())
         total += 1
         bucket['total'] += 1
+        year_bucket['total'] += 1
         predicted = extract_choice(predictions.get(cid))
         if predicted is None:
             missing.append(cid)
             bucket['missing'] += 1
+            year_bucket['missing'] += 1
             continue
         if predicted == expected:
             correct += 1
             bucket['correct'] += 1
-    for bucket in by_domain.values():
+            year_bucket['correct'] += 1
+    for bucket in list(by_domain.values()) + list(by_year.values()):
         bucket['accuracy'] = bucket['correct'] / bucket['total'] if bucket['total'] else 0.0
     return {
         'total': total,
         'correct': correct,
         'accuracy': correct / total if total else 0.0,
         'by_domain': by_domain,
+        'by_year': by_year,
         'missing': missing,
         'invalid_cases': invalid_cases,
     }

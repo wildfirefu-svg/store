@@ -2,6 +2,8 @@ const els = {
     runs: document.getElementById('run-list'),
     report: document.getElementById('report-preview'),
     weakDomains: document.getElementById('weak-domains'),
+    yearBreakdown: document.getElementById('year-breakdown'),
+    domainBreakdown: document.getElementById('domain-breakdown'),
     accuracy: document.getElementById('metric-accuracy'),
     evidence: document.getElementById('metric-evidence'),
     stability: document.getElementById('metric-stability'),
@@ -27,12 +29,30 @@ function setEmptyState(message) {
     els.runs.appendChild(empty);
 }
 
+function renderBreakdown(el, title, buckets) {
+    if (!el) return;
+    el.textContent = '';
+    if (!buckets || Object.keys(buckets).length === 0) return;
+    const heading = document.createElement('strong');
+    heading.textContent = title;
+    el.appendChild(heading);
+    for (const key of Object.keys(buckets).sort()) {
+        const item = buckets[key] || {};
+        const line = document.createElement('div');
+        line.textContent = `${key}: ${item.correct || 0}/${item.total || 0} (${pct(item.accuracy)})`;
+        el.appendChild(line);
+    }
+}
+
 function renderCards(run) {
     if (!run) return;
     els.accuracy.textContent = pct(run.accuracy);
     els.evidence.textContent = pct(run.evidence_score);
     els.stability.textContent = pct(run.stability_score);
     els.safety.textContent = pct(run.safety_score);
+    const aggregate = run.aggregate_json || {};
+    renderBreakdown(els.yearBreakdown, 'Accuracy by Year', aggregate.by_year || {});
+    renderBreakdown(els.domainBreakdown, 'Accuracy by Domain', aggregate.by_domain || {});
 }
 
 function appendLine(parent, value) {
@@ -96,6 +116,8 @@ async function loadReport(runId) {
         if (!resp.ok) {
             els.report.textContent = `报告不可用：HTTP ${resp.status}`;
             els.weakDomains.textContent = '';
+            if (els.yearBreakdown) els.yearBreakdown.textContent = '';
+            if (els.domainBreakdown) els.domainBreakdown.textContent = '';
             return;
         }
         const text = await resp.text();

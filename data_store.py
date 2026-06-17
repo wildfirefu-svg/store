@@ -192,6 +192,7 @@ def init_db():
                     stability_score REAL,
                     safety_score REAL,
                     report_path TEXT NOT NULL DEFAULT '',
+                    aggregate_json TEXT NOT NULL DEFAULT '{}',
                     created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
                 );
                 CREATE INDEX IF NOT EXISTS idx_benchmark_runs_dataset ON benchmark_runs(dataset);
@@ -227,6 +228,9 @@ def init_db():
                     FOREIGN KEY (chart_id) REFERENCES charts(chart_id) ON DELETE CASCADE
                 );
             """)
+            _ensure_columns(conn, 'benchmark_runs', {
+                'aggregate_json': "TEXT NOT NULL DEFAULT '{}'",
+            })
             _ensure_columns(conn, 'conversation_summaries', {
                 'client_id': 'TEXT',
                 'summary_type': "TEXT NOT NULL DEFAULT 'general'",
@@ -889,10 +893,18 @@ def list_benchmark_questions(case_id=None, domain=None, limit=50):
             conn.close()
 
 
+def _benchmark_run_from_row(row):
+    if not row:
+        return None
+    item = dict(row)
+    item['aggregate_json'] = _json_loads(item.get('aggregate_json'), {})
+    return item
+
+
 def save_benchmark_run(id, dataset, provider='', model='', method='structured',
                        prompt_version='', reasoning_protocol='', n_cases=0, n_questions=0,
                        accuracy=None, evidence_score=None, stability_score=None,
-                       safety_score=None, report_path=''):
+                       safety_score=None, report_path='', aggregate_json='{}'):
     with _conn_lock:
         conn = _get_conn()
         try:
@@ -900,15 +912,16 @@ def save_benchmark_run(id, dataset, provider='', model='', method='structured',
                 """INSERT OR REPLACE INTO benchmark_runs (
                     id, dataset, provider, model, method, prompt_version,
                     reasoning_protocol, n_cases, n_questions, accuracy,
-                    evidence_score, stability_score, safety_score, report_path
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    evidence_score, stability_score, safety_score, report_path, aggregate_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (id, dataset, provider, model, method, prompt_version,
                  reasoning_protocol, n_cases, n_questions, accuracy,
-                 evidence_score, stability_score, safety_score, report_path),
+                 evidence_score, stability_score, safety_score, report_path,
+                 aggregate_json if isinstance(aggregate_json, str) else json.dumps(aggregate_json, ensure_ascii=False)),
             )
             conn.commit()
             row = conn.execute("SELECT * FROM benchmark_runs WHERE id = ?", (id,)).fetchone()
-            return dict(row) if row else None
+            return _benchmark_run_from_row(row)
         finally:
             conn.close()
 
@@ -918,7 +931,7 @@ def get_benchmark_run(run_id):
         conn = _get_conn()
         try:
             row = conn.execute("SELECT * FROM benchmark_runs WHERE id = ?", (run_id,)).fetchone()
-            return dict(row) if row else None
+            return _benchmark_run_from_row(row)
         finally:
             conn.close()
 
@@ -946,7 +959,7 @@ def list_benchmark_runs(dataset=None, model=None, limit=20):
         conn = _get_conn()
         try:
             rows = conn.execute(sql, tuple(params)).fetchall()
-            return [dict(r) for r in rows]
+            return [_benchmark_run_from_row(r) for r in rows]
         finally:
             conn.close()
 
