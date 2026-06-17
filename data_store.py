@@ -14,7 +14,10 @@ import sqlite3
 import threading
 import uuid
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bazi_data.db")
+DB_PATH = os.environ.get(
+    "BAZI_DB_PATH",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "bazi_data.db"),
+)
 
 _conn_lock = threading.Lock()
 

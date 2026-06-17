@@ -37,3 +37,6 @@ benchmark/outputs/*.md
 benchmark/outputs/test_report_*.md
 benchmark/reports/__pycache__/
 quality/model_quality_report.json
+.tmp/
+benchmark/outputs/baziqa_smoke_*.md
+benchmark/outputs/run_*.md

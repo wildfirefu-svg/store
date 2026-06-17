@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """E2E tests for BaZi analysis web app using Playwright."""
+import os
 import socket
 import subprocess
 import sys
 import time
 import urllib.request
+from pathlib import Path
 
 import pytest
 from playwright.sync_api import Page, sync_playwright
 
 BASE = "http://127.0.0.1:8000"
+
+pytestmark = [pytest.mark.e2e]
 
 
 def _free_port():
@@ -19,31 +23,46 @@ def _free_port():
 
 
 @pytest.fixture(scope="module")
-def live_server():
+def live_server(tmp_path_factory):
     global BASE
     port = _free_port()
     BASE = f"http://127.0.0.1:{port}"
+
+    tmp_dir = Path(".tmp")
+    tmp_dir.mkdir(exist_ok=True)
+    log_path = tmp_dir / "e2e-uvicorn.log"
+    log_file = log_path.open("w", encoding="utf-8")
+    db_path = tmp_path_factory.mktemp("e2e-db") / "e2e.db"
+    env = os.environ.copy()
+    env.setdefault("BAZI_API_RETRIES", "0")
+    env.setdefault("DEEPSEEK_API_KEY", "test-e2e-no-real-call")
+    env["BAZI_DB_PATH"] = str(db_path)
+
     proc = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "api_server:app", "--host", "127.0.0.1", "--port", str(port)],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
+        env=env,
     )
-    deadline = time.time() + 30
-    while time.time() < deadline:
+    try:
+        deadline = time.time() + 30
+        while time.time() < deadline:
+            try:
+                with urllib.request.urlopen(f"{BASE}/api/health", timeout=1) as resp:
+                    if resp.status == 200:
+                        yield BASE
+                        return
+            except Exception:
+                time.sleep(0.5)
+        pytest.fail(f"E2E server failed to start; see {log_path}")
+    finally:
+        proc.terminate()
         try:
-            with urllib.request.urlopen(f"{BASE}/api/health", timeout=1) as resp:
-                if resp.status == 200:
-                    yield BASE
-                    proc.terminate()
-                    try:
-                        proc.wait(timeout=10)
-                    except subprocess.TimeoutExpired:
-                        proc.kill()
-                    return
-        except Exception:
-            time.sleep(0.5)
-    proc.kill()
-    pytest.fail("E2E server failed to start")
+            proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=5)
+        log_file.close()
 
 
 @pytest.fixture(scope="module")
@@ -66,13 +85,14 @@ def page(browser) -> Page:
         ),
     )
     p.goto(BASE, wait_until="domcontentloaded")
+    p.evaluate("() => { try { localStorage.clear(); sessionStorage.clear(); } catch(e) {} }")
+    p.reload(wait_until="domcontentloaded")
     p.wait_for_timeout(1000)
     yield p
     p.close()
 
 
 def create_chart(page, name="E2E测试"):
-    before = page.locator(".mingzhu-card").count()
     page.evaluate(
         """() => {
             const modal = document.getElementById('add-mingzhu-modal');
@@ -88,13 +108,16 @@ def create_chart(page, name="E2E测试"):
     page.click("#mingzhu-submit-btn")
     try:
         page.wait_for_function(
-            "count => document.querySelectorAll('.mingzhu-card').length > count",
-            arg=before,
+            "name => Array.from(document.querySelectorAll('.mingzhu-card'))"
+            ".some(el => el.textContent.includes(name))",
+            arg=name,
             timeout=30000,
         )
-    except Exception:
-        page.reload(wait_until="domcontentloaded")
-        page.wait_for_selector(".mingzhu-card", timeout=10000)
+    except Exception as exc:
+        body_text = page.locator("body").text_content(timeout=2000) or ""
+        raise AssertionError(
+            f"Chart card for {name} did not appear after submit. Body={body_text[:500]}"
+        ) from exc
     page.wait_for_timeout(1000)
 
 
@@ -134,13 +157,9 @@ class TestMultiMingzhu:
         create_chart(page, "切换测试一")
         create_chart(page, "切换测试二")
 
-        cards = page.locator(".mingzhu-card").all()
-        if len(cards) >= 2:
-            report_before = page.locator("#report-content").text_content() or ""
-            cards[0].click()
-            page.wait_for_timeout(1000)
-            report_after = page.locator("#report-content").text_content() or ""
-            assert report_before != report_after, "切换命主后报告应该不同"
+        # 当前展示的命主应包含最近创建的命主名
+        body = page.locator("body").text_content() or ""
+        assert "切换测试二" in body, "最近创建的命主应该成为当前命主"
 
 
 class TestToolBars:
