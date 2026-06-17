@@ -68,18 +68,25 @@ export function _sendWithStream(chartId, prompt, onSuccess, forceTab) {
         function(toolName) {
             currentTool = toolName;
             const sender = msgEl.querySelector('.sender');
-            sender.innerHTML = '玄机子 <span class="tool-tag">🔧 ' + toolName + '</span>';
-            reportStatus.innerHTML = '⏳ 玄机子正在' + toolName + '…';
+            sender.textContent = '玄机子 ';
+            const tag = document.createElement('span');
+            tag.className = 'tool-tag';
+            tag.textContent = '🔧 ' + toolName;
+            sender.appendChild(tag);
+            reportStatus.textContent = '⏳ 玄机子正在' + toolName + '…';
         },
         function(corrections) {
-            // Finalize: remove cursor, set content with line breaks
-            bubble.innerHTML = (replyText || '分析完成，请查看右侧报告。').replace(/\n/g, '<br>');
+            bubble.textContent = replyText || '分析完成，请查看右侧报告。';
             bubble._streamReady = false;
-            reportStatus.innerHTML = trusted ? '✅ 可信推理完成' : '✅ 分析完成';
+            reportStatus.textContent = trusted ? '✅ 可信推理完成' : '✅ 分析完成';
             if (reportBuf) showReportFinal(currentTab, reportBuf);
             if (currentTool) {
                 const sender = msgEl.querySelector('.sender');
-                sender.innerHTML = '玄机子 <span class="tool-tag">🔧 ' + currentTool + '</span>';
+                sender.textContent = '玄机子 ';
+                const tag = document.createElement('span');
+                tag.className = 'tool-tag';
+                tag.textContent = '🔧 ' + currentTool;
+                sender.appendChild(tag);
             }
             var correctBtn = document.getElementById('correct-btn');
             if (correctBtn) correctBtn.style.display = 'inline-block';

@@ -52,6 +52,12 @@ API_RETRIES = int(os.environ.get("BAZI_API_RETRIES", "2"))
 IZTRO_TIMEOUT = int(os.environ.get("BAZI_IZTRO_TIMEOUT", "10"))
 
 # ---- Security ----
+ENV = os.environ.get("BAZI_ENV", "development").lower()
+ALLOW_QUERY_API_KEY = os.environ.get(
+    "BAZI_ALLOW_QUERY_API_KEY",
+    "1" if ENV != "production" else "0",
+) in ("1", "true", "True", "yes", "YES")
+
 # Maximum request body size in bytes (default 1 MB)
 MAX_BODY_SIZE = int(os.environ.get("BAZI_MAX_BODY_SIZE", str(1024 * 1024)))
 

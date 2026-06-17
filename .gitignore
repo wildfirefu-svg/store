@@ -28,3 +28,12 @@ _v2*
 debug.log
 .agents/
 .codex/
+
+build/
+dist/
+benchmark/datasets/baziqa/raw/
+benchmark/outputs/*.md
+!benchmark/outputs/.gitkeep
+benchmark/outputs/test_report_*.md
+benchmark/reports/__pycache__/
+quality/model_quality_report.json

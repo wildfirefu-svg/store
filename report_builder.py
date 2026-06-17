@@ -54,7 +54,8 @@ def render_chart_table(four_pillars, day_master, da_yun, tai_yuan, ming_gong, sh
             current_dy = d
             break
     dy_str = f'{current_dy["gan"]}{current_dy["zhi"]} ({current_dy.get("start_age","?")}-{current_dy.get("end_age","?")}岁)' if current_dy else 'N/A'
-    lines.append(f'起运：{da_yun[0].get("start_age","?")}岁  当前大运：{dy_str}')
+    start_age = da_yun[0].get("start_age", "?") if da_yun else 'N/A'
+    lines.append(f'起运：{start_age}岁  当前大运：{dy_str}')
     lines.append(f'胎元：{tai_yuan.get("gan","")}{tai_yuan.get("zhi","")}  '
                  f'命宫：{ming_gong.get("gan","")}{ming_gong.get("zhi","")}  '
                  f'身宫：{shen_gong.get("gan","")}{shen_gong.get("zhi","")}')

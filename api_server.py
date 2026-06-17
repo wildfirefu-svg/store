@@ -38,7 +38,7 @@ import data_store
 from config import (
     API_PORT, CORS_ORIGIN_LIST, CORS_ORIGINS,
     RATE_LIMITS, RATE_LIMIT_EXEMPT, RATE_LIMIT_CLEAN_INTERVAL,
-    CHART_CACHE_SIZE, MAX_BODY_SIZE, LOG_LEVEL, LOG_FILE,
+    CHART_CACHE_SIZE, MAX_BODY_SIZE, ALLOW_QUERY_API_KEY, LOG_LEVEL, LOG_FILE,
 )
 
 logging.basicConfig(
@@ -187,12 +187,12 @@ async def auth_middleware(request: Request, call_next):
             return await call_next(request)
 
     # Check query parameter
-    if request.query_params.get("api_key") == _BAZI_API_KEY:
+    if ALLOW_QUERY_API_KEY and request.query_params.get("api_key") == _BAZI_API_KEY:
         return await call_next(request)
 
     return JSONResponse(
         status_code=401,
-        content={"detail": "需要有效的 API Key。请在 Authorization 头中提供 Bearer token，或通过 ?api_key= 参数传递。"},
+        content={"detail": "需要有效的 API Key。请在 Authorization 头中提供 Bearer token。"},
         headers={"WWW-Authenticate": "Bearer"},
     )
 
@@ -1621,7 +1621,12 @@ def _generate_fallback(chart):
     if dm_pct >= 0.4: grade = '身旺'
     elif dm_pct >= 0.2: grade = '中和'
     else: grade = '身弱'
-    return f'\n\n⚠️ AI 服务暂不可用（请设置 ANTHROPIC_API_KEY）。\n\n**本地分析**: 日主{gan}{wu}，{grade}（日主占比{int(dm_pct*100)}%）。\n\n请配置 API Key 后重试以获取四合出深度报告。'
+    return (
+        f'\n\n⚠️ AI 服务暂不可用。请检查 DEEPSEEK_API_KEY / ANTHROPIC_API_KEY 是否已配置、'
+        f'Key 是否有效、账户余额/额度是否可用，以及当前后端进程是否能访问模型 API。'
+        f'\n\n**本地分析**: 日主{gan}{wu}，{grade}（日主占比{int(dm_pct*100)}%）。'
+        f'\n\n请修复 AI 服务连接后重试，以获取四合出深度报告。'
+    )
 
 
 @app.get("/api/kb/search")

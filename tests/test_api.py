@@ -495,3 +495,19 @@ class TestConversationSummariesApi:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+
+def test_generate_fallback_mentions_deepseek_and_anthropic():
+    from api_server import _generate_fallback
+
+    chart = {
+        "day_master": {"gan": "甲", "wuxing": "木"},
+        "wuxing_stats": {"金": 1, "木": 3, "水": 1, "火": 1, "土": 1},
+    }
+
+    text = _generate_fallback(chart)
+    assert "DEEPSEEK_API_KEY" in text
+    assert "ANTHROPIC_API_KEY" in text
+    assert "余额/额度" in text
+    assert "本地分析" in text

@@ -167,3 +167,26 @@ class TestCacheInvalidation:
         r = client.get(f'/api/charts/{cid}/data')
         assert r.status_code == 200
         assert r.json().get('chart_data', {}).get('test_field') == 'updated_value'
+
+
+
+def test_query_api_key_can_be_disabled(monkeypatch):
+    raw_client = TestClient(api.app)
+    monkeypatch.setattr(api, "_BAZI_API_KEY", "secret")
+    monkeypatch.setattr(api, "ALLOW_QUERY_API_KEY", False)
+
+    resp = raw_client.get("/api/charts?api_key=secret")
+    assert resp.status_code == 401
+    assert "Authorization" in resp.json()["detail"]
+
+    resp = raw_client.get("/api/charts", headers={"Authorization": "Bearer secret"})
+    assert resp.status_code == 200
+
+
+def test_query_api_key_can_be_enabled(monkeypatch):
+    raw_client = TestClient(api.app)
+    monkeypatch.setattr(api, "_BAZI_API_KEY", "secret")
+    monkeypatch.setattr(api, "ALLOW_QUERY_API_KEY", True)
+
+    resp = raw_client.get("/api/charts?api_key=secret")
+    assert resp.status_code == 200

@@ -106,6 +106,14 @@ class TestRenderChartTable:
             SAMPLE_CHART['ming_gong'], SAMPLE_CHART['shen_gong'])
         assert '日主' in result
 
+    def test_handles_empty_dayun(self):
+        result = rb.render_chart_table(
+            SAMPLE_CHART['four_pillars'], SAMPLE_CHART['day_master'],
+            [], SAMPLE_CHART['tai_yuan'],
+            SAMPLE_CHART['ming_gong'], SAMPLE_CHART['shen_gong'])
+        assert '起运：N/A' in result
+        assert '当前大运：N/A' in result
+
 
 class TestRenderWangshuai:
     def test_returns_table(self):
