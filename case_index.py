@@ -15,6 +15,8 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
+import numpy as np
+
 from bazi_features import extract as extract_bazi_features
 
 
@@ -123,6 +125,7 @@ class CaseIndex:
         self._cases: List[Dict[str, Any]] = self._load(path)
         self._doc_tokens = [_tokenize(c["text_blob"]) for c in self._cases]
         self._idf = self._build_idf(self._doc_tokens)
+        self._build_vector_index()
 
     # ------------------------------------------------------------ loading
     def _load(self, path: Path) -> List[Dict[str, Any]]:
@@ -321,6 +324,82 @@ class CaseIndex:
                 reasons.append(f"branch_overlap:{overlap}")
         return score, reasons
 
+    # --------------------------------------------------------- vector index
+    _VECTOR_MODEL_NAME = "all-MiniLM-L6-v2"
+
+    def _build_vector_index(self) -> None:
+        """Pre-compute embeddings for all corpus cases (sentence-transformers or TF-IDF fallback)."""
+        self._case_embeddings: Optional[np.ndarray] = None
+        self._vector_model = None
+        if not _env_enabled("BAZI_RAG_VECTOR", False):
+            return
+        # Try sentence-transformers (check HF cache for model)
+        st_mode = os.environ.get("BAZI_RAG_VECTOR_MODE", "auto")
+        if st_mode in ("st", "auto"):
+            try:
+                from sentence_transformers import SentenceTransformer
+                model = SentenceTransformer(self._VECTOR_MODEL_NAME)
+                texts = [c["text_blob"] for c in self._cases]
+                if texts:
+                    self._case_embeddings = model.encode(texts, show_progress_bar=False, normalize_embeddings=True)
+                    self._vector_model = model
+                return
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).info("sentence-transformers failed, using TF-IDF fallback: %s", exc)
+        # Fallback: TF-IDF cosine similarity
+        self._build_tfidf_index()
+
+    def _build_tfidf_index(self) -> None:
+        """Build TF-IDF matrix for cosine similarity retrieval."""
+        if not self._cases:
+            return
+        n = len(self._cases)
+        # Compute TF-IDF vectors using existing token/IDF infrastructure
+        self._tfidf_matrix: List[Dict[str, float]] = []
+        for tokens in self._doc_tokens:
+            tf = Counter(tokens)
+            dl = len(tokens) or 1
+            vec = {}
+            for term, count in tf.items():
+                idf = self._idf.get(term, 0.0)
+                vec[term] = (count / dl) * idf
+            # L2 normalize
+            norm = math.sqrt(sum(v * v for v in vec.values())) or 1.0
+            self._tfidf_matrix.append({k: v / norm for k, v in vec.items()})
+        # Use identity matrix placeholder so _score_vector_similarity knows TF-IDF is active
+        self._case_embeddings = np.zeros((n, 1))  # sentinel
+
+    def _score_vector_similarity(self, query: str) -> List[float]:
+        """Return cosine similarity scores between query and all cases."""
+        if self._case_embeddings is None or not query:
+            return [0.0] * len(self._cases)
+        # sentence-transformers path
+        if self._vector_model is not None:
+            try:
+                q_emb = self._vector_model.encode([query], normalize_embeddings=True)
+                sims = self._case_embeddings @ q_emb.T
+                return sims.flatten().tolist()
+            except Exception:
+                return [0.0] * len(self._cases)
+        # TF-IDF cosine fallback
+        if hasattr(self, '_tfidf_matrix') and self._tfidf_matrix:
+            query_tokens = _tokenize(query)
+            tf = Counter(query_tokens)
+            dl = len(query_tokens) or 1
+            q_vec = {}
+            for term, count in tf.items():
+                idf = self._idf.get(term, 0.0)
+                q_vec[term] = (count / dl) * idf
+            q_norm = math.sqrt(sum(v * v for v in q_vec.values())) or 1.0
+            q_vec = {k: v / q_norm for k, v in q_vec.items()}
+            scores = []
+            for doc_vec in self._tfidf_matrix:
+                dot = sum(q_vec.get(k, 0.0) * v for k, v in doc_vec.items())
+                scores.append(dot)
+            return scores
+        return [0.0] * len(self._cases)
+
     # --------------------------------------------------------------- public
     def top_k_cases(
         self,
@@ -340,12 +419,13 @@ class CaseIndex:
 
         query_tokens = _tokenize(query)
         scores = self._bm25_scores(query_tokens)
+        vector_scores = self._score_vector_similarity(query)
 
         structured = features.get("structured") or {}
         active_filters = filters or {}
 
         ranked = []
-        for case, score in zip(self._cases, scores):
+        for i, (case, score) in enumerate(zip(self._cases, scores)):
             if active_filters.get("gender") and case["gender"] != active_filters["gender"]:
                 continue
             structured_weight = _env_float("BAZI_RAG_STRUCTURED_WEIGHT", 1.0)
@@ -355,14 +435,18 @@ class CaseIndex:
             structured_score, reasons = self._score_structured_match(case, structured)
             structured_score *= structured_weight
             chart_score, chart_reasons = self._score_chart_structure(case, structured)
+            vector_weight = _env_float("BAZI_RAG_VECTOR_WEIGHT", 1.5)
+            vector_score = vector_scores[i] * vector_weight if i < len(vector_scores) else 0.0
             semantic_score, phrase_hits = (0.0, [])
             if semantic_enabled:
                 semantic_score, phrase_hits = self._score_semantic_overlap(case, structured.get("query_text") or query)
                 semantic_score *= semantic_weight
             all_reasons = list(reasons) + list(chart_reasons)
+            if vector_score > 0.3:
+                all_reasons.append(f"vector_sim:{vector_scores[i]:.3f}")
             if phrase_hits:
                 all_reasons.append("semantic_overlap:" + ",".join(phrase_hits[:4]))
-            adj = score + structured_score + chart_score + semantic_score
+            adj = score + structured_score + chart_score + semantic_score + vector_score
             ranked.append((adj, all_reasons, case))
 
         ranked.sort(

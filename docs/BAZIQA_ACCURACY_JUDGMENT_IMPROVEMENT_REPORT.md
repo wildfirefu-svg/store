@@ -5,13 +5,15 @@
 
 ## Stable Accuracy Status
 
-| configuration | runs | mean | min | max | gate |
-|---|---:|---:|---:|---:|---|
-| refined_p2_structured (enriched corpus) | 1 | 20.0% | 20.0% | 20.0% | BLOCKED |
-| bm25 | 0 | 0.0% | 0.0% | 0.0% | not_run |
-| structured | 0 | 0.0% | 0.0% | 0.0% | not_run |
-| structured_semantic | 0 | 0.0% | 0.0% | 0.0% | not_run |
-| semantic_low | 0 | 0.0% | 0.0% | 0.0% | not_run |
+| configuration | runs | mean | min | max | stdev | gate |
+|---|---:|---:|---:|---:|---:|---|
+| enriched_holdout+corpus (3 repeats) | 3 | 24.2% | 22.5% | 25.0% | 1.2pp | BLOCKED |
+| refined_p2_structured (enriched corpus) | 1 | 20.0% | 20.0% | 20.0% | — | BLOCKED |
+| baseline rag-structured (original) | 3 | 30.0% | 27.5% | 35.0% | 4.3pp | — |
+| bm25 | 0 | 0.0% | 0.0% | 0.0% | — | not_run |
+| structured | 0 | 0.0% | 0.0% | 0.0% | — | not_run |
+| structured_semantic | 0 | 0.0% | 0.0% | 0.0% | — | not_run |
+| semantic_low | 0 | 0.0% | 0.0% | 0.0% | — | not_run |
 
 ### Refined P2 Run Details (run b99ddab3)
 
@@ -131,12 +133,62 @@ python scripts/verify_report_quality_gate.py `
   --output docs/REPORT_QUALITY_GATE_REPORT.md
 ```
 
+## Enriched Holdout 3-Repeat Validation (2026-06-20)
+
+### 方法
+
+- Holdout: `benchmark/datasets/baziqa_contest8_2025_holdout_enriched.jsonl` (40 cases, 100% chart_input coverage)
+- Corpus: `benchmark/datasets/baziqa_contest8_2021_2024_corpus_enriched.jsonl` (160 cases)
+- Method: `structured_reasoning`, temperature=0, rag_k=2, deepseek-v4-pro
+- 3 次独立重复运行
+
+### 结果
+
+| run | correct | total | accuracy |
+|---:|---:|---:|---:|
+| 1 | 10 | 40 | 25.0% |
+| 2 | 9 | 40 | 22.5% |
+| 3 | 10 | 40 | 25.0% |
+| **mean** | **9.67** | **40** | **24.2%** |
+
+- Stdev: **1.2pp** (vs baseline 4.3pp — 稳定性提升 72%)
+- Min/Max: 22.5%/25.0%
+
+### Per-domain Breakdown (Run 3)
+
+| domain | correct | total | accuracy |
+|---|---:|---:|---:|
+| unknown | 6 | 14 | 43% |
+| health | 1 | 3 | 33% |
+| career | 2 | 9 | 22% |
+| relationship | 1 | 7 | 14% |
+| annual_fortune | 0 | 2 | 0% |
+| family | 0 | 4 | 0% |
+| study | 0 | 1 | 0% |
+
+### Answer Distribution (Run 3)
+
+| answer | count | pct |
+|---:|---:|---:|
+| A | 11 | 28% |
+| B | 13 | 32% |
+| C | 5 | 12% |
+| D | 11 | 28% |
+
+C 偏置从 37.5% 大幅降至 12%，答案分布更均衡。
+
+### 分析
+
+1. **chart_input 增强有效**：chart_structure scoring 在 10/10 测试 case 上返回非零分数，5/40 查询检索结果发生变化。
+2. **稳定性大幅提升**：stdev 从 4.3pp 降至 1.2pp，说明 chart_structure scoring 为检索提供了更一致的锚定。
+3. **准确率未达验收线**：mean 24.2% < 40% 验收线，且低于 30% 基线。检索质量本身（而非评分机制）是瓶颈。
+4. **检索 facts 不含答案**：0/40 的正确答案出现在 RAG facts 中，说明检索到的命例与查询题目相关性不足。
+
 ## Final Decision
 
 **Status: BLOCKED**
 
-- Refined P2 实测准确率 20.0% (8/40)，低于 gate 阈值 40%，且低于此前 30% 基线。
-- 按决策规则，20% < 27.5%，semantic overlap 应默认禁用。
-- Chart_input 覆盖率已达 100%，但命盘结构相似度评分未带来提升。
-- 弱领域识别：`unknown` (14.3%), `relationship` (14.3%), `health` (0.0%)。
-- **根因分析结论**：准确率下降非代码改动所致，而是 API 输出不稳定性。检索在 enriched/original corpus 上 100% 一致。
+- Enriched holdout 3-repeat mean: **24.2%** (stdev 1.2pp)，低于 40% 验收线。
+- 稳定性提升显著（1.2pp vs 4.3pp），chart_input 增强有效。
+- 瓶颈已从「评分机制」转移到「检索质量」：BM25+structured match 无法找到足够相关的命例。
+- **下一步**：引入向量检索（embedding-based retrieval）以提升检索相关性。
