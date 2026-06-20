@@ -210,3 +210,54 @@ def test_structured_weight_changes_score(monkeypatch, tmp_path):
     idx2 = CaseIndex(path)
     score_high = idx2.top_k_cases({"text_blob": "事业", "structured": {"query_domain": "career"}}, k=1)[0]["_score"]
     assert score_high > score_low
+
+
+def test_chart_structure_boosts_same_day_master_and_month_branch(tmp_path):
+    import json as _json
+    path = tmp_path / "corpus.jsonl"
+    rows = [
+        {
+            "case_id": "same",
+            "answer": "A",
+            "domain": "career",
+            "person": {"person_id": "p1", "name": "同盘", "gender": "male", "birth": {"year": 1980}},
+            "question": "事业",
+            "options": ["A. 升迁", "B. 婚姻"],
+            "chart_input": {
+                "four_pillars": {"month": {"zhi": "巳"}, "day": {"gan": "甲", "zhi": "子"}},
+                "day_master": {"gan": "甲", "wuxing": "木"},
+                "wuxing_stats": {"木": 2, "火": 2},
+                "shishen_stats": {"正官": 1},
+            },
+        },
+        {
+            "case_id": "diff",
+            "answer": "A",
+            "domain": "career",
+            "person": {"person_id": "p2", "name": "异盘", "gender": "male", "birth": {"year": 1980}},
+            "question": "事业",
+            "options": ["A. 升迁", "B. 婚姻"],
+            "chart_input": {
+                "four_pillars": {"month": {"zhi": "亥"}, "day": {"gan": "庚", "zhi": "午"}},
+                "day_master": {"gan": "庚", "wuxing": "金"},
+                "wuxing_stats": {"金": 3, "水": 2},
+                "shishen_stats": {"七杀": 1},
+            },
+        },
+    ]
+    path.write_text("\n".join(_json.dumps(r, ensure_ascii=False) for r in rows), encoding="utf-8")
+    from case_index import CaseIndex
+    idx = CaseIndex(path)
+    result = idx.top_k_cases({
+        "text_blob": "事业",
+        "structured": {
+            "query_domain": "career",
+            "day_master_gan": "甲",
+            "month_zhi": "巳",
+            "wuxing_stats": {"木": 2, "火": 2},
+            "shishen_stats": {"正官": 1},
+        },
+    }, k=2)
+    assert result[0]["person_id"] == "p1"
+    assert "same_day_master" in result[0]["match_reasons"]
+    assert "same_month_branch" in result[0]["match_reasons"]

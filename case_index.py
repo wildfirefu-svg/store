@@ -15,6 +15,8 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
+from bazi_features import extract as extract_bazi_features
+
 
 HOLDOUT_MARKERS = ("holdout", "_holdout")
 
@@ -135,12 +137,17 @@ class CaseIndex:
                 pid = person.get("person_id") or row.get("case_id")
                 if not pid:
                     continue
-                bucket = people.setdefault(pid, {"person": person, "facts": [], "domains": Counter()})
+                bucket = people.setdefault(pid, {"person": person, "facts": [], "domains": Counter(), "chart_features": None})
                 fact = self._row_fact(row)
                 if fact:
                     bucket["facts"].append(fact)
                 domain = str(row.get("domain") or "unknown")
                 bucket["domains"][domain] += 1
+                if bucket["chart_features"] is None and row.get("chart_input"):
+                    try:
+                        bucket["chart_features"] = extract_bazi_features(row["chart_input"])["structured"]
+                    except Exception:
+                        pass
 
         cases: List[Dict[str, Any]] = []
         for pid, bucket in people.items():
@@ -161,6 +168,7 @@ class CaseIndex:
                 "domains": domains,
                 "keywords": self._case_keywords(bucket["facts"], domains),
                 "semantic_phrases": _semantic_phrases(text_blob),
+                "chart_features": bucket.get("chart_features"),
             })
         return cases
 
@@ -229,6 +237,35 @@ class CaseIndex:
                 score += idf * num / max(den, 1e-6)
             scores.append(score)
         return scores
+
+    def _score_chart_structure(self, case: Dict[str, Any], structured: Dict[str, Any]) -> tuple:
+        score = 0.0
+        reasons = []
+        chart = case.get("chart_features") or {}
+        if not chart:
+            return score, reasons
+        if structured.get("day_master_gan") and structured.get("day_master_gan") == chart.get("day_master_gan"):
+            score += 0.45
+            reasons.append("same_day_master")
+        if structured.get("day_master_wuxing") and structured.get("day_master_wuxing") == chart.get("day_master_wuxing"):
+            score += 0.25
+            reasons.append("same_day_master_wuxing")
+        if structured.get("month_zhi") and structured.get("month_zhi") == chart.get("month_zhi"):
+            score += 0.45
+            reasons.append("same_month_branch")
+        query_wuxing = structured.get("wuxing_stats") or {}
+        case_wuxing = chart.get("wuxing_stats") or {}
+        overlap = sum(min(int(query_wuxing.get(k, 0) or 0), int(case_wuxing.get(k, 0) or 0)) for k in ("木", "火", "土", "金", "水"))
+        if overlap:
+            score += min(overlap * 0.08, 0.40)
+            reasons.append(f"wuxing_overlap:{overlap}")
+        query_shishen = structured.get("shishen_stats") or {}
+        case_shishen = chart.get("shishen_stats") or {}
+        hits = sorted(k for k in query_shishen if k in case_shishen)
+        if hits:
+            score += min(len(hits) * 0.15, 0.45)
+            reasons.append("shishen_overlap:" + ",".join(hits[:3]))
+        return score, reasons
 
     def _score_semantic_overlap(self, case: Dict[str, Any], query_text: str) -> tuple:
         query_phrases = set(_semantic_phrases(query_text))
@@ -317,14 +354,15 @@ class CaseIndex:
 
             structured_score, reasons = self._score_structured_match(case, structured)
             structured_score *= structured_weight
+            chart_score, chart_reasons = self._score_chart_structure(case, structured)
             semantic_score, phrase_hits = (0.0, [])
             if semantic_enabled:
                 semantic_score, phrase_hits = self._score_semantic_overlap(case, structured.get("query_text") or query)
                 semantic_score *= semantic_weight
-            all_reasons = list(reasons)
+            all_reasons = list(reasons) + list(chart_reasons)
             if phrase_hits:
                 all_reasons.append("semantic_overlap:" + ",".join(phrase_hits[:4]))
-            adj = score + structured_score + semantic_score
+            adj = score + structured_score + chart_score + semantic_score
             ranked.append((adj, all_reasons, case))
 
         ranked.sort(
