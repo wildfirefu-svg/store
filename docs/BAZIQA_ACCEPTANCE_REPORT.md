@@ -99,9 +99,13 @@ http://127.0.0.1:8000/benchmark
 
 ## BaziQA Accuracy And Judgment Improvement
 
-- Bazi accuracy and judgment专项：BLOCKED until refined P2 40-case validation, retrieval ablation repeats=3, chart_input coverage, and report quality gate are all recorded.
-- Implementation complete for Tasks 1–6: retrieval switches, ablation runner, chart input enrichment, chart-structure scoring, domain action plan, and report quality gate exporter.
+- Bazi accuracy and judgment专项：**BLOCKED**.
+- Refined P2 full 40-case run (run b99ddab3): **8/40 = 20.0%**, below 27.5% threshold and previous 30% baseline.
+- Chart_input coverage: 100% (160/160). ✅
+- Weak domains: unknown (14.3%), relationship (14.3%), health (0.0%).
+- Decision: semantic overlap disabled; chart-structure scoring requires investigation (degraded vs baseline).
 - Report: [BAZIQA_ACCURACY_JUDGMENT_IMPROVEMENT_REPORT.md](file:///f:/project/agent/docs/BAZIQA_ACCURACY_JUDGMENT_IMPROVEMENT_REPORT.md)
+- Domain action plan: [BAZIQA_DOMAIN_ACTION_PLAN.md](file:///f:/project/agent/docs/BAZIQA_DOMAIN_ACTION_PLAN.md)
 
 ## Next Steps / 下一步计划
 
