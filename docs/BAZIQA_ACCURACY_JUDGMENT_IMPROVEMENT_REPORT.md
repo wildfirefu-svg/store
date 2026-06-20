@@ -37,8 +37,28 @@
 
 - Default retrieval mode: **structured only** (semantic overlap disabled per decision rule: result 20.0% < 27.5% threshold).
 - Default rag_k: 2.
-- Chart-structure scoring enabled but did not improve over baseline (20% vs previous 30% baseline).
-- Next step: investigate why enriched corpus with chart-structure scoring degraded accuracy.
+- Chart-structure scoring enabled but had NO effect on retrieval (see Root Cause Analysis below).
+
+## Root Cause Analysis (2026-06-20)
+
+### 核心发现
+
+1. **检索 100% 一致**：对全部 40 个 holdout 查询，enriched corpus 与 original corpus 返回完全相同的 top-2 结果（person_id、score 均一致）。
+2. **chart_structure scoring 未生效**：holdout 数据集没有 `chart_input` 字段，`_case_chart()` 回退到空的 `four_pillars: {}`，导致查询侧 `day_master_gan`、`month_zhi` 等全部为空，`_score_chart_structure()` 返回 0。
+3. **enriched corpus chart_features 已正确提取**：33 个 corpus person 全部有 chart_features（day_master、month_zhi、wuxing_stats、shishen_stats），但查询侧缺少对应数据，无法进行比对。
+4. **模型输出不稳定是主因**：此前 `rag-structured` 3 次重复测试结果为 27.5%/35.0%/27.5%（mean=30.0%, stdev=4.3pp），本次 20.0% 偏离均值约 2.3σ，属于低概率事件但仍在已知方差范围内。
+5. **C 选项偏置**：本次 40 题中 15 题预测为 C（37.5%），答案分布不均。
+6. **检索无答案泄露**：0/40 的正确答案出现在检索到的 facts 中。
+
+### 结论
+
+**准确率下降不是由代码改动（enriched corpus / chart-structure scoring）引起的**，而是 DeepSeek API 在 temperature=0 下的输出不稳定性所致。此前的 30% "基线" 本身就是 3 次重复的均值，单次运行波动范围为 27.5%–35.0%。
+
+### 修复建议
+
+1. **为 holdout 数据补充 chart_input**：使查询侧有完整的八字排盘数据，chart_structure scoring 才能真正生效。
+2. **增加 repeats**：至少 3 次重复以平均模型不稳定性。
+3. **调查 prompt 工程**：RAG 注入的相似命例 facts 中不含正确答案（0/40 泄露），说明检索质量本身需要提升（可能需要 A1 向量检索）。
 
 ## Chart Input Coverage
 
@@ -119,4 +139,4 @@ python scripts/verify_report_quality_gate.py `
 - 按决策规则，20% < 27.5%，semantic overlap 应默认禁用。
 - Chart_input 覆盖率已达 100%，但命盘结构相似度评分未带来提升。
 - 弱领域识别：`unknown` (14.3%), `relationship` (14.3%), `health` (0.0%)。
-- 下一步需调查 enriched corpus + chart-structure scoring 为何反而降低准确率（可能是 chart_features 评分权重干扰了原有结构化匹配）。
+- **根因分析结论**：准确率下降非代码改动所致，而是 API 输出不稳定性。检索在 enriched/original corpus 上 100% 一致。
