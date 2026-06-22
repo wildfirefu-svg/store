@@ -8,7 +8,7 @@ import uuid
 if __package__ in (None, ''):
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from benchmark.scorers.choice_accuracy import load_jsonl, score_choice_answers
+from benchmark.scorers.choice_accuracy import load_jsonl, score_choice_answers, extract_choice, extract_choice_with_meta
 from benchmark.formatters.baziqa_prompt import (
     format_direct_choice_prompt,
     format_structured_reasoning_prompt,
@@ -38,7 +38,140 @@ def build_benchmark_prompt(case, method='direct_choice'):
     raise ValueError(f"Unsupported benchmark method: {method}")
 
 
-def call_model_sync(prompt, provider, model):
+def _case_chart(case):
+    chart = (case or {}).get('chart_input') or {}
+    if not chart:
+        person = (case or {}).get('person') or {}
+        birth = person.get('birth') or {}
+        chart = {
+            'four_pillars': {},
+            'day_master': {},
+            'birth_info': {
+                'year': birth.get('year'),
+                'month': birth.get('month'),
+                'day': birth.get('day'),
+                'hour': birth.get('hour'),
+                'minute': birth.get('minute'),
+                'gender': person.get('gender') or '',
+            },
+        }
+    if case and isinstance(chart, dict):
+        chart = dict(chart)
+        chart["query_domain"] = case.get("domain") or "unknown"
+        options = case.get("options") or []
+        chart["query_text"] = " ".join([str(case.get("question") or "")] + [str(opt) for opt in options])
+    return chart
+
+
+def _get_bench_case_index():
+    if os.environ.get('BAZI_RAG') != '1':
+        return None
+    try:
+        from pathlib import Path as _Path
+        from case_index import CaseIndex
+        global _BENCH_CASE_INDEX, _BENCH_CASE_INDEX_PATH
+        corpus = _Path(os.environ.get(
+            "BAZI_RAG_CORPUS",
+            str(_Path(__file__).resolve().parents[2] / "benchmark" / "datasets" / "baziqa_contest8_2021_2024_corpus.jsonl"),
+        ))
+        if not corpus.exists():
+            return None
+        if _BENCH_CASE_INDEX is None or _BENCH_CASE_INDEX_PATH != str(corpus):
+            _BENCH_CASE_INDEX = CaseIndex(corpus)
+            _BENCH_CASE_INDEX_PATH = str(corpus)
+        return _BENCH_CASE_INDEX
+    except Exception:
+        return None
+
+
+def _compute_case_leak(rag_trace, expected_answer):
+    """Return True iff expected_answer appears in any retrieved fact string.
+
+    Mirrors `scripts.compute_retrieved_answer_leak.compute_leak_ratio` per-case
+    logic so per-trace and post-hoc aggregations stay consistent.
+    """
+    answer = str(expected_answer or "").strip().lower()
+    if not answer:
+        return False
+    for hit in rag_trace or []:
+        for fact in (hit.get("facts") or []) if isinstance(hit, dict) else []:
+            if isinstance(fact, str) and answer in fact.lower():
+                return True
+    return False
+
+
+def _resolve_rag_trace(case, k=2):
+    case_index = _get_bench_case_index()
+    if case_index is None:
+        return []
+    try:
+        from bazi_features import extract
+        chart = _case_chart(case)
+        features = extract(chart)
+        cases = case_index.top_k_cases(features, k=k)
+        out = []
+        for rank, item in enumerate(cases, 1):
+            out.append({
+                "rank": rank,
+                "person_id": item.get("person_id"),
+                "name": item.get("name"),
+                "birth_year": item.get("birth_year"),
+                "gender": item.get("gender"),
+                "domains": item.get("domains") or {},
+                "score": item.get("_score"),
+                "match_reasons": item.get("match_reasons") or [],
+                "facts": (item.get("facts") or [])[:5],
+            })
+        return out
+    except Exception:
+        return []
+
+
+def _resolve_system_prompt(case, rag_k=2):
+    fewshot_path = os.environ.get('BAZI_FEWSHOT_FILE') or ''
+    fewshot_examples = []
+    if fewshot_path:
+        try:
+            from rag_prompt_builder import load_fewshot_examples
+            fewshot_examples = load_fewshot_examples(fewshot_path)
+        except Exception:
+            fewshot_examples = []
+
+    if os.environ.get('BAZI_RAG') != '1':
+        if not fewshot_examples:
+            return SYSTEM_PROMPT_BENCHMARK
+        try:
+            from rag_prompt_builder import build_system_prompt
+            return build_system_prompt(
+                SYSTEM_PROMPT_BENCHMARK,
+                {},
+                None,  # type: ignore[arg-type]
+                enable_rag=False,
+                few_shot_examples=fewshot_examples,
+            )
+        except Exception:
+            return SYSTEM_PROMPT_BENCHMARK
+    try:
+        from rag_prompt_builder import build_system_prompt
+        case_index = _get_bench_case_index()
+        if case_index is None:
+            return SYSTEM_PROMPT_BENCHMARK
+        return build_system_prompt(
+            SYSTEM_PROMPT_BENCHMARK,
+            _case_chart(case),
+            case_index,
+            enable_rag=True,
+            few_shot_examples=fewshot_examples,
+            k=rag_k,
+        )
+    except Exception:
+        return SYSTEM_PROMPT_BENCHMARK
+
+
+_BENCH_CASE_INDEX = None
+
+
+def call_model_sync(prompt, provider, model, case=None, temperature=None, rag_k=2):
     try:
         from claude_api import call_model_messages_sync
         messages = [{"role": "user", "content": prompt}]
@@ -46,21 +179,23 @@ def call_model_sync(prompt, provider, model):
             messages,
             provider=provider,
             model=model,
-            system_prompt=SYSTEM_PROMPT_BENCHMARK,
+            system_prompt=_resolve_system_prompt(case, rag_k=rag_k),
+            temperature=temperature,
         )
         return str(response).strip()
     except Exception as e:
         raise RuntimeError(f"model_call_failed: {type(e).__name__}: {str(e)[:120]}") from e
 
 
-def call_model_messages_with_history(messages, provider, model):
+def call_model_messages_with_history(messages, provider, model, case=None, temperature=None, rag_k=2):
     try:
         from claude_api import call_model_messages_sync
         response = call_model_messages_sync(
             messages,
             provider=provider,
             model=model,
-            system_prompt=SYSTEM_PROMPT_BENCHMARK,
+            system_prompt=_resolve_system_prompt(case, rag_k=rag_k),
+            temperature=temperature,
         )
         return str(response).strip()
     except Exception as e:
@@ -80,9 +215,44 @@ def _group_cases_by_person(cases):
     return [(pid, groups[pid]) for pid in order]
 
 
-def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice'):
+def _prepare_jsonl(path):
+    if not path:
+        return None
+    out_path = os.path.abspath(path)
+    parent = os.path.dirname(out_path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    with open(out_path, "w", encoding="utf-8"):
+        pass
+    return out_path
+
+
+def _append_jsonl(path, row):
+    if not path:
+        return None
+    out_path = os.path.abspath(path)
+    parent = os.path.dirname(out_path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    with open(out_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    return out_path
+
+
+def _write_jsonl(path, rows):
+    out_path = _prepare_jsonl(path)
+    if not out_path:
+        return None
+    for row in rows:
+        _append_jsonl(out_path, row)
+    return out_path
+
+
+def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2):
     if method == 'multi_turn':
-        return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases)
+        return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases, temperature=temperature, case_details_jsonl=case_details_jsonl, rag_k=rag_k)
+
+    _prepare_jsonl(case_details_jsonl)
 
     predictions = {}
     evidence_results = []
@@ -99,7 +269,7 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
 
         prompt = build_benchmark_prompt(case, method=method)
         try:
-            answer = call_model_sync(prompt, provider, model)
+            answer = call_model_sync(prompt, provider, model, case=case, temperature=temperature, rag_k=rag_k)
         except RuntimeError as e:
             failed_cases.append({'case_id': case_id, 'error': str(e)[:120]})
             continue
@@ -114,20 +284,29 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
         safe_result['case_id'] = case_id
         safety_results.append(safe_result)
 
-        from benchmark.scorers.choice_accuracy import extract_choice
         expected = extract_choice(case.get('answer'))
-        predicted = extract_choice(answer)
+        meta = extract_choice_with_meta(answer)
+        predicted = meta['choice']
+        rag_trace = _resolve_rag_trace(case, k=rag_k)
 
-        case_details.append({
+        detail = {
             "case_id": case_id,
             "domain": case.get('domain', 'unknown'),
             "question": case.get('question', '')[:50],
             "expected_answer": expected,
             "predicted_answer": predicted,
+            "raw_answer": answer,
             "correct": predicted == expected,
             "evidence_coverage": ev_result.get('coverage', 0.0),
             "safety_score": safe_result.get('score', 0.0),
-        })
+            "parser_source": meta.get('source'),
+            "parser_valid": meta.get('valid'),
+            "rag_k": rag_k,
+            "rag_trace": rag_trace,
+            "retrieved_answer_leak": _compute_case_leak(rag_trace, expected),
+        }
+        case_details.append(detail)
+        _append_jsonl(case_details_jsonl, detail)
 
         time.sleep(1)
 
@@ -141,9 +320,8 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
     }
 
 
-def run_multi_turn_benchmark(cases, provider, model, max_cases=20):
-    from benchmark.scorers.choice_accuracy import extract_choice
-
+def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0.0, case_details_jsonl=None, rag_k=2):
+    _prepare_jsonl(case_details_jsonl)
     limited_cases = cases[:max_cases]
     predictions = {}
     evidence_results = []
@@ -166,7 +344,7 @@ def run_multi_turn_benchmark(cases, provider, model, max_cases=20):
             question_text = format_multi_turn_question(case)
             messages = history + [{"role": "user", "content": question_text}]
             try:
-                answer = call_model_messages_with_history(messages, provider, model)
+                answer = call_model_messages_with_history(messages, provider, model, case=case, temperature=temperature, rag_k=rag_k)
             except RuntimeError as e:
                 failed_cases.append({'case_id': case_id, 'error': str(e)[:120]})
                 continue
@@ -184,17 +362,27 @@ def run_multi_turn_benchmark(cases, provider, model, max_cases=20):
             safety_results.append(safe_result)
 
             expected = extract_choice(case.get('answer'))
-            predicted = extract_choice(answer)
-            case_details.append({
+            meta = extract_choice_with_meta(answer)
+            predicted = meta['choice']
+            rag_trace = _resolve_rag_trace(case, k=rag_k)
+            detail = {
                 "case_id": case_id,
                 "domain": case.get('domain', 'unknown'),
                 "question": case.get('question', '')[:50],
                 "expected_answer": expected,
                 "predicted_answer": predicted,
+                "raw_answer": answer,
                 "correct": predicted == expected,
                 "evidence_coverage": ev_result.get('coverage', 0.0),
                 "safety_score": safe_result.get('score', 0.0),
-            })
+                "parser_source": meta.get('source'),
+                "parser_valid": meta.get('valid'),
+                "rag_k": rag_k,
+                "rag_trace": rag_trace,
+                "retrieved_answer_leak": _compute_case_leak(rag_trace, expected),
+            }
+            case_details.append(detail)
+            _append_jsonl(case_details_jsonl, detail)
             time.sleep(1)
 
     return {
@@ -218,7 +406,20 @@ def main(argv=None):
     parser.add_argument('--output-dir', default='benchmark/outputs', help='Report output directory')
     parser.add_argument('--max-cases', type=int, default=20, help='Max cases to run (model mode)')
     parser.add_argument('--method', default='direct_choice', choices=['direct_choice', 'multi_turn', 'structured_reasoning'])
+    parser.add_argument('--rag', action='store_true', help='Enable BaziQA case retrieval augmentation (sets BAZI_RAG=1).')
+    parser.add_argument('--rag-corpus', default='', help='JSONL corpus file used when --rag is enabled')
+    parser.add_argument('--fewshot-file', default='', help='Optional JSONL file with few-shot example questions injected into the system prompt')
+    parser.add_argument('--case-details-jsonl', default='', help='Optional JSONL path for full per-case predictions and RAG trace')
+    parser.add_argument('--temperature', type=float, default=0.0, help='Benchmark model temperature')
+    parser.add_argument('--rag-k', type=int, default=2, help='Number of retrieved RAG cases to inject (default: 2)')
     args = parser.parse_args(argv)
+
+    if args.rag:
+        os.environ['BAZI_RAG'] = '1'
+        if args.rag_corpus:
+            os.environ['BAZI_RAG_CORPUS'] = args.rag_corpus
+    if args.fewshot_file:
+        os.environ['BAZI_FEWSHOT_FILE'] = args.fewshot_file
 
     cases = load_jsonl(args.dataset)
 
@@ -226,7 +427,15 @@ def main(argv=None):
         run_id = str(uuid.uuid4().hex[:8])
 
         model_result = run_model_benchmark(
-            cases, args.provider, args.model, args.prompt_version, args.max_cases, method=args.method
+            cases,
+            args.provider,
+            args.model,
+            args.prompt_version,
+            args.max_cases,
+            method=args.method,
+            temperature=args.temperature,
+            case_details_jsonl=args.case_details_jsonl,
+            rag_k=args.rag_k,
         )
 
         model_cases = model_result['cases']
@@ -272,6 +481,9 @@ def main(argv=None):
 
         report_path = save_report(report_data, output_dir)
         print(f"\nReport saved to: {report_path}")
+        case_details_path = _write_jsonl(args.case_details_jsonl, case_details)
+        if case_details_path:
+            print(f"Case details JSONL saved to: {case_details_path}")
 
         data_store.save_benchmark_run(
             id=run_id,
@@ -298,6 +510,7 @@ def main(argv=None):
         print(f"  Total: {choice_result['total']}")
         print(f"  Correct: {choice_result['correct']}")
         print(f"  Accuracy: {round(choice_result['accuracy'] * 100)}%")
+        print(f"  AccuracyExact: {choice_result['correct']}/{choice_result['total']}={choice_result['accuracy']:.6f}")
         print(f"  Evidence Coverage: {round(avg_evidence * 100)}%")
         print(f"  Safety Score: {round(avg_safety * 100)}%")
         print("="*60)
