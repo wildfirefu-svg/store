@@ -184,11 +184,30 @@ C 偏置从 37.5% 大幅降至 12%，答案分布更均衡。
 3. **准确率未达验收线**：mean 24.2% < 40% 验收线，且低于 30% 基线。检索质量本身（而非评分机制）是瓶颈。
 4. **检索 facts 不含答案**：0/40 的正确答案出现在 RAG facts 中，说明检索到的命例与查询题目相关性不足。
 
-## Final Decision
+## 阶段 1 Baseline: retrieved_answer_leak
 
-**Status: BLOCKED**
+> 指标定义：[design §11](file:///f:/project/agent/docs/superpowers/specs/2026-06-22-baziqa-hybrid-retrieval-reasoning-design.md)，由 [scripts/compute_retrieved_answer_leak.py](file:///f:/project/agent/scripts/compute_retrieved_answer_leak.py) 计算。
 
-- Enriched holdout 3-repeat mean: **24.2%** (stdev 1.2pp)，低于 40% 验收线。
-- 稳定性提升显著（1.2pp vs 4.3pp），chart_input 增强有效。
-- 瓶颈已从「评分机制」转移到「检索质量」：BM25+structured match 无法找到足够相关的命例。
-- **下一步**：引入向量检索（embedding-based retrieval）以提升检索相关性。
+### 计算方法
+
+| 指标 | 算法 | 是否用于晋升判定 |
+|---|---|---|
+| `weak_leak`（子串包含） | `expected_answer` 字母（A/B/C/D）作为子串出现在任意 `rag_trace[*].facts` 字符串中 | **否**（单字母天然高假阳，已知 92.5–100%） |
+| `strict_leak`（问题对齐 + `-> X` 模式） | 同时满足：1) facts 包含 `-> {expected_answer}` 模式；2) facts 包含当前 case 的 question 前 6 个字符（排除邻案不同题目的答案对当前案造成假阳） | **是**（用于晋升门阈） |
+
+### 数据来源
+
+按 [实施计划 Task 1.5](file:///f:/project/agent/docs/superpowers/plans/2026-06-22-baziqa-hybrid-stage1-implementation.md) 使用历史 P2 case_details：
+
+| 源文件 | 样本数 | 来源 | weak_leak | strict_leak |
+|---|---|---|---|---|
+| `.tmp/p2_rag_k2_details.jsonl` | 40 | P2 初版 40 题 real API 运行 | 37/40 = 92.5% | **0/40 = 0.0%** |
+| `.tmp/p2_refined_rag_k2_10_details.jsonl` | 10 | P2 refined 10 题 smoke | 10/10 = 100.0% | **0/10 = 0.0%** |
+
+> 注：`weak_leak` 的 92.5–100% 是“单字母答案在邻案 facts 中自然出现”的假阳，不是真实语义泄露。`strict_leak` 通过问题前缀对齐排除了跨题干扰，反映真实泄露比例。
+
+### 基线结论
+
+**`strict_leak` = 0/40 = 0.0%**：在 P2 检索配置下，**没有任何一条 case 的 retrieved facts 中包含与当前问题题干对齐的正确答案**。这与 [BAZIQA_ACCURACY_JUDGMENT_IMPROVEMENT_REPORT.md](file:///f:/project/agent/docs/BAZIQA_ACCURACY_JUDGMENT_IMPROVEMENT_REPORT.md) 中 “检索 facts 不含答案：0/40” 的定性结论完全一致，且用可复现方法量化确认。
+
+阶段 1 的晋升门阈 `retrieved_answer_leak ≥ 15%`（设计 §11 中间门阈）以此为基线。

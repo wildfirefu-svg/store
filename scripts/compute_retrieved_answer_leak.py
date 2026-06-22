@@ -47,6 +47,56 @@ def _case_is_leaky(row: dict, answer_field: str) -> bool:
     return False
 
 
+def _case_is_strict_leaky(row: dict, answer_field: str) -> bool:
+    """Stricter leak detector that requires a question-aligned ``-> {answer}``.
+
+    Baziqa fact strings encode the correct option per neighbour question, e.g.
+    ``此命何年结婚？ -> C 2006``. A single-letter substring is too noisy, and a
+    pure ``-> X`` match is also noisy because neighbour cases cover all of
+    A/B/C/D for unrelated questions.
+
+    The strict rule requires BOTH conditions:
+
+    1. the fact string contains ``-> {answer}`` (case-insensitive); AND
+    2. the fact string also contains the leading 6 characters of the current
+       row's question (lower-cased substring match), meaning the leak is for
+       the SAME question rather than for an unrelated neighbour question.
+
+    Empty question or empty answer yields False.
+    """
+    answer = str(row.get(answer_field) or "").strip().upper()
+    question = str(row.get("question") or "").strip()
+    if not answer or not question:
+        return False
+
+    needle = f"-> {answer}"
+    q_key = question[:6].lower()
+    if not q_key:
+        return False
+
+    rag_trace = row.get("rag_trace") or []
+    for hit in rag_trace:
+        facts = hit.get("facts") or []
+        for fact in facts:
+            if not isinstance(fact, str):
+                continue
+            fact_upper = fact.upper()
+            if needle not in fact_upper:
+                continue
+            if q_key in fact.lower():
+                return True
+    return False
+
+
+def compute_strict_leak_ratio(rows: list[dict], answer_field: str = "expected_answer") -> float:
+    """Strict variant of compute_leak_ratio using "-> {answer}" pattern."""
+    if not rows:
+        return 0.0
+    leaky = sum(1 for r in rows if _case_is_strict_leaky(r, answer_field))
+    return leaky / len(rows)
+
+
+
 def compute_leak_ratio(rows: list[dict], answer_field: str = "expected_answer") -> float:
     """Return proportion of rows in which the answer value appears in facts.
 
@@ -67,6 +117,7 @@ def build_cli_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Compute retrieved answer leak ratio")
     p.add_argument("--case-details-jsonl", type=Path, required=True)
     p.add_argument("--summary-json", type=Path, default=None)
+    p.add_argument("--strict", action="store_true", help="Also compute strict ``-> X`` leak ratio")
     return p
 
 
@@ -83,6 +134,10 @@ def main(argv: list[str] | None = None) -> None:
         "leak_count": sum(1 for r in rows if _case_is_leaky(r, "expected_answer")),
         "leak_ratio": round(ratio, 6),
     }
+    if args.strict:
+        strict_count = sum(1 for r in rows if _case_is_strict_leaky(r, "expected_answer"))
+        summary["strict_leak_count"] = strict_count
+        summary["strict_leak_ratio"] = round(strict_count / len(rows), 6) if rows else 0.0
 
     if args.summary_json:
         with args.summary_json.open("w", encoding="utf-8") as f:

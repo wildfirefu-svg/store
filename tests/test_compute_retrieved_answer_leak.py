@@ -142,3 +142,37 @@ def test_compute_leak_ratio_loads_jsonl_via_cli_helper(tmp_path: Path, two_case_
 
     loaded = load_case_details_jsonl(jsonl_path)
     assert compute_leak_ratio(loaded) == pytest.approx(0.5)
+
+
+def test_compute_strict_leak_ratio_only_counts_question_aligned():
+    """Strict variant must require BOTH ``-> {answer}`` AND question overlap.
+
+    A fact from an unrelated neighbour question (different question prefix)
+    must NOT count as a leak even though it contains ``-> {answer}``.
+    Only facts whose question prefix matches the current row's question
+    prefix are counted.
+    """
+    from scripts.compute_retrieved_answer_leak import compute_strict_leak_ratio
+
+    rows = [
+        {
+            "case_id": "g1",
+            "question": "此命出生家境如何？",
+            "expected_answer": "A",
+            "rag_trace": [{"facts": ["此命1996年发生何事？ -> A 患上严重抑郁症"]}],
+        },
+        {
+            "case_id": "g2",
+            "question": "此命1996年发生何事？",
+            "expected_answer": "A",
+            "rag_trace": [{"facts": ["此命1996年发生何事？ -> A 患上严重抑郁症"]}],
+        },
+    ]
+
+    assert compute_strict_leak_ratio(rows) == pytest.approx(0.5)
+
+
+def test_compute_strict_leak_ratio_zero_when_no_rows():
+    from scripts.compute_retrieved_answer_leak import compute_strict_leak_ratio
+
+    assert compute_strict_leak_ratio([]) == 0.0
