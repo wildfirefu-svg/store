@@ -44,6 +44,53 @@ GENERIC_PHRASES = {
 }
 
 
+_DEFAULT_RETRIEVAL_CONFIG_PATH = Path(__file__).resolve().parent / "benchmark" / "configs" / "baziqa_retrieval_configs.yaml"
+
+
+def load_retrieval_config(config_id: str, path: Optional[Path] = None) -> Dict[str, Any]:
+    """Resolve a retrieval ablation config by id from baziqa_retrieval_configs.yaml.
+
+    Parameters
+    ----------
+    config_id : str
+        The ``id`` field of the desired config entry (e.g. ``"bm25"``).
+    path : Path, optional
+        Override path to the YAML file. Defaults to the repository's
+        ``benchmark/configs/baziqa_retrieval_configs.yaml``.
+
+    Returns
+    -------
+    dict
+        The entry for the requested ``config_id`` with its ``id`` preserved.
+
+    Raises
+    ------
+    KeyError
+        If ``config_id`` is not present; the message lists available ids
+        for quick debugging.
+    ValueError
+        If the YAML payload is not a list of mappings.
+    """
+    import yaml  # local import keeps optional yaml dep out of module-load critical path
+
+    yaml_path = Path(path) if path is not None else _DEFAULT_RETRIEVAL_CONFIG_PATH
+    raw = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+    if not isinstance(raw, list) or not all(isinstance(item, dict) for item in raw):
+        raise ValueError(
+            f"retrieval config file {yaml_path} must contain a list of dict entries"
+        )
+
+    for entry in raw:
+        if entry.get("id") == config_id:
+            return entry
+
+    available = [entry.get("id") for entry in raw]
+    raise KeyError(
+        f"retrieval config id {config_id!r} not found in {yaml_path}; "
+        f"available={available}"
+    )
+
+
 def _env_float(name: str, default: float) -> float:
     try:
         return float(os.environ.get(name, str(default)))
@@ -209,6 +256,28 @@ class CaseIndex:
         )
         body = "；".join(facts[:8])
         text = f"{head}。事实：{body}"
+        
+        # 增强：注入八字结构化特征文本
+        if person.get("chart_features"):
+            chart = person["chart_features"]
+            structured_parts = []
+            if chart.get("day_master_gan"):
+                structured_parts.append(f"日主{chart['day_master_gan']}")
+            if chart.get("day_master_wuxing"):
+                structured_parts.append(f"日主五行{chart['day_master_wuxing']}")
+            if chart.get("four_pillars"):
+                pillars = "".join(chart["four_pillars"])  # 例：["甲子", "乙丑", "丙寅", "丁卯"]
+                structured_parts.append(f"四柱{pillars}")
+            if chart.get("wuxing_stats"):
+                wuxing = chart["wuxing_stats"]
+                wuxing_str = ",".join(f"{k}{v}" for k, v in wuxing.items() if v > 0)
+                structured_parts.append(f"五行分布{wuxing_str}")
+            if chart.get("major_universe"):
+                major_universe = chart["major_universe"]
+                structured_parts.append(f"大运{major_universe}")
+            if structured_parts:
+                text += "；结构化特征：" + " ".join(structured_parts)
+        
         return text[:1200]
 
     # --------------------------------------------------------------- bm25
@@ -331,6 +400,7 @@ class CaseIndex:
         """Pre-compute embeddings for all corpus cases (sentence-transformers or TF-IDF fallback)."""
         self._case_embeddings: Optional[np.ndarray] = None
         self._vector_model = None
+        self._vector_model = None
         if not _env_enabled("BAZI_RAG_VECTOR", False):
             return
         # Try sentence-transformers (check HF cache for model)
@@ -442,7 +512,7 @@ class CaseIndex:
                 semantic_score, phrase_hits = self._score_semantic_overlap(case, structured.get("query_text") or query)
                 semantic_score *= semantic_weight
             all_reasons = list(reasons) + list(chart_reasons)
-            if vector_score > 0.3:
+            if vector_score > 0.2:
                 all_reasons.append(f"vector_sim:{vector_scores[i]:.3f}")
             if phrase_hits:
                 all_reasons.append("semantic_overlap:" + ",".join(phrase_hits[:4]))
