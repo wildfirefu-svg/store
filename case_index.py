@@ -405,10 +405,14 @@ class CaseIndex:
             return
         # Try sentence-transformers (check HF cache for model)
         st_mode = os.environ.get("BAZI_RAG_VECTOR_MODE", "auto")
+        # BAZI_RAG_VECTOR_MODEL overrides the hard-coded default so ablation
+        # configs (see benchmark/configs/baziqa_retrieval_configs.yaml) can
+        # point at domain-tuned models without touching this file.
+        model_name = os.environ.get("BAZI_RAG_VECTOR_MODEL") or self._VECTOR_MODEL_NAME
         if st_mode in ("st", "auto"):
             try:
                 from sentence_transformers import SentenceTransformer
-                model = SentenceTransformer(self._VECTOR_MODEL_NAME)
+                model = SentenceTransformer(model_name)
                 texts = [c["text_blob"] for c in self._cases]
                 if texts:
                     self._case_embeddings = model.encode(texts, show_progress_bar=False, normalize_embeddings=True)
@@ -416,7 +420,11 @@ class CaseIndex:
                 return
             except Exception as exc:
                 import logging
-                logging.getLogger(__name__).info("sentence-transformers failed, using TF-IDF fallback: %s", exc)
+                logging.getLogger(__name__).info(
+                    "sentence-transformers failed for model %r, using TF-IDF fallback: %s",
+                    model_name,
+                    exc,
+                )
         # Fallback: TF-IDF cosine similarity
         self._build_tfidf_index()
 
