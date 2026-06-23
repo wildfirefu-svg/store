@@ -414,6 +414,7 @@ def main(argv=None):
     parser.add_argument('--case-details-jsonl', default='', help='Optional JSONL path for full per-case predictions and RAG trace')
     parser.add_argument('--temperature', type=float, default=0.0, help='Benchmark model temperature')
     parser.add_argument('--rag-k', type=int, default=2, help='Number of retrieved RAG cases to inject (default: 2)')
+    parser.add_argument('--config-id', default=None, help='Optional retrieval ablation config id; persisted into case_details.config_id')
     args = parser.parse_args(argv)
 
     if args.rag:
@@ -438,6 +439,7 @@ def main(argv=None):
             temperature=args.temperature,
             case_details_jsonl=args.case_details_jsonl,
             rag_k=args.rag_k,
+            config_id=args.config_id,
         )
 
         model_cases = model_result['cases']
