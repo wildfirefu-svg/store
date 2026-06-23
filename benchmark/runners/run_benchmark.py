@@ -271,7 +271,33 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
         try:
             answer = call_model_sync(prompt, provider, model, case=case, temperature=temperature, rag_k=rag_k)
         except RuntimeError as e:
-            failed_cases.append({'case_id': case_id, 'error': str(e)[:120]})
+            err_msg = str(e)[:120]
+            failed_cases.append({'case_id': case_id, 'error': err_msg})
+            # Persist a failure-marker detail so case_details / JSONL denominator
+            # stays at max_cases and the ablation accuracy can not be inflated
+            # by silently dropping unanswerable cases.
+            expected_letter = extract_choice(case.get('answer'))
+            failure_detail = {
+                "case_id": case_id,
+                "domain": case.get('domain', 'unknown'),
+                "question": case.get('question', '')[:50],
+                "expected_answer": expected_letter,
+                "predicted_answer": None,
+                "raw_answer": "",
+                "correct": False,
+                "error": err_msg,
+                "evidence_coverage": 0.0,
+                "safety_score": 0.0,
+                "parser_source": None,
+                "parser_valid": False,
+                "rag_k": rag_k,
+                "rag_trace": [],
+                "retrieved_answer_leak": False,
+                "config_id": config_id,
+            }
+            case_details.append(failure_detail)
+            _append_jsonl(case_details_jsonl, failure_detail)
+            time.sleep(1)
             continue
 
         predictions[case_id] = answer

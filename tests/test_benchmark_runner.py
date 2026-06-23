@@ -314,6 +314,12 @@ def test_model_benchmark_writes_case_details_jsonl(monkeypatch, tmp_path):
 
 
 def test_case_details_jsonl_keeps_completed_rows_on_later_failure(monkeypatch, tmp_path):
+    """Both successful and failed cases must end up in case_details and JSONL.
+
+    Rationale: the ablation report computes accuracy as
+    ``sum(correct) / len(case_details)``; if failed calls are silently
+    dropped, the denominator shrinks and the headline accuracy is inflated.
+    """
     from benchmark.runners import run_benchmark
 
     cases = [
@@ -340,9 +346,51 @@ def test_case_details_jsonl_keeps_completed_rows_on_later_failure(monkeypatch, t
         case_details_jsonl=str(details),
     )
 
+    # failed_cases tracking must still capture c2 with its error message.
     assert result["failed_cases"][0]["case_id"] == "c2"
+
+    # case_details (in-memory + JSONL) must include both c1 and c2 so the
+    # denominator stays at max_cases.
+    assert [d["case_id"] for d in result["case_details"]] == ["c1", "c2"]
     rows = [json.loads(line) for line in details.read_text(encoding="utf-8").splitlines()]
-    assert [r["case_id"] for r in rows] == ["c1"]
+    assert [r["case_id"] for r in rows] == ["c1", "c2"]
+
+    c2_row = rows[1]
+    assert c2_row["correct"] is False, c2_row
+    assert c2_row.get("error"), "failed case detail must carry the error message"
+    assert "boom" in c2_row["error"]
+
+
+def test_failed_case_detail_carries_config_id(monkeypatch, tmp_path):
+    """A failed model call must still emit a detail tagged with the config_id
+    so the ablation rollback stays uniformly tagged."""
+    from benchmark.runners import run_benchmark
+
+    cases = [
+        {"case_id": "c1", "domain": "career", "question": "事业?", "options": ["A", "B", "C", "D"], "answer": "A"},
+    ]
+    details = tmp_path / "fail.jsonl"
+
+    def fake_call(*args, **kwargs):
+        raise RuntimeError("model_call_failed: connection refused")
+
+    monkeypatch.setattr(run_benchmark, "call_model_sync", fake_call)
+    result = run_benchmark.run_model_benchmark(
+        cases,
+        "deepseek",
+        "model",
+        "v1",
+        max_cases=1,
+        method="direct_choice",
+        case_details_jsonl=str(details),
+        config_id="embedding_vector",
+    )
+
+    assert result["case_details"][0]["config_id"] == "embedding_vector"
+    rows = [json.loads(line) for line in details.read_text(encoding="utf-8").splitlines()]
+    assert rows[0]["config_id"] == "embedding_vector"
+    assert rows[0]["correct"] is False
+    assert "connection refused" in rows[0]["error"]
 
 
 def test_resolve_rag_trace_includes_retrieved_cases(monkeypatch, tmp_path):
