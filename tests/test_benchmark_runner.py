@@ -474,3 +474,100 @@ def test_multi_turn_case_details_records_retrieved_answer_leak(monkeypatch):
     by_id = {d["case_id"]: d for d in result["case_details"]}
     assert by_id["p1-q1"]["retrieved_answer_leak"] is True
     assert by_id["p1-q2"]["retrieved_answer_leak"] is False
+
+
+def test_case_details_records_config_id_when_provided(monkeypatch, tmp_path):
+    """Single-turn case_details must record the ablation config_id when the
+    caller forwards it; absence must surface as None (Task 3.4 contract).
+    """
+    from benchmark.runners import run_benchmark
+
+    cases = [
+        {
+            "case_id": "with-config",
+            "domain": "wealth",
+            "question": "财运?",
+            "options": ["A", "B", "C", "D"],
+            "answer": "B",
+        },
+    ]
+
+    monkeypatch.setattr(run_benchmark, "_resolve_rag_trace", lambda case, k=2: [])
+    monkeypatch.setattr(run_benchmark, "call_model_sync", lambda *a, **k: "答案：A")
+
+    details = tmp_path / "config_trace.jsonl"
+    with_config = run_benchmark.run_model_benchmark(
+        cases,
+        provider="deepseek",
+        model="deepseek-v4-flash",
+        prompt_version="v1",
+        max_cases=1,
+        method="direct_choice",
+        case_details_jsonl=str(details),
+        config_id="embedding_vector",
+    )
+    assert with_config["case_details"][0]["config_id"] == "embedding_vector"
+
+    rows = [json.loads(line) for line in details.read_text(encoding="utf-8").splitlines()]
+    assert rows[0]["config_id"] == "embedding_vector"
+
+
+def test_case_details_config_id_defaults_to_none(monkeypatch):
+    """When config_id is not forwarded the field must still be present and
+    explicitly None so downstream summary code can rely on the schema.
+    """
+    from benchmark.runners import run_benchmark
+
+    cases = [
+        {
+            "case_id": "no-config",
+            "domain": "wealth",
+            "question": "财运?",
+            "options": ["A", "B", "C", "D"],
+            "answer": "B",
+        },
+    ]
+    monkeypatch.setattr(run_benchmark, "_resolve_rag_trace", lambda case, k=2: [])
+    monkeypatch.setattr(run_benchmark, "call_model_sync", lambda *a, **k: "答案：A")
+
+    out = run_benchmark.run_model_benchmark(
+        cases,
+        provider="deepseek",
+        model="deepseek-v4-flash",
+        prompt_version="v1",
+        max_cases=1,
+        method="direct_choice",
+    )
+    assert out["case_details"][0]["config_id"] is None
+
+
+def test_multi_turn_case_details_records_config_id(monkeypatch):
+    """Multi-turn must propagate config_id to every per-case detail."""
+    from benchmark.runners import run_benchmark
+
+    cases = [
+        {
+            "case_id": "mt-1",
+            "domain": "career",
+            "person": {
+                "person_id": "p1",
+                "name": "甲",
+                "gender": "male",
+                "birth": {"year": 1990, "month": 1, "day": 1, "hour": 9, "minute": 0, "place": "北京"},
+            },
+            "question": "事业?",
+            "options": ["A", "B", "C", "D"],
+            "answer": "A",
+        },
+    ]
+    monkeypatch.setattr(run_benchmark, "_resolve_rag_trace", lambda case, k=2: [])
+    monkeypatch.setattr(run_benchmark, "call_model_sync", lambda *a, **k: "答案：A")
+
+    out = run_benchmark.run_multi_turn_benchmark(
+        cases,
+        provider="deepseek",
+        model="deepseek-v4-flash",
+        max_cases=1,
+        config_id="structured",
+    )
+    assert out["case_details"][0]["config_id"] == "structured"

@@ -248,9 +248,9 @@ def _write_jsonl(path, rows):
     return out_path
 
 
-def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2):
+def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None):
     if method == 'multi_turn':
-        return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases, temperature=temperature, case_details_jsonl=case_details_jsonl, rag_k=rag_k)
+        return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases, temperature=temperature, case_details_jsonl=case_details_jsonl, rag_k=rag_k, config_id=config_id)
 
     _prepare_jsonl(case_details_jsonl)
 
@@ -304,6 +304,7 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
             "rag_k": rag_k,
             "rag_trace": rag_trace,
             "retrieved_answer_leak": _compute_case_leak(rag_trace, expected),
+            "config_id": config_id,
         }
         case_details.append(detail)
         _append_jsonl(case_details_jsonl, detail)
@@ -320,7 +321,7 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
     }
 
 
-def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0.0, case_details_jsonl=None, rag_k=2):
+def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None):
     _prepare_jsonl(case_details_jsonl)
     limited_cases = cases[:max_cases]
     predictions = {}
@@ -380,6 +381,7 @@ def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0
                 "rag_k": rag_k,
                 "rag_trace": rag_trace,
                 "retrieved_answer_leak": _compute_case_leak(rag_trace, expected),
+                "config_id": config_id,
             }
             case_details.append(detail)
             _append_jsonl(case_details_jsonl, detail)
