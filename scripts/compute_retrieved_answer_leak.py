@@ -18,15 +18,27 @@ from pathlib import Path
 
 
 def load_case_details_jsonl(path: Path) -> list[dict]:
-    """Load case_details JSONL into a list of dicts (preserve order)."""
+    """Load case_details JSONL into a list of dicts (preserve order).
+
+    Malformed lines are skipped and reported to stderr so a single bad
+    line in a long ablation artifact cannot abort an entire summary run.
+    """
+    import sys
+
     path = Path(path)
     rows = []
     with path.open("r", encoding="utf-8") as f:
-        for line in f:
+        for lineno, line in enumerate(f, start=1):
             line = line.strip()
             if not line:
                 continue
-            rows.append(json.loads(line))
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError as exc:
+                print(
+                    f"WARNING: {path}:{lineno} skipped (json decode error: {exc.msg})",
+                    file=sys.stderr,
+                )
     return rows
 
 
@@ -69,8 +81,8 @@ def _case_is_strict_leaky(row: dict, answer_field: str) -> bool:
     if not answer or not question:
         return False
 
-    needle = f"-> {answer}"
-    q_key = question[:6].lower()
+    needle_upper = f"-> {answer}"  # matched against fact_upper below
+    q_key = question[:6].lower()   # matched against the lowercased fact
     if not q_key:
         return False
 
@@ -81,7 +93,7 @@ def _case_is_strict_leaky(row: dict, answer_field: str) -> bool:
             if not isinstance(fact, str):
                 continue
             fact_upper = fact.upper()
-            if needle not in fact_upper:
+            if needle_upper not in fact_upper:
                 continue
             if q_key in fact.lower():
                 return True

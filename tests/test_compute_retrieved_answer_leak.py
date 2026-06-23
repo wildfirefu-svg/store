@@ -20,6 +20,7 @@ def _make_case_row(
     case_id: str,
     expected_answer: str,
     facts_per_case: list[list[str]],
+    question: str = "示例问题",
 ) -> dict:
     """Build one case_details-style record matching the live JSONL schema.
 
@@ -30,7 +31,7 @@ def _make_case_row(
     return {
         "case_id": case_id,
         "domain": "wealth",
-        "question": "示例问题",
+        "question": question,
         "expected_answer": expected_answer,
         "predicted_answer": "A",
         "rag_k": 2,
@@ -53,22 +54,29 @@ def _make_case_row(
 
 @pytest.fixture
 def two_case_rows():
-    """Two case_details rows: one with leak, one without."""
+    """Two case_details rows: one with leak, one without.
+
+    Facts mimic the live BaziQA serializer output (``Q -> X content``) so
+    the same fixture exercises both the weak (substring) and the strict
+    (question-aligned + ``-> X``) leak detectors.
+    """
     leaky = _make_case_row(
         case_id="leak-1",
         expected_answer="B",
         facts_per_case=[
-            ["命主于乙未年破财，最终选 B 选项的情形已发生"],
-            ["命主家境普通"],
+            ["命主于乙未年破财 -> B"],
+            ["命主家境普通 -> A"],
         ],
+        question="命主于乙未年破财",
     )
     clean = _make_case_row(
         case_id="clean-1",
         expected_answer="C",
         facts_per_case=[
-            ["命主于丁酉年家境普通"],
-            ["命主性格开朗"],
+            ["命主于丁酉年家境普通 -> A"],
+            ["命主性格开朗 -> D"],
         ],
+        question="命主婚姻如何",
     )
     return [leaky, clean]
 
@@ -77,10 +85,18 @@ def test_compute_leak_ratio_returns_half_on_one_leak_one_clean(two_case_rows):
     """50% leak ratio when 1 of 2 case_details has expected_answer appearing
     in some retrieved facts string.
     """
-    from scripts.compute_retrieved_answer_leak import compute_leak_ratio
+    from scripts.compute_retrieved_answer_leak import (
+        compute_leak_ratio,
+        compute_strict_leak_ratio,
+    )
 
     ratio = compute_leak_ratio(two_case_rows)
     assert ratio == pytest.approx(0.5)
+
+    # The same fixture must also yield 0.5 under the strict (question-aligned
+    # + ``-> X``) rule because facts now use the real serializer format.
+    strict = compute_strict_leak_ratio(two_case_rows)
+    assert strict == pytest.approx(0.5)
 
 
 def test_compute_leak_ratio_zero_when_no_rows():
@@ -176,3 +192,25 @@ def test_compute_strict_leak_ratio_zero_when_no_rows():
     from scripts.compute_retrieved_answer_leak import compute_strict_leak_ratio
 
     assert compute_strict_leak_ratio([]) == 0.0
+
+
+def test_load_case_details_jsonl_skips_malformed_lines(tmp_path: Path, capsys):
+    """A malformed JSONL line must be skipped with a stderr warning rather
+    than aborting the whole summary run (Task 1.5 review #5).
+    """
+    from scripts.compute_retrieved_answer_leak import load_case_details_jsonl
+
+    jsonl_path = tmp_path / "mixed.jsonl"
+    jsonl_path.write_text(
+        '{"case_id": "ok-1", "expected_answer": "A"}\n'
+        'this is not json\n'
+        '{"case_id": "ok-2", "expected_answer": "B"}\n',
+        encoding="utf-8",
+    )
+
+    rows = load_case_details_jsonl(jsonl_path)
+    captured = capsys.readouterr()
+
+    assert [r["case_id"] for r in rows] == ["ok-1", "ok-2"]
+    assert "WARNING" in captured.err
+    assert "mixed.jsonl:2" in captured.err
