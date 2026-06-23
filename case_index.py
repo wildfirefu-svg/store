@@ -206,7 +206,7 @@ class CaseIndex:
             year = birth.get("year")
             decade = (int(year) // 10) * 10 if isinstance(year, int) else None
             domains = dict(bucket["domains"])
-            text_blob = self._make_text_blob(person, bucket["facts"], domains)
+            text_blob = self._make_text_blob(person, bucket["facts"], domains, chart_features=bucket["chart_features"])
             cases.append({
                 "person_id": pid,
                 "name": person.get("name") or pid,
@@ -244,7 +244,7 @@ class CaseIndex:
         return sorted(keywords)
 
     @staticmethod
-    def _make_text_blob(person: Dict[str, Any], facts: List[str], domains: Dict[str, int]) -> str:
+    def _make_text_blob(person: Dict[str, Any], facts: List[str], domains: Dict[str, int], chart_features: Optional[Dict[str, Any]] = None) -> str:
         birth = person.get("birth") or {}
         domain_text = " ".join(domains.keys())
         keyword_text = " ".join(CaseIndex._case_keywords(facts, domains))
@@ -256,28 +256,47 @@ class CaseIndex:
         )
         body = "；".join(facts[:8])
         text = f"{head}。事实：{body}"
-        
-        # 增强：注入八字结构化特征文本
-        if person.get("chart_features"):
-            chart = person["chart_features"]
-            structured_parts = []
-            if chart.get("day_master_gan"):
-                structured_parts.append(f"日主{chart['day_master_gan']}")
-            if chart.get("day_master_wuxing"):
-                structured_parts.append(f"日主五行{chart['day_master_wuxing']}")
-            if chart.get("four_pillars"):
-                pillars = "".join(chart["four_pillars"])  # 例：["甲子", "乙丑", "丙寅", "丁卯"]
-                structured_parts.append(f"四柱{pillars}")
-            if chart.get("wuxing_stats"):
-                wuxing = chart["wuxing_stats"]
-                wuxing_str = ",".join(f"{k}{v}" for k, v in wuxing.items() if v > 0)
+
+        # 注入八字结构化特征文本。
+        # chart_features 来自 bazi_features.extract(...)['structured']，字段名形如
+        # day_master_gan / day_master_wuxing / year_gan / year_zhi / month_gan /
+        # month_zhi / day_zhi / hour_gan / hour_zhi / wuxing_stats。没有聚合的
+        # `four_pillars` list，需要从 8 个独立字段拼出四柱字符串。
+        if chart_features:
+            structured_parts: List[str] = []
+            day_gan = chart_features.get("day_master_gan")
+            day_wuxing = chart_features.get("day_master_wuxing")
+            if day_gan:
+                structured_parts.append(f"日主{day_gan}")
+            if day_wuxing:
+                structured_parts.append(f"日主五行{day_wuxing}")
+
+            pillar_keys = [
+                ("year_gan", "year_zhi"),
+                ("month_gan", "month_zhi"),
+                ("day_master_gan", "day_zhi"),
+                ("hour_gan", "hour_zhi"),
+            ]
+            pillars = [
+                f"{chart_features.get(g, '')}{chart_features.get(z, '')}"
+                for g, z in pillar_keys
+            ]
+            pillars = [p for p in pillars if p]
+            if pillars:
+                structured_parts.append("四柱" + "".join(pillars))
+
+            wuxing_stats = chart_features.get("wuxing_stats") or {}
+            numeric_wuxing = [
+                (k, v) for k, v in wuxing_stats.items()
+                if isinstance(v, (int, float)) and v > 0
+            ]
+            if numeric_wuxing:
+                wuxing_str = ",".join(f"{k}{v}" for k, v in numeric_wuxing)
                 structured_parts.append(f"五行分布{wuxing_str}")
-            if chart.get("major_universe"):
-                major_universe = chart["major_universe"]
-                structured_parts.append(f"大运{major_universe}")
+
             if structured_parts:
                 text += "；结构化特征：" + " ".join(structured_parts)
-        
+
         return text[:1200]
 
     # --------------------------------------------------------------- bm25
@@ -399,7 +418,6 @@ class CaseIndex:
     def _build_vector_index(self) -> None:
         """Pre-compute embeddings for all corpus cases (sentence-transformers or TF-IDF fallback)."""
         self._case_embeddings: Optional[np.ndarray] = None
-        self._vector_model = None
         self._vector_model = None
         if not _env_enabled("BAZI_RAG_VECTOR", False):
             return
