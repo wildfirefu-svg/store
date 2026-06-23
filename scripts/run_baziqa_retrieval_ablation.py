@@ -127,7 +127,9 @@ def _resolve_configs(args: argparse.Namespace, yaml_path: Path) -> List[Dict[str
 def _run_one(cfg: Dict[str, Any], repeat: int, args: argparse.Namespace) -> Path:
     """Invoke run_benchmark.py once for (config, repeat); return the jsonl path."""
     details = Path(args.output_dir) / f"{cfg['id']}_run{repeat}.jsonl"
-    if args.append and details.exists():
+    # An empty file (from a previous aborted run) should not satisfy --append;
+    # otherwise we silently skip a config that actually needs to be redone.
+    if args.append and details.exists() and details.stat().st_size > 0:
         return details
 
     env = os.environ.copy()

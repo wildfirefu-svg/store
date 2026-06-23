@@ -216,6 +216,32 @@ def test_append_skips_existing_files(tmp_path, stub_subprocess):
     assert "pre" in pre_existing.read_text(encoding="utf-8")
 
 
+def test_append_does_not_skip_empty_existing_files(tmp_path, stub_subprocess):
+    """An empty file from a previously aborted run must NOT satisfy --append,
+    otherwise we would silently skip a config that still needs to be redone.
+    """
+    from scripts import run_baziqa_retrieval_ablation as mod
+
+    configs_yaml = _write_configs(tmp_path)
+    out_dir = tmp_path / "out"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    empty = out_dir / "bm25_run1.jsonl"
+    empty.write_text("", encoding="utf-8")
+
+    mod.main([
+        "--run",
+        "--configs", "bm25",
+        "--model", "deepseek-v4-flash",
+        "--repeats", "1",
+        "--append",
+        "--retrieval-configs-yaml", str(configs_yaml),
+        "--output-dir", str(out_dir),
+        "--report", str(tmp_path / "r.md"),
+    ])
+
+    assert len(stub_subprocess) == 1, "an empty pre-existing file must not block the rerun"
+
+
 def test_report_columns_include_model_and_config_id(tmp_path, stub_subprocess):
     from scripts import run_baziqa_retrieval_ablation as mod
 
