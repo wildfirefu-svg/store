@@ -301,3 +301,11 @@ powershell -ExecutionPolicy Bypass -File scripts/verify_baziqa_lovo.ps1 -MaxCase
 1. **任何 ablation / 晋升判定脚本** 默认必须读取 enriched 版本；如果显式指定旧 `baziqa_contest8_2025_holdout.jsonl`，必须在报告中以 `[dataset: pre-enriched]` 标注，且**不允许进入晋升判定**；
 2. enriched 文件因 `chart_input` 携带派生字段，跨 chart 算法版本会产生 “40 insertions / 40 deletions” 级别的 diff——这是正常现象，每次升级 chart 算法必须按 [Task 2.4](file:///f:/project/agent/docs/superpowers/plans/2026-06-22-baziqa-hybrid-stage1-implementation.md) 重新生成并提交；
 3. 与 ablation 相关的 case_details JSONL 必须同时记录 `dataset` 路径，便于后期回溯。
+
+### 11.x Ops note：HF 离线模式是 ablation 必备前提
+
+Hybrid 阶段 1 的 retrieval ablation 会在每个 `(config, repeat)` subprocess 内调用 `sentence-transformers` 加载 `BAAI/bge-small-zh-v1.5`。在 `huggingface.co` 网络抖动时（Windows 上观察到 `WinError 10060`），ST 会对每个非主权重文件做 5×n 次 HEAD 重试，单次模型加载阻塞 5–10 分钟，使 5 configs × 3 repeats = 15 次进程全部不可用。
+
+为此 [scripts/run_baziqa_retrieval_ablation.py](file:///f:/project/agent/scripts/run_baziqa_retrieval_ablation.py) 在 `_run_one` 中给每个 subprocess 的 env 注入 `HF_HUB_OFFLINE=1` 与 `TRANSFORMERS_OFFLINE=1`（用 `env.setdefault`，**不覆盖外部已设值**）。前提：模型权重必须事先在本地缓存（任何成功跑过一次 embedding_vector smoke 就会触发缓存）。
+
+如要主动刷新本地缓存，调用方可显式设置 `HF_HUB_OFFLINE=0` 跑一次 ablation，runner 不会覆盖；测试 [test_subprocess_env_respects_caller_hf_setting](file:///f:/project/agent/tests/test_run_baziqa_retrieval_ablation_cli.py) 锁定该行为。

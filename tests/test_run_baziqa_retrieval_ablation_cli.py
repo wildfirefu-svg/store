@@ -242,6 +242,59 @@ def test_append_does_not_skip_empty_existing_files(tmp_path, stub_subprocess):
     assert len(stub_subprocess) == 1, "an empty pre-existing file must not block the rerun"
 
 
+def test_subprocess_env_defaults_to_hf_offline(tmp_path, stub_subprocess, monkeypatch):
+    """The runner must default to HF offline mode for each subprocess so that
+    a flaky huggingface.co connection cannot stall the ablation; an
+    externally-set value must be preserved (no clobber).
+    """
+    from scripts import run_baziqa_retrieval_ablation as mod
+
+    monkeypatch.delenv("HF_HUB_OFFLINE", raising=False)
+    monkeypatch.delenv("TRANSFORMERS_OFFLINE", raising=False)
+
+    configs_yaml = _write_configs(tmp_path)
+    out_dir = tmp_path / "out"
+
+    mod.main([
+        "--run",
+        "--configs", "bm25",
+        "--model", "deepseek-v4-flash",
+        "--repeats", "1",
+        "--retrieval-configs-yaml", str(configs_yaml),
+        "--output-dir", str(out_dir),
+        "--report", str(tmp_path / "r.md"),
+    ])
+
+    env = stub_subprocess[0]["env"]
+    assert env["HF_HUB_OFFLINE"] == "1"
+    assert env["TRANSFORMERS_OFFLINE"] == "1"
+
+
+def test_subprocess_env_respects_caller_hf_setting(tmp_path, stub_subprocess, monkeypatch):
+    """If the caller explicitly sets HF_HUB_OFFLINE=0 (e.g. to refresh the
+    cache), the runner must NOT silently override it.
+    """
+    from scripts import run_baziqa_retrieval_ablation as mod
+
+    monkeypatch.setenv("HF_HUB_OFFLINE", "0")
+
+    configs_yaml = _write_configs(tmp_path)
+    out_dir = tmp_path / "out"
+
+    mod.main([
+        "--run",
+        "--configs", "bm25",
+        "--model", "deepseek-v4-flash",
+        "--repeats", "1",
+        "--retrieval-configs-yaml", str(configs_yaml),
+        "--output-dir", str(out_dir),
+        "--report", str(tmp_path / "r.md"),
+    ])
+
+    env = stub_subprocess[0]["env"]
+    assert env["HF_HUB_OFFLINE"] == "0", "caller override must win"
+
+
 def test_report_columns_include_model_and_config_id(tmp_path, stub_subprocess):
     from scripts import run_baziqa_retrieval_ablation as mod
 

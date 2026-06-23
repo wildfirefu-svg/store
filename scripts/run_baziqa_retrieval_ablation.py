@@ -134,6 +134,11 @@ def _run_one(cfg: Dict[str, Any], repeat: int, args: argparse.Namespace) -> Path
 
     env = os.environ.copy()
     env.update(_config_envs(cfg))
+    # Default to HF offline mode so that a flaky huggingface.co HEAD check
+    # cannot stall the ablation between subprocess invocations. Caller-set
+    # values win (e.g. set to "0" to refresh the local cache).
+    env.setdefault("HF_HUB_OFFLINE", "1")
+    env.setdefault("TRANSFORMERS_OFFLINE", "1")
     command = [
         sys.executable, "benchmark/runners/run_benchmark.py",
         "--dataset", args.dataset,
