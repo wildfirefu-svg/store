@@ -276,3 +276,28 @@ powershell -ExecutionPolicy Bypass -File scripts/verify_baziqa_lovo.ps1 -MaxCase
 | `scripts/enrich_baziqa_chart_input.py` | 为 corpus 生成 chart_input |
 | `scripts/build_domain_action_plan.py` | 从 trace JSONL 生成领域行动计划 |
 | `scripts/export_report_quality_samples.py` | 导出报告质量门禁样本 |
+
+---
+
+## 十一、Hybrid 阶段 1：默认数据集 = enriched holdout
+
+> 设计：[2026-06-22-baziqa-hybrid-retrieval-reasoning-design.md](file:///f:/project/agent/docs/superpowers/specs/2026-06-22-baziqa-hybrid-retrieval-reasoning-design.md)
+> 实施计划：[2026-06-22-baziqa-hybrid-stage1-implementation.md](file:///f:/project/agent/docs/superpowers/plans/2026-06-22-baziqa-hybrid-stage1-implementation.md)
+> 状态：阶段 1 进行中（已完成 Task 1.1–1.5 / 2.1–2.4）
+
+从 Hybrid 阶段 1 起，所有 ablation / smoke / baseline 评测默认使用 enriched holdout 主集：
+
+| 项 | 值 |
+|---|---|
+| 主集（默认 `--dataset`） | `benchmark/datasets/baziqa_contest8_2025_holdout_enriched.jsonl` |
+| 生成命令 | `python scripts/enrich_holdout_chart_input.py --input benchmark/datasets/baziqa_contest8_2025_holdout.jsonl --output benchmark/datasets/baziqa_contest8_2025_holdout_enriched.jsonl` |
+| 覆盖率验收 | `coverage = 100.0%`（40/40 行均含非空 `chart_input.four_pillars` 与 `chart_input.day_master`） |
+| 默认 corpus | `benchmark/datasets/baziqa_contest8_2021_2024_corpus_enriched.jsonl` |
+| 主集规模 | 40 题 |
+| 模型分层 | smoke / ablation / debug 默认 `deepseek-v4-flash`；3 repeats / 晋升判定强制 `deepseek-v4-pro` |
+
+约束：
+
+1. **任何 ablation / 晋升判定脚本** 默认必须读取 enriched 版本；如果显式指定旧 `baziqa_contest8_2025_holdout.jsonl`，必须在报告中以 `[dataset: pre-enriched]` 标注，且**不允许进入晋升判定**；
+2. enriched 文件因 `chart_input` 携带派生字段，跨 chart 算法版本会产生 “40 insertions / 40 deletions” 级别的 diff——这是正常现象，每次升级 chart 算法必须按 [Task 2.4](file:///f:/project/agent/docs/superpowers/plans/2026-06-22-baziqa-hybrid-stage1-implementation.md) 重新生成并提交；
+3. 与 ablation 相关的 case_details JSONL 必须同时记录 `dataset` 路径，便于后期回溯。
