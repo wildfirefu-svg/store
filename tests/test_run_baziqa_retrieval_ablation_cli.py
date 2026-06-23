@@ -55,7 +55,7 @@ def _write_configs(tmp_path: Path) -> Path:
               semantic: true
               tfidf_vector: false
               embedding_vector: true
-              embedding_model: "bge-zh-base"
+              embedding_model: "BAAI/bge-small-zh-v1.5"
             """
         ).strip()
         + "\n",

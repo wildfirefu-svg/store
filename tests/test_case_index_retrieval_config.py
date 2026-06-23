@@ -63,7 +63,7 @@ def _write_fixture(tmp_path: Path) -> Path:
               semantic: true
               tfidf_vector: false
               embedding_vector: true
-              embedding_model: "bge-zh-base"
+              embedding_model: "BAAI/bge-small-zh-v1.5"
             """
         ).strip()
         + "\n",
@@ -79,7 +79,7 @@ def _write_fixture(tmp_path: Path) -> Path:
         ("structured", {"bm25": True, "structured": True, "semantic": False, "embedding_vector": False}),
         ("semantic", {"semantic": True, "tfidf_vector": False, "embedding_vector": False}),
         ("tfidf_vector", {"tfidf_vector": True, "embedding_vector": False}),
-        ("embedding_vector", {"embedding_vector": True, "embedding_model": "bge-zh-base"}),
+        ("embedding_vector", {"embedding_vector": True, "embedding_model": "BAAI/bge-small-zh-v1.5"}),
     ],
 )
 def test_load_retrieval_config_returns_each_known_id(tmp_path, config_id, expected):
@@ -114,7 +114,7 @@ def test_load_retrieval_config_defaults_to_repo_yaml(monkeypatch):
     cfg = load_retrieval_config("embedding_vector")
     assert cfg["id"] == "embedding_vector"
     assert cfg["embedding_vector"] is True
-    assert cfg["embedding_model"] == "bge-zh-base"
+    assert cfg["embedding_model"] == "BAAI/bge-small-zh-v1.5"
 
 
 def test_load_retrieval_config_rejects_malformed_yaml(tmp_path):
