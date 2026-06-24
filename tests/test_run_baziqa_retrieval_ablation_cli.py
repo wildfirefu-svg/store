@@ -242,6 +242,53 @@ def test_append_does_not_skip_empty_existing_files(tmp_path, stub_subprocess):
     assert len(stub_subprocess) == 1, "an empty pre-existing file must not block the rerun"
 
 
+def test_append_does_not_duplicate_rollback_for_skipped_configs(tmp_path, stub_subprocess):
+    """When --append skips a (config, repeat) pair, its rows MUST NOT be
+    re-appended to the rollback JSONL; otherwise a rerun grows rollback by
+    one full pass each time and inflates downstream counts.
+    """
+    from scripts import run_baziqa_retrieval_ablation as mod
+
+    configs_yaml = _write_configs(tmp_path)
+    out_dir = tmp_path / "out"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    rollback = tmp_path / "rb.jsonl"
+
+    # First pass: stub records 2 invocations and rollback ends with 2 rows.
+    mod.main([
+        "--run",
+        "--configs", "bm25,structured",
+        "--model", "deepseek-v4-flash",
+        "--repeats", "1",
+        "--retrieval-configs-yaml", str(configs_yaml),
+        "--output-dir", str(out_dir),
+        "--rollback-jsonl", str(rollback),
+        "--report", str(tmp_path / "r.md"),
+    ])
+    first_rb_rows = [json.loads(l) for l in rollback.read_text(encoding="utf-8").splitlines() if l.strip()]
+    assert len(first_rb_rows) == 2
+
+    # Second pass with --append: both jsonl files exist and non-empty,
+    # so subprocess.run must be called 0 times and rollback must not grow.
+    stub_subprocess.clear()
+    mod.main([
+        "--run",
+        "--configs", "bm25,structured",
+        "--model", "deepseek-v4-flash",
+        "--repeats", "1",
+        "--append",
+        "--retrieval-configs-yaml", str(configs_yaml),
+        "--output-dir", str(out_dir),
+        "--rollback-jsonl", str(rollback),
+        "--report", str(tmp_path / "r.md"),
+    ])
+    assert stub_subprocess == []
+    second_rb_rows = [json.loads(l) for l in rollback.read_text(encoding="utf-8").splitlines() if l.strip()]
+    assert len(second_rb_rows) == 2, (
+        f"rollback must not duplicate rows for skipped configs, got {len(second_rb_rows)}"
+    )
+
+
 def test_subprocess_env_defaults_to_hf_offline(tmp_path, stub_subprocess, monkeypatch):
     """The runner must default to HF offline mode for each subprocess so that
     a flaky huggingface.co connection cannot stall the ablation; an

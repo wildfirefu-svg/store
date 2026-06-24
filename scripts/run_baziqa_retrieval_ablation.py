@@ -124,13 +124,19 @@ def _resolve_configs(args: argparse.Namespace, yaml_path: Path) -> List[Dict[str
     return [by_id[i] for i in ids]
 
 
-def _run_one(cfg: Dict[str, Any], repeat: int, args: argparse.Namespace) -> Path:
-    """Invoke run_benchmark.py once for (config, repeat); return the jsonl path."""
+def _run_one(cfg: Dict[str, Any], repeat: int, args: argparse.Namespace) -> "tuple[Path, bool]":
+    """Invoke run_benchmark.py once for (config, repeat).
+
+    Returns ``(details_path, skipped)``. ``skipped`` is True when --append
+    short-circuited a prior complete output; callers MUST NOT re-append the
+    rows of a skipped pair into the rollback JSONL, or the rollback grows by
+    one full pass on every rerun.
+    """
     details = Path(args.output_dir) / f"{cfg['id']}_run{repeat}.jsonl"
     # An empty file (from a previous aborted run) should not satisfy --append;
     # otherwise we silently skip a config that actually needs to be redone.
     if args.append and details.exists() and details.stat().st_size > 0:
-        return details
+        return details, True
 
     env = os.environ.copy()
     env.update(_config_envs(cfg))
@@ -155,7 +161,7 @@ def _run_one(cfg: Dict[str, Any], repeat: int, args: argparse.Namespace) -> Path
         "--config-id", cfg["id"],
     ]
     subprocess.run(command, check=True, env=env)
-    return details
+    return details, False
 
 
 def _backfill_config_id(details_path: Path, cfg_id: str, model_name: str) -> List[Dict[str, Any]]:
@@ -255,9 +261,12 @@ def main(argv=None):
         rollback = Path(args.rollback_jsonl) if args.rollback_jsonl else None
         for cfg in configs:
             for repeat in range(1, args.repeats + 1):
-                details = _run_one(cfg, repeat, args)
+                details, skipped = _run_one(cfg, repeat, args)
+                # Always backfill so the on-disk schema is uniform, but only
+                # rollback-append the rows from a freshly produced output to
+                # avoid duplicating entries on every --append rerun.
                 rows = _backfill_config_id(details, cfg["id"], args.model)
-                if rollback is not None and rows:
+                if rollback is not None and rows and not skipped:
                     _append_rollback(rollback, rows)
 
     report_rows = _aggregate_rows(configs, args)
