@@ -159,6 +159,8 @@ def _run_one(cfg: Dict[str, Any], repeat: int, args: argparse.Namespace) -> "tup
         "--rag-corpus", args.corpus,
         "--case-details-jsonl", str(details),
         "--config-id", cfg["id"],
+        "--retrieval-mode", args.retrieval_mode,
+        "--option-evidence-k", str(args.option_evidence_k),
     ]
     subprocess.run(command, check=True, env=env)
     return details, False
@@ -250,6 +252,8 @@ def main(argv=None):
     parser.add_argument("--method", default="structured_reasoning")
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--rag-k", type=int, default=2)
+    parser.add_argument("--retrieval-mode", default="legacy", choices=["legacy", "option_grounded"])
+    parser.add_argument("--option-evidence-k", type=int, default=2)
     args = parser.parse_args(argv)
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
