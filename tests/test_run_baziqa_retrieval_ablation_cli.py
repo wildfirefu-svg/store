@@ -364,3 +364,29 @@ def test_report_columns_include_model_and_config_id(tmp_path, stub_subprocess):
     assert "model_name" in text
     assert "deepseek-v4-flash" in text
     assert "bm25" in text
+
+
+def test_forwards_option_grounded_flags_to_benchmark_runner(tmp_path, stub_subprocess):
+    from scripts import run_baziqa_retrieval_ablation as mod
+
+    configs_yaml = _write_configs(tmp_path)
+    out_dir = tmp_path / "out"
+
+    rc = mod.main([
+        "--run",
+        "--configs", "bm25",
+        "--model", "deepseek-v4-flash",
+        "--repeats", "1",
+        "--retrieval-configs-yaml", str(configs_yaml),
+        "--output-dir", str(out_dir),
+        "--report", str(tmp_path / "r.md"),
+        "--retrieval-mode", "option_grounded",
+        "--option-evidence-k", "2",
+    ])
+
+    assert rc == 0
+    cmd = stub_subprocess[0]["cmd"]
+    assert "--retrieval-mode" in cmd
+    assert cmd[cmd.index("--retrieval-mode") + 1] == "option_grounded"
+    assert "--option-evidence-k" in cmd
+    assert cmd[cmd.index("--option-evidence-k") + 1] == "2"
