@@ -70,6 +70,44 @@ http://127.0.0.1:8000/benchmark
 - BaziQA P1 retrieval quality upgrade: PASS (implementation/non-network), files=[case_index.py](file:///f:/project/agent/case_index.py), [bazi_features.py](file:///f:/project/agent/bazi_features.py), [rag_prompt_builder.py](file:///f:/project/agent/rag_prompt_builder.py), [benchmark/runners/run_benchmark.py](file:///f:/project/agent/benchmark/runners/run_benchmark.py), result=`rag_k` default changed to 2; query question/options enter retrieval as `query_text`; CaseIndex boosts same domain, intent keyword overlap, gender, decade, branch text overlap; RAG prompt/trace include match reasons and score; command=`python -m pytest tests/test_case_index.py tests/test_rag_prompt_builder.py tests/test_bazi_features.py tests/test_benchmark_runner.py -q`, result=`36 passed`, date=2026-06-20。
 - BaziQA P2 semantic retrieval upgrade: PASS (implementation + real API validation), files=[case_index.py](file:///f:/project/agent/case_index.py), [tests/test_case_index.py](file:///f:/project/agent/tests/test_case_index.py), [tests/test_rag_prompt_builder.py](file:///f:/project/agent/tests/test_rag_prompt_builder.py), [run_ecdec259.md](file:///f:/project/agent/docs/p2_real_api_output/run_ecdec259.md), [run_d33408bd.md](file:///f:/project/agent/docs/p2_refined_real_api_output/run_d33408bd.md), result=local semantic phrase overlap added to retrieval ranking; broad semantic noise filtered; full 40-case pre-refine real API result `9/40=22.5%`; refined 10-case smoke result `5/10=50.0%`; command=`python -m pytest -q -m "not e2e"`, result=`316 passed, 1 skipped, 7 deselected`, date=2026-06-20。
 
+## BaziQA Hybrid Stage 1 Gate
+
+- BaziQA Hybrid Stage 1 Gate: **ROLLBACK**.
+- Date: 2026-06-29.
+- Gate command: `python scripts/verify_baziqa_stage1_gate.py --summary-json .tmp/baziqa_stage1_gate_summary.json --json --output-json .tmp/baziqa_stage1_gate_result.json`.
+- Gate exit code: `3`.
+- Gate input: `.tmp/baziqa_stage1_gate_summary.json`.
+- Gate output: `.tmp/baziqa_stage1_gate_result.json`.
+- Primary evidence report: [BAZIQA_RETRIEVAL_ABLATION_REPORT.md](file:///f:/project/agent/docs/BAZIQA_RETRIEVAL_ABLATION_REPORT.md).
+- Gate implementation: [verify_baziqa_stage1_gate.py](file:///f:/project/agent/scripts/verify_baziqa_stage1_gate.py).
+- Gate tests: [test_verify_baziqa_stage1_gate.py](file:///f:/project/agent/tests/test_verify_baziqa_stage1_gate.py).
+
+Stage 1 primary metrics:
+
+| metric | value | source |
+|---|---:|---|
+| best primary config | `tfidf_vector` | Task 4.4 pro Top-2 retest |
+| best primary model | `deepseek-v4-pro` | Task 4.4 pro Top-2 retest |
+| mean | 25.8% | Task 4.4 pro Top-2 retest |
+| stdev | 3.8pp | runs=`10/40, 12/40, 9/40` |
+| leak | 0.0% | Task 4.5 strict retrieved-answer leak |
+| calls | 1407 | Task 4 full ablation + Task 5 domain probes |
+| estimated_calls | 1407 | observed planned Stage 1 + domain probe calls |
+| stage_cost_cny | 19.90 | price model from Task 4.6 |
+| stage_budget_cny | 31.80 | Task 4.6 stage budget guard |
+| cumulative_cost_cny | 19.90 | Stage 1 to date |
+| cumulative_budget_cny | 68.00 | three-stage cumulative budget guard |
+
+Decision rationale:
+
+- Budget guard is OK: `19.90 CNY < 31.80 CNY` and `1407 calls <= 1.5 × 1407`.
+- Promotion criteria fail: `mean=25.8% < 35%`.
+- Leakage criterion fails under the strict question-aligned metric: `leak=0.0% < 15%`.
+- Rollback criterion is met: `mean < 30%` and `leak < 5%`.
+- Domain subset appendix found one promising slice (`annual_fortune`), but Stage 1 primary holdout gate remains governed by the full 2025 holdout pro Top-2 result.
+
+Task 6.5 conclusion: Stage 1 is **ROLLBACK**, not `BLOCKED:budget`. The next work should not promote the current retrieval strategy as-is; it should either redesign the retrieval/evidence mechanism or scope a domain-specific follow-up using the `annual_fortune` signal as a separate experiment.
+
 ## Final Status
 
 - BaziQA focused tests: PASS, command=`python -m pytest tests/test_baziqa_importer.py tests/test_baziqa_prompt_formatter.py tests/test_benchmark_choice_accuracy.py tests/test_benchmark_runner.py tests/test_benchmark_report.py tests/test_benchmark_regression_gate.py tests/test_baziqa_real_import_contract.py tests/test_baziqa_smoke_script_contract.py tests/test_baziqa_k_ablation.py tests/test_baziqa_error_attribution.py tests/test_verify_report_quality_gate.py -q`, result=`34 passed, 1 skipped`.
