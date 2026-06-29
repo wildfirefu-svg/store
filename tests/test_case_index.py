@@ -312,3 +312,66 @@ def test_option_evidence_items_expose_traceable_fields(tmp_path):
     first_item = evidence["A"][0]
     assert required <= set(first_item)
 
+
+def test_option_evidence_keyword_overlap_drives_ranking_and_reason(tmp_path):
+    rows = [
+        _row("career-promotion", 1980, "male", 1, 0, answer="A", options=["A 升迁加薪", "B 婚姻", "C 疾病", "D 财运"], question="命主事业是否升迁?", domain="career"),
+        _row("relationship-marriage", 1980, "male", 1, 0, answer="B", options=["A 升迁", "B 婚姻稳定", "C 疾病", "D 财运"], question="命主婚姻是否稳定?", domain="relationship"),
+    ]
+    corpus = _make_corpus(tmp_path, rows)
+    idx = CaseIndex(corpus)
+
+    evidence = idx.option_evidence(
+        {"text_blob": "甲木", "structured": {"day_master_gan": "甲"}},
+        question="命主下一阶段哪方面更明显?",
+        options=["A 升迁加薪", "B 婚姻稳定", "C 疾病风险", "D 财运改善"],
+        k_per_option=1,
+    )
+
+    assert evidence["A"][0]["person_id"] == "career-promotion"
+    assert evidence["B"][0]["person_id"] == "relationship-marriage"
+    assert any(str(reason).startswith("option_overlap:") for reason in evidence["A"][0]["match_reasons"])
+    assert any(str(reason).startswith("option_overlap:") for reason in evidence["B"][0]["match_reasons"])
+
+
+def test_option_evidence_records_domain_match_reason(tmp_path):
+    rows = [
+        _row("career-case", 1980, "male", 1, 0, answer="A", options=["A 升迁", "B 婚姻", "C 疾病", "D 财运"], question="命主事业是否升迁?", domain="career"),
+        _row("relationship-case", 1980, "male", 1, 0, answer="B", options=["A 升迁", "B 婚姻稳定", "C 疾病", "D 财运"], question="命主婚姻是否稳定?", domain="relationship"),
+    ]
+    corpus = _make_corpus(tmp_path, rows)
+    idx = CaseIndex(corpus)
+
+    evidence = idx.option_evidence(
+        {"text_blob": "事业 升迁", "structured": {"query_domain": "career"}},
+        question="命主事业是否升迁?",
+        options=["A 升迁", "B 婚姻", "C 疾病", "D 财运"],
+        domain="career",
+        k_per_option=1,
+    )
+
+    assert any(reason == "same_domain:career" for reason in evidence["A"][0]["match_reasons"])
+
+
+def test_option_evidence_avoids_one_source_dominating_all_options(tmp_path):
+    rows = [
+        _row("dominant-general", 1980, "male", 1, 0, answer="A", options=["A 升迁", "B 婚姻", "C 疾病", "D 财运"], question="命主升迁婚姻疾病财运皆有明显事件?", domain="unknown"),
+        _row("career-source", 1980, "male", 1, 0, answer="A", options=["A 升迁加薪", "B 平稳", "C 普通", "D 无"], question="命主事业升迁加薪?", domain="career"),
+        _row("relationship-source", 1980, "male", 1, 0, answer="B", options=["A 平稳", "B 婚姻稳定", "C 普通", "D 无"], question="命主婚姻稳定?", domain="relationship"),
+        _row("health-source", 1980, "male", 1, 0, answer="C", options=["A 平稳", "B 普通", "C 疾病风险", "D 无"], question="命主疾病风险?", domain="health"),
+        _row("wealth-source", 1980, "male", 1, 0, answer="D", options=["A 平稳", "B 普通", "C 无", "D 财运改善"], question="命主财运改善?", domain="wealth"),
+    ]
+    corpus = _make_corpus(tmp_path, rows)
+    idx = CaseIndex(corpus)
+
+    evidence = idx.option_evidence(
+        {"text_blob": "升迁 婚姻 疾病 财运", "structured": {"day_master_gan": "甲"}},
+        question="命主下一阶段哪方面更明显?",
+        options=["A 升迁加薪", "B 婚姻稳定", "C 疾病风险", "D 财运改善"],
+        k_per_option=1,
+    )
+
+    top_sources = {label: items[0]["person_id"] for label, items in evidence.items()}
+    assert len(set(top_sources.values())) >= 2
+    assert set(top_sources.values()) != {"dominant-general"}
+
