@@ -99,3 +99,106 @@ Budget guard:
 | three-stage cumulative cost to date | 11.88 CNY | 68.00 CNY | PASS |
 
 Task 4.6 conclusion: no budget guard is triggered. The stage remains blocked by accuracy (`BLOCKED`), not by budget (`BLOCKED:budget`).
+
+## Task 5.5 Domain subset appendix
+
+Task 5 domain subset files:
+
+| domain | subset_file | cases | holdout | corpus_fill |
+|---|---|---:|---:|---:|
+| health | `benchmark/datasets/baziqa_domain_subsets/health.jsonl` | 5 | 3 | 2 |
+| annual_fortune | `benchmark/datasets/baziqa_domain_subsets/annual_fortune.jsonl` | 5 | 2 | 3 |
+| relationship | `benchmark/datasets/baziqa_domain_subsets/relationship.jsonl` | 7 | 7 | 0 |
+| unknown | `benchmark/datasets/baziqa_domain_subsets/unknown.jsonl` | 10 | 10 | 0 |
+
+Flash subset completeness:
+
+| domain | rows | rollback_rows | errors |
+|---|---:|---:|---:|
+| health | 75 | 75 | 0 |
+| annual_fortune | 75 | 75 | 0 |
+| relationship | 105 | 105 | 0 |
+| unknown | 150 | 150 | 0 |
+
+Pro Top-2 subset completeness:
+
+| domain | pro_configs | rows | rollback_rows | errors |
+|---|---|---:|---:|---:|
+| health | `structured,semantic` | 30 | 30 | 0 |
+| annual_fortune | `semantic,bm25` | 30 | 30 | 0 |
+| relationship | `tfidf_vector,structured` | 42 | 42 | 0 |
+| unknown | `bm25,semantic` | 60 | 60 | 0 |
+
+### Domain subset flash results
+
+#### health flash
+
+| rank | config_id | runs | mean | min | max | gate |
+|---:|---|---:|---:|---:|---:|---|
+| 1 | structured | 3 | 60.0% | 40.0% | 80.0% | PASS |
+| 2 | semantic | 3 | 53.3% | 40.0% | 60.0% | PASS |
+| 3 | bm25 | 3 | 46.7% | 40.0% | 60.0% | PASS |
+| 4 | tfidf_vector | 3 | 46.7% | 40.0% | 60.0% | PASS |
+| 5 | embedding_vector | 3 | 40.0% | 40.0% | 40.0% | PASS |
+
+#### annual_fortune flash
+
+| rank | config_id | runs | mean | min | max | gate |
+|---:|---|---:|---:|---:|---:|---|
+| 1 | semantic | 3 | 66.7% | 60.0% | 80.0% | PASS |
+| 2 | bm25 | 3 | 60.0% | 60.0% | 60.0% | PASS |
+| 3 | structured | 3 | 60.0% | 60.0% | 60.0% | PASS |
+| 4 | tfidf_vector | 3 | 60.0% | 60.0% | 60.0% | PASS |
+| 5 | embedding_vector | 3 | 60.0% | 60.0% | 60.0% | PASS |
+
+#### relationship flash
+
+| rank | config_id | runs | mean | min | max | gate |
+|---:|---|---:|---:|---:|---:|---|
+| 1 | tfidf_vector | 3 | 23.8% | 14.3% | 42.9% | BLOCKED |
+| 2 | structured | 3 | 19.0% | 14.3% | 28.6% | BLOCKED |
+| 3 | semantic | 3 | 19.0% | 14.3% | 28.6% | BLOCKED |
+| 4 | bm25 | 3 | 14.3% | 0.0% | 28.6% | BLOCKED |
+| 5 | embedding_vector | 3 | 14.3% | 14.3% | 14.3% | BLOCKED |
+
+#### unknown flash
+
+| rank | config_id | runs | mean | min | max | gate |
+|---:|---|---:|---:|---:|---:|---|
+| 1 | bm25 | 3 | 40.0% | 30.0% | 60.0% | BLOCKED |
+| 2 | semantic | 3 | 33.3% | 30.0% | 40.0% | BLOCKED |
+| 3 | embedding_vector | 3 | 33.3% | 30.0% | 40.0% | BLOCKED |
+| 4 | structured | 3 | 26.7% | 20.0% | 30.0% | BLOCKED |
+| 5 | tfidf_vector | 3 | 23.3% | 20.0% | 30.0% | BLOCKED |
+
+### Domain subset pro Top-2 results
+
+#### health pro
+
+| rank | config_id | runs | mean | min | max | gate |
+|---:|---|---:|---:|---:|---:|---|
+| 1 | semantic | 3 | 46.7% | 40.0% | 60.0% | PASS |
+| 2 | structured | 3 | 40.0% | 20.0% | 60.0% | BLOCKED |
+
+#### annual_fortune pro
+
+| rank | config_id | runs | mean | min | max | gate |
+|---:|---|---:|---:|---:|---:|---|
+| 1 | bm25 | 3 | 66.7% | 60.0% | 80.0% | PASS |
+| 2 | semantic | 3 | 66.7% | 40.0% | 80.0% | PASS |
+
+#### relationship pro
+
+| rank | config_id | runs | mean | min | max | gate |
+|---:|---|---:|---:|---:|---:|---|
+| 1 | tfidf_vector | 3 | 23.8% | 0.0% | 42.9% | BLOCKED |
+| 2 | structured | 3 | 19.0% | 14.3% | 28.6% | BLOCKED |
+
+#### unknown pro
+
+| rank | config_id | runs | mean | min | max | gate |
+|---:|---|---:|---:|---:|---:|---|
+| 1 | semantic | 3 | 30.0% | 30.0% | 30.0% | BLOCKED |
+| 2 | bm25 | 3 | 13.3% | 10.0% | 20.0% | BLOCKED |
+
+Task 5.5 conclusion: domain subsets expose strong distribution differences. `annual_fortune` is the only domain whose pro Top-2 configs both pass the 40% mean / 35% min gate; `health` has one passing pro config (`semantic`), while `relationship` and `unknown` remain blocked. Annual-fortune flash had a four-way tie for second place at 60.0%; relationship flash had a tie between `structured` and `semantic` at 19.0%; unknown flash had a tie between `semantic` and `embedding_vector` at 33.3%. Pro Top-2 selection used mean-descending order with the original retrieval config order as the tie-breaker.
