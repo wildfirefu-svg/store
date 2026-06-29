@@ -261,3 +261,54 @@ def test_chart_structure_boosts_same_day_master_and_month_branch(tmp_path):
     assert result[0]["person_id"] == "p1"
     assert "same_day_master" in result[0]["match_reasons"]
     assert "same_month_branch" in result[0]["match_reasons"]
+
+
+def test_option_evidence_returns_per_option_buckets(tmp_path):
+    rows = [
+        _row("career-case", 1980, "male", 1, 0, answer="A", options=["A 升迁", "B 婚姻", "C 疾病", "D 财运"], question="命主事业是否升迁?", domain="career"),
+        _row("relationship-case", 1982, "female", 2, 0, answer="B", options=["A 升迁", "B 婚姻稳定", "C 疾病", "D 财运"], question="命主婚姻是否稳定?", domain="relationship"),
+    ]
+    corpus = _make_corpus(tmp_path, rows)
+    idx = CaseIndex(corpus)
+
+    evidence = idx.option_evidence(
+        {"text_blob": "事业 升迁 甲木", "structured": {"query_domain": "career", "day_master_gan": "甲"}},
+        question="命主事业是否升迁?",
+        options=["A 升迁", "B 婚姻", "C 疾病", "D 财运"],
+        domain="career",
+        k_per_option=2,
+    )
+
+    assert set(evidence) == {"A", "B", "C", "D"}
+    assert all(isinstance(items, list) for items in evidence.values())
+
+
+def test_option_evidence_items_expose_traceable_fields(tmp_path):
+    rows = [
+        _row("career-case", 1980, "male", 1, 0, answer="A", options=["A 升迁", "B 婚姻", "C 疾病", "D 财运"], question="命主事业是否升迁?", domain="career"),
+        _row("wealth-case", 1982, "male", 2, 0, answer="D", options=["A 升迁", "B 婚姻", "C 疾病", "D 财运改善"], question="命主财运是否改善?", domain="wealth"),
+    ]
+    corpus = _make_corpus(tmp_path, rows)
+    idx = CaseIndex(corpus)
+
+    evidence = idx.option_evidence(
+        {"text_blob": "事业 升迁 甲木", "structured": {"query_domain": "career", "day_master_gan": "甲"}},
+        question="命主事业是否升迁?",
+        options=["A 升迁", "B 婚姻", "C 疾病", "D 财运"],
+        domain="career",
+        k_per_option=1,
+    )
+
+    required = {
+        "case_id",
+        "person_id",
+        "score",
+        "stance",
+        "match_reasons",
+        "fact_excerpt",
+        "source_domain",
+        "source_answer_option_text",
+    }
+    first_item = evidence["A"][0]
+    assert required <= set(first_item)
+
