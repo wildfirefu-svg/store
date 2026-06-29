@@ -92,6 +92,64 @@ def _format_case(idx: int, case: Dict[str, Any]) -> str:
     )
 
 
+def _format_option_evidence_item(item: Dict[str, Any]) -> str:
+    reasons = item.get("match_reasons") or []
+    reason_text = "、".join(str(r) for r in reasons) or "unknown"
+    return (
+        f"  - {item.get('stance') or 'related'} evidence: "
+        f"source={item.get('person_id') or item.get('case_id') or '?'}；"
+        f"domain={item.get('source_domain') or 'unknown'}；"
+        f"score={item.get('score')}；"
+        f"匹配原因={reason_text}；"
+        f"事实={item.get('fact_excerpt') or ''}"
+    )
+
+
+def _format_option_evidence_block(option_evidence: Dict[str, List[Dict[str, Any]]], options: List[str]) -> str:
+    lines: List[str] = [
+        "<选项证据>",
+        "以下证据按当前题 A/B/C/D 选项分别检索，仅供参考，非当前命主，不得直接照搬历史结论。",
+    ]
+    labels = ["A", "B", "C", "D"]
+    for i, label in enumerate(labels):
+        option_text = str(options[i]) if i < len(options or []) else label
+        lines.append(f"{label}. {option_text}")
+        items = option_evidence.get(label) or []
+        if not items:
+            lines.append("  - 暂无强证据")
+        else:
+            lines.extend(_format_option_evidence_item(item) for item in items)
+    lines.extend([
+        "</选项证据>",
+        "请先逐项判断 A/B/C/D 为支持、反驳或无证据，并说明理由；最后必须输出：最终答案：X",
+    ])
+    return "\n".join(lines)
+
+
+def _compose_prompt(base: str, fewshot_block: str, injection: str) -> str:
+    parts: List[str] = []
+    if fewshot_block:
+        parts.append(fewshot_block)
+    parts.append(base)
+    if injection:
+        parts.append(injection)
+    full = "\n\n".join(parts).strip()
+    if len(full) <= MAX_TOTAL_CHARS:
+        return full
+    overflow = len(full) - MAX_TOTAL_CHARS
+    if overflow >= len(injection):
+        return full[:MAX_TOTAL_CHARS]
+    base_keep = max(0, len(base) - overflow - 4)
+    truncated_base = base[:base_keep] + "..."
+    rebuilt_parts: List[str] = []
+    if fewshot_block:
+        rebuilt_parts.append(fewshot_block)
+    rebuilt_parts.append(truncated_base)
+    if injection:
+        rebuilt_parts.append(injection)
+    return "\n\n".join(rebuilt_parts)[:MAX_TOTAL_CHARS]
+
+
 def build_system_prompt(
     base_system: str,
     chart: Dict[str, Any],
@@ -99,6 +157,10 @@ def build_system_prompt(
     enable_rag: bool = True,
     k: int = 2,
     few_shot_examples: Optional[List[Dict[str, Any]]] = None,
+    retrieval_mode: str = "legacy",
+    question: Optional[str] = None,
+    options: Optional[List[str]] = None,
+    option_evidence_k: int = 2,
 ) -> str:
     base = str(base_system or "")
 
@@ -122,6 +184,21 @@ def build_system_prompt(
         return full[:MAX_TOTAL_CHARS]
 
     features = extract(chart)
+    if retrieval_mode == "option_grounded":
+        option_list = list(options or [])
+        query_question = str(question or chart.get("query_text") or "")
+        structured = features.get("structured") or {}
+        domain = chart.get("query_domain") or structured.get("query_domain")
+        option_evidence = case_index.option_evidence(
+            features,
+            question=query_question,
+            options=option_list,
+            domain=domain,
+            k_per_option=option_evidence_k,
+        )
+        injection = _format_option_evidence_block(option_evidence, option_list)
+        return _compose_prompt(base, fewshot_block, injection)
+
     cases = case_index.top_k_cases(features, k=k)
     if not cases:
         if not fewshot_block:
@@ -137,24 +214,4 @@ def build_system_prompt(
     blocks.append("</类似命例>")
 
     injection = "\n\n".join(blocks)
-    parts: List[str] = []
-    if fewshot_block:
-        parts.append(fewshot_block)
-    parts.append(base)
-    parts.append(injection)
-    full = "\n\n".join(parts).strip()
-
-    if len(full) <= MAX_TOTAL_CHARS:
-        return full
-
-    overflow = len(full) - MAX_TOTAL_CHARS
-    if overflow >= len(injection):
-        return full[:MAX_TOTAL_CHARS]
-    base_keep = max(0, len(base) - overflow - 4)
-    truncated_base = base[:base_keep] + "..."
-    rebuilt_parts: List[str] = []
-    if fewshot_block:
-        rebuilt_parts.append(fewshot_block)
-    rebuilt_parts.append(truncated_base)
-    rebuilt_parts.append(injection)
-    return "\n\n".join(rebuilt_parts)[:MAX_TOTAL_CHARS]
+    return _compose_prompt(base, fewshot_block, injection)
