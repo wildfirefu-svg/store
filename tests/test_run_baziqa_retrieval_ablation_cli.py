@@ -56,6 +56,16 @@ def _write_configs(tmp_path: Path) -> Path:
               tfidf_vector: false
               embedding_vector: true
               embedding_model: "BAAI/bge-small-zh-v1.5"
+
+            - id: option_grounded_tfidf
+              bm25: true
+              structured: true
+              semantic: true
+              tfidf_vector: true
+              embedding_vector: false
+              embedding_model: ""
+              retrieval_mode: option_grounded
+              option_evidence_k: 2
             """
         ).strip()
         + "\n",
@@ -389,4 +399,27 @@ def test_forwards_option_grounded_flags_to_benchmark_runner(tmp_path, stub_subpr
     assert "--retrieval-mode" in cmd
     assert cmd[cmd.index("--retrieval-mode") + 1] == "option_grounded"
     assert "--option-evidence-k" in cmd
+    assert cmd[cmd.index("--option-evidence-k") + 1] == "2"
+
+
+def test_option_grounded_config_forwards_its_retrieval_mode(tmp_path, stub_subprocess):
+    from scripts import run_baziqa_retrieval_ablation as mod
+
+    configs_yaml = _write_configs(tmp_path)
+    out_dir = tmp_path / "out"
+
+    rc = mod.main([
+        "--run",
+        "--configs", "option_grounded_tfidf",
+        "--model", "deepseek-v4-flash",
+        "--repeats", "1",
+        "--retrieval-configs-yaml", str(configs_yaml),
+        "--output-dir", str(out_dir),
+        "--report", str(tmp_path / "r.md"),
+    ])
+
+    assert rc == 0
+    cmd = stub_subprocess[0]["cmd"]
+    assert cmd[cmd.index("--config-id") + 1] == "option_grounded_tfidf"
+    assert cmd[cmd.index("--retrieval-mode") + 1] == "option_grounded"
     assert cmd[cmd.index("--option-evidence-k") + 1] == "2"

@@ -20,7 +20,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 
 def _write_fixture(tmp_path: Path) -> Path:
-    """Write a 5-row retrieval config fixture mirroring the production YAML."""
+    """Write a 6-row retrieval config fixture mirroring the production YAML."""
     path = tmp_path / "baziqa_retrieval_configs.yaml"
     path.write_text(
         dedent(
@@ -64,6 +64,16 @@ def _write_fixture(tmp_path: Path) -> Path:
               tfidf_vector: false
               embedding_vector: true
               embedding_model: "BAAI/bge-small-zh-v1.5"
+
+            - id: option_grounded_tfidf
+              bm25: true
+              structured: true
+              semantic: true
+              tfidf_vector: true
+              embedding_vector: false
+              embedding_model: ""
+              retrieval_mode: option_grounded
+              option_evidence_k: 2
             """
         ).strip()
         + "\n",
@@ -80,6 +90,7 @@ def _write_fixture(tmp_path: Path) -> Path:
         ("semantic", {"semantic": True, "tfidf_vector": False, "embedding_vector": False}),
         ("tfidf_vector", {"tfidf_vector": True, "embedding_vector": False}),
         ("embedding_vector", {"embedding_vector": True, "embedding_model": "BAAI/bge-small-zh-v1.5"}),
+        ("option_grounded_tfidf", {"tfidf_vector": True, "embedding_vector": False, "retrieval_mode": "option_grounded", "option_evidence_k": 2}),
     ],
 )
 def test_load_retrieval_config_returns_each_known_id(tmp_path, config_id, expected):
@@ -115,6 +126,10 @@ def test_load_retrieval_config_defaults_to_repo_yaml(monkeypatch):
     assert cfg["id"] == "embedding_vector"
     assert cfg["embedding_vector"] is True
     assert cfg["embedding_model"] == "BAAI/bge-small-zh-v1.5"
+
+    option_cfg = load_retrieval_config("option_grounded_tfidf")
+    assert option_cfg["retrieval_mode"] == "option_grounded"
+    assert option_cfg["option_evidence_k"] == 2
 
 
 def test_load_retrieval_config_rejects_malformed_yaml(tmp_path):

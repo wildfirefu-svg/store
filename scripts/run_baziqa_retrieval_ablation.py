@@ -145,6 +145,8 @@ def _run_one(cfg: Dict[str, Any], repeat: int, args: argparse.Namespace) -> "tup
     # values win (e.g. set to "0" to refresh the local cache).
     env.setdefault("HF_HUB_OFFLINE", "1")
     env.setdefault("TRANSFORMERS_OFFLINE", "1")
+    retrieval_mode = cfg.get("retrieval_mode") or args.retrieval_mode
+    option_evidence_k = cfg.get("option_evidence_k", args.option_evidence_k)
     command = [
         sys.executable, "benchmark/runners/run_benchmark.py",
         "--dataset", args.dataset,
@@ -159,8 +161,8 @@ def _run_one(cfg: Dict[str, Any], repeat: int, args: argparse.Namespace) -> "tup
         "--rag-corpus", args.corpus,
         "--case-details-jsonl", str(details),
         "--config-id", cfg["id"],
-        "--retrieval-mode", args.retrieval_mode,
-        "--option-evidence-k", str(args.option_evidence_k),
+        "--retrieval-mode", retrieval_mode,
+        "--option-evidence-k", str(option_evidence_k),
     ]
     subprocess.run(command, check=True, env=env)
     return details, False

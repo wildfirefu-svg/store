@@ -1,6 +1,6 @@
 # BaziQA retrieval ablation configs.
 #
-# Source of truth for the 5 retrieval configurations consumed by
+# Source of truth for the 6 retrieval configurations consumed by
 # scripts/run_baziqa_retrieval_ablation.py and case_index.load_retrieval_config.
 #
 # Each entry has the following fields:
@@ -16,6 +16,8 @@
 #   embedding_vector  : bool, sentence-transformers embedding over fact strings.
 #   embedding_model   : string, ST model name used when embedding_vector is
 #                       true; empty when embedding_vector is false.
+#   retrieval_mode    : optional benchmark prompt/trace mode.
+#   option_evidence_k : optional per-option evidence count for option_grounded.
 
 - id: bm25
   bm25: true
@@ -56,3 +58,13 @@
   tfidf_vector: false
   embedding_vector: true
   embedding_model: "BAAI/bge-small-zh-v1.5"
+
+- id: option_grounded_tfidf
+  bm25: true
+  structured: true
+  semantic: true
+  tfidf_vector: true
+  embedding_vector: false
+  embedding_model: ""
+  retrieval_mode: option_grounded
+  option_evidence_k: 2
