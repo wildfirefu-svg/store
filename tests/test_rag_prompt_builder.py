@@ -175,3 +175,50 @@ def test_prompt_includes_chart_match_reasons():
     text = _format_case(1, case)
     assert "same_day_master" in text
     assert "same_month_branch" in text
+
+
+class _FakeOptionEvidenceIndex:
+    def option_evidence(self, features, question, options, domain=None, k_per_option=2):
+        return {
+            "A": [{"case_id": "ca", "person_id": "pa", "score": 1.2, "stance": "related", "match_reasons": ["option_overlap:升迁"], "fact_excerpt": "事业 -> 升迁", "source_domain": "career", "source_answer_option_text": "A 升迁"}],
+            "B": [{"case_id": "cb", "person_id": "pb", "score": 0.8, "stance": "related", "match_reasons": ["option_overlap:婚姻"], "fact_excerpt": "婚姻 -> 稳定", "source_domain": "relationship", "source_answer_option_text": "B 婚姻稳定"}],
+            "C": [],
+            "D": [],
+        }
+
+    def top_k_cases(self, features, k=2):
+        return []
+
+
+def test_option_grounded_prompt_renders_option_evidence_block():
+    out = build_system_prompt(
+        "BASE",
+        {**CHART, "query_domain": "career"},
+        _FakeOptionEvidenceIndex(),
+        enable_rag=True,
+        retrieval_mode="option_grounded",
+        question="命主下一阶段哪方面更明显?",
+        options=["A 升迁", "B 婚姻", "C 疾病", "D 财运"],
+        option_evidence_k=2,
+    )
+
+    assert "BASE" in out
+    assert "<选项证据>" in out
+    assert "A. A 升迁" in out
+    assert "B. B 婚姻" in out
+    assert "C. C 疾病" in out
+    assert "D. D 财运" in out
+    assert "option_overlap:升迁" in out
+    assert "暂无强证据" in out
+    assert "最终答案：X" in out
+    assert "<类似命例>" not in out
+
+
+def test_legacy_rag_prompt_remains_default(tmp_path):
+    corpus = _make_corpus(tmp_path)
+    idx = CaseIndex(corpus)
+    out = build_system_prompt("BASE", CHART, idx, enable_rag=True)
+
+    assert "BASE" in out
+    assert "<类似命例>" in out
+    assert "<选项证据>" not in out
