@@ -566,3 +566,78 @@ class CaseIndex:
             if len(out) >= k:
                 break
         return out
+
+    @staticmethod
+    def _option_label(index: int, option_text: str) -> str:
+        text = str(option_text or "").strip()
+        if text[:1].upper() in {"A", "B", "C", "D"}:
+            return text[:1].upper()
+        return "ABCD"[index]
+
+    @staticmethod
+    def _primary_domain(case: Dict[str, Any], fallback: Optional[str] = None) -> str:
+        domains = case.get("domains") or {}
+        if fallback and domains.get(fallback):
+            return str(fallback)
+        if domains:
+            return str(sorted(domains.items(), key=lambda item: (-item[1], item[0]))[0][0])
+        return str(fallback or "unknown")
+
+    @staticmethod
+    def _source_answer_option_text(case: Dict[str, Any]) -> str:
+        for fact in case.get("facts") or []:
+            text = str(fact or "")
+            if "->" in text:
+                return text.split("->", 1)[1].strip()
+        return ""
+
+    @staticmethod
+    def _fact_excerpt(case: Dict[str, Any]) -> str:
+        facts = case.get("facts") or []
+        if facts:
+            return str(facts[0])[:240]
+        return str(case.get("text_blob") or "")[:240]
+
+    def option_evidence(
+        self,
+        features: Dict[str, Any],
+        question: str,
+        options: List[str],
+        domain: Optional[str] = None,
+        k_per_option: int = 2,
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        labels = [self._option_label(i, option) for i, option in enumerate((options or [])[:4])]
+        while len(labels) < 4:
+            labels.append("ABCD"[len(labels)])
+
+        base_text = str((features or {}).get("text_blob") or "")
+        base_structured = dict((features or {}).get("structured") or {})
+        if domain:
+            base_structured["query_domain"] = domain
+
+        evidence: Dict[str, List[Dict[str, Any]]] = {}
+        for i, label in enumerate(labels[:4]):
+            option_text = str(options[i]) if i < len(options or []) else ""
+            query_text = " ".join(part for part in [str(question or ""), option_text] if part)
+            option_structured = dict(base_structured)
+            option_structured["query_text"] = query_text
+            option_features = {
+                "text_blob": " ".join(part for part in [base_text, query_text] if part),
+                "structured": option_structured,
+            }
+            cases = self.top_k_cases(option_features, k=k_per_option)
+            evidence[label] = [
+                {
+                    "case_id": case.get("case_id") or case.get("person_id"),
+                    "person_id": case.get("person_id"),
+                    "score": case.get("_score", 0.0),
+                    "stance": "related",
+                    "match_reasons": list(case.get("match_reasons") or []),
+                    "fact_excerpt": self._fact_excerpt(case),
+                    "source_domain": self._primary_domain(case, domain),
+                    "source_answer_option_text": self._source_answer_option_text(case),
+                }
+                for case in cases
+            ]
+        return evidence
+
