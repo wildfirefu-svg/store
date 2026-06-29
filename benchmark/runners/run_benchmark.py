@@ -127,7 +127,28 @@ def _resolve_rag_trace(case, k=2):
         return []
 
 
-def _resolve_system_prompt(case, rag_k=2):
+def _resolve_option_evidence_trace(case, k=2):
+    case_index = _get_bench_case_index()
+    if case_index is None:
+        return {}, {}
+    try:
+        from bazi_features import extract
+        chart = _case_chart(case)
+        features = extract(chart)
+        evidence = case_index.option_evidence(
+            features,
+            question=str((case or {}).get("question") or ""),
+            options=list((case or {}).get("options") or []),
+            domain=(case or {}).get("domain") or chart.get("query_domain"),
+            k_per_option=k,
+        )
+        coverage = {label: len(evidence.get(label) or []) for label in ["A", "B", "C", "D"]}
+        return evidence, coverage
+    except Exception:
+        return {}, {}
+
+
+def _resolve_system_prompt(case, rag_k=2, retrieval_mode='legacy', option_evidence_k=2):
     fewshot_path = os.environ.get('BAZI_FEWSHOT_FILE') or ''
     fewshot_examples = []
     if fewshot_path:
@@ -163,6 +184,10 @@ def _resolve_system_prompt(case, rag_k=2):
             enable_rag=True,
             few_shot_examples=fewshot_examples,
             k=rag_k,
+            retrieval_mode=retrieval_mode,
+            question=str((case or {}).get('question') or ''),
+            options=list((case or {}).get('options') or []),
+            option_evidence_k=option_evidence_k,
         )
     except Exception:
         return SYSTEM_PROMPT_BENCHMARK
@@ -171,7 +196,7 @@ def _resolve_system_prompt(case, rag_k=2):
 _BENCH_CASE_INDEX = None
 
 
-def call_model_sync(prompt, provider, model, case=None, temperature=None, rag_k=2):
+def call_model_sync(prompt, provider, model, case=None, temperature=None, rag_k=2, retrieval_mode='legacy', option_evidence_k=2):
     try:
         from claude_api import call_model_messages_sync
         messages = [{"role": "user", "content": prompt}]
@@ -179,7 +204,7 @@ def call_model_sync(prompt, provider, model, case=None, temperature=None, rag_k=
             messages,
             provider=provider,
             model=model,
-            system_prompt=_resolve_system_prompt(case, rag_k=rag_k),
+            system_prompt=_resolve_system_prompt(case, rag_k=rag_k, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k),
             temperature=temperature,
         )
         return str(response).strip()
@@ -187,14 +212,14 @@ def call_model_sync(prompt, provider, model, case=None, temperature=None, rag_k=
         raise RuntimeError(f"model_call_failed: {type(e).__name__}: {str(e)[:120]}") from e
 
 
-def call_model_messages_with_history(messages, provider, model, case=None, temperature=None, rag_k=2):
+def call_model_messages_with_history(messages, provider, model, case=None, temperature=None, rag_k=2, retrieval_mode='legacy', option_evidence_k=2):
     try:
         from claude_api import call_model_messages_sync
         response = call_model_messages_sync(
             messages,
             provider=provider,
             model=model,
-            system_prompt=_resolve_system_prompt(case, rag_k=rag_k),
+            system_prompt=_resolve_system_prompt(case, rag_k=rag_k, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k),
             temperature=temperature,
         )
         return str(response).strip()
@@ -248,9 +273,17 @@ def _write_jsonl(path, rows):
     return out_path
 
 
-def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None):
+def _retrieval_call_kwargs(rag_k, retrieval_mode='legacy', option_evidence_k=2):
+    kwargs = {"rag_k": rag_k}
+    if retrieval_mode != 'legacy':
+        kwargs["retrieval_mode"] = retrieval_mode
+        kwargs["option_evidence_k"] = option_evidence_k
+    return kwargs
+
+
+def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2):
     if method == 'multi_turn':
-        return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases, temperature=temperature, case_details_jsonl=case_details_jsonl, rag_k=rag_k, config_id=config_id)
+        return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases, temperature=temperature, case_details_jsonl=case_details_jsonl, rag_k=rag_k, config_id=config_id, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k)
 
     _prepare_jsonl(case_details_jsonl)
 
@@ -269,7 +302,14 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
 
         prompt = build_benchmark_prompt(case, method=method)
         try:
-            answer = call_model_sync(prompt, provider, model, case=case, temperature=temperature, rag_k=rag_k)
+            answer = call_model_sync(
+                prompt,
+                provider,
+                model,
+                case=case,
+                temperature=temperature,
+                **_retrieval_call_kwargs(rag_k, retrieval_mode, option_evidence_k),
+            )
         except RuntimeError as e:
             err_msg = str(e)[:120]
             failed_cases.append({'case_id': case_id, 'error': err_msg})
@@ -291,7 +331,10 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                 "parser_source": None,
                 "parser_valid": False,
                 "rag_k": rag_k,
+                "retrieval_mode": retrieval_mode,
                 "rag_trace": [],
+                "option_evidence": {},
+                "option_evidence_coverage": {},
                 "retrieved_answer_leak": False,
                 "config_id": config_id,
             }
@@ -314,6 +357,10 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
         meta = extract_choice_with_meta(answer)
         predicted = meta['choice']
         rag_trace = _resolve_rag_trace(case, k=rag_k)
+        option_evidence = {}
+        option_evidence_coverage = {}
+        if retrieval_mode == 'option_grounded':
+            option_evidence, option_evidence_coverage = _resolve_option_evidence_trace(case, k=option_evidence_k)
 
         detail = {
             "case_id": case_id,
@@ -328,7 +375,10 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
             "parser_source": meta.get('source'),
             "parser_valid": meta.get('valid'),
             "rag_k": rag_k,
+            "retrieval_mode": retrieval_mode,
             "rag_trace": rag_trace,
+            "option_evidence": option_evidence,
+            "option_evidence_coverage": option_evidence_coverage,
             "retrieved_answer_leak": _compute_case_leak(rag_trace, expected),
             "config_id": config_id,
         }
@@ -347,7 +397,7 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
     }
 
 
-def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None):
+def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2):
     _prepare_jsonl(case_details_jsonl)
     limited_cases = cases[:max_cases]
     predictions = {}
@@ -371,7 +421,14 @@ def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0
             question_text = format_multi_turn_question(case)
             messages = history + [{"role": "user", "content": question_text}]
             try:
-                answer = call_model_messages_with_history(messages, provider, model, case=case, temperature=temperature, rag_k=rag_k)
+                answer = call_model_messages_with_history(
+                    messages,
+                    provider,
+                    model,
+                    case=case,
+                    temperature=temperature,
+                    **_retrieval_call_kwargs(rag_k, retrieval_mode, option_evidence_k),
+                )
             except RuntimeError as e:
                 failed_cases.append({'case_id': case_id, 'error': str(e)[:120]})
                 continue
@@ -392,6 +449,10 @@ def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0
             meta = extract_choice_with_meta(answer)
             predicted = meta['choice']
             rag_trace = _resolve_rag_trace(case, k=rag_k)
+            option_evidence = {}
+            option_evidence_coverage = {}
+            if retrieval_mode == 'option_grounded':
+                option_evidence, option_evidence_coverage = _resolve_option_evidence_trace(case, k=option_evidence_k)
             detail = {
                 "case_id": case_id,
                 "domain": case.get('domain', 'unknown'),
@@ -405,7 +466,10 @@ def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0
                 "parser_source": meta.get('source'),
                 "parser_valid": meta.get('valid'),
                 "rag_k": rag_k,
+                "retrieval_mode": retrieval_mode,
                 "rag_trace": rag_trace,
+                "option_evidence": option_evidence,
+                "option_evidence_coverage": option_evidence_coverage,
                 "retrieved_answer_leak": _compute_case_leak(rag_trace, expected),
                 "config_id": config_id,
             }
@@ -440,6 +504,8 @@ def main(argv=None):
     parser.add_argument('--case-details-jsonl', default='', help='Optional JSONL path for full per-case predictions and RAG trace')
     parser.add_argument('--temperature', type=float, default=0.0, help='Benchmark model temperature')
     parser.add_argument('--rag-k', type=int, default=2, help='Number of retrieved RAG cases to inject (default: 2)')
+    parser.add_argument('--retrieval-mode', default='legacy', choices=['legacy', 'option_grounded'], help='Retrieval prompt/trace mode')
+    parser.add_argument('--option-evidence-k', type=int, default=2, help='Number of option-grounded evidence items per answer option')
     parser.add_argument('--config-id', default=None, help='Optional retrieval ablation config id; persisted into case_details.config_id')
     args = parser.parse_args(argv)
 
@@ -466,6 +532,8 @@ def main(argv=None):
             case_details_jsonl=args.case_details_jsonl,
             rag_k=args.rag_k,
             config_id=args.config_id,
+            retrieval_mode=args.retrieval_mode,
+            option_evidence_k=args.option_evidence_k,
         )
 
         model_cases = model_result['cases']
