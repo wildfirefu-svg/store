@@ -164,6 +164,10 @@ def _run_one(cfg: Dict[str, Any], repeat: int, args: argparse.Namespace) -> "tup
         "--retrieval-mode", retrieval_mode,
         "--option-evidence-k", str(option_evidence_k),
     ]
+    if getattr(args, "shuffle_options", False):
+        if args.shuffle_seed is None:
+            raise SystemExit("--shuffle-options requires --shuffle-seed")
+        command.extend(["--shuffle-options", "--shuffle-seed", str(args.shuffle_seed)])
     subprocess.run(command, check=True, env=env)
     return details, False
 
@@ -256,6 +260,8 @@ def main(argv=None):
     parser.add_argument("--rag-k", type=int, default=2)
     parser.add_argument("--retrieval-mode", default="legacy", choices=["legacy", "option_grounded"])
     parser.add_argument("--option-evidence-k", type=int, default=2)
+    parser.add_argument("--shuffle-options", action="store_true", help="Pass --shuffle-options to run_benchmark.py")
+    parser.add_argument("--shuffle-seed", type=int, default=None, help="Pass --shuffle-seed to run_benchmark.py; required when --shuffle-options is set")
     args = parser.parse_args(argv)
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)

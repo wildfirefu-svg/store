@@ -9,6 +9,7 @@ if __package__ in (None, ''):
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from benchmark.scorers.choice_accuracy import load_jsonl, score_choice_answers, extract_choice, extract_choice_with_meta
+from benchmark.runners.shuffle_options import shuffle_options as _shuffle_options_fn, unshuffle_predicted_answer
 from benchmark.formatters.baziqa_prompt import (
     format_direct_choice_prompt,
     format_structured_reasoning_prompt,
@@ -281,9 +282,17 @@ def _retrieval_call_kwargs(rag_k, retrieval_mode='legacy', option_evidence_k=2):
     return kwargs
 
 
-def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2):
+def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None):
     if method == 'multi_turn':
         return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases, temperature=temperature, case_details_jsonl=case_details_jsonl, rag_k=rag_k, config_id=config_id, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k)
+
+    if shuffle_options:
+        if shuffle_seed is None:
+            raise ValueError("run_model_benchmark: shuffle_options=True requires an explicit int shuffle_seed")
+        cases = [
+            _shuffle_options_fn(case, seed=shuffle_seed + idx)
+            for idx, case in enumerate(cases)
+        ]
 
     _prepare_jsonl(case_details_jsonl)
 
@@ -338,6 +347,11 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                 "retrieved_answer_leak": False,
                 "config_id": config_id,
             }
+            if shuffle_options:
+                label_map = case.get('answer_label_map') or {}
+                failure_detail["answer_label_map"] = label_map
+                failure_detail["original_expected_answer"] = case.get('_original_answer')
+                failure_detail["original_predicted_answer"] = None
             case_details.append(failure_detail)
             _append_jsonl(case_details_jsonl, failure_detail)
             time.sleep(1)
@@ -382,6 +396,11 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
             "retrieved_answer_leak": _compute_case_leak(rag_trace, expected),
             "config_id": config_id,
         }
+        if shuffle_options:
+            label_map = case.get('answer_label_map') or {}
+            detail["answer_label_map"] = label_map
+            detail["original_expected_answer"] = case.get('_original_answer')
+            detail["original_predicted_answer"] = unshuffle_predicted_answer(predicted, label_map)
         case_details.append(detail)
         _append_jsonl(case_details_jsonl, detail)
 
@@ -507,6 +526,8 @@ def main(argv=None):
     parser.add_argument('--retrieval-mode', default='legacy', choices=['legacy', 'option_grounded'], help='Retrieval prompt/trace mode')
     parser.add_argument('--option-evidence-k', type=int, default=2, help='Number of option-grounded evidence items per answer option')
     parser.add_argument('--config-id', default=None, help='Optional retrieval ablation config id; persisted into case_details.config_id')
+    parser.add_argument('--shuffle-options', action='store_true', help='Randomize option order per case using --shuffle-seed for reproducibility')
+    parser.add_argument('--shuffle-seed', type=int, default=None, help='Integer seed required when --shuffle-options is enabled')
     args = parser.parse_args(argv)
 
     if args.rag:
@@ -534,6 +555,8 @@ def main(argv=None):
             config_id=args.config_id,
             retrieval_mode=args.retrieval_mode,
             option_evidence_k=args.option_evidence_k,
+            shuffle_options=args.shuffle_options,
+            shuffle_seed=args.shuffle_seed,
         )
 
         model_cases = model_result['cases']
