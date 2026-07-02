@@ -151,32 +151,32 @@ Boris Cherny (creator of Claude Code) keeps his team's file around 100 lines. Un
 **Fill this in per project. Keep it specific. Delete sections that don't apply.**
 
 ### Stack
-- Language and version: none verified; this directory currently has no project source files.
-- Framework(s): none verified.
-- Package manager: none verified.
-- Runtime / deployment target: none verified.
+- Language and version: Python 3.11+
+- Framework(s): FastAPI, pywebview, ChromaDB, SQLite, fpdf2
+- Package manager: pip (requirements.txt / requirements-dev.txt)
+- Runtime / deployment target: Docker / local Python / desktop app
 
 ### Commands
-- Install: none verified.
-- Build: none verified.
-- Test (all): none verified.
-- Test (single file): none verified.
-- Lint: none verified.
-- Typecheck: none verified.
-- Run locally: none verified.
+- Install: `pip install -r requirements-dev.txt && playwright install`
+- Build: `docker-compose up --build`
+- Test (all): `python -m pytest tests/ -q`
+- Test (single file): `python -m pytest tests/test_xxx.py -q`
+- Lint: none configured
+- Typecheck: none configured
+- Run locally: `python api_server.py` (API), `python mcp_server.py` (MCP), `python desktop_app.py` (desktop)
 
 Prefer single-file or single-test runs during iteration. Full suites are for the final verification pass.
 
 ### Layout
-- Source lives in: none verified.
-- Tests live in: none verified.
-- Do not modify: user-created files outside the current task scope.
+- Source lives in: repo root (`*.py`), `knowledge-base/`, `benchmark/`, `scripts/`, `quality/`
+- Tests live in: `tests/`
+- Do not modify: user-created files outside the current task scope, tracked binary/data artifacts (e.g. `knowledge-base/.gejue_tfidf.json`, `tests/case_db.json`).
 
 ### Conventions specific to this repo
-- Naming: none verified.
-- Import style: none verified.
-- Error handling pattern: none verified.
-- Testing pattern and framework: none verified.
+- Naming: snake_case for modules/functions, PascalCase for classes
+- Import style: absolute imports with local project root on sys.path; `from __future__ import annotations` preferred in new files
+- Error handling pattern: return/raise explicit errors; benchmark runners use parser fallbacks and record `None` predictions
+- Testing pattern and framework: pytest; add failing test first for new behavior (TDD preferred)
 
 ### Forbidden
 - Do not invent a stack, package manager, test command, or deployment target until files in this workspace verify it.

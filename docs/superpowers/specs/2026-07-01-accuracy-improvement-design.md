@@ -2,7 +2,7 @@
 
 - **日期**: 2026-07-01
 - **作者**: TRAE Agent
-- **状态**: Draft，待用户审阅
+- **状态**: Phase 1 已完成，Phase 2 待启动
 - **目标**: 基于 baziqa 40-case × 3 与 MingLi-Bench 160 题双基准，把 flash 主流程准确率从 28.3% mean → **35%+（近期）→ 55%+（长期，MingLi-Bench）**，同时不牺牲 strict leak = 0
 
 ---
