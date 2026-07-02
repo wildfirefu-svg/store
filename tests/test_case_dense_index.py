@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import os
+import subprocess
 import sys
 import types
 from pathlib import Path
@@ -88,3 +91,61 @@ def test_cache_invalidated_on_model_change(tmp_path: Path) -> None:
         )
         is False
     )
+
+
+def _write_fake_sentence_transformers_package(tmp_path: Path) -> Path:
+    """Create an importable fake sentence_transformers module for subprocess tests."""
+    pkg_dir = tmp_path / "fake_st"
+    pkg_dir.mkdir()
+    code = '''
+import numpy as np
+
+class SentenceTransformer:
+    def __init__(self, model_name: str):
+        self.model_name = model_name
+
+    def encode(self, sentences, **kwargs):
+        dim = 512 if "bge-small-zh" in self.model_name else 384
+        rng = np.random.default_rng(7)
+        arr = rng.random((len(sentences), dim)).astype(np.float32)
+        norms = np.linalg.norm(arr, axis=1, keepdims=True)
+        return arr / np.maximum(norms, 1e-12)
+'''
+    (pkg_dir / "sentence_transformers.py").write_text(code, encoding="utf-8")
+    return pkg_dir
+
+
+def test_build_dense_index_cli_writes_cache(tmp_path: Path) -> None:
+    corpus = tmp_path / "corpus.jsonl"
+    corpus.write_text(
+        json.dumps(
+            {"person_id": "p1", "text_blob": "丁火日主"},
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    cache = tmp_path / "dense.pkl"
+    fake_pkg = _write_fake_sentence_transformers_package(tmp_path)
+
+    env = os.environ.copy()
+    pythonpath = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(fake_pkg) + (os.pathsep + pythonpath if pythonpath else "")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/build_dense_index.py",
+            "--corpus",
+            str(corpus),
+            "--cache",
+            str(cache),
+            "--model",
+            "sentence-transformers/all-MiniLM-L6-v2",
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert result.returncode == 0, result.stderr
+    assert cache.exists()
