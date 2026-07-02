@@ -2,8 +2,9 @@
 
 - **日期**: 2026-07-01
 - **作者**: TRAE Agent
-- **状态**: Phase 1 已完成，Phase 2 待启动
+- **状态**: Phase 1 已完成并归档 baseline；Phase 2 工程完成但原验收 NO-GO（统一状态见 [PHASE2_STATUS_UNIFIED.md](file:///f:/project/agent/docs/PHASE2_STATUS_UNIFIED.md)）；Phase 2.5 离线候选改善但 reranker 运行时阻塞；Phase 3 待启动
 - **目标**: 基于 baziqa 40-case × 3 与 MingLi-Bench 160 题双基准，把 flash 主流程准确率从 28.3% mean → **35%+（近期）→ 55%+（长期，MingLi-Bench）**，同时不牺牲 strict leak = 0
+- **Phase 1 最新结论**: `option_grounded_tfidf` shuffle-off 40×3 mean = 28.3%；shuffle-on(seed=42) 40×3 mean = 18.3%，暴露明显选项顺序敏感性；MingLi-Bench 官方 2025 前 20 题 smoke = 60.0%。
 
 ---
 

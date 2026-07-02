@@ -31,13 +31,66 @@ def _extract_chart_input(fortune_entry: Optional[Dict[str, Any]]) -> Dict[str, A
     if not isinstance(fortune_entry, dict):
         return {}
     bazi = fortune_entry.get("bazi")
-    if not isinstance(bazi, dict):
+    if isinstance(bazi, dict):
+        chart: Dict[str, Any] = {}
+        for key in ("four_pillars", "day_master", "shishen_stats", "wuxing_stats", "branch_relations", "shensha", "wuyun_liuqi"):
+            if key in bazi:
+                chart[key] = bazi[key]
+        return chart
+
+    api_data = (((fortune_entry.get("api_response") or {}).get("data") or {}).get("data") or {})
+    if isinstance(api_data, dict):
+        chart = {}
+        for key in ("chineseDate", "rawDates", "time", "timeRange", "sign", "zodiac", "fiveElementsClass", "palaces"):
+            if key in api_data:
+                chart[key] = api_data[key]
+        return chart
+    return {}
+
+
+def _normalise_options(options: Any) -> List[str]:
+    normalised: List[str] = []
+    if not isinstance(options, list):
+        return normalised
+    for idx, option in enumerate(options):
+        if isinstance(option, str):
+            normalised.append(option)
+            continue
+        if isinstance(option, dict):
+            letter = str(option.get("letter") or chr(ord("A") + idx))
+            text = str(option.get("text") or "")
+            normalised.append(f"{letter}. {text}".strip())
+    return normalised
+
+
+def _infer_year(entry: Dict[str, Any]) -> str:
+    for key in ("year", "benchmark_year", "source_year"):
+        value = entry.get(key)
+        if value is not None:
+            return str(value)
+    question_number = entry.get("question_number")
+    try:
+        number = int(question_number)
+    except (TypeError, ValueError):
+        return ""
+    if number < 1:
+        return ""
+    return str(2022 + ((number - 1) // 40))
+
+
+def _load_fortune_index(path: Optional[str]) -> Dict[str, Any]:
+    if not path:
         return {}
-    chart: Dict[str, Any] = {}
-    for key in ("four_pillars", "day_master", "shishen_stats", "wuxing_stats", "branch_relations", "shensha", "wuyun_liuqi"):
-        if key in bazi:
-            chart[key] = bazi[key]
-    return chart
+    loaded = _read_json(path)
+    if isinstance(loaded, dict):
+        return {str(k): v for k, v in loaded.items()}
+    if isinstance(loaded, list):
+        indexed: Dict[str, Any] = {}
+        for item in loaded:
+            if isinstance(item, dict) and item.get("case_id"):
+                indexed[str(item["case_id"])] = item
+        return indexed
+    return {}
 
 
 def load_and_normalize(
@@ -52,15 +105,15 @@ def load_and_normalize(
             "load_and_normalize: include_astro=True requires fortune_api_json_path"
         )
 
-    raw_data = _read_json(data_json_path)
-    if not isinstance(raw_data, list):
-        raise ValueError(f"MingLi-Bench data.json must be a JSON array, got {type(raw_data).__name__}")
+    loaded_data = _read_json(data_json_path)
+    if isinstance(loaded_data, list):
+        raw_data = loaded_data
+    elif isinstance(loaded_data, dict) and isinstance(loaded_data.get("questions"), list):
+        raw_data = loaded_data["questions"]
+    else:
+        raise ValueError(f"MingLi-Bench data.json must be a JSON array or object with questions array, got {type(loaded_data).__name__}")
 
-    fortune_data: Dict[str, Any] = {}
-    if fortune_api_json_path:
-        loaded = _read_json(fortune_api_json_path)
-        if isinstance(loaded, dict):
-            fortune_data = loaded
+    fortune_data = _load_fortune_index(fortune_api_json_path)
 
     year_str: Optional[str] = None
     if year_filter is not None:
@@ -84,11 +137,10 @@ def load_and_normalize(
         if not case_id.startswith("mingli_"):
             case_id = f"mingli_{case_id}"
         question = entry.get("question") or ""
-        options = list(entry.get("options") or [])
+        options = _normalise_options(entry.get("options"))
         answer = entry.get("answer") or ""
         category = str(entry.get("category") or "")
-        year_value = entry.get("year")
-        year_normalised = str(year_value) if year_value is not None else ""
+        year_normalised = _infer_year(entry)
 
         if year_str is not None and year_normalised != year_str:
             continue
@@ -108,7 +160,8 @@ def load_and_normalize(
         }
 
         if include_astro:
-            chart = _extract_chart_input(fortune_data.get(case_id))
+            original_case_id = str(entry.get("case_id") or "")
+            chart = _extract_chart_input(fortune_data.get(case_id) or fortune_data.get(original_case_id))
             if chart:
                 row["chart_input"] = chart
 

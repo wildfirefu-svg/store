@@ -2,6 +2,7 @@
 
 - **日期**：2026-07-01
 - **对应设计**：[2026-07-01-accuracy-improvement-design.md](file:///f:/project/agent/docs/superpowers/specs/2026-07-01-accuracy-improvement-design.md)
+- **状态**：已完成；baseline 已归档到 [PHASE1_BASELINE_SUMMARY.md](file:///f:/project/agent/docs/PHASE1_BASELINE_SUMMARY.md)
 - **执行者假设**：对代码库不熟悉，需按顺序执行
 - **原则**：TDD（先写失败测试，再实现）、小步提交、DRY、YAGNI
 

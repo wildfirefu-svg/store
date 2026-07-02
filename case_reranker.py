@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
 DEFAULT_RERANKER = "BAAI/bge-reranker-v2-m3"
@@ -9,6 +10,13 @@ DEFAULT_RERANKER = "BAAI/bge-reranker-v2-m3"
 def _mock_scores(pairs: List[tuple[str, str]]) -> List[float]:
     """测试或模型未配置时的 fallback 打分。"""
     return [0.5] * len(pairs)
+
+
+@lru_cache(maxsize=4)
+def _load_cross_encoder(model_name: str):
+    from sentence_transformers import CrossEncoder
+
+    return CrossEncoder(model_name)
 
 
 def rerank_pairs(
@@ -25,9 +33,7 @@ def rerank_pairs(
     if model_name is None:
         return _mock_scores(pairs)
 
-    from sentence_transformers import CrossEncoder
-
-    model = CrossEncoder(model_name)
+    model = _load_cross_encoder(model_name)
     scores = model.predict(
         pairs,
         batch_size=batch_size,

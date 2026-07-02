@@ -1,58 +1,60 @@
-# Phase 2 · Hybrid Retrieval + Reranker Implementation Plan
+# Phase 2 · Hybrid Retrieval + Reranker 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **状态说明**：本计划作为 Phase 2 实现历史保留。Phase 2 当前统一状态以 [PHASE2_STATUS_UNIFIED.md](file:///f:/project/agent/docs/PHASE2_STATUS_UNIFIED.md) 为准：工程实现完成，但原始验收 NO-GO；Phase 2.5 离线候选改善但不默认启用。
 
-**Goal:** Add an `option_grounded_hybrid` retrieval path that fuses sparse BM25/structured/semantic ranking with dense embedding similarity (RRF) and an optional cross-encoder reranker, improving BaziQA gold-answer top1 rate from 27.5% to ≥40% offline and 40×3 mean from 28.3% to ≥30% online, while keeping strict leak at 0.
+> **面向执行 Agent：** 必需子技能：使用 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans` 逐任务执行本计划。任务使用复选框（`- [ ]`）语法以便跟踪进度。
 
-**Architecture:** Keep the existing `option_grounded` path untouched for backward compatibility. Introduce a new `case_dense_index.py` module for cached dense embeddings, `hybrid_retrieval.py` for RRF fusion, and `case_reranker.py` for cross-encoder reranking. Extend `CaseIndex.option_evidence()` to support a new `retrieval_mode='option_grounded_hybrid'`, wired through `rag_prompt_builder.py` and `benchmark/runners/run_benchmark.py`.
+**目标：** 新增 `option_grounded_hybrid` 检索路径，将稀疏 BM25/结构化/语义排序与稠密向量相似度（RRF 融合）以及可选的 cross-encoder reranker 结合，把 BaziQA 的 gold-answer top1 离线指标从 27.5% 提升到 ≥40%，40×3 mean 在线指标从 28.3% 提升到 ≥30%，同时保持 strict leak 为 0。
 
-**Tech Stack:** Python 3.11, `sentence-transformers` (BAAI/bge-small-zh-v1.5, BAAI/bge-reranker-v2-m3), NumPy, pytest.
+**架构：** 保持现有 `option_grounded` 路径完全不变以确保向后兼容。新增 `case_dense_index.py` 模块负责缓存稠密向量，`hybrid_retrieval.py` 负责 RRF 融合，`case_reranker.py` 负责 cross-encoder 精排。扩展 `CaseIndex.option_evidence()` 支持新的 `retrieval_mode='option_grounded_hybrid'`，并通过 `rag_prompt_builder.py` 与 `benchmark/runners/run_benchmark.py` 贯通。
+
+**技术栈：** Python 3.11、`sentence-transformers`（BAAI/bge-small-zh-v1.5、BAAI/bge-reranker-v2-m3）、NumPy、pytest。
 
 ---
 
-## File Structure
+## 文件结构
 
-| File | Responsibility |
+| 文件 | 职责 |
 |---|---|
-| `case_dense_index.py` (create) | Encode corpus cases into dense vectors; save/load a pickle cache keyed by model name and corpus metadata. |
-| `scripts/build_dense_index.py` (create) | CLI to pre-build the dense index for a corpus JSONL. |
-| `hybrid_retrieval.py` (create) | Reciprocal Rank Fusion (RRF) over multiple ranked candidate lists. |
-| `case_reranker.py` (create) | Cross-encoder wrapper: score (query, passage) pairs and rerank candidates. |
-| `case_index.py` (modify) | Integrate dense index, RRF, and reranker into `CaseIndex`; add `retrieval_mode='option_grounded_hybrid'`. |
-| `rag_prompt_builder.py` (modify) | Pass through `retrieval_mode='option_grounded_hybrid'` to `case_index.option_evidence()`. |
-| `benchmark/runners/run_benchmark.py` (modify) | Accept `option_grounded_hybrid` as a `--retrieval-mode` choice and forward it. |
-| `scripts/run_baziqa_retrieval_ablation.py` (modify) | Accept `option_grounded_hybrid` and forward to runner; add yaml config entry. |
-| `benchmark/configs/baziqa_retrieval_configs.yaml` (modify) | Add an `option_grounded_hybrid` config. |
-| `scripts/evaluate_hybrid_offline.py` (create) | Offline evaluation script measuring gold-answer top1/top2 rate without LLM calls. |
-| `tests/test_case_dense_index.py` (create) | Tests for dense index encoding and cache. |
-| `tests/test_hybrid_rrf.py` (create) | Tests for RRF fusion. |
-| `tests/test_reranker_stub.py` (create) | Tests for reranker interface. |
-| `tests/test_case_index_hybrid.py` (create) | Tests for hybrid option evidence path. |
-| `tests/test_rag_prompt_hybrid.py` (create) | Tests for prompt builder with hybrid mode. |
+| `case_dense_index.py`（新建） | 将语料库 case 编码为稠密向量；按模型名和语料元数据保存/加载 pickle 缓存。 |
+| `scripts/build_dense_index.py`（新建） | 离线构建语料 JSONL 稠密索引的 CLI。 |
+| `hybrid_retrieval.py`（新建） | 对多个候选排序列表做 Reciprocal Rank Fusion（RRF）。 |
+| `case_reranker.py`（新建） | cross-encoder 包装器：为 (query, passage) 对打分并重排候选。 |
+| `case_index.py`（修改） | 将稠密索引、RRF、reranker 集成到 `CaseIndex`；新增 `retrieval_mode='option_grounded_hybrid'`。 |
+| `rag_prompt_builder.py`（修改） | 将 `retrieval_mode='option_grounded_hybrid'` 透传给 `case_index.option_evidence()`。 |
+| `benchmark/runners/run_benchmark.py`（修改） | 接受 `option_grounded_hybrid` 作为 `--retrieval-mode` 选项并转发。 |
+| `scripts/run_baziqa_retrieval_ablation.py`（修改） | 接受 `option_grounded_hybrid` 并转发给 runner；在 yaml 中新增配置项。 |
+| `benchmark/configs/baziqa_retrieval_configs.yaml`（修改） | 新增 `option_grounded_hybrid` 配置。 |
+| `scripts/evaluate_hybrid_offline.py`（新建） | 离线评估脚本，无需调用 LLM 即可测量 gold-answer top1/top2 率。 |
+| `tests/test_case_dense_index.py`（新建） | 稠密索引编码与缓存测试。 |
+| `tests/test_hybrid_rrf.py`（新建） | RRF 融合测试。 |
+| `tests/test_reranker_stub.py`（新建） | reranker 接口测试。 |
+| `tests/test_case_index_hybrid.py`（新建） | hybrid option evidence 路径测试。 |
+| `tests/test_rag_prompt_hybrid.py`（新建） | hybrid 模式下 prompt builder 测试。 |
 
 ---
 
-## Pre-Read for Implementers
+## 实施者前置阅读
 
-Read these files before starting:
+开始前请先阅读以下文件：
 
-- `case_index.py` — existing retrieval and `option_evidence()` logic.
-- `rag_prompt_builder.py` — how evidence is formatted into prompts.
-- `benchmark/runners/run_benchmark.py` — how `--retrieval-mode` is parsed and passed.
-- `benchmark/configs/baziqa_retrieval_configs.yaml` — retrieval ablation config schema.
-- `docs/superpowers/specs/2026-07-01-accuracy-improvement-design.md` — Phase 2 design goals.
+- `case_index.py` — 现有检索与 `option_evidence()` 逻辑。
+- `rag_prompt_builder.py` — evidence 如何格式化为 prompt。
+- `benchmark/runners/run_benchmark.py` — `--retrieval-mode` 如何解析与传递。
+- `benchmark/configs/baziqa_retrieval_configs.yaml` — 检索消融配置 schema。
+- `docs/superpowers/specs/2026-07-01-accuracy-improvement-design.md` — Phase 2 设计目标。
 
 ---
 
-## Task 1: Dense Index Module `case_dense_index.py`
+## 任务 1：稠密索引模块 `case_dense_index.py`
 
-**Files:**
-- Create: `case_dense_index.py`
-- Test: `tests/test_case_dense_index.py`
+**文件：**
+- 新建：`case_dense_index.py`
+- 测试：`tests/test_case_dense_index.py`
 
-**Overview:** Build a module that encodes corpus cases into dense vectors and persists them to a pickle cache. The cache is invalidated when the model name or corpus file metadata changes.
+**概述：** 构建一个模块，将语料库 case 编码为稠密向量并持久化到 pickle 缓存。当模型名或语料文件元数据变化时缓存自动失效。
 
-- [ ] **Step 1: Write the failing test for `encode_cases`**
+- [ ] **步骤 1：编写 `encode_cases` 的失败测试**
 
 ```python
 # tests/test_case_dense_index.py
@@ -76,17 +78,17 @@ def test_encode_cases_returns_normalized_vectors():
     assert np.allclose(norms, 1.0, atol=1e-5)
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [ ] **步骤 2：运行测试确认失败**
 
-Run:
+运行：
 
 ```bash
 python -m pytest tests/test_case_dense_index.py::test_encode_cases_returns_normalized_vectors -v
 ```
 
-Expected: `FAIL` with `ModuleNotFoundError: No module named 'case_dense_index'`.
+预期：`FAIL`，报错 `ModuleNotFoundError: No module named 'case_dense_index'`。
 
-- [ ] **Step 3: Implement `encode_cases`**
+- [ ] **步骤 3：实现 `encode_cases`**
 
 ```python
 # case_dense_index.py
@@ -105,11 +107,11 @@ def encode_cases(
     model_name: str = DEFAULT_MODEL,
     batch_size: int = 32,
 ) -> np.ndarray:
-    """Encode a list of cases into normalized dense vectors."""
+    """将 case 列表编码为已归一化的稠密向量。"""
     from sentence_transformers import SentenceTransformer
 
     if not cases:
-        # bge-small-zh-v1.5 produces 512-dim vectors
+        # bge-small-zh-v1.5 输出 512 维向量
         return np.zeros((0, 512), dtype=np.float32)
 
     model = SentenceTransformer(model_name)
@@ -124,20 +126,20 @@ def encode_cases(
     return np.asarray(embeddings, dtype=np.float32)
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [ ] **步骤 4：运行测试确认通过**
 
-Run:
+运行：
 
 ```bash
 python -m pytest tests/test_case_dense_index.py::test_encode_cases_returns_normalized_vectors -v
 ```
 
-Expected: `PASS`.
+预期：`PASS`。
 
-- [ ] **Step 5: Write the failing test for cache save/load**
+- [ ] **步骤 5：编写缓存存取失败测试**
 
 ```python
-# tests/test_case_dense_index.py (append)
+# tests/test_case_dense_index.py（追加）
 from pathlib import Path
 
 
@@ -162,19 +164,19 @@ def test_cache_invalidated_on_model_change(tmp_path: Path) -> None:
     assert is_cache_valid(cache_path, corpus_path=tmp_path / "corpus.jsonl", model_name="new") is False
 ```
 
-- [ ] **Step 6: Run the tests to verify they fail**
+- [ ] **步骤 6：运行测试确认失败**
 
-Run:
+运行：
 
 ```bash
 python -m pytest tests/test_case_dense_index.py -v
 ```
 
-Expected: `FAIL` for the new tests.
+预期：新增测试 `FAIL`。
 
-- [ ] **Step 7: Implement cache functions**
+- [ ] **步骤 7：实现缓存函数**
 
-Append to `case_dense_index.py`:
+追加到 `case_dense_index.py`：
 
 ```python
 import json
@@ -194,7 +196,7 @@ def save_dense_cache(
     model_name: str,
     corpus_path: Optional[Path] = None,
 ) -> None:
-    """Serialize cases + embeddings + metadata to disk."""
+    """将 case、embedding 与元数据序列化到磁盘。"""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     corpus_path = Path(corpus_path) if corpus_path else None
@@ -215,12 +217,12 @@ def save_dense_cache(
 
 
 def load_dense_cache(path: Path) -> Tuple[List[Dict[str, Any]], np.ndarray, str]:
-    """Load cache; raises if corrupt or version mismatch."""
+    """加载缓存；版本不匹配或损坏时抛出异常。"""
     with Path(path).open("rb") as f:
         payload = pickle.load(f)
     metadata = payload["metadata"]
     if metadata.get("version") != CACHE_VERSION:
-        raise ValueError(f"dense cache version mismatch: {metadata.get('version')} != {CACHE_VERSION}")
+        raise ValueError(f"dense cache 版本不匹配: {metadata.get('version')} != {CACHE_VERSION}")
     cases = [
         {"person_id": cid, "text_blob": text}
         for cid, text in zip(payload["case_ids"], payload["text_blobs"])
@@ -233,7 +235,7 @@ def is_cache_valid(
     corpus_path: Path,
     model_name: str,
 ) -> bool:
-    """Return True if cache exists and matches model + corpus metadata."""
+    """缓存存在且模型名与语料元数据均匹配时返回 True。"""
     if not Path(path).exists():
         return False
     try:
@@ -244,7 +246,7 @@ def is_cache_valid(
         return False
     expected_mtime = os.path.getmtime(corpus_path)
     expected_size = os.path.getsize(corpus_path)
-    # Re-read metadata without loading embeddings to save memory
+    # 不加载 embedding，直接读取 metadata 以节省内存
     with Path(path).open("rb") as f:
         payload = pickle.load(f)
     metadata = payload["metadata"]
@@ -260,7 +262,7 @@ def build_or_load(
     cache_path: Optional[Path] = None,
     model_name: str = DEFAULT_MODEL,
 ) -> Tuple[List[Dict[str, Any]], np.ndarray]:
-    """Return (cases, embeddings), building from corpus if cache is missing or stale."""
+    """返回 (cases, embeddings)，缓存缺失或过期时从语料库重建。"""
     corpus_path = Path(corpus_path)
     if cache_path is None:
         model_slug = model_name.replace("/", "_")
@@ -290,35 +292,35 @@ def _load_corpus(path: Path) -> List[Dict[str, Any]]:
     return cases
 ```
 
-- [ ] **Step 8: Run the tests to verify they pass**
+- [ ] **步骤 8：运行测试确认通过**
 
-Run:
+运行：
 
 ```bash
 python -m pytest tests/test_case_dense_index.py -v
 ```
 
-Expected: all `PASS`.
+预期：全部 `PASS`。
 
-- [ ] **Step 9: Commit**
+- [ ] **步骤 9：提交**
 
 ```bash
 git add case_dense_index.py tests/test_case_dense_index.py
-git commit -m "feat(retrieval): add case_dense_index with pickle cache"
+git commit -m "feat(retrieval): 新增 case_dense_index 与 pickle 缓存"
 ```
 
 ---
 
-## Task 2: Offline Dense Index Build CLI
+## 任务 2：离线稠密索引构建 CLI
 
-**Files:**
-- Create: `scripts/build_dense_index.py`
-- Test: `tests/test_case_dense_index.py` (CLI test)
+**文件：**
+- 新建：`scripts/build_dense_index.py`
+- 测试：`tests/test_case_dense_index.py`（CLI 测试）
 
-- [ ] **Step 1: Write the failing test for the CLI**
+- [ ] **步骤 1：编写 CLI 失败测试**
 
 ```python
-# tests/test_case_dense_index.py (append)
+# tests/test_case_dense_index.py（追加）
 import subprocess
 import sys
 
@@ -339,21 +341,21 @@ def test_build_dense_index_cli_writes_cache(tmp_path: Path) -> None:
     assert cache.exists()
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [ ] **步骤 2：运行测试确认失败**
 
-Run:
+运行：
 
 ```bash
 python -m pytest tests/test_case_dense_index.py::test_build_dense_index_cli_writes_cache -v
 ```
 
-Expected: `FAIL` with file not found.
+预期：`FAIL`，报错文件不存在。
 
-- [ ] **Step 3: Implement the CLI**
+- [ ] **步骤 3：实现 CLI**
 
 ```python
 # scripts/build_dense_index.py
-"""CLI to pre-build a dense embedding cache for a BaziQA corpus."""
+"""为 BaziQA 语料库预构建稠密 embedding 缓存的 CLI。"""
 
 from __future__ import annotations
 
@@ -371,12 +373,12 @@ from case_dense_index import build_or_load, DEFAULT_MODEL
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description="Build dense embedding cache for a corpus.")
-    parser.add_argument("--corpus", required=True, help="Path to corpus JSONL")
-    parser.add_argument("--model", default=DEFAULT_MODEL, help="Sentence-transformers model name")
-    parser.add_argument("--cache", default=None, help="Output cache path (default: .cache/dense_<model>.pkl)")
+    parser = argparse.ArgumentParser(description="为语料库构建稠密 embedding 缓存。")
+    parser.add_argument("--corpus", required=True, help="语料库 JSONL 路径")
+    parser.add_argument("--model", default=DEFAULT_MODEL, help="sentence-transformers 模型名")
+    parser.add_argument("--cache", default=None, help="输出缓存路径（默认：.cache/dense_<model>.pkl）")
     parser.add_argument("--batch-size", type=int, default=32)
-    parser.add_argument("--force", action="store_true", help="Rebuild even if cache is valid")
+    parser.add_argument("--force", action="store_true", help="即使缓存有效也强制重建")
     args = parser.parse_args(argv)
 
     corpus_path = Path(args.corpus)
@@ -385,7 +387,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.force and cache_path and cache_path.exists():
         cache_path.unlink()
 
-    # Allow offline HF caches
+    # 允许使用本地 HF 缓存
     os.environ.setdefault("HF_HUB_OFFLINE", "1")
     os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
@@ -402,32 +404,32 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [ ] **步骤 4：运行测试确认通过**
 
-Run:
+运行：
 
 ```bash
 python -m pytest tests/test_case_dense_index.py -v
 ```
 
-Expected: all `PASS`.
+预期：全部 `PASS`。
 
-- [ ] **Step 5: Commit**
+- [ ] **步骤 5：提交**
 
 ```bash
 git add scripts/build_dense_index.py tests/test_case_dense_index.py
-git commit -m "feat(retrieval): add build_dense_index CLI"
+git commit -m "feat(retrieval): 新增 build_dense_index CLI"
 ```
 
 ---
 
-## Task 3: RRF Fusion Module `hybrid_retrieval.py`
+## 任务 3：RRF 融合模块 `hybrid_retrieval.py`
 
-**Files:**
-- Create: `hybrid_retrieval.py`
-- Test: `tests/test_hybrid_rrf.py`
+**文件：**
+- 新建：`hybrid_retrieval.py`
+- 测试：`tests/test_hybrid_rrf.py`
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **步骤 1：编写失败测试**
 
 ```python
 # tests/test_hybrid_rrf.py
@@ -458,17 +460,17 @@ def test_rrf_fuse_single_list():
     assert [c["person_id"] for c in fused] == ["c1", "c2"]
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [ ] **步骤 2：运行测试确认失败**
 
-Run:
+运行：
 
 ```bash
 python -m pytest tests/test_hybrid_rrf.py -v
 ```
 
-Expected: `FAIL` with `ModuleNotFoundError: No module named 'hybrid_retrieval'`.
+预期：`FAIL`，报错 `ModuleNotFoundError: No module named 'hybrid_retrieval'`。
 
-- [ ] **Step 3: Implement `hybrid_retrieval.py`**
+- [ ] **步骤 3：实现 `hybrid_retrieval.py`**
 
 ```python
 # hybrid_retrieval.py
@@ -482,11 +484,10 @@ def rrf_fuse(
     k: int = 60,
     id_key: str = "person_id",
 ) -> List[Dict[str, Any]]:
-    """Reciprocal Rank Fusion over multiple ranked lists.
+    """对多个排序列表做 Reciprocal Rank Fusion。
 
-    Score = sum(1 / (k + rank)) for each list where the item appears.
-    Returns a unified ranking. The returned dicts are shallow copies of the
-    first occurrence in the input rankings.
+    得分 = sum(1 / (k + rank))，rank 从 1 开始。
+    返回统一排序后的列表，返回的 dict 是输入中首次出现项的浅拷贝。
     """
     if not rankings:
         return []
@@ -518,39 +519,39 @@ def hybrid_retrieve(
     top_k: int = 20,
     k: int = 60,
 ) -> List[Dict[str, Any]]:
-    """Fetch rankings from sparse and dense sources, fuse with RRF, return top-K pool."""
+    """分别从稀疏源和稠密源取排序结果，RRF 融合后返回 top-K 候选池。"""
     sparse = sparse_fn()
     dense = dense_fn()
     fused = rrf_fuse([sparse, dense], k=k)
     return fused[:top_k]
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [ ] **步骤 4：运行测试确认通过**
 
-Run:
+运行：
 
 ```bash
 python -m pytest tests/test_hybrid_rrf.py -v
 ```
 
-Expected: all `PASS`.
+预期：全部 `PASS`。
 
-- [ ] **Step 5: Commit**
+- [ ] **步骤 5：提交**
 
 ```bash
 git add hybrid_retrieval.py tests/test_hybrid_rrf.py
-git commit -m "feat(retrieval): add RRF fusion for sparse + dense rankings"
+git commit -m "feat(retrieval): 新增稀疏 + 稠密排序的 RRF 融合"
 ```
 
 ---
 
-## Task 4: Cross-Encoder Reranker `case_reranker.py`
+## 任务 4：Cross-Encoder Reranker `case_reranker.py`
 
-**Files:**
-- Create: `case_reranker.py`
-- Test: `tests/test_reranker_stub.py`
+**文件：**
+- 新建：`case_reranker.py`
+- 测试：`tests/test_reranker_stub.py`
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **步骤 1：编写失败测试**
 
 ```python
 # tests/test_reranker_stub.py
@@ -561,7 +562,7 @@ def test_rerank_pairs_returns_scores():
     from case_reranker import rerank_pairs
 
     pairs = [("问题？", "事实一"), ("问题？", "事实二")]
-    scores = rerank_pairs(pairs, model_name=None)  # use mock fallback
+    scores = rerank_pairs(pairs, model_name=None)  # 使用 mock fallback
     assert len(scores) == 2
     assert all(isinstance(s, float) for s in scores)
 
@@ -578,17 +579,17 @@ def test_rerank_candidates_orders_by_score():
     assert ranked[0]["rerank_score"] >= ranked[1]["rerank_score"]
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [ ] **步骤 2：运行测试确认失败**
 
-Run:
+运行：
 
 ```bash
 python -m pytest tests/test_reranker_stub.py -v
 ```
 
-Expected: `FAIL` with `ModuleNotFoundError`.
+预期：`FAIL`，报错 `ModuleNotFoundError`。
 
-- [ ] **Step 3: Implement `case_reranker.py`**
+- [ ] **步骤 3：实现 `case_reranker.py`**
 
 ```python
 # case_reranker.py
@@ -601,7 +602,7 @@ DEFAULT_RERANKER = "BAAI/bge-reranker-v2-m3"
 
 
 def _mock_scores(pairs: List[tuple[str, str]]) -> List[float]:
-    """Fallback scoring for tests or when no model is configured."""
+    """测试或模型未配置时的 fallback 打分。"""
     return [0.5] * len(pairs)
 
 
@@ -610,9 +611,9 @@ def rerank_pairs(
     model_name: Optional[str] = None,
     batch_size: int = 8,
 ) -> List[float]:
-    """Return scalar relevance scores for (query, passage) pairs.
+    """为 (query, passage) 对返回相关性分数。
 
-    If model_name is None, returns mock scores so callers can test the plumbing.
+    如果 model_name 为 None，则返回 mock 分数，方便调用方测试管道。
     """
     if not pairs:
         return []
@@ -638,7 +639,7 @@ def rerank_candidates(
     top_k: int = 2,
     text_key: str = "fact_excerpt",
 ) -> List[Dict[str, Any]]:
-    """Rerank candidates by query relevance and return top-k."""
+    """按 query 相关性重排候选并返回 top-k。"""
     if not candidates:
         return []
 
@@ -656,32 +657,32 @@ def rerank_candidates(
     return scored[:top_k]
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [ ] **步骤 4：运行测试确认通过**
 
-Run:
+运行：
 
 ```bash
 python -m pytest tests/test_reranker_stub.py -v
 ```
 
-Expected: all `PASS`.
+预期：全部 `PASS`。
 
-- [ ] **Step 5: Commit**
+- [ ] **步骤 5：提交**
 
 ```bash
 git add case_reranker.py tests/test_reranker_stub.py
-git commit -m "feat(retrieval): add bge-reranker cross-encoder wrapper"
+git commit -m "feat(retrieval): 新增 bge-reranker cross-encoder 包装器"
 ```
 
 ---
 
-## Task 5: Integrate Hybrid Retrieval into `case_index.py`
+## 任务 5：将 Hybrid Retrieval 集成到 `case_index.py`
 
-**Files:**
-- Modify: `case_index.py`
-- Test: `tests/test_case_index_hybrid.py`
+**文件：**
+- 修改：`case_index.py`
+- 测试：`tests/test_case_index_hybrid.py`
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **步骤 1：编写失败测试**
 
 ```python
 # tests/test_case_index_hybrid.py
@@ -749,22 +750,22 @@ def test_option_evidence_legacy_mode_unchanged(tmp_path: Path) -> None:
     assert "A" in evidence
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [ ] **步骤 2：运行测试确认失败**
 
-Run:
+运行：
 
 ```bash
 python -m pytest tests/test_case_index_hybrid.py -v
 ```
 
-Expected: `FAIL` with `TypeError: option_evidence() got an unexpected keyword argument 'retrieval_mode'`.
+预期：`FAIL`，报错 `TypeError: option_evidence() got an unexpected keyword argument 'retrieval_mode'`。
 
-- [ ] **Step 3: Modify `CaseIndex.__init__` to support dense index**
+- [ ] **步骤 3：修改 `CaseIndex.__init__` 以支持稠密索引**
 
-In `case_index.py`, update the constructor signature and body:
+在 `case_index.py` 中，更新构造函数签名与主体：
 
 ```python
-# Existing import section
+# 现有 import 区
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
@@ -772,7 +773,7 @@ import numpy as np
 
 from bazi_features import extract as extract_bazi_features
 
-# Add new imports
+# 新增 import
 import case_dense_index
 import hybrid_retrieval
 import case_reranker
@@ -789,7 +790,7 @@ class CaseIndex:
         rrf_k: int = 60,
         reranker_model: Optional[str] = None,
     ):
-        # ... existing validation ...
+        # ... 原有校验逻辑 ...
         self.path = path
         self._embed_fn = embed_fn
         self._cases: List[Dict[str, Any]] = self._load(path)
@@ -797,7 +798,7 @@ class CaseIndex:
         self._idf = self._build_idf(self._doc_tokens)
         self._build_vector_index()
 
-        # Hybrid retrieval state
+        # Hybrid retrieval 状态
         self._use_hybrid = use_hybrid
         self._rrf_k = rrf_k
         self._reranker_model = reranker_model
@@ -827,9 +828,9 @@ class CaseIndex:
             self._case_embeddings = None
 ```
 
-- [ ] **Step 4: Add dense query method**
+- [ ] **步骤 4：新增稠密查询方法**
 
-Append to `CaseIndex`:
+追加到 `CaseIndex`：
 
 ```python
     def top_k_cases_dense(
@@ -837,7 +838,7 @@ Append to `CaseIndex`:
         query: str,
         k: int = 20,
     ) -> List[Dict[str, Any]]:
-        """Retrieve top-k cases using dense embeddings."""
+        """使用稠密向量检索 top-k cases。"""
         if self._case_embeddings is None or not query:
             return []
         if len(self._dense_case_ids) != len(self._cases):
@@ -864,9 +865,9 @@ Append to `CaseIndex`:
         return out
 ```
 
-- [ ] **Step 5: Add hybrid option evidence path**
+- [ ] **步骤 5：新增 hybrid option evidence 路径**
 
-Modify `option_evidence()` signature:
+修改 `option_evidence()` 签名：
 
 ```python
     def option_evidence(
@@ -880,7 +881,7 @@ Modify `option_evidence()` signature:
     ) -> Dict[str, List[Dict[str, Any]]]:
 ```
 
-Inside the method, replace the per-option retrieval loop with a branch:
+在方法内部，将每个选项的检索循环替换为分支：
 
 ```python
         for i, label in enumerate(labels[:4]):
@@ -925,7 +926,7 @@ Inside the method, replace the per-option retrieval loop with a branch:
             option_candidates[label] = ranked
 ```
 
-Add helper method `_option_evidence_hybrid`:
+新增辅助方法 `_option_evidence_hybrid`：
 
 ```python
     def _option_evidence_hybrid(
@@ -934,7 +935,7 @@ Add helper method `_option_evidence_hybrid`:
         option_text: str,
         k_per_option: int = 2,
     ) -> List[Dict[str, Any]]:
-        """Hybrid retrieval for one option: sparse + dense RRF, then optional reranker."""
+        """单个选项的 hybrid 检索：sparse + dense RRF，再可选 reranker 精排。"""
         k_pool = max(k_per_option * 10, 20)
 
         def sparse_fn():
@@ -954,7 +955,7 @@ Add helper method `_option_evidence_hybrid`:
         if not pool:
             return []
 
-        # Re-score with option evidence heuristic
+        # 使用选项 evidence 启发式重新打分
         scored = []
         for case in pool:
             item = dict(case)
@@ -985,32 +986,32 @@ Add helper method `_option_evidence_hybrid`:
         return scored[:k_per_option]
 ```
 
-- [ ] **Step 6: Run the tests to verify they pass**
+- [ ] **步骤 6：运行测试确认通过**
 
-Run:
+运行：
 
 ```bash
 python -m pytest tests/test_case_index_hybrid.py -v
 ```
 
-Expected: all `PASS`.
+预期：全部 `PASS`。
 
-- [ ] **Step 7: Commit**
+- [ ] **步骤 7：提交**
 
 ```bash
 git add case_index.py tests/test_case_index_hybrid.py
-git commit -m "feat(retrieval): integrate hybrid dense + RRF + reranker into CaseIndex"
+git commit -m "feat(retrieval): 在 CaseIndex 中集成 hybrid dense + RRF + reranker"
 ```
 
 ---
 
-## Task 6: Wire Hybrid Mode Through Prompt Builder and Runner
+## 任务 6：将 Hybrid Mode 贯通 Prompt Builder 与 Runner
 
-**Files:**
-- Modify: `rag_prompt_builder.py`, `benchmark/runners/run_benchmark.py`, `scripts/run_baziqa_retrieval_ablation.py`
-- Test: `tests/test_rag_prompt_hybrid.py`
+**文件：**
+- 修改：`rag_prompt_builder.py`、`benchmark/runners/run_benchmark.py`、`scripts/run_baziqa_retrieval_ablation.py`
+- 测试：`tests/test_rag_prompt_hybrid.py`
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **步骤 1：编写失败测试**
 
 ```python
 # tests/test_rag_prompt_hybrid.py
@@ -1046,19 +1047,19 @@ def test_build_system_prompt_hybrid_mode_calls_option_evidence():
     assert "<选项证据>" in prompt
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [ ] **步骤 2：运行测试确认失败**
 
-Run:
+运行：
 
 ```bash
 python -m pytest tests/test_rag_prompt_hybrid.py -v
 ```
 
-Expected: `FAIL` because `build_system_prompt` does not pass `retrieval_mode` to `option_evidence`.
+预期：`FAIL`，因为 `build_system_prompt` 没有把 `retrieval_mode` 传给 `option_evidence`。
 
-- [ ] **Step 3: Modify `rag_prompt_builder.py`**
+- [ ] **步骤 3：修改 `rag_prompt_builder.py`**
 
-In `build_system_prompt`, update the `retrieval_mode == "option_grounded"` branch to also handle `option_grounded_hybrid`:
+在 `build_system_prompt` 中，将 `retrieval_mode == "option_grounded"` 分支扩展为同时处理 `option_grounded_hybrid`：
 
 ```python
     if retrieval_mode in ("option_grounded", "option_grounded_hybrid"):
@@ -1078,9 +1079,9 @@ In `build_system_prompt`, update the `retrieval_mode == "option_grounded"` branc
         return _compose_prompt(base, fewshot_block, injection)
 ```
 
-- [ ] **Step 4: Modify `benchmark/runners/run_benchmark.py`**
+- [ ] **步骤 4：修改 `benchmark/runners/run_benchmark.py`**
 
-Find the `--retrieval-mode` argparse definition and add `option_grounded_hybrid`:
+找到 `--retrieval-mode` 的 argparse 定义并增加 `option_grounded_hybrid`：
 
 ```python
 parser.add_argument(
@@ -1091,11 +1092,11 @@ parser.add_argument(
 )
 ```
 
-Ensure `run_model_benchmark` signature already accepts `retrieval_mode` and passes it through (it does).
+确认 `run_model_benchmark` 签名已接受 `retrieval_mode` 并透传（当前代码已支持）。
 
-- [ ] **Step 5: Modify `scripts/run_baziqa_retrieval_ablation.py`**
+- [ ] **步骤 5：修改 `scripts/run_baziqa_retrieval_ablation.py`**
 
-Update the `--retrieval-mode` argument:
+更新 `--retrieval-mode` 参数：
 
 ```python
 parser.add_argument(
@@ -1105,9 +1106,9 @@ parser.add_argument(
 )
 ```
 
-- [ ] **Step 6: Add yaml config entry**
+- [ ] **步骤 6：新增 yaml 配置项**
 
-Append to `benchmark/configs/baziqa_retrieval_configs.yaml`:
+追加到 `benchmark/configs/baziqa_retrieval_configs.yaml`：
 
 ```yaml
 - id: option_grounded_hybrid
@@ -1121,35 +1122,35 @@ Append to `benchmark/configs/baziqa_retrieval_configs.yaml`:
   option_evidence_k: 2
 ```
 
-- [ ] **Step 7: Run the tests to verify they pass**
+- [ ] **步骤 7：运行测试确认通过**
 
-Run:
+运行：
 
 ```bash
 python -m pytest tests/test_rag_prompt_hybrid.py -v
 ```
 
-Expected: `PASS`.
+预期：`PASS`。
 
-- [ ] **Step 8: Commit**
+- [ ] **步骤 8：提交**
 
 ```bash
 git add rag_prompt_builder.py benchmark/runners/run_benchmark.py scripts/run_baziqa_retrieval_ablation.py benchmark/configs/baziqa_retrieval_configs.yaml tests/test_rag_prompt_hybrid.py
-git commit -m "feat(bench): wire option_grounded_hybrid through prompt builder and runner"
+git commit -m "feat(bench): 将 option_grounded_hybrid 贯通 prompt builder 与 runner"
 ```
 
 ---
 
-## Task 7: Offline Evaluation Script
+## 任务 7：离线评估脚本
 
-**Files:**
-- Create: `scripts/evaluate_hybrid_offline.py`
+**文件：**
+- 新建：`scripts/evaluate_hybrid_offline.py`
 
-- [ ] **Step 1: Implement the script**
+- [ ] **步骤 1：实现脚本**
 
 ```python
 # scripts/evaluate_hybrid_offline.py
-"""Offline evaluation of option evidence ranking without LLM calls."""
+"""离线评估 option evidence 排序，无需调用 LLM。"""
 
 from __future__ import annotations
 
@@ -1234,7 +1235,7 @@ def evaluate(
             retrieval_mode=retrieval_mode,
         )
 
-        # Build a vote per option based on its top-1 evidence source_answer_option_text
+        # 根据每个选项的 top-1 evidence source_answer_option_text 构建投票
         option_scores: Dict[str, float] = {}
         for label in ["A", "B", "C", "D"]:
             items = evidence.get(label) or []
@@ -1280,14 +1281,14 @@ def evaluate(
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description="Offline hybrid retrieval evaluation")
-    parser.add_argument("--dataset", required=True, help="Path to holdout JSONL")
-    parser.add_argument("--corpus", required=True, help="Path to corpus JSONL")
+    parser = argparse.ArgumentParser(description="Hybrid retrieval 离线评估")
+    parser.add_argument("--dataset", required=True, help="holdout JSONL 路径")
+    parser.add_argument("--corpus", required=True, help="语料库 JSONL 路径")
     parser.add_argument("--retrieval-mode", default="option_grounded", choices=["option_grounded", "option_grounded_hybrid"])
-    parser.add_argument("--dense-model", default=None, help="e.g. BAAI/bge-small-zh-v1.5")
-    parser.add_argument("--reranker-model", default=None, help="e.g. BAAI/bge-reranker-v2-m3")
+    parser.add_argument("--dense-model", default=None, help="例如 BAAI/bge-small-zh-v1.5")
+    parser.add_argument("--reranker-model", default=None, help="例如 BAAI/bge-reranker-v2-m3")
     parser.add_argument("--option-evidence-k", type=int, default=2)
-    parser.add_argument("--output", default=None, help="JSON output path (default: stdout)")
+    parser.add_argument("--output", default=None, help="JSON 输出路径（默认 stdout）")
     args = parser.parse_args(argv)
 
     result = evaluate(
@@ -1311,17 +1312,17 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-- [ ] **Step 2: Verify it runs**
+- [ ] **步骤 2：验证脚本可运行**
 
-Run:
+运行：
 
 ```bash
 python scripts/evaluate_hybrid_offline.py --help
 ```
 
-Expected: help text prints, exit 0.
+预期：打印帮助信息，退出码 0。
 
-- [ ] **Step 3: Run baseline offline evaluation**
+- [ ] **步骤 3：运行 baseline 离线评估**
 
 ```bash
 python scripts/evaluate_hybrid_offline.py \
@@ -1331,9 +1332,9 @@ python scripts/evaluate_hybrid_offline.py \
     --output .tmp/phase2_offline_baseline.json
 ```
 
-Expected: JSON output with `gold_top1_rate` ≈ 0.275.
+预期：JSON 输出中 `gold_top1_rate` 约为 0.275。
 
-- [ ] **Step 4: Run hybrid offline evaluation**
+- [ ] **步骤 4：运行 hybrid 离线评估**
 
 ```bash
 python scripts/build_dense_index.py \
@@ -1349,23 +1350,23 @@ python scripts/evaluate_hybrid_offline.py \
     --output .tmp/phase2_offline_hybrid.json
 ```
 
-Expected: `gold_top1_rate` ≥ 0.40.
+预期：`gold_top1_rate` ≥ 0.40。
 
-- [ ] **Step 5: Commit**
+- [ ] **步骤 5：提交**
 
 ```bash
 git add scripts/evaluate_hybrid_offline.py
-git commit -m "feat(bench): add offline hybrid retrieval evaluation"
+git commit -m "feat(bench): 新增 hybrid retrieval 离线评估脚本"
 ```
 
 ---
 
-## Task 8: Online A/B Evaluation and Go/No-Go
+## 任务 8：在线 A/B 评估与 Go/No-Go 决策
 
-**Files:**
-- Use existing scripts; produce reports in `.tmp/`
+**文件：**
+- 使用现有脚本；在 `.tmp/` 生成报告
 
-- [ ] **Step 1: Run baseline online A/B**
+- [ ] **步骤 1：运行 baseline 在线 A/B**
 
 ```bash
 python scripts/run_baziqa_retrieval_ablation.py \
@@ -1379,9 +1380,9 @@ python scripts/run_baziqa_retrieval_ablation.py \
     --report .tmp/phase2_baseline/report.md
 ```
 
-Expected: report shows mean ≈ 28.3%.
+预期：报告显示 mean ≈ 28.3%。
 
-- [ ] **Step 2: Run hybrid online A/B**
+- [ ] **步骤 2：运行 hybrid 在线 A/B**
 
 ```bash
 python scripts/run_baziqa_retrieval_ablation.py \
@@ -1395,9 +1396,9 @@ python scripts/run_baziqa_retrieval_ablation.py \
     --report .tmp/phase2_hybrid/report.md
 ```
 
-Expected: report shows mean ≥ 30%.
+预期：报告显示 mean ≥ 30%。
 
-- [ ] **Step 3: Check strict leak**
+- [ ] **步骤 3：检查 strict leak**
 
 ```bash
 python scripts/compute_retrieved_answer_leak.py \
@@ -1405,102 +1406,102 @@ python scripts/compute_retrieved_answer_leak.py \
     --strict
 ```
 
-Expected: leak ratio = 0.
+预期：leak ratio = 0。
 
-- [ ] **Step 4: Make go/no-go decision**
+- [ ] **步骤 4：做出 go/no-go 决策**
 
-| Condition | Action |
+| 条件 | 行动 |
 |---|---|
-| Offline hybrid gold-top1 ≥ 40% AND online mean ≥ 30% AND leak = 0 | Keep `option_grounded_hybrid` config; proceed to Phase 3 with hybrid as default |
-| Offline hybrid gold-top1 < 35% OR online mean < 30% OR leak > 0 | Remove `option_grounded_hybrid` from default yaml configs; keep code and tests; proceed to Phase 3 without hybrid |
-| Mixed results | Document in `.tmp/phase2_report.md`; keep hybrid as opt-in only |
+| 离线 hybrid gold-top1 ≥ 40% 且在线 mean ≥ 30% 且 leak = 0 | 保留 `option_grounded_hybrid` 配置；以 hybrid 为默认进入 Phase 3 |
+| 离线 hybrid gold-top1 < 35% 或在线 mean < 30% 或 leak > 0 | 从默认 yaml 配置中移除 `option_grounded_hybrid`；保留代码与测试；不带 hybrid 进入 Phase 3 |
+| 结果混合 | 写入 `.tmp/phase2_report.md`；hybrid 仅作为可选开关保留 |
 
-- [ ] **Step 5: Write Phase 2 summary report**
+- [ ] **步骤 5：撰写 Phase 2 总结报告**
 
-Create `.tmp/phase2_report.md` with:
+创建 `.tmp/phase2_report.md`：
 
 ```markdown
 # Phase 2 Report: Hybrid Retrieval + Reranker
 
-## Offline Evaluation
+## 离线评估
 - Baseline gold-top1: X%
 - Hybrid gold-top1: Y%
 
-## Online A/B (40×3 flash)
+## 在线 A/B (40×3 flash)
 - Baseline mean: X%
 - Hybrid mean: Y%
 
 ## Strict Leak
 - Hybrid: Z%
 
-## Decision
+## 决策
 [GO / NO-GO / OPT-IN]
 ```
 
-- [ ] **Step 6: Final regression test**
+- [ ] **步骤 6：最终回归测试**
 
-Run:
+运行：
 
 ```bash
 python -m pytest tests/test_case_dense_index.py tests/test_hybrid_rrf.py tests/test_reranker_stub.py tests/test_case_index_hybrid.py tests/test_rag_prompt_hybrid.py -q
 ```
 
-Expected: all `PASS`.
+预期：全部 `PASS`。
 
-- [ ] **Step 7: Commit report**
+- [ ] **步骤 7：提交报告**
 
 ```bash
 git add .tmp/phase2_report.md
-git commit -m "chore(bench): phase2 hybrid retrieval A/B results and decision"
+git commit -m "chore(bench): phase2 hybrid retrieval A/B 结果与决策"
 ```
 
 ---
 
-## Acceptance Criteria
+## 验收标准
 
-| Criterion | Target |
+| 检查项 | 目标 |
 |---|---|
-| Unit tests | All new tests pass: `pytest tests/test_case_dense_index.py tests/test_hybrid_rrf.py tests/test_reranker_stub.py tests/test_case_index_hybrid.py tests/test_rag_prompt_hybrid.py -q` |
-| Offline gold-top1 | Hybrid ≥ 40% (baseline 27.5%) |
-| Online 40×3 mean | Hybrid ≥ 30% |
+| 单元测试 | 全部新测试通过：`pytest tests/test_case_dense_index.py tests/test_hybrid_rrf.py tests/test_reranker_stub.py tests/test_case_index_hybrid.py tests/test_rag_prompt_hybrid.py -q` |
+| 离线 gold-top1 | Hybrid ≥ 40%（baseline 27.5%） |
+| 在线 40×3 mean | Hybrid ≥ 30% |
 | strict leak | 0 |
-| Backward compatibility | `option_grounded` path mean difference vs Phase 1 ≤ 1pt |
+| 向后兼容 | `option_grounded` 路径 mean 与 Phase 1 差异 ≤ 1pt |
 
 ---
 
-## Self-Review Checklist
+## 自查清单
 
-**Spec coverage:**
-- [x] Dense index with local cache — Task 1
-- [x] Hybrid retrieval (sparse + dense) — Task 5
-- [x] RRF fusion — Task 3
-- [x] Cross-encoder reranker — Task 4
-- [x] `option_grounded_hybrid` retrieval mode — Tasks 5-6
-- [x] Offline evaluation without LLM — Task 7
-- [x] Online A/B and go/no-go — Task 8
-- [x] Backward compatibility / default-off — Task 5, Task 8
+**需求覆盖：**
+- [x] 带本地缓存的稠密索引 — 任务 1
+- [x] Hybrid 检索（稀疏 + 稠密）— 任务 5
+- [x] RRF 融合 — 任务 3
+- [x] Cross-encoder reranker — 任务 4
+- [x] `option_grounded_hybrid` 检索模式 — 任务 5-6
+- [x] 无需 LLM 的离线评估 — 任务 7
+- [x] 在线 A/B 与 go/no-go — 任务 8
+- [x] 向后兼容 / 默认关闭 — 任务 5、任务 8
 
-**Placeholder scan:**
-- [x] No "TBD", "TODO", "implement later"
-- [x] No vague "add error handling" steps
-- [x] No "write tests for the above" without code
-- [x] No "Similar to Task N"
+**占位符检查：**
+- [x] 无 "TBD"、"TODO"、"implement later"
+- [x] 无模糊 "add error handling" 步骤
+- [x] 无 "write tests for the above" 而无代码
+- [x] 无 "Similar to Task N"
 
-**Type consistency:**
-- `retrieval_mode` parameter consistently `str` with allowed values `"option_grounded" | "option_grounded_hybrid"`.
-- `option_evidence()` signature extended in Task 5 and called with `retrieval_mode` in Task 6.
-- Cache functions in `case_dense_index.py` use `Path` and `np.ndarray` consistently.
+**类型一致性：**
+- `retrieval_mode` 参数统一为 `str`，允许取值 `"option_grounded" | "option_grounded_hybrid"`。
+- `option_evidence()` 签名在任务 5 中扩展，并在任务 6 中以 `retrieval_mode` 调用。
+- `case_dense_index.py` 中的缓存函数统一使用 `Path` 与 `np.ndarray`。
 
 ---
 
-## Execution Handoff
+## 执行交接
 
-**Plan complete and saved to `docs/superpowers/plans/2026-07-02-phase2-hybrid-retrieval.md`.**
+**计划已完成并保存至 `docs/superpowers/plans/2026-07-02-phase2-hybrid-retrieval.md`。**
 
-Two execution options:
+两种执行方式可选：
 
-**1. Subagent-Driven (recommended)** — Dispatch a fresh subagent per task, review between tasks, fast iteration.
+**1. Subagent-Driven（推荐）** — 每个任务派一个独立 subagent 执行，我在每任务完成后 review，适合长时间、多文件、严格 TDD 的场景。
 
-**2. Inline Execution** — Execute tasks in this session using `executing-plans`, batch execution with checkpoints for review.
+**2. Inline Execution** — 在当前会话中按任务顺序执行，我可以批量处理若干任务后给你一个 checkpoint review。
 
-Which approach would you like?
+你选哪种？

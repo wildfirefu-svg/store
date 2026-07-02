@@ -2,13 +2,13 @@
 
 ## [model: flash] Retrieval ablation summary
 
-| rank | config_id | model_name | runs | mean | min | max | weak_leak | strict_leak | est_cost_cny | gate |
-|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---|
-| 1 | tfidf_vector | deepseek-v4-flash | 3 | 27.5% | 25.0% | 30.0% | 97.5% | 0.0% | 0.79 | BLOCKED |
-| 2 | bm25 | deepseek-v4-flash | 3 | 24.2% | 20.0% | 27.5% | 97.5% | 0.0% | 0.79 | BLOCKED |
-| 3 | structured | deepseek-v4-flash | 3 | 21.7% | 12.5% | 27.5% | 78.3% | 0.0% | 0.79 | BLOCKED |
-| 4 | embedding_vector | deepseek-v4-flash | 3 | 21.7% | 17.5% | 27.5% | 94.2% | 0.0% | 0.79 | BLOCKED |
-| 5 | semantic | deepseek-v4-flash | 3 | 20.0% | 15.0% | 22.5% | 97.5% | 0.0% | 0.79 | BLOCKED |
+| rank | config_id | model_name | runs | mean | min | max | stdev | weak_leak | strict_leak | est_cost_cny | gate |
+|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| 1 | tfidf_vector | deepseek-v4-flash | 3 | 27.5% | 25.0% | 30.0% | 1.2pp | 97.5% | 0.0% | 0.79 | BLOCKED |
+| 2 | bm25 | deepseek-v4-flash | 3 | 24.2% | 20.0% | 27.5% | 2.4pp | 97.5% | 0.0% | 0.79 | BLOCKED |
+| 3 | structured | deepseek-v4-flash | 3 | 21.7% | 12.5% | 27.5% | 6.1pp | 78.3% | 0.0% | 0.79 | BLOCKED |
+| 4 | embedding_vector | deepseek-v4-flash | 3 | 21.7% | 17.5% | 27.5% | 4.1pp | 94.2% | 0.0% | 0.79 | BLOCKED |
+| 5 | semantic | deepseek-v4-flash | 3 | 20.0% | 15.0% | 22.5% | 3.1pp | 97.5% | 0.0% | 0.79 | BLOCKED |
 
 ## Task 4.3 Top-2 selection
 
@@ -36,10 +36,10 @@ python -u scripts/run_baziqa_retrieval_ablation.py `
 
 ## [model: pro] Task 4.4 Top-2 retest summary
 
-| rank | config_id | model_name | runs | mean | min | max | weak_leak | strict_leak | est_cost_cny | gate |
-|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---|
-| 1 | tfidf_vector | deepseek-v4-pro | 3 | 25.8% | 22.5% | 30.0% | 97.5% | 0.0% | 3.96 | BLOCKED |
-| 2 | bm25 | deepseek-v4-pro | 3 | 20.8% | 12.5% | 27.5% | 97.5% | 0.0% | 3.96 | BLOCKED |
+| rank | config_id | model_name | runs | mean | min | max | stdev | weak_leak | strict_leak | est_cost_cny | gate |
+|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| 1 | tfidf_vector | deepseek-v4-pro | 3 | 25.8% | 22.5% | 30.0% | 3.1pp | 97.5% | 0.0% | 3.96 | BLOCKED |
+| 2 | bm25 | deepseek-v4-pro | 3 | 20.8% | 12.5% | 27.5% | 6.2pp | 97.5% | 0.0% | 3.96 | BLOCKED |
 
 Run-level pro results:
 
@@ -48,9 +48,18 @@ Run-level pro results:
 | tfidf_vector | 10/40 | 12/40 | 9/40 | 0 |
 | bm25 | 5/40 | 9/40 | 11/40 | 0 |
 
-Task 4.4 conclusion: `tfidf_vector` remains the better Top-2 candidate under `deepseek-v4-pro`, but both pro configs remain below the 40% gate and are therefore `BLOCKED`.
+Task 4.4 conclusion: `tfidf_vector` remains the better Top-2 candidate under `deepseek-v4-pro`, but both pro configs remain below the 40% gate and are therefore `BLOCKED`. `tfidf_vector` stdev (3.1pp) passes the `mean >= 3 * stdev` sub-gate (`25.8% >= 9.3%`); `bm25` stdev (6.2pp) fails the sub-gate (`20.8% < 18.6%`).
 
-## Task 4.5 Retrieval leak summary
+## Baseline comparison
+
+| phase | config | model | mean | date | source |
+|---|---|---|---|---|---|
+| P2 baseline | direct_choice (no RAG) | deepseek-v4-pro | 25.0% | 2026-06-18 | BAZIQA_ACCEPTANCE_REPORT.md |
+| P2 RAG | rag-structured | deepseek-v4-pro | 30.0% (3 repeats) | 2026-06-19 | BAZIQA_RAG_STRUCTURED_STABILITY_REPORT.md |
+| Stage 1 | tfidf_vector | deepseek-v4-pro | 25.8% | 2026-06-29 | This report |
+| Stage 1 | bm25 | deepseek-v4-pro | 20.8% | 2026-06-29 | This report |
+
+Baseline comparison conclusion: Stage 1 ablation configs do not improve over P2 RAG baseline (`30.0%`). `tfidf_vector` is comparable to P2 no-RAG baseline (`25.0%`), while `bm25` underperforms it. The best historical result remains `rag-structured` single run at `42.5%` (2026-06-19), but that result was unstable across 3 repeats.
 
 Flash rollback source: `.tmp/ablation_stage1_flash/rollback.jsonl`
 
@@ -72,6 +81,15 @@ Pro rollback source: `.tmp/ablation_stage1_pro_top2/rollback.jsonl`
 | **overall** | **240** | **234** | **97.5%** | **0** | **0.0%** |
 
 The weak leak metric is intentionally conservative and noisy for this dataset because single-letter expected answers (`A`/`B`/`C`/`D`) frequently appear as substrings in unrelated retrieved facts. The strict rule requires both `-> {answer}` and a current-question substring match; strict retrieved-answer leak is 0 for both flash and pro rollback files, so the ablation results are not explained by question-aligned answer leakage.
+
+## Answer distribution (pro Top-2)
+
+| config_id | A | B | C | D | other | total |
+|---|---:|---:|---:|---:|---:|---:|
+| tfidf_vector | 29 | 37 | 23 | 31 | 0 | 120 |
+| bm25 | 25 | 36 | 29 | 30 | 0 | 120 |
+
+Distribution conclusion: Both configs show a slight B-bias (30.8% for tfidf_vector, 30.0% for bm25), but overall distribution is relatively uniform. No single option dominates, suggesting the model is not stuck in a positional bias.
 
 ## Task 4.6 Cost guard
 

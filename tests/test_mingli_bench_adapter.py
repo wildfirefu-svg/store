@@ -146,3 +146,34 @@ def test_load_and_normalize_preserves_existing_mingli_prefix():
     for row in rows:
         assert row["case_id"].startswith("mingli_")
         assert not row["case_id"].startswith("mingli_mingli_")
+
+
+def test_load_and_normalize_supports_official_questions_payload(tmp_path):
+    _require_impl()
+    data = tmp_path / "data.json"
+    fortune = tmp_path / "fortune_api_results.json"
+    data.write_text(
+        '{"questions":[{"case_id":"case_121","question_number":121,"category":"家庭",'
+        '"question":"?","options":[{"letter":"A","text":"a"},{"letter":"B","text":"b"},'
+        '{"letter":"C","text":"c"},{"letter":"D","text":"d"}],"answer":"B"}]}',
+        encoding="utf-8",
+    )
+    fortune.write_text(
+        '[{"case_id":"case_121","api_response":{"data":{"data":{"chineseDate":"x",'
+        '"palaces":[{"name":"命宫"}]}}}}]',
+        encoding="utf-8",
+    )
+
+    rows = load_and_normalize(
+        str(data),
+        fortune_api_json_path=str(fortune),
+        include_astro=True,
+        year_filter="2025",
+    )
+
+    assert len(rows) == 1
+    assert rows[0]["case_id"] == "mingli_case_121"
+    assert rows[0]["year"] == "2025"
+    assert rows[0]["domain"] == "family"
+    assert rows[0]["options"] == ["A. a", "B. b", "C. c", "D. d"]
+    assert rows[0]["chart_input"]["chineseDate"] == "x"

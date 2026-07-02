@@ -198,10 +198,15 @@ class CaseIndex:
     def _load_dense_index(self) -> None:
         """Load or build the dense embedding index for hybrid retrieval."""
         try:
+            dense_cases = [
+                {"person_id": c.get("person_id"), "text_blob": c.get("text_blob")}
+                for c in self._cases
+            ]
             cases, embeddings = case_dense_index.build_or_load(
                 corpus_path=self.path,
                 cache_path=self._dense_cache_path,
                 model_name=self._dense_model,
+                cases=dense_cases,
             )
             self._dense_case_ids = [str(c.get("person_id") or "") for c in cases]
             self._dense_embeddings = embeddings
@@ -630,6 +635,10 @@ class CaseIndex:
         return str(fallback or "unknown")
 
     @staticmethod
+    def _clean_option_text(option_text: str) -> str:
+        return re.sub(r"^[A-D][\.、\s]*", "", str(option_text or "").strip(), flags=re.IGNORECASE)
+
+    @staticmethod
     def _source_answer_option_text(case: Dict[str, Any]) -> str:
         for fact in case.get("facts") or []:
             text = str(fact or "")
@@ -645,34 +654,86 @@ class CaseIndex:
         return str(case.get("text_blob") or "")[:240]
 
     @staticmethod
-    def _fact_excerpt_for_option(case: Dict[str, Any], option_text: str) -> tuple:
-        facts = case.get("facts") or []
-        if not facts:
-            return str(case.get("text_blob") or "")[:240], 0.0
-        option_clean = re.sub(r"^[A-D][\.、\s]*", "", str(option_text or "").strip(), flags=re.IGNORECASE)
-        option_terms = set(_semantic_phrases(option_clean))
-        for hints in DOMAIN_HINTS.values():
-            option_terms.update(_hint_matches(option_clean, hints))
-        option_terms = set(t for t in option_terms if t and t not in GENERIC_PHRASES)
-        if not option_terms:
-            return str(facts[0])[:240], 0.0
-        best_fact = facts[0]
-        best_score = 0.0
-        for fact in facts:
-            fact_lower = str(fact).lower()
-            score = sum(1 for t in option_terms if t.lower() in fact_lower)
-            if score > best_score:
-                best_score = float(score)
-                best_fact = fact
-        return str(best_fact)[:240], best_score
-
-    @staticmethod
     def _option_overlap_terms(option_text: str) -> List[str]:
-        text = re.sub(r"^[A-D][\.、\s]*", "", str(option_text or "").strip(), flags=re.IGNORECASE)
+        text = CaseIndex._clean_option_text(option_text)
         terms = set(_semantic_phrases(text))
         for hints in DOMAIN_HINTS.values():
             terms.update(_hint_matches(text, hints))
         return sorted((t for t in terms if t and t not in GENERIC_PHRASES), key=lambda t: (-len(t), t))
+
+    @staticmethod
+    def _fact_excerpt_for_option(case: Dict[str, Any], option_text: str) -> tuple:
+        facts = case.get("facts") or []
+        if not facts:
+            return str(case.get("text_blob") or "")[:360], 0.0
+        option_terms = CaseIndex._option_overlap_terms(option_text)
+        if not option_terms:
+            return str(facts[0])[:360], 0.0
+        scored_facts = []
+        for idx, fact in enumerate(facts):
+            fact_text = str(fact or "")
+            fact_lower = fact_text.lower()
+            score = sum(1 for t in option_terms if t.lower() in fact_lower)
+            scored_facts.append((float(score), idx, fact_text))
+        scored_facts.sort(key=lambda item: (-item[0], item[1]))
+        selected = [fact for score, _, fact in scored_facts if score > 0][:3]
+        if not selected:
+            selected = [scored_facts[0][2]]
+        return "；".join(selected)[:420], scored_facts[0][0]
+
+    @staticmethod
+    def _chart_query_parts(structured: Dict[str, Any]) -> List[str]:
+        parts: List[str] = []
+        day_gan = structured.get("day_master_gan")
+        day_wuxing = structured.get("day_master_wuxing")
+        if day_gan:
+            parts.append(f"日主{day_gan}")
+        if day_wuxing:
+            parts.append(f"日主五行{day_wuxing}")
+        for gan_key, zhi_key in [
+            ("year_gan", "year_zhi"),
+            ("month_gan", "month_zhi"),
+            ("day_master_gan", "day_zhi"),
+            ("hour_gan", "hour_zhi"),
+        ]:
+            gan = structured.get(gan_key)
+            zhi = structured.get(zhi_key)
+            if gan or zhi:
+                parts.append(f"{gan or ''}{zhi or ''}")
+        wuxing_stats = structured.get("wuxing_stats") or {}
+        if isinstance(wuxing_stats, dict):
+            numeric = [(k, v) for k, v in wuxing_stats.items() if isinstance(v, (int, float)) and v > 0]
+            if numeric:
+                parts.append("五行" + ",".join(f"{k}{v}" for k, v in numeric))
+        return parts
+
+    @staticmethod
+    def _build_option_query(base_text: str, question: str, option_text: str, domain: Optional[str], structured: Dict[str, Any]) -> str:
+        clean_option = CaseIndex._clean_option_text(option_text)
+        terms = CaseIndex._option_overlap_terms(option_text)
+        parts = [
+            f"领域 {domain}" if domain else "",
+            str(question or ""),
+            f"选项 {clean_option}" if clean_option else "",
+            "关键词 " + " ".join(terms[:8]) if terms else "",
+            "命盘 " + " ".join(CaseIndex._chart_query_parts(structured)[:10]),
+            str(base_text or ""),
+        ]
+        return "。".join(part for part in parts if part)[:1400]
+
+    @staticmethod
+    def _rerank_passage(case: Dict[str, Any], option_text: str, domain: Optional[str]) -> str:
+        facts = case.get("facts") or []
+        fact_excerpt, _ = CaseIndex._fact_excerpt_for_option(case, option_text)
+        source_option = CaseIndex._source_answer_option_text(case)
+        parts = [
+            f"领域 {CaseIndex._primary_domain(case, domain)}",
+            f"命主 {case.get('name') or case.get('person_id') or ''}",
+            f"原答案 {source_option}" if source_option else "",
+            f"相关事实 {fact_excerpt}",
+            f"全部事实 {'；'.join(str(f) for f in facts[:6])}" if facts else "",
+        ]
+        return "。".join(part for part in parts if part)[:1200]
 
     def _score_option_evidence(self, case: Dict[str, Any], option_text: str) -> tuple:
         haystack = str(case.get("text_blob") or "")
@@ -773,7 +834,7 @@ class CaseIndex:
             return self.top_k_cases(option_features, k=k_pool)
 
         def dense_fn():
-            query = str(option_features.get("text_blob") or "")
+            query = str(option_features.get("option_query") or option_features.get("text_blob") or "")
             return self.top_k_cases_dense(query, k=k_pool)
 
         pool = hybrid_retrieval.hybrid_retrieve(
@@ -795,13 +856,15 @@ class CaseIndex:
             scored.append(item)
 
         if self._reranker_model:
-            query = str(option_features.get("text_blob") or "")
+            query = str(option_features.get("option_query") or option_features.get("text_blob") or "")
+            for item in scored:
+                item["rerank_passage"] = self._rerank_passage(item, option_text, option_features.get("domain"))
             reranked = case_reranker.rerank_candidates(
                 query=query,
                 candidates=scored,
                 model_name=self._reranker_model,
                 top_k=k_per_option,
-                text_key="fact_excerpt",
+                text_key="rerank_passage",
             )
             return reranked
 
@@ -840,8 +903,11 @@ class CaseIndex:
             query_text = " ".join(part for part in [str(question or ""), option_text] if part)
             option_structured = dict(base_structured)
             option_structured["query_text"] = query_text
+            option_query = self._build_option_query(base_text, str(question or ""), option_text, domain, option_structured)
             option_features = {
-                "text_blob": " ".join(part for part in [base_text, query_text] if part),
+                "text_blob": option_query,
+                "option_query": option_query,
+                "domain": domain,
                 "structured": option_structured,
             }
 
