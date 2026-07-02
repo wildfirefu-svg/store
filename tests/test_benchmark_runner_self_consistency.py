@@ -77,6 +77,9 @@ def test_run_model_benchmark_n_samples_majority_vote(monkeypatch, tmp_path):
     assert detail["aggregate"] == "majority"
     assert [s["predicted"] for s in detail["samples"]] == ["A", "B", "B"]
     assert detail["samples"][0]["raw"] == "最终答案：A"
+    # raw_answer must reflect the majority-vote winner's first matching sample raw,
+    # not samples[0] (which may be a minority vote).
+    assert detail["raw_answer"] == "最终答案：B"
 
 
 def test_run_model_benchmark_default_n_samples_stays_backward_compatible(monkeypatch, tmp_path):

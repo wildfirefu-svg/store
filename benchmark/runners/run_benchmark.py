@@ -336,8 +336,18 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                     n=n_samples,
                     temperatures=[sample_temperature] * n_samples,
                 )
-                answer = samples[0][0]
                 predicted = majority_vote([label for _, label in samples])
+                # Use the first sample whose predicted label matches the
+                # majority-vote winner as the canonical raw_answer so that
+                # downstream evidence/safety scoring and detail["raw_answer"]
+                # stay consistent with predicted_answer instead of possibly
+                # reflecting a minority-vote sample text.
+                answer = samples[0][0]
+                if predicted is not None:
+                    for raw, label in samples:
+                        if label == predicted:
+                            answer = raw
+                            break
                 sample_records = [{"raw": raw, "predicted": label} for raw, label in samples]
             else:
                 answer = call_model_sync(
