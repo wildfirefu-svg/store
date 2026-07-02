@@ -191,6 +191,7 @@ class CaseIndex:
         self._dense_cache_path = dense_cache_path
         self._dense_embeddings: Optional[np.ndarray] = None
         self._dense_case_ids: List[str] = []
+        self._dense_model_instance: Any = None
         if self._use_hybrid and self._dense_model:
             self._load_dense_index()
 
@@ -204,6 +205,10 @@ class CaseIndex:
             )
             self._dense_case_ids = [str(c.get("person_id") or "") for c in cases]
             self._dense_embeddings = embeddings
+            if self._dense_model != "tfidf":
+                from sentence_transformers import SentenceTransformer
+
+                self._dense_model_instance = SentenceTransformer(self._dense_model)
         except Exception as exc:
             import logging
 
@@ -213,6 +218,7 @@ class CaseIndex:
                 exc,
             )
             self._dense_embeddings = None
+            self._dense_model_instance = None
 
     # ------------------------------------------------------------ loading
     def _load(self, path: Path) -> List[Dict[str, Any]]:
@@ -716,16 +722,25 @@ class CaseIndex:
             return []
 
         try:
-            from sentence_transformers import SentenceTransformer
+            if self._dense_model == "tfidf":
+                from sklearn.feature_extraction.text import TfidfVectorizer
 
-            model = SentenceTransformer(self._dense_model)
-            q_emb = model.encode(
-                [query],
-                normalize_embeddings=True,
-                convert_to_numpy=True,
-            )
-            q_emb = np.asarray(q_emb, dtype=np.float32)
-            sims = (self._dense_embeddings @ q_emb.T).flatten()
+                # Re-fit the same char-level TF-IDF representation used during indexing.
+                texts = [str(c.get("text_blob") or "") for c in self._cases]
+                vectorizer = TfidfVectorizer(analyzer="char", ngram_range=(1, 2), max_features=512)
+                doc_matrix = vectorizer.fit_transform(texts)
+                q_matrix = vectorizer.transform([query])
+                sims = (doc_matrix @ q_matrix.T).toarray().flatten()
+            elif self._dense_model_instance is not None:
+                q_emb = self._dense_model_instance.encode(
+                    [query],
+                    normalize_embeddings=True,
+                    convert_to_numpy=True,
+                )
+                q_emb = np.asarray(q_emb, dtype=np.float32)
+                sims = (self._dense_embeddings @ q_emb.T).flatten()
+            else:
+                return []
         except Exception:
             return []
 
