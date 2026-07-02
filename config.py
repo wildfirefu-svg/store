@@ -11,9 +11,10 @@ API_PORT = int(os.environ.get("BAZI_API_PORT", "8000"))
 MCP_PORT = int(os.environ.get("BAZI_MCP_PORT", "8001"))
 
 # ---- CORS ----
-CORS_ORIGINS = os.environ.get("BAZI_CORS_ORIGINS", "*")
-# Split comma-separated origins into a list
-CORS_ORIGIN_LIST = [o.strip() for o in CORS_ORIGINS.split(",") if o.strip()]
+CORS_ORIGINS = os.environ.get("BAZI_CORS_ORIGINS", "")
+# Default when unset: only local origins. Production must be explicit.
+_DEFAULT_ORIGINS = "http://localhost:8000,http://127.0.0.1:8000,http://localhost"
+CORS_ORIGIN_LIST = [o.strip() for o in (CORS_ORIGINS or _DEFAULT_ORIGINS).split(",") if o.strip()]
 
 # ---- Rate limiting (per-IP sliding window) ----
 # Format: "path_prefix:max_requests,window_seconds"
@@ -53,10 +54,6 @@ IZTRO_TIMEOUT = int(os.environ.get("BAZI_IZTRO_TIMEOUT", "10"))
 
 # ---- Security ----
 ENV = os.environ.get("BAZI_ENV", "development").lower()
-ALLOW_QUERY_API_KEY = os.environ.get(
-    "BAZI_ALLOW_QUERY_API_KEY",
-    "1" if ENV != "production" else "0",
-) in ("1", "true", "True", "yes", "YES")
 
 # Maximum request body size in bytes (default 1 MB)
 MAX_BODY_SIZE = int(os.environ.get("BAZI_MAX_BODY_SIZE", str(1024 * 1024)))

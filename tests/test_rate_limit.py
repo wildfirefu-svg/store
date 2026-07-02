@@ -170,23 +170,17 @@ class TestCacheInvalidation:
 
 
 
-def test_query_api_key_can_be_disabled(monkeypatch):
+def test_query_api_key_rejected(monkeypatch):
+    """Query parameter API key is always rejected (feature removed)."""
     raw_client = TestClient(api.app)
-    monkeypatch.setattr(api, "_BAZI_API_KEY", "secret")
-    monkeypatch.setattr(api, "ALLOW_QUERY_API_KEY", False)
-
-    resp = raw_client.get("/api/charts?api_key=secret")
+    monkeypatch.setattr(api, "_BAZI_API_KEY", "test-key-123")
+    resp = raw_client.get("/api/charts?api_key=test-key-123")
     assert resp.status_code == 401
-    assert "Authorization" in resp.json()["detail"]
-
-    resp = raw_client.get("/api/charts", headers={"Authorization": "Bearer secret"})
-    assert resp.status_code == 200
 
 
-def test_query_api_key_can_be_enabled(monkeypatch):
+def test_bearer_token_accepted(monkeypatch):
+    """Bearer token in Authorization header should still work."""
     raw_client = TestClient(api.app)
     monkeypatch.setattr(api, "_BAZI_API_KEY", "secret")
-    monkeypatch.setattr(api, "ALLOW_QUERY_API_KEY", True)
-
-    resp = raw_client.get("/api/charts?api_key=secret")
+    resp = raw_client.get("/api/charts", headers={"Authorization": "Bearer secret"})
     assert resp.status_code == 200

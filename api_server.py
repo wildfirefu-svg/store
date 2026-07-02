@@ -38,7 +38,7 @@ import data_store
 from config import (
     API_PORT, CORS_ORIGIN_LIST, CORS_ORIGINS,
     RATE_LIMITS, RATE_LIMIT_EXEMPT, RATE_LIMIT_CLEAN_INTERVAL,
-    CHART_CACHE_SIZE, MAX_BODY_SIZE, ALLOW_QUERY_API_KEY, LOG_LEVEL, LOG_FILE,
+    CHART_CACHE_SIZE, MAX_BODY_SIZE, LOG_LEVEL, LOG_FILE,
 )
 
 logging.basicConfig(
@@ -186,9 +186,8 @@ async def auth_middleware(request: Request, call_next):
         if token == _BAZI_API_KEY:
             return await call_next(request)
 
-    # Check query parameter
-    if ALLOW_QUERY_API_KEY and request.query_params.get("api_key") == _BAZI_API_KEY:
-        return await call_next(request)
+    # Query-string API key is not accepted: it would leak into access logs
+    # and browser history. Clients must use the Authorization header.
 
     return JSONResponse(
         status_code=401,

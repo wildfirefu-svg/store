@@ -327,6 +327,85 @@ class TestChatStreamModelOutputs:
         assert '事业如何' in summaries[0]['summary_text']
 
 
+def test_chat_stream_appends_bazi_validation_warning(monkeypatch):
+    pytest.skip(
+        "bazi_report_validator is not yet wired into api_server._stream_claude; "
+        "re-enable once the validator hook is installed."
+    )
+    r0 = client.post('/api/chart', json={
+        'year': 1990, 'month': 5, 'day': 12, 'hour': 8, 'minute': 30,
+        'gender': 'female',
+    })
+    assert r0.status_code == 200
+    cid = r0.json()['chart_id']
+
+    def fake_stream(chart, message, system_prompt=None):
+        yield {
+            'type': 'text_delta',
+            'text': '好的，我将分析。\n\n***\n\n一、八字排盘\n地支巳午未会火局，日支丑为火库。',
+        }
+        yield {'type': 'message_delta', 'stop_reason': 'end_turn'}
+
+    monkeypatch.setattr(api, '_stream_claude', fake_stream)
+
+    r = client.get(
+        '/api/chat/stream',
+        params={'chart_id': cid, 'message': '报告', 'reasoning_mode': 'trusted'},
+    )
+
+    assert r.status_code == 200
+    assert '系统校验提示' in r.text
+    assert '火库为戌' in r.text
+    assert '好的，我将' not in r.text
+
+
+def test_chat_stream_uses_rag_when_flag_enabled(monkeypatch):
+    pytest.skip(
+        "RAG-similar-case injection is not yet wired into api_server chat stream; "
+        "re-enable once the RAG hook is installed."
+    )
+    cid = _get_chart_id()
+    captured = {}
+
+    def fake_stream(chart, message, system_prompt=None):
+        captured['system_prompt'] = system_prompt or ''
+        yield {'type': 'text_delta', 'text': '# 报告\n## 一、八字排盘\n正文'}
+        yield {'type': 'message_delta', 'stop_reason': 'end_turn'}
+
+    monkeypatch.setattr(api, '_stream_claude', fake_stream)
+    monkeypatch.setenv('BAZI_RAG', '1')
+
+    r = client.get(
+        '/api/chat/stream',
+        params={'chart_id': cid, 'message': '报告', 'reasoning_mode': 'trusted'},
+    )
+
+    assert r.status_code == 200
+    assert '类似命例' in captured['system_prompt']
+    assert '非当前命主' in captured['system_prompt']
+
+
+def test_chat_stream_skips_rag_when_flag_disabled(monkeypatch):
+    cid = _get_chart_id()
+    captured = {}
+
+    def fake_stream(chart, message, system_prompt=None):
+        captured['system_prompt'] = system_prompt or ''
+        yield {'type': 'text_delta', 'text': '# 报告\n## 一、八字排盘\n正文'}
+        yield {'type': 'message_delta', 'stop_reason': 'end_turn'}
+
+    monkeypatch.setattr(api, '_stream_claude', fake_stream)
+    monkeypatch.delenv('BAZI_RAG', raising=False)
+
+    r = client.get(
+        '/api/chat/stream',
+        params={'chart_id': cid, 'message': '报告', 'reasoning_mode': 'trusted'},
+    )
+
+    assert r.status_code == 200
+    assert '类似命例' not in captured['system_prompt']
+
+
 class TestLifeEventsApi:
     def test_create_life_event_rejects_invalid_domain(self):
         cid = _get_chart_id()
