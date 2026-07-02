@@ -168,6 +168,12 @@ def _run_one(cfg: Dict[str, Any], repeat: int, args: argparse.Namespace) -> "tup
         if args.shuffle_seed is None:
             raise SystemExit("--shuffle-options requires --shuffle-seed")
         command.extend(["--shuffle-options", "--shuffle-seed", str(args.shuffle_seed)])
+    if getattr(args, "n_samples", 1) and args.n_samples > 1:
+        command.extend(["--n-samples", str(args.n_samples)])
+    if getattr(args, "sample_temperature", None) is not None:
+        command.extend(["--sample-temperature", str(args.sample_temperature)])
+    if getattr(args, "aggregate", None):
+        command.extend(["--aggregate", str(args.aggregate)])
     subprocess.run(command, check=True, env=env)
     return details, False
 
@@ -262,6 +268,9 @@ def main(argv=None):
     parser.add_argument("--option-evidence-k", type=int, default=2)
     parser.add_argument("--shuffle-options", action="store_true", help="Pass --shuffle-options to run_benchmark.py")
     parser.add_argument("--shuffle-seed", type=int, default=None, help="Pass --shuffle-seed to run_benchmark.py; required when --shuffle-options is set")
+    parser.add_argument("--n-samples", type=int, default=1, help="Pass --n-samples to run_benchmark.py (default 1 disables self-consistency)")
+    parser.add_argument("--sample-temperature", type=float, default=None, help="Pass --sample-temperature to run_benchmark.py")
+    parser.add_argument("--aggregate", default=None, choices=[None, "majority"], help="Pass --aggregate to run_benchmark.py")
     args = parser.parse_args(argv)
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)

@@ -10,6 +10,7 @@ if __package__ in (None, ''):
 
 from benchmark.scorers.choice_accuracy import load_jsonl, score_choice_answers, extract_choice, extract_choice_with_meta
 from benchmark.runners.shuffle_options import shuffle_options as _shuffle_options_fn, unshuffle_predicted_answer
+from benchmark.runners.self_consistency import majority_vote, sample_answers
 from benchmark.formatters.baziqa_prompt import (
     format_direct_choice_prompt,
     format_structured_reasoning_prompt,
@@ -282,9 +283,14 @@ def _retrieval_call_kwargs(rag_k, retrieval_mode='legacy', option_evidence_k=2):
     return kwargs
 
 
-def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None):
+def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None, n_samples=1, sample_temperature=0.4, aggregate='majority'):
     if method == 'multi_turn':
         return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases, temperature=temperature, case_details_jsonl=case_details_jsonl, rag_k=rag_k, config_id=config_id, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k)
+
+    if not isinstance(n_samples, int) or n_samples < 1:
+        raise ValueError(f"run_model_benchmark: n_samples must be a positive int, got {n_samples!r}")
+    if aggregate not in {"majority"}:
+        raise ValueError(f"run_model_benchmark: aggregate {aggregate!r} is not supported (expected 'majority')")
 
     if shuffle_options:
         if shuffle_seed is None:
@@ -310,15 +316,40 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
         print(f"  [{i+1}/{len(limited_cases)}] {case_id}")
 
         prompt = build_benchmark_prompt(case, method=method)
-        try:
-            answer = call_model_sync(
+
+        def _do_one_call(call_temperature):
+            raw = call_model_sync(
                 prompt,
                 provider,
                 model,
                 case=case,
-                temperature=temperature,
+                temperature=call_temperature,
                 **_retrieval_call_kwargs(rag_k, retrieval_mode, option_evidence_k),
             )
+            parsed = extract_choice_with_meta(raw)
+            return raw, parsed.get('choice')
+
+        try:
+            if n_samples > 1:
+                samples = sample_answers(
+                    _do_one_call,
+                    n=n_samples,
+                    temperatures=[sample_temperature] * n_samples,
+                )
+                answer = samples[0][0]
+                predicted = majority_vote([label for _, label in samples])
+                sample_records = [{"raw": raw, "predicted": label} for raw, label in samples]
+            else:
+                answer = call_model_sync(
+                    prompt,
+                    provider,
+                    model,
+                    case=case,
+                    temperature=temperature,
+                    **_retrieval_call_kwargs(rag_k, retrieval_mode, option_evidence_k),
+                )
+                predicted = None
+                sample_records = None
         except RuntimeError as e:
             err_msg = str(e)[:120]
             failed_cases.append({'case_id': case_id, 'error': err_msg})
@@ -369,7 +400,8 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
 
         expected = extract_choice(case.get('answer'))
         meta = extract_choice_with_meta(answer)
-        predicted = meta['choice']
+        if predicted is None:
+            predicted = meta['choice']
         rag_trace = _resolve_rag_trace(case, k=rag_k)
         option_evidence = {}
         option_evidence_coverage = {}
@@ -401,6 +433,10 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
             detail["answer_label_map"] = label_map
             detail["original_expected_answer"] = case.get('_original_answer')
             detail["original_predicted_answer"] = unshuffle_predicted_answer(predicted, label_map)
+        if sample_records is not None:
+            detail["n_samples"] = n_samples
+            detail["aggregate"] = aggregate
+            detail["samples"] = sample_records
         case_details.append(detail)
         _append_jsonl(case_details_jsonl, detail)
 
@@ -528,6 +564,9 @@ def main(argv=None):
     parser.add_argument('--config-id', default=None, help='Optional retrieval ablation config id; persisted into case_details.config_id')
     parser.add_argument('--shuffle-options', action='store_true', help='Randomize option order per case using --shuffle-seed for reproducibility')
     parser.add_argument('--shuffle-seed', type=int, default=None, help='Integer seed required when --shuffle-options is enabled')
+    parser.add_argument('--n-samples', type=int, default=1, help='Self-consistency: number of samples per case (default: 1 disables SC)')
+    parser.add_argument('--sample-temperature', type=float, default=0.4, help='Sampling temperature used when --n-samples > 1')
+    parser.add_argument('--aggregate', default='majority', choices=['majority'], help='Aggregation strategy over samples')
     args = parser.parse_args(argv)
 
     if args.rag:
@@ -557,6 +596,9 @@ def main(argv=None):
             option_evidence_k=args.option_evidence_k,
             shuffle_options=args.shuffle_options,
             shuffle_seed=args.shuffle_seed,
+            n_samples=args.n_samples,
+            sample_temperature=args.sample_temperature,
+            aggregate=args.aggregate,
         )
 
         model_cases = model_result['cases']
