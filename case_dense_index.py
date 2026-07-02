@@ -25,15 +25,43 @@ def encode_cases(
     model_name: str = DEFAULT_MODEL,
     batch_size: int = 32,
 ) -> np.ndarray:
-    """Encode a list of cases into normalized dense vectors."""
-    from sentence_transformers import SentenceTransformer
+    """Encode a list of cases into normalized dense vectors.
 
+    When ``model_name == "tfidf"`` the function falls back to a lightweight
+    scikit-learn TF-IDF vectorizer so the hybrid pipeline can be validated in
+    environments where ``sentence-transformers`` is not available. Real
+    semantic experiments should use ``BAAI/bge-small-zh-v1.5``.
+    """
     if not cases:
-        # bge-small-zh-v1.5 outputs 512-dimensional vectors.
         return np.zeros((0, 512), dtype=np.float32)
 
-    model = SentenceTransformer(model_name)
     texts = [str(c.get("text_blob") or "") for c in cases]
+
+    if model_name == "tfidf":
+        import re
+        from sklearn.feature_extraction.text import TfidfVectorizer
+
+        _token_re = re.compile(r"[\u4e00-\u9fa5A-Za-z0-9]+")
+
+        def _tokenize(text: str) -> str:
+            tokens: list[str] = []
+            for chunk in _token_re.findall(text):
+                if re.match(r"[\u4e00-\u9fa5]+", chunk):
+                    tokens.extend(list(chunk))
+                else:
+                    tokens.append(chunk.lower())
+            return " ".join(tokens)
+
+        vectorizer = TfidfVectorizer(analyzer="char", ngram_range=(1, 2), max_features=512)
+        embeddings = vectorizer.fit_transform(texts).toarray().astype(np.float32)
+        # L2-normalize each row so cosine similarity == dot product.
+        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+        embeddings = embeddings / np.maximum(norms, 1e-12)
+        return embeddings
+
+    from sentence_transformers import SentenceTransformer
+
+    model = SentenceTransformer(model_name)
     embeddings = model.encode(
         texts,
         batch_size=batch_size,
@@ -125,8 +153,14 @@ def build_or_load(
     corpus_path: Path,
     cache_path: Optional[Path] = None,
     model_name: str = DEFAULT_MODEL,
+    cases: Optional[List[Dict[str, Any]]] = None,
 ) -> Tuple[List[Dict[str, Any]], np.ndarray]:
-    """Return (cases, embeddings), rebuilding from the corpus when needed."""
+    """Return (cases, embeddings), rebuilding from the corpus when needed.
+
+    ``cases`` can be preloaded/aggregated externally (e.g. by ``CaseIndex``)
+    so that the dense index row order matches ``CaseIndex._cases`` exactly.
+    When ``cases`` is None the raw corpus JSONL rows are used.
+    """
     corpus_path = Path(corpus_path)
     if cache_path is None:
         model_slug = model_name.replace("/", "_")
@@ -136,7 +170,8 @@ def build_or_load(
     if is_cache_valid(cache_path, corpus_path, model_name):
         return load_dense_cache(cache_path)[:2]
 
-    cases = _load_corpus(corpus_path)
+    if cases is None:
+        cases = _load_corpus(corpus_path)
     embeddings = encode_cases(cases, model_name=model_name)
     save_dense_cache(
         cache_path,

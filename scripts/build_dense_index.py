@@ -13,6 +13,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from case_dense_index import DEFAULT_MODEL, build_or_load
+from case_index import CaseIndex
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -21,7 +22,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument(
         "--model",
         default=DEFAULT_MODEL,
-        help="sentence-transformers 模型名",
+        help="sentence-transformers 模型名；特殊值 'tfidf' 使用 sklearn TF-IDF fallback",
     )
     parser.add_argument(
         "--cache",
@@ -46,10 +47,19 @@ def main(argv: Optional[List[str]] = None) -> int:
     os.environ.setdefault("HF_HUB_OFFLINE", "1")
     os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
+    # Aggregate the corpus with CaseIndex so that the dense index row order
+    # matches the rows CaseIndex will use at retrieval time.
+    index = CaseIndex(corpus_path)
+    aggregated_cases = [
+        {"person_id": c.get("person_id"), "text_blob": c.get("text_blob")}
+        for c in index._cases
+    ]
+
     cases, embeddings = build_or_load(
         corpus_path=corpus_path,
         cache_path=cache_path,
         model_name=args.model,
+        cases=aggregated_cases,
     )
     print(
         f"Built dense index: {len(cases)} cases, "

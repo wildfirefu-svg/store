@@ -69,6 +69,7 @@ def evaluate(
     retrieval_mode: str,
     dense_model: Optional[str],
     reranker_model: Optional[str],
+    dense_cache_path: Optional[Path] = None,
     option_evidence_k: int = 2,
 ) -> Dict[str, Any]:
     os.environ["BAZI_RAG"] = "1"
@@ -79,6 +80,7 @@ def evaluate(
         corpus_path,
         use_hybrid=(retrieval_mode == "option_grounded_hybrid"),
         dense_model=dense_model,
+        dense_cache_path=dense_cache_path,
         reranker_model=reranker_model,
     )
 
@@ -160,7 +162,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         choices=["option_grounded", "option_grounded_hybrid"],
         help="检索模式",
     )
-    parser.add_argument("--dense-model", default=None, help="例如 BAAI/bge-small-zh-v1.5")
+    parser.add_argument("--dense-model", default=None, help="例如 BAAI/bge-small-zh-v1.5 或 tfidf")
+    parser.add_argument("--dense-cache", default=None, help="稠密索引缓存路径（默认：.cache/dense_<model>.pkl）")
     parser.add_argument("--reranker-model", default=None, help="例如 BAAI/bge-reranker-v2-m3")
     parser.add_argument("--option-evidence-k", type=int, default=2)
     parser.add_argument("--output", default=None, help="JSON 输出路径（默认 stdout）")
@@ -172,6 +175,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         retrieval_mode=args.retrieval_mode,
         dense_model=args.dense_model,
         reranker_model=args.reranker_model,
+        dense_cache_path=Path(args.dense_cache) if args.dense_cache else None,
         option_evidence_k=args.option_evidence_k,
     )
 
