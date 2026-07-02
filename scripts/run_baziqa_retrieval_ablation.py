@@ -264,7 +264,7 @@ def main(argv=None):
     parser.add_argument("--method", default="structured_reasoning")
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--rag-k", type=int, default=2)
-    parser.add_argument("--retrieval-mode", default="legacy", choices=["legacy", "option_grounded"])
+    parser.add_argument("--retrieval-mode", default="legacy", choices=["legacy", "option_grounded", "option_grounded_hybrid"])
     parser.add_argument("--option-evidence-k", type=int, default=2)
     parser.add_argument("--shuffle-options", action="store_true", help="Pass --shuffle-options to run_benchmark.py")
     parser.add_argument("--shuffle-seed", type=int, default=None, help="Pass --shuffle-seed to run_benchmark.py; required when --shuffle-options is set")

@@ -68,3 +68,13 @@
   embedding_model: ""
   retrieval_mode: option_grounded
   option_evidence_k: 2
+
+- id: option_grounded_hybrid
+  bm25: true
+  structured: true
+  semantic: true
+  tfidf_vector: false
+  embedding_vector: false
+  embedding_model: ""
+  retrieval_mode: option_grounded_hybrid
+  option_evidence_k: 2

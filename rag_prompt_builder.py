@@ -188,7 +188,7 @@ def build_system_prompt(
         return full[:MAX_TOTAL_CHARS]
 
     features = extract(chart)
-    if retrieval_mode == "option_grounded":
+    if retrieval_mode in ("option_grounded", "option_grounded_hybrid"):
         option_list = list(options or [])
         query_question = str(question or chart.get("query_text") or "")
         structured = features.get("structured") or {}
@@ -199,6 +199,7 @@ def build_system_prompt(
             options=option_list,
             domain=domain,
             k_per_option=option_evidence_k,
+            retrieval_mode=retrieval_mode,
         )
         injection = _format_option_evidence_block(option_evidence, option_list)
         return _compose_prompt(base, fewshot_block, injection)

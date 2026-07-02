@@ -569,7 +569,7 @@ def main(argv=None):
     parser.add_argument('--case-details-jsonl', default='', help='Optional JSONL path for full per-case predictions and RAG trace')
     parser.add_argument('--temperature', type=float, default=0.0, help='Benchmark model temperature')
     parser.add_argument('--rag-k', type=int, default=2, help='Number of retrieved RAG cases to inject (default: 2)')
-    parser.add_argument('--retrieval-mode', default='legacy', choices=['legacy', 'option_grounded'], help='Retrieval prompt/trace mode')
+    parser.add_argument('--retrieval-mode', default='legacy', choices=['legacy', 'option_grounded', 'option_grounded_hybrid'], help='Retrieval prompt/trace mode')
     parser.add_argument('--option-evidence-k', type=int, default=2, help='Number of option-grounded evidence items per answer option')
     parser.add_argument('--config-id', default=None, help='Optional retrieval ablation config id; persisted into case_details.config_id')
     parser.add_argument('--shuffle-options', action='store_true', help='Randomize option order per case using --shuffle-seed for reproducibility')
