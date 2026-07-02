@@ -19,6 +19,10 @@ import numpy as np
 
 from bazi_features import extract as extract_bazi_features
 
+import case_dense_index
+import hybrid_retrieval
+import case_reranker
+
 
 HOLDOUT_MARKERS = ("holdout", "_holdout")
 
@@ -156,6 +160,11 @@ class CaseIndex:
         self,
         corpus_path: Path,
         embed_fn: Optional[Callable[[str], List[float]]] = None,
+        dense_model: Optional[str] = None,
+        dense_cache_path: Optional[Path] = None,
+        use_hybrid: bool = False,
+        rrf_k: int = 60,
+        reranker_model: Optional[str] = None,
     ):
         path = Path(corpus_path)
         name = path.name.lower()
@@ -173,6 +182,37 @@ class CaseIndex:
         self._doc_tokens = [_tokenize(c["text_blob"]) for c in self._cases]
         self._idf = self._build_idf(self._doc_tokens)
         self._build_vector_index()
+
+        # Hybrid retrieval state
+        self._use_hybrid = use_hybrid
+        self._rrf_k = rrf_k
+        self._reranker_model = reranker_model
+        self._dense_model = dense_model
+        self._dense_cache_path = dense_cache_path
+        self._dense_embeddings: Optional[np.ndarray] = None
+        self._dense_case_ids: List[str] = []
+        if self._use_hybrid and self._dense_model:
+            self._load_dense_index()
+
+    def _load_dense_index(self) -> None:
+        """Load or build the dense embedding index for hybrid retrieval."""
+        try:
+            cases, embeddings = case_dense_index.build_or_load(
+                corpus_path=self.path,
+                cache_path=self._dense_cache_path,
+                model_name=self._dense_model,
+            )
+            self._dense_case_ids = [str(c.get("person_id") or "") for c in cases]
+            self._dense_embeddings = embeddings
+        except Exception as exc:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Failed to load dense index for %s: %s; hybrid dense path disabled",
+                self.path,
+                exc,
+            )
+            self._dense_embeddings = None
 
     # ------------------------------------------------------------ loading
     def _load(self, path: Path) -> List[Dict[str, Any]]:
@@ -664,6 +704,102 @@ class CaseIndex:
             "source_answer_option_text": self._source_answer_option_text(case),
         }
 
+    def top_k_cases_dense(
+        self,
+        query: str,
+        k: int = 20,
+    ) -> List[Dict[str, Any]]:
+        """Retrieve top-k cases using the dense embedding index."""
+        if self._dense_embeddings is None or not query:
+            return []
+        if len(self._dense_case_ids) != len(self._cases):
+            return []
+
+        try:
+            from sentence_transformers import SentenceTransformer
+
+            model = SentenceTransformer(self._dense_model)
+            q_emb = model.encode(
+                [query],
+                normalize_embeddings=True,
+                convert_to_numpy=True,
+            )
+            q_emb = np.asarray(q_emb, dtype=np.float32)
+            sims = (self._dense_embeddings @ q_emb.T).flatten()
+        except Exception:
+            return []
+
+        indexed_sims = list(enumerate(sims.tolist()))
+        indexed_sims.sort(
+            key=lambda x: (
+                -x[1],
+                self._cases[x[0]].get("person_id") or "",
+            )
+        )
+
+        out: List[Dict[str, Any]] = []
+        for idx, score in indexed_sims[:k]:
+            case = dict(self._cases[idx])
+            case["_score"] = round(float(score), 6)
+            case["match_reasons"] = [f"dense_sim:{score:.3f}"]
+            out.append(case)
+        return out
+
+    def _option_evidence_hybrid(
+        self,
+        option_features: Dict[str, Any],
+        option_text: str,
+        k_per_option: int = 2,
+    ) -> List[Dict[str, Any]]:
+        """Hybrid retrieval for a single option: sparse + dense RRF, optional reranker."""
+        k_pool = max(k_per_option * 10, 20)
+
+        def sparse_fn():
+            return self.top_k_cases(option_features, k=k_pool)
+
+        def dense_fn():
+            query = str(option_features.get("text_blob") or "")
+            return self.top_k_cases_dense(query, k=k_pool)
+
+        pool = hybrid_retrieval.hybrid_retrieve(
+            sparse_fn=sparse_fn,
+            dense_fn=dense_fn,
+            top_k=k_pool,
+            k=self._rrf_k,
+        )
+
+        if not pool:
+            return []
+
+        scored = []
+        for case in pool:
+            item = dict(case)
+            option_score, option_reasons = self._score_option_evidence(item, option_text)
+            item["_score"] = round(float(item.get("_score") or 0.0) + option_score, 6)
+            item["match_reasons"] = list(item.get("match_reasons") or []) + option_reasons
+            scored.append(item)
+
+        if self._reranker_model:
+            query = str(option_features.get("text_blob") or "")
+            reranked = case_reranker.rerank_candidates(
+                query=query,
+                candidates=scored,
+                model_name=self._reranker_model,
+                top_k=k_per_option,
+                text_key="fact_excerpt",
+            )
+            return reranked
+
+        scored.sort(
+            key=lambda case: (
+                -float(case.get("_score") or 0.0),
+                str(case.get("person_id") or ""),
+                str(case.get("birth_year") or ""),
+                str(case.get("name") or ""),
+            )
+        )
+        return scored[:k_per_option]
+
     def option_evidence(
         self,
         features: Dict[str, Any],
@@ -671,6 +807,7 @@ class CaseIndex:
         options: List[str],
         domain: Optional[str] = None,
         k_per_option: int = 2,
+        retrieval_mode: str = "option_grounded",
     ) -> Dict[str, List[Dict[str, Any]]]:
         labels = [self._option_label(i, option) for i, option in enumerate((options or [])[:4])]
         while len(labels) < 4:
@@ -692,21 +829,29 @@ class CaseIndex:
                 "text_blob": " ".join(part for part in [base_text, query_text] if part),
                 "structured": option_structured,
             }
-            ranked = []
-            for case in self.top_k_cases(option_features, k=candidate_count):
-                item = dict(case)
-                option_score, option_reasons = self._score_option_evidence(item, option_text)
-                item["_score"] = round(float(item.get("_score") or 0.0) + option_score, 6)
-                item["match_reasons"] = list(item.get("match_reasons") or []) + option_reasons
-                ranked.append(item)
-            ranked.sort(
-                key=lambda case: (
-                    -float(case.get("_score") or 0.0),
-                    str(case.get("person_id") or ""),
-                    str(case.get("birth_year") or ""),
-                    str(case.get("name") or ""),
+
+            if retrieval_mode == "option_grounded_hybrid" and self._use_hybrid:
+                ranked = self._option_evidence_hybrid(
+                    option_features,
+                    option_text,
+                    k_per_option=k_per_option,
                 )
-            )
+            else:
+                ranked = []
+                for case in self.top_k_cases(option_features, k=candidate_count):
+                    item = dict(case)
+                    option_score, option_reasons = self._score_option_evidence(item, option_text)
+                    item["_score"] = round(float(item.get("_score") or 0.0) + option_score, 6)
+                    item["match_reasons"] = list(item.get("match_reasons") or []) + option_reasons
+                    ranked.append(item)
+                ranked.sort(
+                    key=lambda case: (
+                        -float(case.get("_score") or 0.0),
+                        str(case.get("person_id") or ""),
+                        str(case.get("birth_year") or ""),
+                        str(case.get("name") or ""),
+                    )
+                )
             option_candidates[label] = ranked
 
         evidence: Dict[str, List[Dict[str, Any]]] = {}
