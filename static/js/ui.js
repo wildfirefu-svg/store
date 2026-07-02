@@ -161,8 +161,8 @@ export function addChatMsg(role, text, tool) {
     const w = c.querySelector('.chat-welcome'); if (w) w.remove();
     const d = document.createElement('div');
     d.className = 'chat-msg ' + (role==='user'?'user':role==='system'?'system':'agent');
-    const safeText = role === 'user' ? _escHtml(text) : text;
-    d.innerHTML = '<div class="sender">' + (role==='user'?'您':role==='system'?'系统':'玄机子') + (tool?' <span class="tool-tag">🔧 '+tool+'</span>':'') + '</div><div class="bubble">' + safeText + '</div>';
+    const safeText = _escHtml(text);
+    d.innerHTML = '<div class="sender">' + _escHtml(role==='user'?'您':role==='system'?'系统':'玄机子') + (tool?' <span class="tool-tag">🔧 '+_escHtml(tool)+'</span>':'') + '</div><div class="bubble">' + safeText + '</div>';
     c.appendChild(d);
     const cur = MingzhuManager.getCurrent();
     if (cur && role !== 'system') { ChatHistory.append(cur.chart_id, role, text, tool); }

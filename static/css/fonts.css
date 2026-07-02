@@ -1,0 +1,8 @@
+:root {
+    --font-sans: "Noto Sans TC", "Microsoft YaHei", "PingFang SC", "Segoe UI", Arial, sans-serif;
+    --font-serif: "Noto Serif TC", "Songti SC", "SimSun", serif;
+}
+
+body {
+    font-family: var(--font-sans);
+}

@@ -131,9 +131,9 @@ document.getElementById('chat-send-btn').addEventListener('click', function() {
         return;
     }
 
+    const prompt = _expandPrompt(text);
     var isDeep = window._forceDeepReport || false;
     window._forceDeepReport = false;
-    const prompt = _expandPrompt(text);
     addChatMsg('user', text);
     inp.value = ''; inp.style.height = 'auto';
     _sendWithStream(cur.chart_id, prompt, null, isDeep ? 'deep_report' : null);
