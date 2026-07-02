@@ -126,3 +126,23 @@ def test_load_and_normalize_rejects_missing_fortune_when_astro_requested():
     _require_impl()
     with pytest.raises(ValueError):
         load_and_normalize(str(DATA_FIXTURE), include_astro=True)
+
+
+def test_load_and_normalize_prefixes_bare_case_ids(tmp_path):
+    _require_impl()
+    bare = tmp_path / "bare.json"
+    bare.write_text(
+        '[{"case_id": "q1_2025_001", "year": "2025", "category": "\u4e8b\u4e1a",'
+        ' "question": "?", "options": ["A. a", "B. b", "C. c", "D. d"], "answer": "A"}]',
+        encoding="utf-8",
+    )
+    rows = load_and_normalize(str(bare))
+    assert rows[0]["case_id"] == "mingli_q1_2025_001"
+
+
+def test_load_and_normalize_preserves_existing_mingli_prefix():
+    _require_impl()
+    rows = load_and_normalize(str(DATA_FIXTURE))
+    for row in rows:
+        assert row["case_id"].startswith("mingli_")
+        assert not row["case_id"].startswith("mingli_mingli_")

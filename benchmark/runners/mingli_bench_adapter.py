@@ -77,6 +77,12 @@ def load_and_normalize(
         case_id = entry.get("case_id")
         if not case_id:
             continue
+        # Guard against case_id collisions with the baziqa dataset by
+        # prepending a namespace prefix. Fixtures / already-namespaced ids
+        # pass through unchanged.
+        case_id = str(case_id)
+        if not case_id.startswith("mingli_"):
+            case_id = f"mingli_{case_id}"
         question = entry.get("question") or ""
         options = list(entry.get("options") or [])
         answer = entry.get("answer") or ""
