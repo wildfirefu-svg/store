@@ -28,6 +28,7 @@ _v2*
 debug.log
 .agents/
 .codex/
+.qoder/
 
 build/
 dist/
@@ -40,3 +41,9 @@ quality/model_quality_report.json
 .tmp/
 benchmark/outputs/baziqa_smoke_*.md
 benchmark/outputs/run_*.md
+
+# 真实 BaziQA 数据集导入产物 (从 F:\project\BaziQA 本地生成，不入仓)
+benchmark/datasets/baziqa_contest8_*.jsonl
+
+# smoke 脚本自动生成的 fixture jsonl (源 fixture 是 .json)
+tests/fixtures/baziqa/contest8_sample.jsonl
