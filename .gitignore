@@ -29,6 +29,7 @@ debug.log
 .agents/
 .codex/
 .qoder/
+.vscode/
 
 build/
 dist/
