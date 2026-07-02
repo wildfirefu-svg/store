@@ -1607,7 +1607,9 @@ INTERNATIONAL_CITY_COORDINATES = {
     'Seoul': (126.978, 37.566), 'Busan': (129.076, 35.180),
     'Pyongyang': (125.738, 39.039), 'Singapore': (103.820, 1.352),
     'Singapore City': (103.820, 1.352), 'Bangkok': (100.502, 13.754),
-    'Kuala Lumpur': (101.687, 3.140), 'Jakarta': (106.846, -6.209),
+    'Kuala Lumpur': (101.687, 3.140), 'Malaysia': (101.687, 3.140),
+    '吉隆坡': (101.687, 3.140), '马来西亚': (101.687, 3.140),
+    'Jakarta': (106.846, -6.209),
     'Manila': (120.984, 14.599), 'Hanoi': (105.834, 21.028),
     'Ho Chi Minh City': (106.629, 10.823), 'Saigon': (106.629, 10.823),
     'Mumbai': (72.878, 19.076), 'Bombay': (72.878, 19.076),
@@ -1702,7 +1704,8 @@ CITY_TIMEZONES = {
     'Tokyo': 9, 'Osaka': 9, 'Kyoto': 9, 'Nagoya': 9, 'Yokohama': 9, 'Sapporo': 9,
     'Seoul': 9, 'Busan': 9, 'Pyongyang': 9,
     'Singapore': 8, 'Singapore City': 8, 'Bangkok': 7,
-    'Kuala Lumpur': 8, 'Jakarta': 7, 'Manila': 8,
+    'Kuala Lumpur': 8, 'Malaysia': 8, '吉隆坡': 8, '马来西亚': 8,
+    'Jakarta': 7, 'Manila': 8,
     'Hanoi': 7, 'Ho Chi Minh City': 7, 'Saigon': 7,
     'Mumbai': 5.5, 'Bombay': 5.5, 'New Delhi': 5.5, 'Delhi': 5.5,
     'Kolkata': 5.5, 'Calcutta': 5.5, 'Bangalore': 5.5,
@@ -1794,8 +1797,13 @@ def _find_location_info(location_str):
         }
         return lon, 'chinese_city', 8
 
-    # Search international cities (substring match on city name)
-    for city, (lon, lat) in INTERNATIONAL_CITY_COORDINATES.items():
+    # Search international cities (substring match on city name).
+    # Iterate longest-first so short aliases (e.g. "LA") do not accidentally
+    # match inside longer strings (e.g. "Malaysia" contains "la").
+    for city, (lon, lat) in sorted(
+        INTERNATIONAL_CITY_COORDINATES.items(),
+        key=lambda item: -len(item[0]),
+    ):
         if city.lower() in location_str.lower():
             tz = CITY_TIMEZONES.get(city, 0)
             # Also try country-level fallback
