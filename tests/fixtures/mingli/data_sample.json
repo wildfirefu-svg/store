@@ -1,0 +1,50 @@
+[
+  {
+    "case_id": "mingli_fixture_c001_q1",
+    "year": "2025",
+    "category": "事业",
+    "question": "此命事业方向?",
+    "options": ["A. 稳定组织", "B. 高风险投机", "C. 完全不工作", "D. 随机选择"],
+    "answer": "A"
+  },
+  {
+    "case_id": "mingli_fixture_c002_q1",
+    "year": "2025",
+    "category": "健康",
+    "question": "此命健康隐患?",
+    "options": ["A. 心血管", "B. 皮肤病", "C. 无", "D. 骨折"],
+    "answer": "A"
+  },
+  {
+    "case_id": "mingli_fixture_c003_q1",
+    "year": "2025",
+    "category": "婚姻",
+    "question": "此命婚姻走向?",
+    "options": ["A. 早婚", "B. 晚婚", "C. 独身", "D. 二婚"],
+    "answer": "B"
+  },
+  {
+    "case_id": "mingli_fixture_c004_q1",
+    "year": "2024",
+    "category": "子女",
+    "question": "此命子女数量?",
+    "options": ["A. 无", "B. 一子", "C. 两子", "D. 三子及以上"],
+    "answer": "B"
+  },
+  {
+    "case_id": "mingli_fixture_c005_q1",
+    "year": "2024",
+    "category": "财运",
+    "question": "此命财运层级?",
+    "options": ["A. 富裕", "B. 中等", "C. 温饱", "D. 贫困"],
+    "answer": "B"
+  },
+  {
+    "case_id": "mingli_fixture_c006_q1",
+    "year": "2024",
+    "category": "外貌",
+    "question": "此命外貌特征?",
+    "options": ["A. 圆脸", "B. 长脸", "C. 方脸", "D. 尖脸"],
+    "answer": "A"
+  }
+]

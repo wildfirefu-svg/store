@@ -1,0 +1,46 @@
+{
+  "mingli_fixture_c001_q1": {
+    "bazi": {
+      "four_pillars": {
+        "year": {"gan": "庚", "zhi": "午"},
+        "month": {"gan": "辛", "zhi": "巳"},
+        "day": {"gan": "丁", "zhi": "丑", "cang_gan": ["己", "癸", "辛"], "cang_gan_shi_shen": ["食神", "七杀", "偏财"]},
+        "hour": {"gan": "甲", "zhi": "辰"}
+      },
+      "day_master": {"gan": "丁", "wuxing": "火", "yinyang": "阴"}
+    }
+  },
+  "mingli_fixture_c002_q1": {
+    "bazi": {
+      "four_pillars": {
+        "year": {"gan": "戊", "zhi": "戌"},
+        "month": {"gan": "甲", "zhi": "子"},
+        "day": {"gan": "壬", "zhi": "申"},
+        "hour": {"gan": "丙", "zhi": "午"}
+      },
+      "day_master": {"gan": "壬", "wuxing": "水", "yinyang": "阳"}
+    }
+  },
+  "mingli_fixture_c003_q1": {
+    "bazi": {
+      "four_pillars": {
+        "year": {"gan": "乙", "zhi": "亥"},
+        "month": {"gan": "戊", "zhi": "寅"},
+        "day": {"gan": "庚", "zhi": "辰"},
+        "hour": {"gan": "壬", "zhi": "午"}
+      },
+      "day_master": {"gan": "庚", "wuxing": "金", "yinyang": "阳"}
+    }
+  },
+  "mingli_fixture_c004_q1": {
+    "bazi": {
+      "four_pillars": {
+        "year": {"gan": "癸", "zhi": "巳"},
+        "month": {"gan": "戊", "zhi": "午"},
+        "day": {"gan": "丙", "zhi": "戌"},
+        "hour": {"gan": "戊", "zhi": "子"}
+      },
+      "day_master": {"gan": "丙", "wuxing": "火", "yinyang": "阳"}
+    }
+  }
+}
