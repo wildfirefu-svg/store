@@ -135,6 +135,10 @@ class TestChartCreation:
         create_chart(page, "总览测试")
         report = page.locator("#report-content").text_content() or ""
         assert "等待输入" not in report, "总览报告不应该显示等待输入"
+        assert "输入出生信息后，报告将在此显示" not in report, "总览报告不应该停留在占位文案"
+        assert "命盘总览" in report, "总览报告应该包含标题"
+        assert "日主" in report, "总览报告应该包含日主信息"
+        assert "可信度说明" in report, "总览报告应该包含可信度说明"
 
 
 class TestChat:
@@ -150,6 +154,34 @@ class TestChat:
         text = page.locator(".chat-messages").text_content() or ""
         assert "连接失败" not in text, "不应该出现连接失败"
         assert "暂不可用" not in text, "不应该出现暂不可用"
+
+    def test_deep_report_routes_to_deep_report_tab(self, page):
+        page.unroute("**/api/chat/stream**")
+        page.route(
+            "**/api/chat/stream**",
+            lambda route: route.fulfill(
+                status=200,
+                headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                body=(
+                    'event: report\n'
+                    'data: {"text":"# 深度报告\\n## 一、八字排盘\\n正文","tab":"deep_report"}\n\n'
+                    'event: done\n'
+                    'data: {"corrections":0}\n\n'
+                ),
+            ),
+        )
+        create_chart(page, "深度报告测试")
+        page.fill("#chat-input", "深度报告")
+        page.click("#chat-send-btn")
+        page.wait_for_function(
+            "() => (document.getElementById('report-status')?.textContent || '').includes('完成')",
+            timeout=10000,
+        )
+
+        tabs = page.locator("#report-tabs").text_content() or ""
+        report = page.locator("#report-content").text_content() or ""
+        assert "深度报告" in tabs
+        assert "深度报告" in report
 
 
 class TestMultiMingzhu:
