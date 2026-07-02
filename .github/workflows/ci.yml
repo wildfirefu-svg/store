@@ -53,8 +53,7 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m pytest tests/ -v --tb=short --timeout=120 2>&1 || true
-          echo "Tests completed (see output above)"
+          python -m pytest tests/ -v --tb=short --timeout=120
 
       - name: LLM report quality smoke test
         run: |

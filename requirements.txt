@@ -1,5 +1,26 @@
+# Production dependencies for 玄机子 (XuanJiZi)
 fastapi==0.136.3
 uvicorn[standard]==0.48.0
 pydantic==2.13.4
 fpdf2==2.8.7
 pywebview==6.2.1
+
+# RAG / knowledge base
+chromadb>=0.4.0,<2.0
+sentence-transformers==2.7.*
+numpy>=1.24.0
+
+# Chinese lunar calendar / BaZi computation
+iztro_py>=0.1.0
+
+# Visualization / chart rendering
+matplotlib>=3.7.0
+
+# MCP server support (also used by mcp_server.py)
+mcp>=1.0.0
+
+# Browser automation (used by chart_to_image / e2e tests)
+playwright>=1.40.0
+
+# Config / data parsing
+pyyaml>=6.0
