@@ -48,3 +48,7 @@ benchmark/datasets/baziqa_contest8_*.jsonl
 
 # smoke 脚本自动生成的 fixture jsonl (源 fixture 是 .json)
 tests/fixtures/baziqa/contest8_sample.jsonl
+
+# Virtual environments and model caches
+.venv/
+.cache/
