@@ -1,4 +1,4 @@
-from benchmark.scorers.choice_accuracy import extract_choice, load_jsonl, score_choice_answers
+from benchmark.scorers.choice_accuracy import extract_choice, extract_choice_with_meta, load_jsonl, score_choice_answers
 
 
 def test_score_choice_answers_counts_accuracy():
@@ -36,6 +36,37 @@ def test_score_choice_answers_reports_invalid_expected_answer():
     result = score_choice_answers(cases, {'bad1': 'A'})
     assert result['total'] == 0
     assert result['invalid_cases'] == ['bad1']
+
+
+def test_extract_choice_prefers_final_answer_line():
+    text = "分析过程里提到 A 和 C。\n最终答案：D"
+    assert extract_choice(text) == "D"
+    meta = extract_choice_with_meta(text)
+    assert meta == {"choice": "D", "source": "final_answer", "valid": True}
+
+
+def test_extract_choice_uses_confidence_table_when_final_line_missing():
+    text = "\n".join([
+        "A: 30",
+        "B: 65",
+        "C: 20",
+        "D: 10",
+    ])
+    assert extract_choice(text) == "B"
+    meta = extract_choice_with_meta(text)
+    assert meta == {"choice": "B", "source": "confidence", "valid": True}
+
+
+def test_extract_choice_falls_back_to_legacy_patterns():
+    assert extract_choice("我选择 c，因为命局以水为忌。") == "C"
+    meta = extract_choice_with_meta("我选择 c，因为命局以水为忌。")
+    assert meta == {"choice": "C", "source": "legacy", "valid": True}
+
+
+def test_extract_choice_returns_invalid_meta_for_unparseable_text():
+    assert extract_choice("无法判断") is None
+    meta = extract_choice_with_meta("无法判断")
+    assert meta == {"choice": None, "source": "none", "valid": False}
 
 
 def test_baziqa_mini_dataset_format_is_valid():

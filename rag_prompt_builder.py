@@ -108,7 +108,11 @@ def _format_option_evidence_item(item: Dict[str, Any]) -> str:
 def _format_option_evidence_block(option_evidence: Dict[str, List[Dict[str, Any]]], options: List[str]) -> str:
     lines: List[str] = [
         "<选项证据>",
-        "以下证据按当前题 A/B/C/D 选项分别检索，仅供参考，非当前命主，不得直接照搬历史结论。",
+        "以下证据按当前题 A/B/C/D 选项分别检索，均来自其他命例，仅供参考，非当前命主，不得直接照搬历史结论。",
+        "请按以下步骤推理：",
+        "1. 先独立完成八字格局分析（强弱、用神、格局），不依赖检索证据",
+        "2. 再逐项判断每个选项的证据支持强度：强支持 / 弱支持 / 无证据 / 弱反驳 / 强反驳",
+        "3. 最后结合独立分析与证据参考，选出最可能的答案",
     ]
     labels = ["A", "B", "C", "D"]
     for i, label in enumerate(labels):
@@ -121,7 +125,7 @@ def _format_option_evidence_block(option_evidence: Dict[str, List[Dict[str, Any]
             lines.extend(_format_option_evidence_item(item) for item in items)
     lines.extend([
         "</选项证据>",
-        "请先逐项判断 A/B/C/D 为支持、反驳或无证据，并说明理由；最后必须输出：最终答案：X",
+        "输出格式：先写三阶段推理，再写四选项置信度（0-100分），最后必须输出：最终答案：X",
     ])
     return "\n".join(lines)
 

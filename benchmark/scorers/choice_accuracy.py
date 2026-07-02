@@ -12,7 +12,7 @@ def load_jsonl(path):
     return items
 
 
-def extract_choice(text):
+def _legacy_extract_choice(text):
     if text is None:
         return None
     s = str(text).strip()
@@ -29,6 +29,45 @@ def extract_choice(text):
         if m:
             return m.group(1).upper()
     return None
+
+
+def _extract_final_answer_choice(s):
+    matches = re.findall(r'最终答案\s*[:：]\s*([A-Da-d])', s)
+    if not matches:
+        return None
+    return matches[-1].upper()
+
+
+def _extract_confidence_choice(s):
+    scores = {}
+    for choice, score in re.findall(r'(?m)^\s*([A-Da-d])\s*[:：]\s*([0-9]{1,3})(?:\s*/\s*100)?\s*$', s):
+        value = int(score)
+        if 0 <= value <= 100:
+            scores[choice.upper()] = value
+    if not scores:
+        return None
+    ordered = sorted(scores.items(), key=lambda item: (-item[1], item[0]))
+    return ordered[0][0]
+
+
+def extract_choice_with_meta(text):
+    if text is None:
+        return {"choice": None, "source": "none", "valid": False}
+    s = str(text).strip()
+    choice = _extract_final_answer_choice(s)
+    if choice:
+        return {"choice": choice, "source": "final_answer", "valid": True}
+    choice = _extract_confidence_choice(s)
+    if choice:
+        return {"choice": choice, "source": "confidence", "valid": True}
+    choice = _legacy_extract_choice(s)
+    if choice:
+        return {"choice": choice, "source": "legacy", "valid": True}
+    return {"choice": None, "source": "none", "valid": False}
+
+
+def extract_choice(text):
+    return extract_choice_with_meta(text)["choice"]
 
 
 def _case_id(case):

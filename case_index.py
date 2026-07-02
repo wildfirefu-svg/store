@@ -599,6 +599,28 @@ class CaseIndex:
         return str(case.get("text_blob") or "")[:240]
 
     @staticmethod
+    def _fact_excerpt_for_option(case: Dict[str, Any], option_text: str) -> tuple:
+        facts = case.get("facts") or []
+        if not facts:
+            return str(case.get("text_blob") or "")[:240], 0.0
+        option_clean = re.sub(r"^[A-D][\.、\s]*", "", str(option_text or "").strip(), flags=re.IGNORECASE)
+        option_terms = set(_semantic_phrases(option_clean))
+        for hints in DOMAIN_HINTS.values():
+            option_terms.update(_hint_matches(option_clean, hints))
+        option_terms = set(t for t in option_terms if t and t not in GENERIC_PHRASES)
+        if not option_terms:
+            return str(facts[0])[:240], 0.0
+        best_fact = facts[0]
+        best_score = 0.0
+        for fact in facts:
+            fact_lower = str(fact).lower()
+            score = sum(1 for t in option_terms if t.lower() in fact_lower)
+            if score > best_score:
+                best_score = float(score)
+                best_fact = fact
+        return str(best_fact)[:240], best_score
+
+    @staticmethod
     def _option_overlap_terms(option_text: str) -> List[str]:
         text = re.sub(r"^[A-D][\.、\s]*", "", str(option_text or "").strip(), flags=re.IGNORECASE)
         terms = set(_semantic_phrases(text))
@@ -608,20 +630,36 @@ class CaseIndex:
 
     def _score_option_evidence(self, case: Dict[str, Any], option_text: str) -> tuple:
         haystack = str(case.get("text_blob") or "")
-        hits = [term for term in self._option_overlap_terms(option_text) if term in haystack]
+        option_terms = self._option_overlap_terms(option_text)
+        hits = [term for term in option_terms if term in haystack]
         if not hits:
             return 0.0, []
         unique_hits = sorted(set(hits), key=lambda t: (-len(t), t))
-        return min(0.65 * len(unique_hits), 1.95), ["option_overlap:" + ",".join(unique_hits[:4])]
+        base_score = min(1.2 * len(unique_hits), 3.6)
+        _, fact_match_score = self._fact_excerpt_for_option(case, option_text)
+        fact_bonus = min(fact_match_score * 0.8, 2.4)
+        total = round(base_score + fact_bonus, 6)
+        reasons = ["option_overlap:" + ",".join(unique_hits[:4])]
+        if fact_match_score > 0:
+            reasons.append(f"fact_match:{int(fact_match_score)}")
+        return total, reasons
 
-    def _evidence_item(self, case: Dict[str, Any], domain: Optional[str] = None) -> Dict[str, Any]:
+    def _evidence_item(self, case: Dict[str, Any], domain: Optional[str] = None, option_text: Optional[str] = None) -> Dict[str, Any]:
+        if option_text:
+            fact_excerpt, fact_match_score = self._fact_excerpt_for_option(case, option_text)
+            match_reasons = list(case.get("match_reasons") or [])
+            if fact_match_score > 0 and not any(r.startswith("fact_match:") for r in match_reasons):
+                match_reasons.append(f"fact_match:{int(fact_match_score)}")
+        else:
+            fact_excerpt = self._fact_excerpt(case)
+            match_reasons = list(case.get("match_reasons") or [])
         return {
             "case_id": case.get("case_id") or case.get("person_id"),
             "person_id": case.get("person_id"),
             "score": case.get("_score", 0.0),
             "stance": "related",
-            "match_reasons": list(case.get("match_reasons") or []),
-            "fact_excerpt": self._fact_excerpt(case),
+            "match_reasons": match_reasons,
+            "fact_excerpt": fact_excerpt,
             "source_domain": self._primary_domain(case, domain),
             "source_answer_option_text": self._source_answer_option_text(case),
         }
@@ -673,7 +711,8 @@ class CaseIndex:
 
         evidence: Dict[str, List[Dict[str, Any]]] = {}
         used_top_sources: set = set()
-        for label in labels[:4]:
+        for i, label in enumerate(labels[:4]):
+            option_text = str(options[i]) if i < len(options or []) else ""
             candidates = option_candidates.get(label, [])
             selected: List[Dict[str, Any]] = []
             for case in candidates:
@@ -686,6 +725,6 @@ class CaseIndex:
                     used_top_sources.add(person_id)
                 if len(selected) >= k_per_option:
                     break
-            evidence[label] = [self._evidence_item(case, domain) for case in selected]
+            evidence[label] = [self._evidence_item(case, domain, option_text) for case in selected]
         return evidence
 

@@ -49,4 +49,14 @@ def test_format_structured_reasoning_prompt():
     prompt = format_structured_reasoning_prompt(_case())
     for marker in ["第一阶段：量化扫描", "第二阶段：冲突定级", "第三阶段：应象映射"]:
         assert marker in prompt
-    assert "最后一行必须写" in prompt
+    assert "最后一行只能写" in prompt
+
+
+def test_structured_reasoning_prompt_requires_confidence_contract():
+    prompt = format_structured_reasoning_prompt(_case())
+    assert "A: 0-100" in prompt
+    assert "B: 0-100" in prompt
+    assert "C: 0-100" in prompt
+    assert "D: 0-100" in prompt
+    assert "最终答案：X" in prompt
+    assert "最后一行只能写" in prompt
