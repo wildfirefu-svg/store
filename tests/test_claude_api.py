@@ -82,3 +82,44 @@ def test_stream_chat_yields_error_when_retries_zero(monkeypatch):
     assert events, 'expected at least one event when retries=0'
     assert events[-1]['type'] == 'error'
     assert '401' in events[-1]['text']
+
+
+import json
+import urllib.request
+
+
+class _Resp:
+    def __init__(self, payload):
+        self.payload = payload
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def read(self):
+        return b'{"choices":[{"message":{"content":"A"}}]}'
+
+
+def test_call_model_messages_sync_sends_temperature(monkeypatch):
+    captured = {}
+
+    def fake_urlopen(req, timeout=180):
+        captured["payload"] = json.loads(req.data.decode("utf-8"))
+        return _Resp(captured["payload"])
+
+    monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(claude_api, "ANTHROPIC_API_KEY", "sk-test-deepseek-key-1234567890")
+
+    out = claude_api.call_model_messages_sync(
+        [{"role": "user", "content": "只回答A"}],
+        provider="deepseek",
+        model="deepseek-v4-pro",
+        system_prompt="system",
+        temperature=0.0,
+    )
+
+    assert out == "A"
+    assert captured["payload"]["temperature"] == 0.0
+

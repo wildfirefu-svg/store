@@ -93,12 +93,11 @@ def _log_ai_config():
         logger.warning("AI key not configured — set DEEPSEEK_API_KEY/ANTHROPIC_API_KEY or place .deepseek_key/.anthropic_key next to api_server.py")
         return
     provider, _, model = _detect_provider(key)
-    prefix = key[:7] + "***"
-    logger.info("AI configured: provider=%s model=%s key_prefix=%s key_len=%d", provider, model, prefix, len(key))
+    logger.info("AI configured: provider=%s model=%s", provider, model)
     if not key.startswith("sk-"):
         logger.warning("AI key does not start with 'sk-'; this looks suspicious")
     elif provider == "deepseek" and len(key) < 32:
-        logger.warning("DeepSeek key length=%d looks unusually short; verify it is the full key", len(key))
+        logger.warning("DeepSeek key looks unusually short; verify it is the full key")
 
 
 def get_ai_config():
@@ -110,7 +109,7 @@ def get_ai_config():
     }
 
 
-def call_model_messages_sync(messages, provider=None, model=None, system_prompt=None, timeout=180):
+def call_model_messages_sync(messages, provider=None, model=None, system_prompt=None, timeout=180, temperature=None):
     """同步调用模型补全接口，支持 multi-turn messages。"""
     key = ANTHROPIC_API_KEY
     if not key:
@@ -129,6 +128,8 @@ def call_model_messages_sync(messages, provider=None, model=None, system_prompt=
             "messages": [{"role": m["role"], "content": m["content"]} for m in messages],
             "stream": False,
         }
+        if temperature is not None:
+            payload["temperature"] = float(temperature)
         headers = {
             "x-api-key": key,
             "anthropic-version": "2023-06-01",
@@ -146,6 +147,8 @@ def call_model_messages_sync(messages, provider=None, model=None, system_prompt=
             "messages": chat_messages,
             "stream": False,
         }
+        if temperature is not None:
+            payload["temperature"] = float(temperature)
         headers = {
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
