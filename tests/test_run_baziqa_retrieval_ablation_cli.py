@@ -423,3 +423,50 @@ def test_option_grounded_config_forwards_its_retrieval_mode(tmp_path, stub_subpr
     assert cmd[cmd.index("--config-id") + 1] == "option_grounded_tfidf"
     assert cmd[cmd.index("--retrieval-mode") + 1] == "option_grounded"
     assert cmd[cmd.index("--option-evidence-k") + 1] == "2"
+
+
+def test_forwards_shuffle_options_flags_to_benchmark_runner(tmp_path, stub_subprocess):
+    from scripts import run_baziqa_retrieval_ablation as mod
+
+    configs_yaml = _write_configs(tmp_path)
+    out_dir = tmp_path / "out"
+
+    rc = mod.main([
+        "--run",
+        "--configs", "bm25",
+        "--model", "deepseek-v4-flash",
+        "--repeats", "1",
+        "--retrieval-configs-yaml", str(configs_yaml),
+        "--output-dir", str(out_dir),
+        "--report", str(tmp_path / "r.md"),
+        "--shuffle-options",
+        "--shuffle-seed", "42",
+    ])
+
+    assert rc == 0
+    cmd = stub_subprocess[0]["cmd"]
+    assert "--shuffle-options" in cmd
+    assert "--shuffle-seed" in cmd
+    assert cmd[cmd.index("--shuffle-seed") + 1] == "42"
+
+
+def test_omits_shuffle_flags_when_not_requested(tmp_path, stub_subprocess):
+    from scripts import run_baziqa_retrieval_ablation as mod
+
+    configs_yaml = _write_configs(tmp_path)
+    out_dir = tmp_path / "out"
+
+    rc = mod.main([
+        "--run",
+        "--configs", "bm25",
+        "--model", "deepseek-v4-flash",
+        "--repeats", "1",
+        "--retrieval-configs-yaml", str(configs_yaml),
+        "--output-dir", str(out_dir),
+        "--report", str(tmp_path / "r.md"),
+    ])
+
+    assert rc == 0
+    cmd = stub_subprocess[0]["cmd"]
+    assert "--shuffle-options" not in cmd
+    assert "--shuffle-seed" not in cmd
