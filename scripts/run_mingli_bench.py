@@ -20,6 +20,11 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
+# Allow running as `python scripts/run_mingli_bench.py` from the repo root.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
 from benchmark.runners.mingli_bench_adapter import load_and_normalize
 
 
