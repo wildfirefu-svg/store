@@ -1,0 +1,72 @@
+rules:
+  - id: ding_si_male_career_hard
+    pattern:
+      day_master_gan: 丁
+      month_zhi: 巳
+      gender: male
+    expected_event: 事业初期多坎坷
+    forbidden_phrases:
+      - 事业一帆风顺
+      - 少年得志
+      - 事业从无波折
+    support: 3
+    confidence: 0.6
+    severity: warning
+    message: 丁火生巳月（男命）在 corpus 反推下事业初期常有波折，需复核“事业一帆风顺/少年得志”表述。
+    source_persons:
+      - guangdong_male_19510213
+      - shandong_male_19770510
+      - henan_male_19890214
+  - id: ren_zi_female_marriage_late
+    pattern:
+      day_master_gan: 壬
+      month_zhi: 子
+      gender: female
+    expected_event: 婚姻多波折或晚婚
+    forbidden_phrases:
+      - 婚姻一帆风顺
+      - 早婚美满
+      - 一婚到老
+    support: 3
+    confidence: 0.6
+    severity: warning
+    message: 壬水生子月（女命）在 corpus 反推下婚姻多波折/晚婚，需复核“婚姻一帆风顺”表述。
+  - id: bing_wu_wealth_volatile
+    pattern:
+      day_master_gan: 丙
+      month_zhi: 午
+    expected_event: 财运暴起暴跌
+    forbidden_phrases:
+      - 财源稳定
+      - 财运一路上扬
+      - 富贵稳固
+    support: 3
+    confidence: 0.6
+    severity: warning
+    message: 丙火生午月在 corpus 反推下财运多暴起暴跌，需复核“财源稳定/一路上扬”表述。
+  - id: yi_mao_health_alert
+    pattern:
+      day_master_gan: 乙
+      month_zhi: 卯
+    expected_event: 健康有肝胆/神经类隐患
+    forbidden_phrases:
+      - 健康无虞
+      - 终身无病
+      - 体魄强健无虑
+    support: 3
+    confidence: 0.6
+    severity: warning
+    message: 乙木生卯月在 corpus 反推下健康常见肝胆/神经类隐患，需复核“健康无虞”表述。
+  - id: geng_shen_relationship_issue
+    pattern:
+      day_master_gan: 庚
+      month_zhi: 申
+    expected_event: 六亲缘薄
+    forbidden_phrases:
+      - 六亲缘深
+      - 家庭和睦无波
+      - 父母双亲健旺
+    support: 3
+    confidence: 0.6
+    severity: warning
+    message: 庚金生申月在 corpus 反推下六亲缘多薄，需复核“家庭和睦无波/六亲缘深”表述。
