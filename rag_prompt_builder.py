@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import random
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -220,3 +221,66 @@ def build_system_prompt(
 
     injection = "\n\n".join(blocks)
     return _compose_prompt(base, fewshot_block, injection)
+
+
+_APB_INSTRUCTION = (
+    "<抗位置偏差指令>\n"
+    "1. 以当前选项文本为准，逐项比较选项内容。\n"
+    "2. 不要根据 A/B/C/D 的位置、历史分布或 few-shot 示例字母猜测答案。\n"
+    "3. evidence 只辅助比较选项内容，不能直接抄标签。\n"
+    "4. 最终输出当前题目中的一个 label（A/B/C/D）。\n"
+    "5. 如果选项顺序变化，答案也必须跟随选项文本而不是跟随位置。\n"
+    "</抗位置偏差指令>"
+)
+
+_APB_INSTRUCTION_NO_EVIDENCE = (
+    "<抗位置偏差指令>\n"
+    "1. 以当前选项文本为准，逐项比较选项内容。\n"
+    "2. 不要根据 A/B/C/D 的位置、历史分布或 few-shot 示例字母猜测答案。\n"
+    "3. 最终输出当前题目中的一个 label（A/B/C/D）。\n"
+    "4. 如果选项顺序变化，答案也必须跟随选项文本而不是跟随位置。\n"
+    "</抗位置偏差指令>"
+)
+
+
+def format_apb_instruction_block(has_evidence: bool = True) -> str:
+    """Return APB instruction block.
+
+    Args:
+        has_evidence: When False (e.g. MingLi direct_choice without --rag),
+            omit the evidence-related clause to avoid confusing the model.
+    """
+    return _APB_INSTRUCTION if has_evidence else _APB_INSTRUCTION_NO_EVIDENCE
+
+
+def select_fewshot_examples(
+    examples: Optional[List[Dict[str, Any]]],
+    domain: Optional[str] = None,
+    limit: int = 1,
+) -> List[Dict[str, Any]]:
+    if not examples:
+        return []
+    if limit is None or limit <= 0:
+        return []
+    filtered = [e for e in examples if (domain is None or e.get("domain") == domain)]
+    return filtered[:limit]
+
+
+def render_dynamic_fewshot(example: Dict[str, Any], seed: int = 42) -> Dict[str, Any]:
+    options = example.get("option_identities") or []
+    if len(options) != 4:
+        raise ValueError(f"expected 4 option_identities, got {len(options)}")
+    labels = ["A", "B", "C", "D"]
+    rng = random.Random(seed)
+    shuffled = labels[:]
+    rng.shuffle(shuffled)
+    label_map = {options[i]["id"]: shuffled[i] for i in range(4)}
+    answer_opt = next((o for o in options if o.get("is_answer")), None)
+    answer_label = label_map[answer_opt["id"]] if answer_opt else None
+    label_to_text = {label_map[o["id"]]: o["text"] for o in options}
+    lines = [f"题目：{example.get('question', '')}", "选项："]
+    for lab in labels:
+        lines.append(f"{lab}. {label_to_text[lab]}")
+    lines.append(f"推理：{example.get('reasoning', '')}")
+    lines.append(f"最终答案：{answer_label}")
+    return {"label_map": label_map, "answer_label": answer_label, "rendered": "\n".join(lines)}

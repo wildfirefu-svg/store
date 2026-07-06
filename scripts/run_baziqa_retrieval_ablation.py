@@ -174,6 +174,8 @@ def _run_one(cfg: Dict[str, Any], repeat: int, args: argparse.Namespace) -> "tup
         command.extend(["--sample-temperature", str(args.sample_temperature)])
     if getattr(args, "aggregate", None):
         command.extend(["--aggregate", str(args.aggregate)])
+    if getattr(args, "fewshot_file", ""):
+        command.extend(["--fewshot-file", args.fewshot_file])
     subprocess.run(command, check=True, env=env)
     return details, False
 
@@ -271,6 +273,7 @@ def main(argv=None):
     parser.add_argument("--n-samples", type=int, default=1, help="Pass --n-samples to run_benchmark.py (default 1 disables self-consistency)")
     parser.add_argument("--sample-temperature", type=float, default=None, help="Pass --sample-temperature to run_benchmark.py")
     parser.add_argument("--aggregate", default=None, choices=[None, "majority"], help="Pass --aggregate to run_benchmark.py")
+    parser.add_argument("--fewshot-file", default="", help="Pass --fewshot-file to run_benchmark.py (JSONL few-shot examples)")
     args = parser.parse_args(argv)
 
     Path(args.output_dir).mkdir(parents=True, exist_ok=True)

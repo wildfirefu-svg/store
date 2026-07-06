@@ -56,6 +56,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--aggregate", default=None, choices=[None, "majority"])
     parser.add_argument("--shuffle-options", action="store_true")
     parser.add_argument("--shuffle-seed", type=int, default=None)
+    parser.add_argument("--apb-block", action="store_true", help="Inject anti-position-bias instruction prefix (Phase 3 smoke parity)")
 
     args = parser.parse_args(argv)
 
@@ -104,6 +105,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.shuffle_seed is None:
             raise SystemExit("--shuffle-options requires --shuffle-seed")
         command.extend(["--shuffle-options", "--shuffle-seed", str(args.shuffle_seed)])
+    if getattr(args, "apb_block", False):
+        command.append("--apb-block")
 
     env = os.environ.copy()
     result = subprocess.run(command, check=False, env=env)

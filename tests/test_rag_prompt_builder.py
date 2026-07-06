@@ -178,7 +178,7 @@ def test_prompt_includes_chart_match_reasons():
 
 
 class _FakeOptionEvidenceIndex:
-    def option_evidence(self, features, question, options, domain=None, k_per_option=2):
+    def option_evidence(self, features, question, options, domain=None, k_per_option=2, retrieval_mode=None):
         return {
             "A": [{"case_id": "ca", "person_id": "pa", "score": 1.2, "stance": "related", "match_reasons": ["option_overlap:升迁"], "fact_excerpt": "事业 -> 升迁", "source_domain": "career", "source_answer_option_text": "A 升迁"}],
             "B": [{"case_id": "cb", "person_id": "pb", "score": 0.8, "stance": "related", "match_reasons": ["option_overlap:婚姻"], "fact_excerpt": "婚姻 -> 稳定", "source_domain": "relationship", "source_answer_option_text": "B 婚姻稳定"}],

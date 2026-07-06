@@ -519,3 +519,47 @@ def test_omits_self_consistency_flags_when_default(tmp_path, stub_subprocess):
     assert "--n-samples" not in cmd
     assert "--sample-temperature" not in cmd
     assert "--aggregate" not in cmd
+
+
+def test_forwards_fewshot_file_to_benchmark_runner(tmp_path, stub_subprocess):
+    from scripts import run_baziqa_retrieval_ablation as mod
+
+    configs_yaml = _write_configs(tmp_path)
+    out_dir = tmp_path / "out"
+
+    rc = mod.main([
+        "--run",
+        "--configs", "bm25",
+        "--model", "deepseek-v4-flash",
+        "--repeats", "1",
+        "--retrieval-configs-yaml", str(configs_yaml),
+        "--output-dir", str(out_dir),
+        "--report", str(tmp_path / "r.md"),
+        "--fewshot-file", "benchmark/fewshot/anti_position_bias_v1.jsonl",
+    ])
+
+    assert rc == 0
+    cmd = stub_subprocess[0]["cmd"]
+    assert "--fewshot-file" in cmd
+    assert cmd[cmd.index("--fewshot-file") + 1] == "benchmark/fewshot/anti_position_bias_v1.jsonl"
+
+
+def test_omits_fewshot_file_when_not_provided(tmp_path, stub_subprocess):
+    from scripts import run_baziqa_retrieval_ablation as mod
+
+    configs_yaml = _write_configs(tmp_path)
+    out_dir = tmp_path / "out"
+
+    rc = mod.main([
+        "--run",
+        "--configs", "bm25",
+        "--model", "deepseek-v4-flash",
+        "--repeats", "1",
+        "--retrieval-configs-yaml", str(configs_yaml),
+        "--output-dir", str(out_dir),
+        "--report", str(tmp_path / "r.md"),
+    ])
+
+    assert rc == 0
+    cmd = stub_subprocess[0]["cmd"]
+    assert "--fewshot-file" not in cmd

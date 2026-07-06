@@ -20,6 +20,7 @@ from benchmark.formatters.baziqa_prompt import (
 from benchmark.scorers.evidence_score import score_case_evidence, aggregate_evidence_score
 from benchmark.scorers.safety_score import score_safety, aggregate_safety_score
 from benchmark.reports.generate_report import save_report
+from benchmark.phase3 import to_original_option_identity, classify_parser_failure
 import data_store
 
 
@@ -151,6 +152,17 @@ def _resolve_option_evidence_trace(case, k=2):
 
 
 def _resolve_system_prompt(case, rag_k=2, retrieval_mode='legacy', option_evidence_k=2):
+    prompt = _resolve_system_prompt_inner(case, rag_k, retrieval_mode, option_evidence_k)
+    if os.environ.get('BAZI_APB_BLOCK') == '1' and os.environ.get('BAZI_RAG') == '1':
+        try:
+            from rag_prompt_builder import format_apb_instruction_block
+            prompt = prompt + "\n\n" + format_apb_instruction_block(has_evidence=True)
+        except Exception:
+            pass
+    return prompt
+
+
+def _resolve_system_prompt_inner(case, rag_k=2, retrieval_mode='legacy', option_evidence_k=2):
     fewshot_path = os.environ.get('BAZI_FEWSHOT_FILE') or ''
     fewshot_examples = []
     if fewshot_path:
@@ -387,6 +399,14 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                 "option_evidence_coverage": {},
                 "retrieved_answer_leak": False,
                 "config_id": config_id,
+                # Phase 3 fields
+                "call_success": False,
+                "permutation_id": case.get('_permutation_id'),
+                "label_map": case.get('answer_label_map') or {},
+                "predicted_identity": None,
+                "correct_identity": case.get('_original_answer'),
+                "mode": "on-3" if case.get('answer_label_map') else "off-3",
+                "parser_failure_reason": "model_call_failed",
             }
             if shuffle_options:
                 label_map = case.get('answer_label_map') or {}
@@ -437,7 +457,22 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
             "option_evidence_coverage": option_evidence_coverage,
             "retrieved_answer_leak": _compute_case_leak(rag_trace, expected),
             "config_id": config_id,
+            # Phase 3 fields
+            "call_success": True,
+            "permutation_id": case.get('_permutation_id'),
+            "label_map": case.get('answer_label_map') or {},
+            "predicted_identity": to_original_option_identity(predicted, case.get('answer_label_map') or {}),
+            "correct_identity": case.get('_original_answer'),
+            "mode": "on-3" if case.get('answer_label_map') else "off-3",
         }
+        parser_failure_reason = classify_parser_failure(
+            raw_answer=answer,
+            parsed_choice=predicted,
+            valid=meta.get('valid', False),
+            label_map=case.get('answer_label_map') or {},
+            call_success=True,
+        )
+        detail["parser_failure_reason"] = parser_failure_reason
         if shuffle_options:
             label_map = case.get('answer_label_map') or {}
             detail["answer_label_map"] = label_map
@@ -577,6 +612,7 @@ def main(argv=None):
     parser.add_argument('--n-samples', type=int, default=1, help='Self-consistency: number of samples per case (default: 1 disables SC)')
     parser.add_argument('--sample-temperature', type=float, default=0.4, help='Sampling temperature used when --n-samples > 1')
     parser.add_argument('--aggregate', default='majority', choices=['majority'], help='Aggregation strategy over samples')
+    parser.add_argument('--apb-block', action='store_true', help='Append anti-position-bias instruction to system prompt (Phase 3)')
     args = parser.parse_args(argv)
 
     if args.rag:
@@ -585,6 +621,8 @@ def main(argv=None):
             os.environ['BAZI_RAG_CORPUS'] = args.rag_corpus
     if args.fewshot_file:
         os.environ['BAZI_FEWSHOT_FILE'] = args.fewshot_file
+    if args.apb_block:
+        os.environ['BAZI_APB_BLOCK'] = '1'
 
     cases = load_jsonl(args.dataset)
 

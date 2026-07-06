@@ -156,3 +156,42 @@ def test_run_mingli_bench_with_astro_includes_chart_input(tmp_path, stub_subproc
     rows = [json.loads(l) for l in jsonl_out.read_text(encoding="utf-8").splitlines() if l.strip()]
     with_chart = [r for r in rows if r.get("chart_input")]
     assert len(with_chart) == 4
+
+
+def test_run_mingli_bench_forwards_apb_block(tmp_path, stub_subprocess):
+    """Phase 3 Task 13: --apb-block must be forwarded to run_benchmark.py
+    so the MingLi smoke can use the same anti-position-bias intervention."""
+    from scripts import run_mingli_bench as mod
+
+    jsonl_out = tmp_path / "mingli.jsonl"
+    out_dir = tmp_path / "out"
+
+    rc = mod.main([
+        "--data", str(DATA_FIXTURE),
+        "--model", "deepseek-v4-flash",
+        "--jsonl-out", str(jsonl_out),
+        "--output-dir", str(out_dir),
+        "--apb-block",
+    ])
+
+    assert rc == 0
+    cmd = stub_subprocess[0]["cmd"]
+    assert "--apb-block" in cmd
+
+
+def test_run_mingli_bench_omits_apb_block_by_default(tmp_path, stub_subprocess):
+    from scripts import run_mingli_bench as mod
+
+    jsonl_out = tmp_path / "mingli.jsonl"
+    out_dir = tmp_path / "out"
+
+    rc = mod.main([
+        "--data", str(DATA_FIXTURE),
+        "--model", "deepseek-v4-flash",
+        "--jsonl-out", str(jsonl_out),
+        "--output-dir", str(out_dir),
+    ])
+
+    assert rc == 0
+    cmd = stub_subprocess[0]["cmd"]
+    assert "--apb-block" not in cmd
