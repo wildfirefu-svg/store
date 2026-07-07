@@ -886,6 +886,7 @@ class CaseIndex:
         domain: Optional[str] = None,
         k_per_option: int = 2,
         retrieval_mode: str = "option_grounded",
+        exclude_case_id: Optional[str] = None,
     ) -> Dict[str, List[Dict[str, Any]]]:
         labels = [self._option_label(i, option) for i, option in enumerate((options or [])[:4])]
         while len(labels) < 4:
@@ -933,6 +934,8 @@ class CaseIndex:
                         str(case.get("name") or ""),
                     )
                 )
+            if exclude_case_id:
+                ranked = [c for c in ranked if c.get("case_id") != exclude_case_id]
             option_candidates[label] = ranked
 
         evidence: Dict[str, List[Dict[str, Any]]] = {}

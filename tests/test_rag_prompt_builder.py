@@ -131,10 +131,10 @@ def _write_fewshot(tmp_path: Path, n=3) -> Path:
     return p
 
 
-def test_load_fewshot_examples_caps_to_three(tmp_path):
-    path = _write_fewshot(tmp_path, n=5)
+def test_load_fewshot_examples_caps_to_five(tmp_path):
+    path = _write_fewshot(tmp_path, n=8)
     rows = load_fewshot_examples(path)
-    assert len(rows) == 3
+    assert len(rows) == 5
 
 
 def test_load_fewshot_examples_returns_empty_when_path_missing():
@@ -178,7 +178,7 @@ def test_prompt_includes_chart_match_reasons():
 
 
 class _FakeOptionEvidenceIndex:
-    def option_evidence(self, features, question, options, domain=None, k_per_option=2, retrieval_mode=None):
+    def option_evidence(self, features, question, options, domain=None, k_per_option=2, retrieval_mode=None, exclude_case_id=None):
         return {
             "A": [{"case_id": "ca", "person_id": "pa", "score": 1.2, "stance": "related", "match_reasons": ["option_overlap:升迁"], "fact_excerpt": "事业 -> 升迁", "source_domain": "career", "source_answer_option_text": "A 升迁"}],
             "B": [{"case_id": "cb", "person_id": "pb", "score": 0.8, "stance": "related", "match_reasons": ["option_overlap:婚姻"], "fact_excerpt": "婚姻 -> 稳定", "source_domain": "relationship", "source_answer_option_text": "B 婚姻稳定"}],

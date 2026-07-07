@@ -189,6 +189,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Phase 3 gate report generator")
     parser.add_argument("--stage", required=True, choices=["dev20", "formal40", "link8"])
     parser.add_argument("--output", default=None, help="Output JSON path (default: stdout)")
+    parser.add_argument("--pred-dir", default=None, help="Override prediction directory (default: .tmp/phase3_{stage})")
     args = parser.parse_args(argv)
 
     dataset_path = DATASET_BY_STAGE.get(args.stage)
@@ -201,9 +202,10 @@ def main(argv=None):
     arms = ARMS_BY_STAGE.get(args.stage, [])
 
     reports = {}
+    pred_dir = args.pred_dir or f".tmp/phase3_{args.stage}"
     for arm in arms:
-        on_pattern = f".tmp/phase3_{args.stage}/{args.stage}_{arm}_on-3_p*.jsonl"
-        off_pattern = f".tmp/phase3_{args.stage}/{args.stage}_{arm}_off-3_p*.jsonl"
+        on_pattern = f"{pred_dir}/{args.stage}_{arm}_on-3_p*.jsonl"
+        off_pattern = f"{pred_dir}/{args.stage}_{arm}_off-3_p*.jsonl"
 
         on_preds = load_predictions(on_pattern, "on-3", dataset)
         off_preds = load_predictions(off_pattern, "off-3", dataset)

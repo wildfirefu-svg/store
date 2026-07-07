@@ -1,12 +1,30 @@
-def format_birth_line(person):
+def format_birth_line(case):
+    person = case.get("person", {}) if isinstance(case, dict) else {}
     birth = person.get("birth", {})
-    return (
-        f"姓名：{person.get('name', '')}\n"
-        f"性别：{person.get('gender', '')}\n"
+    lines = [
+        f"姓名：{person.get('name', '')}",
+        f"性别：{person.get('gender', '')}",
         f"出生：{birth.get('year')}年{birth.get('month')}月{birth.get('day')}日"
-        f"{birth.get('hour', 0)}时{birth.get('minute', 0)}分\n"
-        f"地点：{birth.get('place', '')}"
-    )
+        f"{birth.get('hour', 0)}时{birth.get('minute', 0)}分",
+        f"地点：{birth.get('place', '')}",
+    ]
+    chart = case.get("chart_input") or {} if isinstance(case, dict) else {}
+    fp = chart.get("four_pillars") or {}
+    if fp:
+        pillar_names = {"year": "年柱", "month": "月柱", "day": "日柱", "hour": "时柱"}
+        pillars = []
+        for name in ("year", "month", "day", "hour"):
+            p = fp.get(name) or {}
+            gan = p.get("gan", "")
+            zhi = p.get("zhi", "")
+            if gan or zhi:
+                pillars.append(f"{pillar_names[name]} {gan}{zhi}")
+        if pillars:
+            lines.append("四柱：" + "，".join(pillars))
+        dm = chart.get("day_master") or {}
+        if dm.get("gan"):
+            lines.append(f"日主：{dm.get('gan')}（{dm.get('wuxing', '')}，{dm.get('yinyang', '')}）")
+    return "\n".join(lines)
 
 
 def format_options(options):
@@ -18,7 +36,7 @@ def format_direct_choice_prompt(case):
         "你是一位严谨的八字命理评测助手。",
         "请根据命主信息回答四选一题。请直接回答选项字母 A/B/C/D，不要解释。",
         "## 命主信息",
-        format_birth_line(case.get("person", {})),
+        format_birth_line(case),
         "## 问题",
         case.get("question", ""),
         "## 选项",
@@ -31,7 +49,7 @@ def format_multi_turn_context(case):
     return "\n\n".join([
         "你是一位严谨的八字命理评测助手。以下是命主资料，后续问题都围绕此命主。",
         "## 命主信息",
-        format_birth_line(case.get("person", {})),
+        format_birth_line(case),
         f"领域：{case.get('domain', 'unknown')}",
     ])
 
@@ -48,7 +66,7 @@ def format_structured_reasoning_prompt(case):
     return "\n\n".join([
         "你是一位严谨的八字命理评测助手。必须按三阶段结构化推理后再作答。",
         "## 命主信息",
-        format_birth_line(case.get("person", {})),
+        format_birth_line(case),
         "## 三阶段结构化推理协议",
         "第一阶段：量化扫描。清点五行、日主强弱、十神分布、格局倾向、用神喜忌。",
         "第二阶段：冲突定级。识别刑冲合害、空亡、入墓、忌神成局，并判断轻微/中度/严重。",

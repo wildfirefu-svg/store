@@ -13,15 +13,19 @@ from case_index import CaseIndex
 
 MAX_TOTAL_CHARS = 8000
 MAX_FACT_PER_CASE = 5
-MAX_FEWSHOT_EXAMPLES = 3
+MAX_FEWSHOT_EXAMPLES = 5
 MAX_FEWSHOT_OPTION_CHARS = 60
 
 
 def load_fewshot_examples(path: Optional[Any]) -> List[Dict[str, Any]]:
     """Load few-shot examples from a JSONL file.
 
-    Each line should be a BaziQA-style row: question/options/answer plus optional
-    person.birth and domain. Returns at most MAX_FEWSHOT_EXAMPLES rows.
+    Supports two schemas:
+    1. Legacy: question/options/answer (options is list[str], answer is "A"/"B"/...)
+    2. APB: question/option_identities (each with id/text/is_answer) + reasoning +
+       position_bias_guard. This schema is rendered via render_dynamic_fewshot.
+
+    Returns at most MAX_FEWSHOT_EXAMPLES rows.
     """
     if path is None:
         return []
@@ -40,7 +44,11 @@ def load_fewshot_examples(path: Optional[Any]) -> List[Dict[str, Any]]:
                 continue
             if not isinstance(row, dict):
                 continue
-            if not row.get("question") or not row.get("options") or not row.get("answer"):
+            if not row.get("question"):
+                continue
+            has_legacy = bool(row.get("options")) and bool(row.get("answer"))
+            has_apb = bool(row.get("option_identities"))
+            if not has_legacy and not has_apb:
                 continue
             out.append(row)
             if len(out) >= MAX_FEWSHOT_EXAMPLES:
@@ -166,6 +174,7 @@ def build_system_prompt(
     question: Optional[str] = None,
     options: Optional[List[str]] = None,
     option_evidence_k: int = 2,
+    exclude_case_id: Optional[str] = None,
 ) -> str:
     base = str(base_system or "")
 
@@ -173,11 +182,21 @@ def build_system_prompt(
     if few_shot_examples:
         formatted = []
         for i, row in enumerate(few_shot_examples[:MAX_FEWSHOT_EXAMPLES], 1):
-            formatted.append(_format_fewshot_example(i, row))
+            if row.get("option_identities"):
+                seed = hash(row.get("id", str(i))) & 0xFFFFFFFF
+                rendered = render_dynamic_fewshot(row, seed=seed)
+                formatted.append(
+                    f"### 示例 {i}\n"
+                    f"领域：{row.get('domain', 'unknown')}\n"
+                    f"{rendered['rendered']}\n"
+                    f"位置偏差防护：{row.get('position_bias_guard', '答案由命理内容决定，与选项位置无关')}"
+                )
+            else:
+                formatted.append(_format_fewshot_example(i, row))
         if formatted:
             fewshot_block = (
                 "<示例题（few-shot）>\n"
-                "下面是一些**与本题非同一命主**的样题与标准答案，用于示意输出格式与推理风格，不得直接照搬结论。\n\n"
+                "下面是一些**与本题非同一命主**的样题与标准答案，用于示意选项匹配方式与位置偏差防护，不得直接照搬结论。\n\n"
                 + "\n\n".join(formatted)
                 + "\n</示例题（few-shot）>"
             )
@@ -201,11 +220,14 @@ def build_system_prompt(
             domain=domain,
             k_per_option=option_evidence_k,
             retrieval_mode=retrieval_mode,
+            exclude_case_id=exclude_case_id,
         )
         injection = _format_option_evidence_block(option_evidence, option_list)
         return _compose_prompt(base, fewshot_block, injection)
 
     cases = case_index.top_k_cases(features, k=k)
+    if exclude_case_id:
+        cases = [c for c in cases if c.get("case_id") != exclude_case_id]
     if not cases:
         if not fewshot_block:
             return base
@@ -225,20 +247,22 @@ def build_system_prompt(
 
 _APB_INSTRUCTION = (
     "<抗位置偏差指令>\n"
-    "1. 以当前选项文本为准，逐项比较选项内容。\n"
-    "2. 不要根据 A/B/C/D 的位置、历史分布或 few-shot 示例字母猜测答案。\n"
-    "3. evidence 只辅助比较选项内容，不能直接抄标签。\n"
-    "4. 最终输出当前题目中的一个 label（A/B/C/D）。\n"
-    "5. 如果选项顺序变化，答案也必须跟随选项文本而不是跟随位置。\n"
+    "1. 逐项阅读 A/B/C/D 四个选项的完整文本，先在心中复述每个选项的核心含义。\n"
+    "2. 你的最终答案必须由选项内容决定，而非选项位置。选项顺序被打乱过，A 不比 B/C/D 更可能正确。\n"
+    "3. 反 A 偏好检查：如果你即将选 A，先问自己——B、C、D 的文本内容是否也可能匹配你的推理结论？"
+    "如果无法用 A 的具体文字说明排除 B/C/D，则 A 很可能是位置偏好而非内容判断，应重新选择。\n"
+    "4. evidence 只辅助比较选项内容，不能直接抄标签。\n"
+    "5. 输出前最后一步：默念你选的字母对应的选项文本，确认它确实与你第三阶段推理结论一致，而非因为该选项在 A 位。\n"
     "</抗位置偏差指令>"
 )
 
 _APB_INSTRUCTION_NO_EVIDENCE = (
     "<抗位置偏差指令>\n"
-    "1. 以当前选项文本为准，逐项比较选项内容。\n"
-    "2. 不要根据 A/B/C/D 的位置、历史分布或 few-shot 示例字母猜测答案。\n"
-    "3. 最终输出当前题目中的一个 label（A/B/C/D）。\n"
-    "4. 如果选项顺序变化，答案也必须跟随选项文本而不是跟随位置。\n"
+    "1. 逐项阅读 A/B/C/D 四个选项的完整文本，先在心中复述每个选项的核心含义。\n"
+    "2. 你的最终答案必须由选项内容决定，而非选项位置。选项顺序被打乱过，A 不比 B/C/D 更可能正确。\n"
+    "3. 反 A 偏好检查：如果你即将选 A，先问自己——B、C、D 的文本内容是否也可能匹配你的推理结论？"
+    "如果无法用 A 的具体文字说明排除 B/C/D，则 A 很可能是位置偏好而非内容判断，应重新选择。\n"
+    "4. 输出前最后一步：默念你选的字母对应的选项文本，确认它确实与你第三阶段推理结论一致，而非因为该选项在 A 位。\n"
     "</抗位置偏差指令>"
 )
 
@@ -266,7 +290,7 @@ def select_fewshot_examples(
     return filtered[:limit]
 
 
-def render_dynamic_fewshot(example: Dict[str, Any], seed: int = 42) -> Dict[str, Any]:
+def render_dynamic_fewshot(example: Dict[str, Any], seed: int = 42, include_reasoning: bool = False) -> Dict[str, Any]:
     options = example.get("option_identities") or []
     if len(options) != 4:
         raise ValueError(f"expected 4 option_identities, got {len(options)}")
@@ -281,6 +305,7 @@ def render_dynamic_fewshot(example: Dict[str, Any], seed: int = 42) -> Dict[str,
     lines = [f"题目：{example.get('question', '')}", "选项："]
     for lab in labels:
         lines.append(f"{lab}. {label_to_text[lab]}")
-    lines.append(f"推理：{example.get('reasoning', '')}")
+    if include_reasoning and example.get("reasoning"):
+        lines.append(f"推理：{example.get('reasoning', '')}")
     lines.append(f"最终答案：{answer_label}")
     return {"label_map": label_map, "answer_label": answer_label, "rendered": "\n".join(lines)}

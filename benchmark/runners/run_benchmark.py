@@ -112,6 +112,9 @@ def _resolve_rag_trace(case, k=2):
         chart = _case_chart(case)
         features = extract(chart)
         cases = case_index.top_k_cases(features, k=k)
+        exclude_case_id = str((case or {}).get("case_id") or "")
+        if exclude_case_id:
+            cases = [c for c in cases if c.get("case_id") != exclude_case_id]
         out = []
         for rank, item in enumerate(cases, 1):
             out.append({
@@ -144,6 +147,7 @@ def _resolve_option_evidence_trace(case, k=2):
             options=list((case or {}).get("options") or []),
             domain=(case or {}).get("domain") or chart.get("query_domain"),
             k_per_option=k,
+            exclude_case_id=str((case or {}).get("case_id") or ""),
         )
         coverage = {label: len(evidence.get(label) or []) for label in ["A", "B", "C", "D"]}
         return evidence, coverage
@@ -202,6 +206,7 @@ def _resolve_system_prompt_inner(case, rag_k=2, retrieval_mode='legacy', option_
             question=str((case or {}).get('question') or ''),
             options=list((case or {}).get('options') or []),
             option_evidence_k=option_evidence_k,
+            exclude_case_id=str((case or {}).get('case_id') or ''),
         )
     except Exception:
         return SYSTEM_PROMPT_BENCHMARK

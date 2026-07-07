@@ -35,9 +35,9 @@ def pool_examples():
 
 def test_apb_block_contains_key_phrases():
     block = format_apb_instruction_block()
-    assert "当前选项文本" in block
+    assert "选项内容" in block
     assert "A/B/C/D" in block or "位置" in block
-    assert "label" in block or "标签" in block
+    assert "label" in block or "标签" in block or "字母" in block
 
 
 def test_select_fewshot_by_domain(pool_examples):

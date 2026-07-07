@@ -34,6 +34,9 @@ def sample_answers(
     n: int,
     temperatures: Optional[Sequence[float]] = None,
     default_temperature: float = 0.4,
+    max_retries: int = 3,
+    retry_delay: float = 2.0,
+    inter_sample_delay: float = 0.5,
 ) -> List[Tuple[str, Optional[str]]]:
     if not isinstance(n, int) or n <= 0:
         raise ValueError(f"sample_answers n must be a positive int, got {n!r}")
@@ -46,8 +49,24 @@ def sample_answers(
                 f"sample_answers temperatures length {len(temp_list)} != n={n}"
             )
 
+    import time
+
     results: List[Tuple[str, Optional[str]]] = []
-    for temp in temp_list:
-        raw, predicted = call_fn(temp)
-        results.append((raw, predicted))
+    for idx, temp in enumerate(temp_list):
+        if idx > 0 and inter_sample_delay > 0:
+            time.sleep(inter_sample_delay)
+        last_err: Optional[Exception] = None
+        for attempt in range(max_retries):
+            try:
+                raw, predicted = call_fn(temp)
+                results.append((raw, predicted))
+                last_err = None
+                break
+            except Exception as e:
+                last_err = e
+                if attempt < max_retries - 1:
+                    wait = retry_delay * (attempt + 1)
+                    time.sleep(wait)
+        if last_err is not None:
+            results.append(("", None))
     return results
