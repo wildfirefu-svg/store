@@ -121,118 +121,190 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
 
 ## 3. 任务分解
 
-### 阶段 1：基础设施（TDD）
+> 原则：每个步骤 2-5 分钟，TDD 红绿循环，小步提交。每个 ✅ 步骤产出可独立测试的变更。
 
-#### Task 1.1：编写 two_stage_reasoning formatter 测试
+### 阶段 1：formatter 基础设施（TDD）
 
-- 文件：`tests/test_two_stage_reasoning.py`
-- 测试内容：
-  - `format_stage1_prompt(case)` 含选项文本但**不含 A/B/C/D 标签**
-  - `format_stage1_prompt(case)` 选项顺序打乱（固定 seed 基于 case_id，保证跨 perm 一致）
-  - `format_stage1_prompt(case)` 对时间类问题注入两步推理指令
-  - `format_stage1_prompt(case)` 要求输出 `【内容假设】：` 固定标记
-  - `format_stage1_prompt(case)` prompt 含"禁止引用选项编号"约束
-  - `format_stage1_prompt(case)` 同一 case 多次调用结果一致（固定 seed 验证）
-  - `format_stage2_prompt(case, hypothesis, evidence)` 含选项(A/B/C/D) + 假设 + 证据 + 冲突仲裁指令
-  - `parse_stage1_result(raw)` 解析 `【内容假设】：` 标记，支持多前缀容错，失败返回 None
-  - `parse_stage1_result(raw)` 返回 `(hypothesis, confidence)` 或 `None`
-  - `is_time_location_question(question, options)` 正确识别时间类问题（含扩展关键词）
-  - `is_time_location_question` 对 4 个 unanimous wrong case 全部返回 True
-  - `build_stage2_evidence(case, hypothesis, mode='all')` 返回全选项证据
-- 预期：测试失败（实现未写）
+#### Task 1.1：创建测试文件骨架（红）
 
-#### Task 1.2：实现 two_stage_reasoning formatter
+- [ ] 创建 `tests/test_two_stage_reasoning.py`，编写 import 和 4 个测试桩（预期 import 失败）
+  - `test_is_time_location_question_keywords`
+  - `test_format_stage1_prompt_no_labels`
+  - `test_parse_stage1_result_marker`
+  - `test_build_stage2_evidence_all_mode`
+- [ ] 运行 `pytest tests/test_two_stage_reasoning.py -q`，确认 4 个测试因 ImportError 失败（红）
+- [ ] 提交：`test(phase4): add two-stage reasoning test scaffolding (red)`
 
-- 文件：`benchmark/formatters/two_stage_reasoning.py`
-- 函数：
-  - `format_stage1_prompt(case)` → str
-  - `format_stage2_prompt(case, stage1_result, top2_options)` → str
-  - `parse_stage1_result(raw)` → Optional[str]（内容假设）
-  - `is_time_location_question(question, options)` → bool
-- 预期：Task 1.1 测试通过
+#### Task 1.2：实现 is_time_location_question（绿-1）
 
-#### Task 1.3：接入 benchmark runner
+- [ ] 创建 `benchmark/formatters/two_stage_reasoning.py`
+- [ ] 实现 `is_time_location_question(question, options)`：关键词检测 + 4 位年份选项检测
+  - 关键词：哪年/何时/哪一年/几年/时间/年份/什么时候/几时/何年/哪年发生/出现在
+  - 4 位年份：选项文本全是 `\d{4}` 格式
+- [ ] 完善 `test_is_time_location_question_keywords`：正向（含关键词）+ 负向（不含）+ 4 位年份选项
+- [ ] 运行该测试，确认通过（绿）
+- [ ] 提交：`feat(phase4): implement is_time_location_question detector`
 
-- 文件：`benchmark/runners/run_benchmark.py`
-- 改动：
-  - `build_benchmark_prompt` 新增 `two_stage_reasoning` 分支（返回 Stage 1 prompt）
-  - CLI `--method` choices 新增 `two_stage_reasoning`
-  - `run_model_benchmark` 新增两阶段调用逻辑：Stage 1 调用 → 解析 → Stage 2 调用 → 最终答案
-  - Stage 1 失败时 fallback 到 structured_reasoning
-- 预期：`--method two_stage_reasoning` 可运行
+#### Task 1.3：验证 4 个 unanimous wrong case 触发（绿-2）
 
-### 阶段 2：Stage 1 → Stage 2 调用链
+- [ ] 在测试中加载 4 个 case（P002-Q9/P003-Q13/P004-Q17/P005-Q22），验证全部返回 True
+- [ ] 若有 case 未触发，扩展关键词
+- [ ] 运行测试，确认 4/4 通过
+- [ ] 提交：`test(phase4): verify 4 unanimous wrong cases trigger time detection`
 
-#### Task 2.1：实现两阶段调用编排
+#### Task 1.4：实现 format_stage1_prompt（绿-3）
 
-- 文件：`benchmark/runners/run_benchmark.py` 的 `run_model_benchmark`
-- 逻辑：
+- [ ] 实现 `format_stage1_prompt(case)`：
+  - 选项打乱（固定 seed = case_id hash）+ 无 A/B/C/D 标签
+  - 三阶段协议 + 时间类两步推理指令（若触发）
+  - 要求输出 `【内容假设】：` 固定标记
+  - prompt 含"禁止引用选项编号"约束
+- [ ] 完善 `test_format_stage1_prompt_no_labels`：
+  - 断言不含 "A:"/"B:"/"C:"/"D:" 标签
+  - 断言含 "选项1"/"选项2" 无标签格式
+  - 断言含 `【内容假设】：` 标记要求
+  - 断言含"禁止引用选项编号"
+  - 断言同一 case 多次调用结果一致（固定 seed）
+  - 断言时间类 case 含两步推理指令
+- [ ] 运行测试，确认通过
+- [ ] 提交：`feat(phase4): implement format_stage1_prompt with label-blind options`
+
+#### Task 1.5：实现 parse_stage1_result（绿-4）
+
+- [ ] 实现 `parse_stage1_result(raw)`：
+  - 优先匹配 `【内容假设】：(.+)`
+  - 容错匹配"结论："/"假设："/"判断："前缀
+  - 最低优先级：取最后一段非空行
+  - 返回 `(hypothesis, confidence)` 或 None
+- [ ] 完善 `test_parse_stage1_result_marker`：
+  - 标准标记格式 → 正确提取
+  - 容错前缀 → 正确提取
+  - 无任何标记 → 返回 None
+  - 空字符串 → 返回 None
+- [ ] 运行测试，确认通过
+- [ ] 提交：`feat(phase4): implement parse_stage1_result with multi-prefix fallback`
+
+#### Task 1.6：实现 format_stage2_prompt（绿-5）
+
+- [ ] 实现 `format_stage2_prompt(case, hypothesis, evidence)`：
+  - 含选项 A/B/C/D + Stage1 假设 + 证据 + APB
+  - 含冲突仲裁指令（"若假设与证据矛盾，以证据为准"）
+- [ ] 编写 `test_format_stage2_prompt`：
+  - 断言含 A/B/C/D 标签
+  - 断言含 hypothesis 内容
+  - 断言含冲突仲裁指令
+- [ ] 运行测试，确认通过
+- [ ] 提交：`feat(phase4): implement format_stage2_prompt with conflict arbitration`
+
+#### Task 1.7：实现 build_stage2_evidence（绿-6）
+
+- [ ] 实现 `build_stage2_evidence(case, hypothesis, mode='all')`：
+  - mode='all'：复用 `rag_prompt_builder` 检索全选项证据
+  - mode='top2'：TF-IDF cosine 匹配 hypothesis → top-2 选项 → 只检索这 2 个
+- [ ] 完善 `test_build_stage2_evidence_all_mode`：
+  - mode='all' 返回全选项证据
+  - mode='top2' 返回 ≤2 条证据
+- [ ] 运行全部 formatter 测试，确认 100% 通过
+- [ ] 提交：`feat(phase4): implement build_stage2_evidence with all/top2 modes`
+
+### 阶段 2：benchmark runner 接入
+
+#### Task 2.1：CLI 参数 + build_benchmark_prompt 接入（红→绿）
+
+- [ ] 在 `run_benchmark.py` 的 `--method` choices 新增 `two_stage_reasoning`
+- [ ] 在 `build_benchmark_prompt` 新增 `two_stage_reasoning` 分支（返回 Stage 1 prompt）
+- [ ] 编写 `test_build_benchmark_prompt_two_stage`：断言 method='two_stage_reasoning' 返回 Stage 1 prompt
+- [ ] 运行测试，确认通过
+- [ ] 提交：`feat(phase4): add two_stage_reasoning to CLI and build_benchmark_prompt`
+
+#### Task 2.2：两阶段调用编排 + fallback（红→绿）
+
+- [ ] 在 `run_model_benchmark` 新增两阶段调用逻辑：
   1. Stage 1：`call_model_sync(stage1_prompt, temperature=0.0)` → raw1
-  2. `stage1_hypothesis = parse_stage1_result(raw1)`
-  3. 若 hypothesis is None：fallback 到 structured_reasoning（单阶段）
-  4. 否则：对 hypothesis 匹配的 top-2 选项检索 evidence
-  5. Stage 2：`call_model_sync(stage2_prompt, temperature=0.0)` → raw2
-  6. 最终答案从 raw2 解析
-- `case_details` 记录 `stage1_raw`、`stage1_hypothesis`、`stage2_raw`、`fallback`
+  2. `parse_stage1_result(raw1)` → hypothesis
+  3. 若 None：fallback 到 structured_reasoning 单阶段
+  4. 否则：`build_stage2_evidence` + Stage 2 调用 → raw2 → 最终答案
+- [ ] `case_details` 记录 `phase4_stage1_raw`/`phase4_stage1_hypothesis`/`phase4_stage2_raw`/`phase4_fallback`/`phase4_fallback_reason`/`phase4_is_time_question`/`phase4_conflict`/`phase4_evidence_mode`
+- [ ] 编写集成测试 `test_two_stage_call_chain`：mock call_model_sync，验证调用顺序 + fallback 路径
+- [ ] 运行测试，确认通过
+- [ ] 提交：`feat(phase4): implement two-stage call orchestration with fallback`
 
-#### Task 2.2：编写调用链集成测试
+#### Task 2.3：Stage 1 跨 perm 缓存（优化）
 
-- 文件：`tests/test_two_stage_reasoning.py` 追加
-- 测试内容：
-  - mock call_model_sync，验证两阶段调用顺序
-  - Stage 1 返回无法解析的结果时，验证 fallback 路径
-  - 时间类问题验证 Stage 1 prompt 含两步推理指令
+- [ ] 在 `run_model_benchmark` 增加 Stage 1 结果缓存：同一 case_id 只调用 1 次 Stage 1
+- [ ] 编写 `test_stage1_cross_perm_cache`：mock call_model_sync，验证同 case 3 perm 只触发 1 次 Stage 1
+- [ ] 运行测试，确认通过
+- [ ] 提交：`perf(phase4): cache Stage 1 across perms (67% Stage 1 call reduction)`
 
 ### 阶段 3：smoke 验证
 
 #### Task 3.1：10 case smoke（development 集）
 
-- 数据：2025 前 20 题中的 10 题（Phase 3 development 集，不污染 2024 holdout）
-- 命令：`--method two_stage_reasoning --max-cases 10`
-- 验证：
+- [ ] 准备 10 case 数据：2025 前 20 题中的 10 题（不污染 2024 holdout）
+- [ ] 运行：`--method two_stage_reasoning --max-cases 10 --case-details-jsonl .tmp/phase4/smoke10.jsonl`
+- [ ] 验证：
   - parser_valid_rate ≥ 0.90
   - fallback 率 ≤ 0.20
   - 准确率不低于 structured_reasoning baseline（同 10 题）
+  - top-2 命中率统计（为 formal 阶段决策提供数据）
+- [ ] 若 fallback > 0.20：优化 parser 或 Stage 1 prompt，重跑
+- [ ] 提交：`test(phase4): 10-case smoke validation (dev set)`
 
-#### Task 3.2：时间类问题专项 smoke
+#### Task 3.2：时间类 4 case 专项 smoke
 
-- 数据：4 个 unanimous wrong case（P002-Q9 / P003-Q13 / P004-Q17 / P005-Q22）
-- 验证：
+- [ ] 提取 4 个 unanimous wrong case（P002-Q9/P003-Q13/P004-Q17/P005-Q22）
+- [ ] 运行 two_stage_reasoning，检查 Stage 1 raw 输出
+- [ ] 验证：
+  - `is_time_location_question` 4/4 返回 True
   - Stage 1 是否输出了大运区间 + 流年验证
-  - 准确率是否提升（≥ 1/4 正确即有改善）
+  - 准确率 ≥ 1/4 正确
+- [ ] 若 0/4：分析 Stage 1 输出，调整两步推理指令
+- [ ] 提交：`test(phase4): time-location 4-case targeted smoke`
 
 ### 阶段 4：formal40 评测
 
-#### Task 4.1：formal40 on-3 × 3 perm（two_stage_reasoning）
+#### Task 4.1：formal40 on-3 × 3 perm
 
-- 数据：2024 holdout 40 case，3 perm（p0/p1/p2）
-- 配置：`--method two_stage_reasoning --apb-block --rag --rag-k 2 --retrieval-mode option_grounded --option-evidence-k 2`
-- 输出：`formal40_A4_p4_on-3_p{0,1,2}.jsonl`
+- [ ] 运行 on-3 p0：`--method two_stage_reasoning --apb-block --rag --rag-k 2 --retrieval-mode option_grounded --option-evidence-k 2 --case-details-jsonl .tmp/phase4/formal40_p4_on-3_p0.jsonl`
+- [ ] 检查 p0 结果（准确率、fallback 率、parser_valid）
+- [ ] 若 p0 准确率 < Phase 3 p0 (80%) - 5pp：触发回滚条件，停止并分析
+- [ ] 运行 on-3 p1、p2（可并行）
+- [ ] 提交：`test(phase4): formal40 on-3 x3perm two_stage_reasoning`
 
-#### Task 4.2：formal40 off-3 × 3 perm（控制组）
+#### Task 4.2：formal40 off-3 × 3 perm
 
-- 同 Task 4.1 但 off 配置
-- 输出：`formal40_A4_p4_off-3_p{0,1,2}.jsonl`
+- [ ] 运行 off-3 p0/p1/p2（Stage 1 与 on-3 共享缓存）
+- [ ] 检查 off-3 结果
+- [ ] 提交：`test(phase4): formal40 off-3 x3perm two_stage_reasoning`
 
-#### Task 4.3：生成 gate report
+#### Task 4.3：生成 gate report + 验收
 
-- 命令：`python scripts/phase3_generate_gate_report.py --stage formal40 --pred-dir .tmp/phase4 --output .tmp/phase4/gate_report_p4.json`
-- 验证：
-  - gate_ite_28pct：≥ 0.28（不退化）
-  - gate_mms_80pct：是否突破 0.80？
-  - 时间类 4 case 是否改善
+- [ ] 运行：`python scripts/phase3_generate_gate_report.py --stage formal40 --pred-dir .tmp/phase4 --output .tmp/phase4/gate_report_p4.json`
+- [ ] 验证 6 项 gate：
+  - gate_ite_28pct ≥ 0.28
+  - gate_mms_80pct（目标 ≥ 0.80，底线 ≥ 0.7033）
+  - gate_parser_valid_95pct ≥ 0.95
+  - gate_confirmed_leak_zero = 0
+  - gate_off_control_28_3pct ≥ 0.283
+  - three_pp_advisory_pass
+- [ ] 统计时间类 4 case 改善情况
+- [ ] 统计总 API 调用数（验证 ≤ 336）
+- [ ] 提交：`test(phase4): formal40 gate report generation`
 
 ### 阶段 5：交付
 
 #### Task 5.1：撰写 Phase 4 交付报告
 
-- 文件：`docs/PHASE4_DELIVERY_REPORT.md`
-- 内容：gate 结果、两阶段推理效果、时间类攻坚效果、与 Phase 3 对比
+- [ ] 创建 `docs/PHASE4_DELIVERY_REPORT.md`
+- [ ] 内容：gate 结果、两阶段推理效果、时间类攻坚效果、与 Phase 3 对比、失败路径归因（若有）
+- [ ] 提交：`docs(phase4): add delivery report`
 
-#### Task 5.2：提交
+#### Task 5.2：最终提交 + 清理
 
-- 小步提交：每个 Task 一个 commit
-- 最终 commit 含报告
+- [ ] 确认所有测试通过：`pytest tests/test_two_stage_reasoning.py -q`
+- [ ] 确认 git status 干净
+- [ ] 清理 .tmp/phase4 临时实验文件（保留 gate_report_p4.json 和正式预测文件）
+- [ ] 提交：`chore(phase4): cleanup temp experiment files`
 
 ---
 
