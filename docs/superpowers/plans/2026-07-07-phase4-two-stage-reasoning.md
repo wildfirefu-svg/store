@@ -147,7 +147,9 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
 
 #### Task 1.3：验证 4 个 unanimous wrong case 触发（绿-2）
 
-- [ ] 在测试中加载 4 个 case（P002-Q9/P003-Q13/P004-Q17/P005-Q22），验证全部返回 True
+- [ ] 在测试中从 `benchmark/datasets/baziqa_contest8_2024_holdout_enriched.jsonl` 加载 4 个 case（P002-Q9/P003-Q13/P004-Q17/P005-Q22），验证 `is_time_location_question` 全部返回 True
+  - 数据源说明：Phase 3 的 4 个 unanimous wrong case 来自 2024 holdout（case_id 如 `chaozhou_male_19720108_P002-Q9`），不从 2025 加载（避免数据暴露混淆）
+  - 测试用 fixture 读取该 JSONL，按 case_id 后缀匹配
 - [ ] 若有 case 未触发，扩展关键词
 - [ ] 运行测试，确认 4/4 通过
 - [ ] 提交：`test(phase4): verify 4 unanimous wrong cases trigger time detection`
@@ -172,14 +174,15 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
 
 #### Task 1.5：实现 parse_stage1_result（绿-4）
 
-- [ ] 实现 `parse_stage1_result(raw)`：
+- [ ] 实现 `parse_stage1_result(raw)`（v4 修订：返回 `Optional[str]`，对齐 spec §4.1）：
   - 优先匹配 `【内容假设】：(.+)`
   - 容错匹配"结论："/"假设："/"判断："前缀
   - 最低优先级：取最后一段非空行
-  - 返回 `(hypothesis, confidence)` 或 None
+  - 返回 `Optional[str]`（只返回 hypothesis 文本，不返回 tuple）
+  - confidence 若需要，通过 `case_details` 的 `phase4_stage1_confidence` 字段单独记录（本轮不实现 confidence 提取，YAGNI）
 - [ ] 完善 `test_parse_stage1_result_marker`：
-  - 标准标记格式 → 正确提取
-  - 容错前缀 → 正确提取
+  - 标准标记格式 → 正确提取字符串
+  - 容错前缀 → 正确提取字符串
   - 无任何标记 → 返回 None
   - 空字符串 → 返回 None
 - [ ] 运行测试，确认通过
@@ -225,10 +228,13 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
   2. `parse_stage1_result(raw1)` → hypothesis
   3. 若 None：fallback 到 structured_reasoning 单阶段
   4. 否则：`build_stage2_evidence` + Stage 2 调用 → raw2 → 最终答案
-- [ ] **Stage 1 RAG/APB 隔离**（审核补充）：`call_model_sync` 默认会通过 `_resolve_system_prompt(case, ...)` 注入 RAG 证据和 APB。Stage 1 必须**禁用**这些注入：
-  - Stage 1 调用时传 `rag_k=0`（或新增 `suppress_system_prompt=True` 参数），确保 Stage 1 prompt 不含 evidence/APB
-  - Stage 2 调用正常传 `rag_k`/`option_evidence_k`，保持证据注入
-- [ ] 编写 `test_stage1_no_rag_apb`：mock `_resolve_system_prompt`，验证 Stage 1 调用时 rag_k=0（无证据注入）
+- [ ] **Stage 1 RAG/APB 隔离**（审核补充，v4 修订）：`call_model_sync` 默认通过 `_resolve_system_prompt(case, rag_k=...)` 注入 RAG 证据和 APB。Stage 1 必须禁用这些注入。采用**方案 A**：
+  - 在 `call_model_sync` 新增 `suppress_rag=False, suppress_apb=False` 参数
+  - `suppress_rag=True` 时跳过 `_resolve_system_prompt` 的 RAG 检索（`rag_k=0` 仍会执行 RAG 逻辑返回空列表，不干净）
+  - `suppress_apb=True` 时跳过 APB 指令注入
+  - Stage 1 调用：`call_model_sync(stage1_prompt, ..., suppress_rag=True, suppress_apb=True)`
+  - Stage 2 调用：正常传 `rag_k`/`option_evidence_k`，不 suppress
+- [ ] 编写 `test_stage1_no_rag_apb`：mock `_resolve_system_prompt`，验证 Stage 1 调用时 suppress_rag=True/suppress_apb=True（无证据/APB 注入）
 - [ ] `case_details` 记录 `phase4_stage1_raw`/`phase4_stage1_hypothesis`/`phase4_stage2_raw`/`phase4_fallback`/`phase4_fallback_reason`/`phase4_is_time_question`/`phase4_conflict`/`phase4_evidence_mode`
 - [ ] 编写集成测试 `test_two_stage_call_chain`：mock call_model_sync，验证调用顺序 + fallback 路径
 - [ ] 运行测试，确认通过
@@ -304,6 +310,7 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
   # Stage 2 调用数（phase4_stage2_raw 非空的条数）+ fallback 调用数（phase4_fallback=True 的条数）
   ```
   或在 `run_model_benchmark` 中新增 `phase4_total_calls` 计数器，写入 case_details
+- [ ] **gate report 兼容性检查**（审核补充）：`phase3_generate_gate_report.py` 期望 Phase 3 基础字段（`call_success`/`parser_valid`/`predicted_label`/`correct_identity` 等）。Phase 4 保持这些字段不变（`phase4_` 前缀只用于新增字段），gate report 脚本应能直接读取。若脚本报字段缺失，检查 `case_details` 中 Phase 3 基础字段是否完整输出
 - [ ] 验证总调用 ≤ 336
 - [ ] 提交：`test(phase4): formal40 gate report generation`
 
