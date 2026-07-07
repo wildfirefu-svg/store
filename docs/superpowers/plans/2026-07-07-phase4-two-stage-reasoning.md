@@ -156,6 +156,7 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
 
 - [ ] 实现 `format_stage1_prompt(case)`：
   - 选项打乱（固定 seed = case_id hash）+ 无 A/B/C/D 标签
+  - 打乱方式：`shuffled = options[:]; random.Random(seed).shuffle(shuffled)`（审核建议：比 sorted+random 更直观且分布均匀）
   - 三阶段协议 + 时间类两步推理指令（若触发）
   - 要求输出 `【内容假设】：` 固定标记
   - prompt 含"禁止引用选项编号"约束
@@ -224,6 +225,10 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
   2. `parse_stage1_result(raw1)` → hypothesis
   3. 若 None：fallback 到 structured_reasoning 单阶段
   4. 否则：`build_stage2_evidence` + Stage 2 调用 → raw2 → 最终答案
+- [ ] **Stage 1 RAG/APB 隔离**（审核补充）：`call_model_sync` 默认会通过 `_resolve_system_prompt(case, ...)` 注入 RAG 证据和 APB。Stage 1 必须**禁用**这些注入：
+  - Stage 1 调用时传 `rag_k=0`（或新增 `suppress_system_prompt=True` 参数），确保 Stage 1 prompt 不含 evidence/APB
+  - Stage 2 调用正常传 `rag_k`/`option_evidence_k`，保持证据注入
+- [ ] 编写 `test_stage1_no_rag_apb`：mock `_resolve_system_prompt`，验证 Stage 1 调用时 rag_k=0（无证据注入）
 - [ ] `case_details` 记录 `phase4_stage1_raw`/`phase4_stage1_hypothesis`/`phase4_stage2_raw`/`phase4_fallback`/`phase4_fallback_reason`/`phase4_is_time_question`/`phase4_conflict`/`phase4_evidence_mode`
 - [ ] 编写集成测试 `test_two_stage_call_chain`：mock call_model_sync，验证调用顺序 + fallback 路径
 - [ ] 运行测试，确认通过
@@ -232,6 +237,7 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
 #### Task 2.3：Stage 1 跨 perm 缓存（优化）
 
 - [ ] 在 `run_model_benchmark` 增加 Stage 1 结果缓存：同一 case_id 只调用 1 次 Stage 1
+- [ ] **缓存方案**（审核建议：方案 A 最简单）：在 `run_model_benchmark` 内维护 `stage1_cache = {}`（key=case_id），同一 Python 进程内 on-3/off-3 共享。若 on-3 和 off-3 是两次独立调用，需在同一进程内顺序执行（或通过 CLI 参数合并为一次调用）
 - [ ] 编写 `test_stage1_cross_perm_cache`：mock call_model_sync，验证同 case 3 perm 只触发 1 次 Stage 1
 - [ ] 运行测试，确认通过
 - [ ] 提交：`perf(phase4): cache Stage 1 across perms (67% Stage 1 call reduction)`
@@ -240,12 +246,13 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
 
 #### Task 3.1：10 case smoke（development 集）
 
+- [ ] **先跑 structured_reasoning baseline**（审核补充）：同 10 题用 Phase 3 单阶段跑一次，保存到 `.tmp/phase4/smoke10_baseline.jsonl`，作为两阶段效果对比基线
 - [ ] 准备 10 case 数据：2025 前 20 题中的 10 题（不污染 2024 holdout）
-- [ ] 运行：`--method two_stage_reasoning --max-cases 10 --case-details-jsonl .tmp/phase4/smoke10.jsonl`
+- [ ] 运行 two_stage：`--method two_stage_reasoning --max-cases 10 --case-details-jsonl .tmp/phase4/smoke10.jsonl`
 - [ ] 验证：
   - parser_valid_rate ≥ 0.90
   - fallback 率 ≤ 0.20
-  - 准确率不低于 structured_reasoning baseline（同 10 题）
+  - 准确率不低于 baseline（同 10 题对比）
   - top-2 命中率统计（为 formal 阶段决策提供数据）
 - [ ] 若 fallback > 0.20：优化 parser 或 Stage 1 prompt，重跑
 - [ ] 提交：`test(phase4): 10-case smoke validation (dev set)`
@@ -273,7 +280,10 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
 
 #### Task 4.2：formal40 off-3 × 3 perm
 
-- [ ] 运行 off-3 p0/p1/p2（Stage 1 与 on-3 共享缓存）
+- [ ] **off-3 也使用两阶段推理**（审核补充）：与 on-3 公平对照，确保 shuffle gap 可比
+- [ ] off-3 Stage 1 与 on-3 共享缓存（Stage 1 是 label-blind，与 shuffle 无关）
+- [ ] off-3 Stage 2 不 shuffle（选项保持原始 A/B/C/D），on-3 Stage 2 按 perm shuffle
+- [ ] 运行 off-3 p0/p1/p2
 - [ ] 检查 off-3 结果
 - [ ] 提交：`test(phase4): formal40 off-3 x3perm two_stage_reasoning`
 
@@ -288,7 +298,13 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
   - gate_off_control_28_3pct ≥ 0.283
   - three_pp_advisory_pass
 - [ ] 统计时间类 4 case 改善情况
-- [ ] 统计总 API 调用数（验证 ≤ 336）
+- [ ] **统计总 API 调用数**（审核建议）：gate report 脚本不统计调用数，需从 case_details 计算：
+  ```powershell
+  # Stage 1 调用数（phase4_stage1_raw 非空且 phase4_fallback != True 的条数，去重 case_id）
+  # Stage 2 调用数（phase4_stage2_raw 非空的条数）+ fallback 调用数（phase4_fallback=True 的条数）
+  ```
+  或在 `run_model_benchmark` 中新增 `phase4_total_calls` 计数器，写入 case_details
+- [ ] 验证总调用 ≤ 336
 - [ ] 提交：`test(phase4): formal40 gate report generation`
 
 ### 阶段 5：交付

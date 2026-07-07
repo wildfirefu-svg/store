@@ -95,7 +95,8 @@ Stage 1 prompt 中的选项以"选项1/选项2/选项3/选项4"呈现（打乱�
 ```python
 import hashlib, random
 seed = int(hashlib.md5(case['case_id'].encode()).hexdigest()[:8], 16)
-shuffled = sorted(options, key=lambda _: random.Random(seed).random())
+shuffled = options[:]
+random.Random(seed).shuffle(shuffled)
 ```
 - 这样 p0/p1/p2 三个 perm 看到的 Stage 1 prompt 完全一致，才能共享 1 次调用
 
@@ -295,7 +296,7 @@ Stage1 调用 (temp=0, 跨 perm 共享 1 次) → raw1
 | 时间类指令干扰非时间类 | 低 | 非时间类退化 | `is_time_location_question` 精确触发 + smoke 统计误触发率 < 10% |
 | API 限流 | 中 | 部分 case 失败 | 复用 Phase 3 的 SC retry 机制（`sample_answers` 的 retry + delay） |
 | 假设-证据冲突处理不当 | 中 | Stage 2 判断被错误假设污染 | 默认相信证据 + `phase4_conflict` 标记 + Stage 2 prompt 明确冲突仲裁指令 |
-| Fallback 浪费调用 | 中 | 20% case 多消耗 1 次调用 | 总调用预算预留 20% 余量（≤200 + 40 fallback = ≤240） |
+| Fallback 浪费调用 | 中 | 20% case 多消耗 1 次调用 | 总调用预算预留 20% 余量（280 + 56 fallback = ≤336） |
 | dev20 数据暴露导致 smoke 偏高 | 中 | smoke 结论泛化性存疑 | formal40（2024 独立 holdout）为准，smoke 标注暴露偏差 |
 
 ---
