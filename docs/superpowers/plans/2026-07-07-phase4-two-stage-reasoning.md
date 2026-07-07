@@ -128,9 +128,11 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
 - 文件：`tests/test_two_stage_reasoning.py`
 - 测试内容：
   - `format_stage1_prompt(case)` 含选项文本但**不含 A/B/C/D 标签**
-  - `format_stage1_prompt(case)` 选项顺序打乱（每次调用可能不同或固定 seed）
+  - `format_stage1_prompt(case)` 选项顺序打乱（固定 seed 基于 case_id，保证跨 perm 一致）
   - `format_stage1_prompt(case)` 对时间类问题注入两步推理指令
   - `format_stage1_prompt(case)` 要求输出 `【内容假设】：` 固定标记
+  - `format_stage1_prompt(case)` prompt 含"禁止引用选项编号"约束
+  - `format_stage1_prompt(case)` 同一 case 多次调用结果一致（固定 seed 验证）
   - `format_stage2_prompt(case, hypothesis, evidence)` 含选项(A/B/C/D) + 假设 + 证据 + 冲突仲裁指令
   - `parse_stage1_result(raw)` 解析 `【内容假设】：` 标记，支持多前缀容错，失败返回 None
   - `parse_stage1_result(raw)` 返回 `(hypothesis, confidence)` 或 `None`
@@ -246,7 +248,7 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
 | 时间类 4 case | 0/4 正确 | ≥ 1/4 正确 | 准确率提升 |
 | fallback 率 | N/A | ≤ 0.20 | 两阶段稳定性 |
 | top-2 命中率 | N/A | ≥ 0.85 | formal 启用 top-2 的前提 |
-| 总 API 调用 | 240 | ≤ 200 | Stage 1 跨 perm 共享后 |
+| 总 API 调用 | 240 | ≤ 336（280 基础 + 20% fallback） | Stage 1 跨 perm 共享后 |
 
 **Phase 4 成功条件**：5/6 gate 维持 PASS + 时间类至少 1/4 改善 + fallback 率 ≤ 0.20。MMS 突破 80% 为 stretch goal。
 
@@ -258,11 +260,13 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
 
 | 风险 | 概率 | 缓解 |
 |---|---|---|
-| Stage 1 内容假设与选项表述对不上 | 中 | 强制"可比较表述"约束 + fallback |
-| 两阶段调用成本翻倍 | 高 | 接受（评测场景可承受） |
-| Stage 1 parser 失败率高 | 中 | fallback 到 structured_reasoning |
-| 时间类两步推理指令干扰非时间类 | 低 | `is_time_location_question` 精确触发 |
-| API 限流（2x 调用） | 中 | 复用 Phase 3 的 SC retry 机制 |
+| Stage 1 内容假设与选项表述对不上 | 中 | 标签 blind 保留选项语义 + "可比较表述"约束 + fallback |
+| 两阶段调用成本增加 | 中 | Stage 1 跨 perm 共享，总调用 280（vs Phase 3 的 240，+16.7%） |
+| Stage 1 parser 失败率高 | 中 | 固定标记 `【内容假设】：` + 多前缀容错 + fallback 到单阶段 |
+| 标签 blind 下模型引用选项编号 | 中 | Stage 1 prompt 明确禁止引用选项编号，必须用实际内容表述 |
+| 时间类两步推理指令干扰非时间类 | 低 | `is_time_location_question` 精确触发 + smoke 统计误触发率 |
+| API 限流 | 中 | 复用 Phase 3 的 SC retry 机制 |
+| 假设-证据冲突 | 中 | 默认相信证据 + `phase4_conflict` 标记 |
 
 ---
 

@@ -89,6 +89,52 @@ prompt_1 = base + chart + question + 选项文本（无 A/B/C/D 标签，打乱�
 
 Stage 1 prompt 中的选项以"选项1/选项2/选项3/选项4"呈现（打乱顺序、无字母标签），模型无法知道哪个是 A、哪个是 B，但能看到选项内容完成应象映射。
 
+**选项打乱的确定性**（审核 v3 反馈）：
+- Stage 1 的选项打乱必须使用**固定 seed**（基于 case_id 的 hash），保证同一 case 跨 perm 可共享
+- 实现示例：
+```python
+import hashlib, random
+seed = int(hashlib.md5(case['case_id'].encode()).hexdigest()[:8], 16)
+shuffled = sorted(options, key=lambda _: random.Random(seed).random())
+```
+- 这样 p0/p1/p2 三个 perm 看到的 Stage 1 prompt 完全一致，才能共享 1 次调用
+
+**Stage 1 prompt 示例**（审核 v3 反馈：补充完整示例）：
+```
+你是一位严谨的八字命理评测助手。必须按三阶段结构化推理后再作答。
+
+## 命主信息
+姓名：某命主  性别：女  出生：1980年8月24日12时0分  地点：广东
+
+## 三阶段结构化推理协议
+第一阶段：量化扫描。清点五行、日主强弱、十神分布、格局倾向、用神喜忌。
+第二阶段：冲突定级。识别刑冲合害、空亡、入墓、忌神成局，并判断轻微/中度/严重。
+第三阶段：应象映射。将命理结构映射到题目领域和现实事件。
+
+## 时间类两步推理指令（仅时间类问题注入）
+若本题需要时间定位，必须按两步推理：
+第一步：大运锚定——确定事件对应的大运区间（10年），输出"第 X 步大运（YYYY-YYYY）"
+第二步：流年验证——在该大运内枚举候选流年，逐个验证触发条件，输出最可能流年 + 触发判据
+
+## 问题
+{question}
+
+## 候选项（无标签，顺序随机）
+选项1：{option_text_a}
+选项2：{option_text_b}
+选项3：{option_text_c}
+选项4：{option_text_d}
+
+## 输出要求
+1. 先完成三阶段推理
+2. 最后用固定格式输出内容假设（不要使用"选项1/选项2"引用，必须用实际内容表述）：
+【内容假设】：{用选项的实际内容表述你的判断，如"事业方向偏文职/教育"或"第3步大运2003-2012，重点2007丁亥"}
+```
+
+**关键约束**（审核 v3 反馈：禁止引用选项编号）：
+- Stage 1 prompt 中明确要求"不要使用'选项1/选项2'来引用选项，必须用选项的实际内容表述"
+- 避免模型在【内容假设】中写"选项2最符合"，导致 Stage 2 无法对应 A/B/C/D
+
 **内容假设的固定标记格式**（审核反馈：parser 容错设计）：
 ```
 【内容假设】：第3步大运（2003-2012），重点流年2007丁亥
@@ -128,8 +174,13 @@ Stage 1 解析失败（无法提取内容假设）时，退化为 Phase 3 的 st
 - 同一 case 的 3 个 perm（p0/p1/p2）共享同一个 Stage 1 假设
 - Stage 1 prompt 中的选项是打乱顺序、无标签的，与 perm 无关
 - 因此 Stage 1 只需调用 1 次（而非 3 次），Stage 2 仍按 perm 分别调用
-- 调用数：on-3 从 3×40×2=240 降至 40×1 + 3×40×1=160（Stage 1 共享 + Stage 2 按 perm）
-- off-3 的 Stage 1 与 on-3 共享（off-3 只是 Stage 2 不 shuffle），无需额外 Stage 1 调用
+- **调用数计算**（修正 v3）：
+  - Stage 1：40 case × 1 = 40（跨 on-3/off-3 + 跨 3 perm 共享）
+  - Stage 2 on-3：40 × 3 perm = 120
+  - Stage 2 off-3：40 × 3 perm = 120
+  - **总计 = 280**（Phase 3 基线 240 → Phase 4 两阶段 280，+16.7%）
+  - 含 20% fallback 余量：280 × 1.2 ≈ 336
+- off-3 也使用两阶段（与 on-3 公平对照），Stage 1 与 on-3 共享，Stage 2 独立调用
 
 ### 3.3 时间类两步推理
 
@@ -197,8 +248,14 @@ Stage1 调用 (temp=0, 跨 perm 共享 1 次) → raw1
 ### 4.3 评测复用
 
 - Permutation plan：沿用 Phase 3 冻结的 `formal40_perm_s{0,1,2}.jsonl`
-- Gate：沿用 Phase 3 的 6 项 gate（`phase3_generate_gate_report.py`）
+- Gate：沿用 Phase 3 的 6 项 gate（`scripts/phase3_generate_gate_report.py`）
 - 数据隔离：development=2025 前 20 题，final=2024 holdout 40 题
+
+**off-3 两阶段策略**（审核 v3 反馈：明确）：
+- off-3 也使用两阶段推理，与 on-3 公平对照（否则 shuffle gap 不可比）
+- off-3 的 Stage 1 与 on-3 共享（Stage 1 是 label-blind，与 shuffle 无关）
+- off-3 的 Stage 2 不 shuffle（选项保持原始顺序 A/B/C/D），on-3 的 Stage 2 按 perm shuffle
+- 这样 off_ite vs on_ite 的差异只来自 Stage 2 的 shuffle，是公平的 shuffle gap
 
 **数据暴露声明**（审核反馈）：
 - `phase4_dev_data_exposed_in_phase1_and_phase3 = true`：dev20（2025 前 20 题）在 Phase 1 和 Phase 3 中已被模型多次见过
@@ -219,7 +276,7 @@ Stage1 调用 (temp=0, 跨 perm 共享 1 次) → raw1
 | 时间类 4 case | 0/4 正确 | ≥ 1/4 正确 | （非 gate，内部跟踪） |
 | fallback 率 | N/A | ≤ 0.20 | （非 gate，内部跟踪） |
 | top-2 命中率 | N/A | ≥ 0.85（formal 启用 top-2 的前提） | （非 gate，内部跟踪） |
-| 总 API 调用 | 240 | ≤ 200（Stage 1 跨 perm 共享后） | （非 gate，成本控制） |
+| 总 API 调用 | 240 | ≤ 336（280 基础 + 20% fallback 余量） | （非 gate，成本控制） |
 
 **Phase 4 成功条件**：5/6 gate 维持 PASS + 时间类至少 1/4 改善 + fallback 率 ≤ 0.20。MMS 突破 0.80 为 stretch goal。
 
@@ -233,7 +290,7 @@ Stage1 调用 (temp=0, 跨 perm 共享 1 次) → raw1
 |---|---|---|---|
 | Stage 1 内容假设与选项表述对不上 | 中 | 准确率下降 | 标签 blind 保留选项语义 + "可比较表述"约束 + fallback 到单阶段 |
 | top-2 TF-IDF 匹配命中率低 | 中 | formal 阶段无法启用 top-2 | smoke 阶段统计命中率，< 0.85 则保持全选项证据（方案 c） |
-| 两阶段调用成本增加 | 中 | 评测时间增加 | Stage 1 跨 perm 共享，总调用 ≤ 200（原 240）；smoke 限 10 case |
+| 两阶段调用成本增加 | 中 | 评测时间 +16.7%（280 vs 240） | Stage 1 跨 perm 共享（40 次 vs 240 次）；smoke 限 10 case |
 | Stage 1 parser 失败率高 | 中 | fallback 率高 | 固定标记 `【内容假设】：` + 多前缀容错 + 回退到最后一段非空行 |
 | 时间类指令干扰非时间类 | 低 | 非时间类退化 | `is_time_location_question` 精确触发 + smoke 统计误触发率 < 10% |
 | API 限流 | 中 | 部分 case 失败 | 复用 Phase 3 的 SC retry 机制（`sample_answers` 的 retry + delay） |
@@ -290,6 +347,17 @@ Stage1 调用 (temp=0, 跨 perm 共享 1 次) → raw1
 | Fallback 浪费调用未算入预算 | 中 | §5 预算预留 20% 余量 |
 | Stage 1 跨 perm 复用机会 | 低 | §3.2/§3.4 新增跨 perm 共享，节省 67% Stage 1 调用 |
 | 缺少回滚条件 | 低 | §5 新增回滚条件（on_ite >5pp 或 MMS >2pp 下降） |
+
+**v3 修订（第二轮审核，5 项）**：
+
+| 问题 | 严重度 | 处理 |
+|---|---|---|
+| 总 API 调用预算计算错误（280 非 200） | 高 | §3.2/§5/§6 修正：280 基础 + 20% fallback = ≤336 |
+| Stage 1 选项打乱缺乏确定性 | 高 | §3.2 新增固定 seed（case_id hash）保证跨 perm 可共享 |
+| 标签 blind 下模型可能引用"选项2"造成歧义 | 高 | §3.2 Stage 1 prompt 明确禁止引用选项编号，必须用实际内容表述 |
+| off-3 两阶段策略未明确 | 中 | §4.3 新增 off-3 也用两阶段，Stage 1 共享，Stage 2 不 shuffle |
+| Stage 1 prompt 示例缺失 | 中 | §3.2 补充完整 Stage 1 prompt 示例（含候选项/输出要求/禁止编号） |
+| gate report 脚本路径 | 低 | §4.3 修正为 `scripts/phase3_generate_gate_report.py`（已验证存在） |
 
 ---
 
