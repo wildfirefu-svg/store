@@ -52,3 +52,6 @@ tests/fixtures/baziqa/contest8_sample.jsonl
 # Virtual environments and model caches
 .venv/
 .cache/
+
+# Firecrawl CLI output (web search/scrape cache)
+.firecrawl/
