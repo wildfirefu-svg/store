@@ -54,22 +54,30 @@ prompt = base + chart + question + options + evidence(全部选项) + APB
 
 #### Phase 4 two_stage_reasoning（两阶段）
 
-**Stage 1（option-blind 推理）**：
+**Stage 1（标签 blind 推理）**：
 ```
-prompt_1 = base + chart + question + 三阶段推理协议 + 时间类两步推理指令
-（不含选项、不含 evidence）
-→ 输出：三阶段推理 + "内容假设"（用可比较的具体表述）
+prompt_1 = base + chart + question + 选项文本（无 A/B/C/D 标签，打乱顺序）
+           + 三阶段推理协议 + 时间类两步推理指令（若触发）
+（不含 RAG evidence、不含选项位置标签）
+→ 输出：三阶段推理 + 【内容假设】（固定标记 + 可比较表述）
 ```
 
-关键约束：Stage 1 必须要求"可比较表述"（如"日主丙火偏弱，用神取印比，事业方向偏文职/教育"），否则命理语言和选项表述对不上，匹配失败反而降准确率。
+关键约束：
+- Stage 1 可看选项文本但不含 A/B/C/D 标签，切断位置→字母捷径，同时保留应象映射所需的选项语义
+- 内容假设用固定标记 `【内容假设】：` 输出，parser 正则提取 + 多前缀容错
+- "可比较表述"约束：事业类输出方向+细分，时间类输出大运区间+流年，性质类输出事件性质+程度
+- Stage 1 跨 perm 共享：同一 case 的 3 个 perm 共用 1 次 Stage 1 调用
 
 **Stage 2（选项匹配 + 证据决胜）**：
 ```
-prompt_2 = base + chart + question + options(A/B/C/D) + Stage1推理结果 + evidence(top-2 only) + APB
+prompt_2 = base + chart + question + options(A/B/C/D) + Stage1内容假设
+           + evidence + APB + 冲突仲裁指令
 → 输出：四选项置信度 + 最终答案
 ```
 
-关键约束：Stage 2 只对 Stage 1 的 top-2 候选检索 evidence，减少证据噪声。
+关键约束：
+- 证据策略分阶段：smoke 用全选项证据，formal 视 top-2 命中率（≥0.85）决定是否启用 top-2
+- 冲突仲裁：假设与证据矛盾时默认相信证据，标记 `phase4_conflict=True`
 
 #### Fallback
 
@@ -119,11 +127,16 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
 
 - 文件：`tests/test_two_stage_reasoning.py`
 - 测试内容：
-  - `format_stage1_prompt(case)` 不含选项文本
+  - `format_stage1_prompt(case)` 含选项文本但**不含 A/B/C/D 标签**
+  - `format_stage1_prompt(case)` 选项顺序打乱（每次调用可能不同或固定 seed）
   - `format_stage1_prompt(case)` 对时间类问题注入两步推理指令
-  - `format_stage2_prompt(case, stage1_result, top2_evidence)` 含选项 + Stage1 结果
-  - `parse_stage1_result(raw)` 解析内容假设，失败返回 None
-  - `is_time_location_question(question)` 正确识别时间类问题
+  - `format_stage1_prompt(case)` 要求输出 `【内容假设】：` 固定标记
+  - `format_stage2_prompt(case, hypothesis, evidence)` 含选项(A/B/C/D) + 假设 + 证据 + 冲突仲裁指令
+  - `parse_stage1_result(raw)` 解析 `【内容假设】：` 标记，支持多前缀容错，失败返回 None
+  - `parse_stage1_result(raw)` 返回 `(hypothesis, confidence)` 或 `None`
+  - `is_time_location_question(question, options)` 正确识别时间类问题（含扩展关键词）
+  - `is_time_location_question` 对 4 个 unanimous wrong case 全部返回 True
+  - `build_stage2_evidence(case, hypothesis, mode='all')` 返回全选项证据
 - 预期：测试失败（实现未写）
 
 #### Task 1.2：实现 two_stage_reasoning formatter
@@ -229,10 +242,15 @@ Option-blind（2.1）和时间类两步推理（2.2）正交，可叠加：
 | MMS | 0.7033 | ≥ 0.7033（突破 0.80 为成功） | 不退化，突破为 bonus |
 | gate_parser_valid_95pct | 0.9598 | ≥ 0.95 | 不退化 |
 | confirmed_leak_count | 0 | 0 | 不退化 |
+| off_ite_accuracy | 0.65 | ≥ 0.65 | 不退化（修正） |
 | 时间类 4 case | 0/4 正确 | ≥ 1/4 正确 | 准确率提升 |
 | fallback 率 | N/A | ≤ 0.20 | 两阶段稳定性 |
+| top-2 命中率 | N/A | ≥ 0.85 | formal 启用 top-2 的前提 |
+| 总 API 调用 | 240 | ≤ 200 | Stage 1 跨 perm 共享后 |
 
-**Phase 4 成功条件**：5/6 gate 维持 PASS + 时间类至少 1/4 改善。MMS 突破 80% 为 stretch goal。
+**Phase 4 成功条件**：5/6 gate 维持 PASS + 时间类至少 1/4 改善 + fallback 率 ≤ 0.20。MMS 突破 80% 为 stretch goal。
+
+**回滚条件**：任何 Task 后若 on_ite 下降 > 5pp 或 MMS 下降 > 2pp，立即回滚到 Phase 3 noleak v4 配置。
 
 ---
 
