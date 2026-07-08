@@ -1,8 +1,11 @@
-"""Call LLM API (Anthropic or DeepSeek) with urllib (no external deps).
+"""Call LLM API (Anthropic, DeepSeek, Kimi, GLM, Qwen) with urllib (no external deps).
 
-Auto-detects API provider from key prefix:
+Auto-detects API provider from key prefix or env var:
   - sk-ant-* → Anthropic Messages API
-  - otherwise → DeepSeek (OpenAI-compatible) API
+  - sk-* with DEEPSEEK_API_KEY → DeepSeek (OpenAI-compatible) API
+  - sk-* with KIMI_API_KEY → Kimi/Moonshot (OpenAI-compatible) API
+  - * with GLM_API_KEY → GLM/Zhipu (OpenAI-compatible) API
+  - sk-* with QWEN_API_KEY → Qwen/DashScope (OpenAI-compatible) API
 """
 import json
 import os
@@ -11,7 +14,12 @@ import urllib.request
 import urllib.error
 import logging
 
-from config import MAX_TOKENS, DEFAULT_TEMPERATURE, DEEPSEEK_THINKING, LOG_LEVEL, LOG_FILE, API_RETRIES
+from config import (
+    MAX_TOKENS, DEFAULT_TEMPERATURE, DEEPSEEK_THINKING, LOG_LEVEL, LOG_FILE, API_RETRIES,
+    DEEPSEEK_API_KEY, ANTHROPIC_API_KEY, KIMI_API_KEY, GLM_API_KEY, QWEN_API_KEY,
+    DEEPSEEK_MODEL, ANTHROPIC_MODEL, KIMI_MODEL, GLM_MODEL, QWEN_MODEL,
+    DEEPSEEK_BASE_URL, ANTHROPIC_BASE_URL, KIMI_BASE_URL, GLM_BASE_URL, QWEN_BASE_URL,
+)
 
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
@@ -23,7 +31,7 @@ logger = logging.getLogger('claude')
 
 def _load_dotenv():
     """Lightweight .env loader (no external dep). Reads KEY=VALUE pairs from
-    project_root/.env into os.environ without overriding existing values.
+    project-root/.env into os.environ without overriding existing values.
     Lines starting with '#' are ignored. Quoted values are unquoted."""
     if getattr(sys, 'frozen', False):
         root = os.path.dirname(sys.executable)
@@ -48,41 +56,46 @@ def _load_dotenv():
             os.environ[key] = value
 
 
+_load_dotenv()
+
+
 def _load_api_key():
-    """Load API key: env vars > external key file. Returns '' if not configured."""
-    for env_name in ("DEEPSEEK_API_KEY", "ANTHROPIC_API_KEY"):
+    """Load API key from env vars (loaded by _load_dotenv). Returns '' if not configured."""
+    # Priority: deepseek > anthropic > kimi > glm > qwen
+    for env_name in (
+        "DEEPSEEK_API_KEY", "ANTHROPIC_API_KEY", "KIMI_API_KEY", "GLM_API_KEY", "QWEN_API_KEY"
+    ):
         key = os.environ.get(env_name, "").strip()
         if key:
             return key
-
-    # PyInstaller: key file is next to .exe, not inside _internal/
-    if getattr(sys, 'frozen', False):
-        root = os.path.dirname(sys.executable)
-    else:
-        root = os.path.dirname(os.path.abspath(__file__))
-    for filename in (".deepseek_key", ".anthropic_key"):
-        key_file = os.path.join(root, filename)
-        try:
-            with open(key_file, "r") as f:
-                key = f.read().strip()
-            if key:
-                return key
-        except FileNotFoundError:
-            pass
     return ""
 
 
-_load_dotenv()
 ANTHROPIC_API_KEY = _load_api_key()
 
 
 def _detect_provider(api_key: str):
-    """Return ('anthropic'|'deepseek', base_url, model)."""
+    """Return (provider_name, base_url, default_model)."""
+    if not api_key:
+        return "deepseek", DEEPSEEK_BASE_URL, DEEPSEEK_MODEL
     if api_key.startswith("sk-ant"):
-        model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
-        return "anthropic", "https://api.anthropic.com/v1/messages", model
-    model = os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-pro")
-    return "deepseek", "https://api.deepseek.com/chat/completions", model
+        return "anthropic", ANTHROPIC_BASE_URL, ANTHROPIC_MODEL
+    # Check which env var matched by comparing against os.environ values
+    # Priority: kimi > glm > qwen > deepseek (for sk- prefixed keys)
+    env_key_map = [
+        ("KIMI_API_KEY", "kimi", KIMI_BASE_URL, KIMI_MODEL),
+        ("GLM_API_KEY", "glm", GLM_BASE_URL, GLM_MODEL),
+        ("QWEN_API_KEY", "qwen", QWEN_BASE_URL, QWEN_MODEL),
+        ("DEEPSEEK_API_KEY", "deepseek", DEEPSEEK_BASE_URL, DEEPSEEK_MODEL),
+    ]
+    for env_name, provider_name, base_url, default_model in env_key_map:
+        env_val = os.environ.get(env_name, "").strip()
+        if env_val and api_key == env_val:
+            return provider_name, base_url, default_model
+    # Fallback for unknown sk- keys: assume deepseek
+    if api_key.startswith("sk-"):
+        return "deepseek", DEEPSEEK_BASE_URL, DEEPSEEK_MODEL
+    return "deepseek", DEEPSEEK_BASE_URL, DEEPSEEK_MODEL
 
 
 def _log_ai_config():
@@ -90,11 +103,11 @@ def _log_ai_config():
     and model are actually loaded, and surface obvious key issues."""
     key = ANTHROPIC_API_KEY
     if not key:
-        logger.warning("AI key not configured — set DEEPSEEK_API_KEY/ANTHROPIC_API_KEY or place .deepseek_key/.anthropic_key next to api_server.py")
+        logger.warning("AI key not configured — set DEEPSEEK_API_KEY/ANTHROPIC_API_KEY/KIMI_API_KEY/GLM_API_KEY/QWEN_API_KEY or add to .env")
         return
     provider, _, model = _detect_provider(key)
     logger.info("AI configured: provider=%s model=%s", provider, model)
-    if not key.startswith("sk-"):
+    if not key.startswith("sk-") and provider not in ("glm",):
         logger.warning("AI key does not start with 'sk-'; this looks suspicious")
     elif provider == "deepseek" and len(key) < 32:
         logger.warning("DeepSeek key looks unusually short; verify it is the full key")
@@ -111,14 +124,22 @@ def get_ai_config():
 
 def call_model_messages_sync(messages, provider=None, model=None, system_prompt=None, timeout=180, temperature=None):
     """同步调用模型补全接口，支持 multi-turn messages。"""
-    key = ANTHROPIC_API_KEY
-    if not key:
-        raise RuntimeError("AI key not configured")
-
-    detected_provider, url, default_model = _detect_provider(key)
+    detected_provider, detected_url, default_model = _detect_provider(ANTHROPIC_API_KEY or "")
     provider = provider or detected_provider
     model = model or default_model
     sys_text = system_prompt if system_prompt is not None else ""
+
+    # Select the appropriate API key and base URL for the provider
+    provider_config = {
+        "anthropic": (ANTHROPIC_API_KEY, ANTHROPIC_BASE_URL),
+        "deepseek": (DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL),
+        "kimi": (KIMI_API_KEY, KIMI_BASE_URL),
+        "glm": (GLM_API_KEY, GLM_BASE_URL),
+        "qwen": (QWEN_API_KEY, QWEN_BASE_URL),
+    }
+    key, url = provider_config.get(provider, (ANTHROPIC_API_KEY, detected_url))
+    if not key:
+        raise RuntimeError(f"AI key not configured for provider: {provider}")
 
     if provider == "anthropic":
         payload = {
@@ -137,6 +158,7 @@ def call_model_messages_sync(messages, provider=None, model=None, system_prompt=
         }
         endpoint = url
     else:
+        # OpenAI-compatible providers: deepseek, kimi, glm, qwen
         chat_messages = []
         if sys_text:
             chat_messages.append({"role": "system", "content": sys_text})
@@ -148,12 +170,18 @@ def call_model_messages_sync(messages, provider=None, model=None, system_prompt=
             "stream": False,
         }
         if temperature is not None:
-            payload["temperature"] = float(temperature)
+            _t = float(temperature)
+            if provider == "kimi":
+                _t = 1.0
+            payload["temperature"] = _t
         headers = {
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
         }
+        # Append /chat/completions for OpenAI-compatible endpoints
         endpoint = url
+        if not endpoint.endswith("/chat/completions"):
+            endpoint = endpoint.rstrip("/") + "/chat/completions"
 
     req = urllib.request.Request(
         endpoint,

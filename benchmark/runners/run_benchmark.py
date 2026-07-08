@@ -17,6 +17,13 @@ from benchmark.formatters.baziqa_prompt import (
     format_multi_turn_context,
     format_multi_turn_question,
 )
+from benchmark.formatters.two_stage_reasoning import (
+    format_stage1_prompt,
+    format_stage2_prompt,
+    parse_stage1_result,
+    build_stage2_evidence,
+    is_time_location_question,
+)
 from benchmark.scorers.evidence_score import score_case_evidence, aggregate_evidence_score
 from benchmark.scorers.safety_score import score_safety, aggregate_safety_score
 from benchmark.reports.generate_report import save_report
@@ -34,6 +41,8 @@ def run_offline_benchmark(cases, predictions):
 
 
 def build_benchmark_prompt(case, method='direct_choice'):
+    if method == 'two_stage_reasoning':
+        return format_stage1_prompt(case)
     if method == 'structured_reasoning':
         return format_structured_reasoning_prompt(case)
     if method in ('direct_choice', 'multi_turn'):
@@ -155,9 +164,11 @@ def _resolve_option_evidence_trace(case, k=2):
         return {}, {}
 
 
-def _resolve_system_prompt(case, rag_k=2, retrieval_mode='legacy', option_evidence_k=2):
-    prompt = _resolve_system_prompt_inner(case, rag_k, retrieval_mode, option_evidence_k)
-    if os.environ.get('BAZI_APB_BLOCK') == '1' and os.environ.get('BAZI_RAG') == '1':
+def _resolve_system_prompt(case, rag_k=2, retrieval_mode='legacy', option_evidence_k=2, suppress_rag=False, suppress_apb=False):
+    if suppress_rag and suppress_apb:
+        return SYSTEM_PROMPT_BENCHMARK
+    prompt = _resolve_system_prompt_inner(case, rag_k, retrieval_mode, option_evidence_k, suppress_rag=suppress_rag)
+    if not suppress_apb and os.environ.get('BAZI_APB_BLOCK') == '1' and os.environ.get('BAZI_RAG') == '1':
         try:
             from rag_prompt_builder import format_apb_instruction_block
             prompt = prompt + "\n\n" + format_apb_instruction_block(has_evidence=True)
@@ -166,7 +177,7 @@ def _resolve_system_prompt(case, rag_k=2, retrieval_mode='legacy', option_eviden
     return prompt
 
 
-def _resolve_system_prompt_inner(case, rag_k=2, retrieval_mode='legacy', option_evidence_k=2):
+def _resolve_system_prompt_inner(case, rag_k=2, retrieval_mode='legacy', option_evidence_k=2, suppress_rag=False):
     fewshot_path = os.environ.get('BAZI_FEWSHOT_FILE') or ''
     fewshot_examples = []
     if fewshot_path:
@@ -176,7 +187,7 @@ def _resolve_system_prompt_inner(case, rag_k=2, retrieval_mode='legacy', option_
         except Exception:
             fewshot_examples = []
 
-    if os.environ.get('BAZI_RAG') != '1':
+    if suppress_rag or os.environ.get('BAZI_RAG') != '1':
         if not fewshot_examples:
             return SYSTEM_PROMPT_BENCHMARK
         try:
@@ -215,7 +226,7 @@ def _resolve_system_prompt_inner(case, rag_k=2, retrieval_mode='legacy', option_
 _BENCH_CASE_INDEX = None
 
 
-def call_model_sync(prompt, provider, model, case=None, temperature=None, rag_k=2, retrieval_mode='legacy', option_evidence_k=2):
+def call_model_sync(prompt, provider, model, case=None, temperature=None, timeout=300, rag_k=2, retrieval_mode='legacy', option_evidence_k=2, suppress_rag=False, suppress_apb=False):
     try:
         from claude_api import call_model_messages_sync
         messages = [{"role": "user", "content": prompt}]
@@ -223,23 +234,25 @@ def call_model_sync(prompt, provider, model, case=None, temperature=None, rag_k=
             messages,
             provider=provider,
             model=model,
-            system_prompt=_resolve_system_prompt(case, rag_k=rag_k, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k),
+            system_prompt=_resolve_system_prompt(case, rag_k=rag_k, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k, suppress_rag=suppress_rag, suppress_apb=suppress_apb),
             temperature=temperature,
+            timeout=timeout,
         )
         return str(response).strip()
     except Exception as e:
         raise RuntimeError(f"model_call_failed: {type(e).__name__}: {str(e)[:120]}") from e
 
 
-def call_model_messages_with_history(messages, provider, model, case=None, temperature=None, rag_k=2, retrieval_mode='legacy', option_evidence_k=2):
+def call_model_messages_with_history(messages, provider, model, case=None, temperature=None, timeout=300, rag_k=2, retrieval_mode='legacy', option_evidence_k=2, suppress_rag=False, suppress_apb=False):
     try:
         from claude_api import call_model_messages_sync
         response = call_model_messages_sync(
             messages,
             provider=provider,
             model=model,
-            system_prompt=_resolve_system_prompt(case, rag_k=rag_k, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k),
+            system_prompt=_resolve_system_prompt(case, rag_k=rag_k, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k, suppress_rag=suppress_rag, suppress_apb=suppress_apb),
             temperature=temperature,
+            timeout=timeout,
         )
         return str(response).strip()
     except Exception as e:
@@ -300,7 +313,7 @@ def _retrieval_call_kwargs(rag_k, retrieval_mode='legacy', option_evidence_k=2):
     return kwargs
 
 
-def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None, n_samples=1, sample_temperature=0.4, aggregate='majority'):
+def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None, n_samples=1, sample_temperature=0.4, aggregate='majority', phase4_evidence_mode='all'):
     if method == 'multi_turn':
         return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases, temperature=temperature, case_details_jsonl=case_details_jsonl, rag_k=rag_k, config_id=config_id, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k)
 
@@ -325,6 +338,9 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
     case_details = []
     failed_cases = []
 
+    # Stage 1 cache for two_stage_reasoning (cross-perm optimization)
+    stage1_cache = {}
+
     limited_cases = cases[:max_cases]
     print(f"Running model benchmark on {len(limited_cases)} cases...")
 
@@ -333,6 +349,208 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
         print(f"  [{i+1}/{len(limited_cases)}] {case_id}")
 
         prompt = build_benchmark_prompt(case, method=method)
+
+        # Two-stage reasoning path
+        if method == 'two_stage_reasoning':
+            try:
+                # Stage 1: label-blind reasoning (suppress RAG/APB)
+                cached = stage1_cache.get(case_id)
+                if cached is not None:
+                    raw1, hypothesis = cached
+                    print(f"    [Stage 1 cached]")
+                else:
+                    raw1 = call_model_sync(
+                        prompt,
+                        provider,
+                        model,
+                        case=case,
+                        temperature=0.0,
+                        suppress_rag=True,
+                        suppress_apb=True,
+                    )
+                    hypothesis = parse_stage1_result(raw1)
+                    stage1_cache[case_id] = (raw1, hypothesis)
+
+                # Parse failure → fallback to structured_reasoning
+                if hypothesis is None:
+                    print(f"    [Stage 1 parse failed → fallback to structured_reasoning]")
+                    fallback_prompt = format_structured_reasoning_prompt(case)
+                    answer = call_model_sync(
+                        fallback_prompt,
+                        provider,
+                        model,
+                        case=case,
+                        temperature=temperature,
+                        **_retrieval_call_kwargs(rag_k, retrieval_mode, option_evidence_k),
+                    )
+                    predicted = None
+                    sample_records = None
+                    fallback = True
+                    fallback_reason = "stage1_parse_failed"
+                else:
+                    # Stage 2: option matching with evidence
+                    print(f"    [Stage 2 with hypothesis]")
+                    is_time = is_time_location_question(case.get('question', ''), case.get('options', []))
+                    # evidence_mode: 'all' for smoke (default), 'top2' only for formal if hit rate >= 0.85
+                    evidence_mode = phase4_evidence_mode if phase4_evidence_mode in ('all', 'top2') else 'all'
+                    evidence = build_stage2_evidence(case, hypothesis, mode=evidence_mode)
+                    stage2_prompt = format_stage2_prompt(case, hypothesis, evidence, is_time=is_time)
+
+                    # Self-consistency for Stage 2: multiple samples with majority vote
+                    if n_samples > 1:
+                        def _do_stage2_call(call_temperature):
+                            raw = call_model_sync(
+                                stage2_prompt,
+                                provider,
+                                model,
+                                case=case,
+                                temperature=call_temperature,
+                                **_retrieval_call_kwargs(rag_k, retrieval_mode, option_evidence_k),
+                            )
+                            parsed = extract_choice_with_meta(raw)
+                            return raw, parsed.get('choice')
+
+                        samples = sample_answers(
+                            _do_stage2_call,
+                            n=n_samples,
+                            temperatures=[sample_temperature] * n_samples,
+                        )
+                        predicted = majority_vote([label for _, label in samples])
+                        # Use the first sample whose predicted label matches the majority vote
+                        answer = samples[0][0]
+                        if predicted is not None:
+                            for raw, label in samples:
+                                if label == predicted:
+                                    answer = raw
+                                    break
+                        sample_records = [{"raw": raw, "predicted": label} for raw, label in samples]
+                        print(f"    [SC votes: {dict((label, sum(1 for _, l in samples if l == label)) for label in set(l for _, l in samples if l is not None))} → {predicted}]")
+                    else:
+                        answer = call_model_sync(
+                            stage2_prompt,
+                            provider,
+                            model,
+                            case=case,
+                            temperature=temperature,
+                            **_retrieval_call_kwargs(rag_k, retrieval_mode, option_evidence_k),
+                        )
+                        sample_records = None
+                        predicted = None
+                    fallback = False
+                    fallback_reason = None
+
+                # Build detail for two_stage
+                expected = extract_choice(case.get('answer'))
+                meta = extract_choice_with_meta(answer)
+                if predicted is None:
+                    predicted = meta['choice']
+                rag_trace = _resolve_rag_trace(case, k=rag_k)
+                option_evidence = {}
+                option_evidence_coverage = {}
+                if retrieval_mode == 'option_grounded':
+                    option_evidence, option_evidence_coverage = _resolve_option_evidence_trace(case, k=option_evidence_k)
+
+                ev_result = score_case_evidence(case, answer)
+                ev_result['case_id'] = case_id
+                evidence_results.append(ev_result)
+
+                safe_result = score_safety(answer)
+                safe_result['case_id'] = case_id
+                safety_results.append(safe_result)
+
+                predictions[case_id] = answer
+
+                detail = {
+                    "case_id": case_id,
+                    "domain": case.get('domain', 'unknown'),
+                    "question": case.get('question', '')[:50],
+                    "expected_answer": expected,
+                    "predicted_answer": predicted,
+                    "raw_answer": answer,
+                    "correct": predicted == expected,
+                    "evidence_coverage": ev_result.get('coverage', 0.0),
+                    "safety_score": safe_result.get('score', 0.0),
+                    "parser_source": meta.get('source'),
+                    "parser_valid": meta.get('valid'),
+                    "rag_k": rag_k,
+                    "retrieval_mode": retrieval_mode,
+                    "rag_trace": rag_trace,
+                    "option_evidence": option_evidence,
+                    "option_evidence_coverage": option_evidence_coverage,
+                    "retrieved_answer_leak": _compute_case_leak(rag_trace, expected),
+                    "config_id": config_id,
+                    "call_success": True,
+                    "permutation_id": case.get('_permutation_id'),
+                    "label_map": case.get('answer_label_map') or {},
+                    "predicted_identity": to_original_option_identity(predicted, case.get('answer_label_map') or {}),
+                    "correct_identity": case.get('_original_answer'),
+                    "mode": "on-3" if case.get('answer_label_map') else "off-3",
+                    # Phase 4 fields
+                    "phase4_stage1_raw": raw1 if not fallback else None,
+                    "phase4_stage1_hypothesis": hypothesis if not fallback else None,
+                    "phase4_stage2_raw": answer if not fallback else None,
+                    "phase4_fallback": fallback,
+                    "phase4_fallback_reason": fallback_reason,
+                    "phase4_is_time_question": is_time if not fallback else None,
+                    "phase4_conflict": None,  # TODO: detect conflict between hypothesis and evidence
+                    "phase4_evidence_mode": evidence_mode if not fallback else None,
+                    "phase4_sc_samples": sample_records if sample_records else None,
+                }
+                parser_failure_reason = classify_parser_failure(
+                    raw_answer=answer,
+                    parsed_choice=predicted,
+                    valid=meta.get('valid', False),
+                    label_map=case.get('answer_label_map') or {},
+                    call_success=True,
+                )
+                detail["parser_failure_reason"] = parser_failure_reason
+                if shuffle_options:
+                    label_map = case.get('answer_label_map') or {}
+                    detail["answer_label_map"] = label_map
+                    detail["original_expected_answer"] = case.get('_original_answer')
+                    detail["original_predicted_answer"] = unshuffle_predicted_answer(predicted, label_map)
+                case_details.append(detail)
+                _append_jsonl(case_details_jsonl, detail)
+                time.sleep(1)
+                continue
+            except RuntimeError as e:
+                err_msg = str(e)[:120]
+                failed_cases.append({'case_id': case_id, 'error': err_msg})
+                expected_letter = extract_choice(case.get('answer'))
+                failure_detail = {
+                    "case_id": case_id,
+                    "domain": case.get('domain', 'unknown'),
+                    "question": case.get('question', '')[:50],
+                    "expected_answer": expected_letter,
+                    "predicted_answer": None,
+                    "raw_answer": "",
+                    "correct": False,
+                    "error": err_msg,
+                    "evidence_coverage": 0.0,
+                    "safety_score": 0.0,
+                    "parser_source": None,
+                    "parser_valid": False,
+                    "rag_k": rag_k,
+                    "retrieval_mode": retrieval_mode,
+                    "rag_trace": [],
+                    "option_evidence": {},
+                    "option_evidence_coverage": {},
+                    "retrieved_answer_leak": False,
+                    "config_id": config_id,
+                    "call_success": False,
+                    "permutation_id": case.get('_permutation_id'),
+                    "label_map": case.get('answer_label_map') or {},
+                    "predicted_identity": None,
+                    "correct_identity": case.get('_original_answer'),
+                    "mode": "on-3" if case.get('answer_label_map') else "off-3",
+                    "parser_failure_reason": "model_call_failed",
+                    "phase4_fallback": True,
+                    "phase4_fallback_reason": "model_call_failed",
+                }
+                case_details.append(failure_detail)
+                _append_jsonl(case_details_jsonl, failure_detail)
+                time.sleep(1)
+                continue
 
         def _do_one_call(call_temperature):
             raw = call_model_sync(
@@ -597,12 +815,12 @@ def main(argv=None):
     parser.add_argument('--dataset', required=True, help='Path to JSONL dataset')
     parser.add_argument('--predictions', help='Path to JSON predictions map (offline mode)')
     parser.add_argument('--model-runner', action='store_true', help='Enable real model calls')
-    parser.add_argument('--provider', default='deepseek', help='deepseek or anthropic')
+    parser.add_argument('--provider', default='deepseek', help='deepseek, anthropic, kimi, glm, or qwen')
     parser.add_argument('--model', default='deepseek-v4-pro', help='Model name')
     parser.add_argument('--prompt-version', default='srp_v1', help='Prompt version')
     parser.add_argument('--output-dir', default='benchmark/outputs', help='Report output directory')
     parser.add_argument('--max-cases', type=int, default=20, help='Max cases to run (model mode)')
-    parser.add_argument('--method', default='direct_choice', choices=['direct_choice', 'multi_turn', 'structured_reasoning'])
+    parser.add_argument('--method', default='direct_choice', choices=['direct_choice', 'multi_turn', 'structured_reasoning', 'two_stage_reasoning'])
     parser.add_argument('--rag', action='store_true', help='Enable BaziQA case retrieval augmentation (sets BAZI_RAG=1).')
     parser.add_argument('--rag-corpus', default='', help='JSONL corpus file used when --rag is enabled')
     parser.add_argument('--fewshot-file', default='', help='Optional JSONL file with few-shot example questions injected into the system prompt')
@@ -618,6 +836,7 @@ def main(argv=None):
     parser.add_argument('--sample-temperature', type=float, default=0.4, help='Sampling temperature used when --n-samples > 1')
     parser.add_argument('--aggregate', default='majority', choices=['majority'], help='Aggregation strategy over samples')
     parser.add_argument('--apb-block', action='store_true', help='Append anti-position-bias instruction to system prompt (Phase 3)')
+    parser.add_argument('--phase4-evidence-mode', default='all', choices=['all', 'top2'], help='Phase 4: evidence mode for Stage 2 (all=retrieve all options, top2=top-2 TF-IDF match)')
     args = parser.parse_args(argv)
 
     if args.rag:
@@ -652,6 +871,7 @@ def main(argv=None):
             n_samples=args.n_samples,
             sample_temperature=args.sample_temperature,
             aggregate=args.aggregate,
+            phase4_evidence_mode=args.phase4_evidence_mode,
         )
 
         model_cases = model_result['cases']
