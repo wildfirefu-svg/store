@@ -15,7 +15,7 @@
 - Create: `scripts/run_phase5_c2_generalization.py` — Phase 5 唯一编排入口；包含纯函数、manifest、运行恢复、汇总和 CLI。
 - Create: `tests/test_phase5_c2_generalization.py` — fake runner 单元/集成测试，不访问网络。
 - Create at runtime only: `.tmp/phase5_generalization/**` — enriched 数据、离线结果、attempt 记录和运行状态，不加入 Git。
-- Create after a complete real experiment: `docs/PHASE5_C2_GENERALIZATION_REPORT.md`、`docs/phase5/phase5_c2_generalization_manifest.json`、`docs/phase5/phase5_c2_generalization_summary.json` — 由脚本生成；实现阶段不伪造真实实验结果。
+- Create after a complete real experiment: `docs/phase5/<run_id>/report.md`、`docs/phase5/<run_id>/manifest.json`、`docs/phase5/<run_id>/summary.json` — 每个 run 使用独立目录，由脚本生成；实现阶段不伪造真实实验结果。
 - Do not modify: `benchmark/runners/per_option_scorer.py`、`benchmark/runners/run_benchmark.py`、`benchmark/datasets/*.jsonl`。
 
 ## 固定接口与数据结构
@@ -195,6 +195,7 @@ import json
 import math
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -426,6 +427,20 @@ def test_resume_requires_existing_manifest(tmp_path: Path):
             {"fingerprint": "abc"},
             resume=True,
         )
+
+
+def test_manifest_declares_explicit_fingerprint_scope(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(phase5, "EXPERIMENT_SCOPE", ())
+    monkeypatch.setattr(phase5, "git_output", lambda *args: "deadbeef")
+    config = phase5.ExperimentConfig("r1", tmp_path, (2021, 2022))
+
+    manifest = phase5.build_manifest(config, datasets={}, scope_status={})
+
+    assert manifest["fingerprint_scope"] == {
+        "coverage": "explicit_experiment_files_only",
+        "files": [],
+        "indirect_dependencies_fingerprinted": False,
+    }
 ```
 
 - [ ] **Step 2: 运行新增测试确认函数不存在**
@@ -496,6 +511,11 @@ def build_manifest(
         "git_commit": git_output("rev-parse", "HEAD"),
         "scope_status": scope_status,
         "scope_hashes": scope_hashes,
+        "fingerprint_scope": {
+            "coverage": "explicit_experiment_files_only",
+            "files": list(EXPERIMENT_SCOPE),
+            "indirect_dependencies_fingerprinted": False,
+        },
         "provider": config.provider,
         "model": config.model,
         "method": config.method,
@@ -553,6 +573,13 @@ def assert_fixed_environment() -> None:
         raise RuntimeError(f"fixed Phase 5 configuration violated by: {', '.join(active)}")
 
 
+def validate_run_id(run_id: str) -> None:
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}", run_id):
+        raise ValueError(
+            "run_id must be 1-80 characters using only letters, digits, '.', '_' or '-'"
+        )
+
+
 def assert_fixed_config(config: ExperimentConfig) -> None:
     actual = (
         config.provider,
@@ -565,13 +592,13 @@ def assert_fixed_config(config: ExperimentConfig) -> None:
         raise RuntimeError(f"fixed Phase 5 configuration mismatch: {actual!r}")
 ```
 
-注意：manifest 只记录 `EXPERIMENT_SCOPE`，绝不执行无路径限定的 `git status` 并写入产物，避免把 `.env` 等无关敏感路径纳入记录。
+注意：manifest 只记录 `EXPERIMENT_SCOPE`，绝不执行无路径限定的 `git status` 并写入产物，避免把 `.env` 等无关敏感路径纳入记录。`scope_hashes` 本身位于 `immutable` 内，因此 `fingerprint` 已包含所有显式作用域文件哈希；`--resume` 会重建 expected manifest 并比较 fingerprint，代码漂移无需第二套重复校验。`fingerprint_scope` 明确声明未自动计算完整 Python 间接依赖闭包，避免把显式文件指纹误解为全依赖指纹。
 
 - [ ] **Step 4: 运行 manifest 测试确认通过**
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `8 passed`。
+Expected: `9 passed`。
 
 - [ ] **Step 5: 提交 manifest 实现**
 
@@ -741,7 +768,7 @@ CLI 主流程必须先对 2021 和 2022 全部执行 `run_offline_gate()`，确�
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `15 passed`。
+Expected: `16 passed`。
 
 - [ ] **Step 5: 提交离线门禁**
 
@@ -1045,7 +1072,7 @@ def run_initial_pairs(
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `20 passed`。
+Expected: `21 passed`。
 
 - [ ] **Step 5: 运行现有 runner 关联测试**
 
@@ -1204,6 +1231,10 @@ def resolve_arm(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+# No fourth tie-break request is allowed. A/B/C or valid/invalid ties remain
+# unresolved and therefore do not contribute a correct answer for that arm.
+
+
 def summarize_repeat_consistency(rows: list[dict[str, Any]]) -> dict[str, int]:
     grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
     for row in rows:
@@ -1276,13 +1307,13 @@ def run_disagreement_retests(
     return records
 ```
 
-attempt 2/3 必须继续使用 `config.temperature == 0.0`。复测测量的是相同配置下已在 `docs/BAZIQA_TRACE_DIAGNOSIS_REPORT.md` 实测出现的 API 非确定性；改成 `0.4` 会引入新的实验变量，使多数票不再代表原配置的稳定结论。若三次完全一致，`summarize_repeat_consistency()` 将其记录为 `unanimous` 确定性行为证据，而不是判为复测失败。
+attempt 2/3 必须继续使用 `config.temperature == 0.0`。复测测量的是相同配置下已在 `docs/BAZIQA_TRACE_DIAGNOSIS_REPORT.md` 实测出现的 API 非确定性；改成 `0.4` 会引入新的实验变量，使多数票不再代表原配置的稳定结论。若三次完全一致，`summarize_repeat_consistency()` 将其记录为 `unanimous` 确定性行为证据，而不是判为复测失败。`all_invalid` 是 arm 级指标：direct 和 direct_c2 各自三次全部不可解析时分别计 1，因此同一题两个 arm 都全无效时总计 2。报告使用 “all-invalid arms” 明示这个分母，不把它误解为题目数。
 
 - [ ] **Step 4: 运行 Task 5 测试确认通过**
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `25 passed`。
+Expected: `26 passed`。
 
 - [ ] **Step 5: 提交自适应复测**
 
@@ -1474,7 +1505,7 @@ def decide_final(metrics: dict[str, Any]) -> dict[str, Any]:
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `32 passed`。
+Expected: `33 passed`。
 
 - [ ] **Step 5: 提交统计判定**
 
@@ -1564,6 +1595,15 @@ def test_run_validation_uses_fake_runner_and_writes_summary(tmp_path: Path, monk
     assert final["total"] == 6
     assert (config.root / "final_manifest.json").is_file()
     assert phase5.sha256_file(config.root / "manifest.json") == initial_manifest_hash
+    archive_dir = tmp_path / "docs" / "phase5" / "r1"
+    assert (archive_dir / "manifest.json").is_file()
+    assert (archive_dir / "summary.json").is_file()
+    assert (archive_dir / "report.md").is_file()
+
+
+def test_run_id_rejects_path_traversal():
+    with pytest.raises(ValueError, match="run_id must be"):
+        phase5.validate_run_id("../overwrite")
 
 
 def test_run_validation_persists_auditable_year_stop(tmp_path: Path, monkeypatch):
@@ -1678,7 +1718,7 @@ def render_report(summary: dict[str, Any], manifest_sha256: str) -> str:
         f"- Rescues / regressions: {summary['rescues']} / {summary['regressions']}",
         f"- Parser valid rate (attempt-weighted): {summary['parser_valid_rate']:.1%} "
         f"({summary.get('parser_valid_attempts', 0)}/{summary.get('parser_total_attempts', 0)})",
-        f"- Unresolved / all-invalid: {summary['unresolved']} / {summary['all_invalid']}",
+        f"- Unresolved arms / all-invalid arms: {summary['unresolved']} / {summary['all_invalid']}",
         f"- Repeat consistency: {json.dumps(summary.get('repeat_consistency', {}), ensure_ascii=False)}",
         f"- Exact two-sided McNemar p: {summary['mcnemar_exact_p']:.6f}",
         f"- Discordant pairs: {summary['rescues'] + summary['regressions']}",
@@ -1724,17 +1764,18 @@ def render_report(summary: dict[str, Any], manifest_sha256: str) -> str:
 
 
 def archive_final_artifacts(
-    root: Path,
+    run_id: str,
     manifest_path: Path,
     summary_path: Path,
 ) -> None:
-    docs_phase5 = PROJECT_ROOT / "docs" / "phase5"
-    docs_phase5.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(manifest_path, docs_phase5 / "phase5_c2_generalization_manifest.json")
-    shutil.copy2(summary_path, docs_phase5 / "phase5_c2_generalization_summary.json")
+    validate_run_id(run_id)
+    archive_dir = PROJECT_ROOT / "docs" / "phase5" / run_id
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(manifest_path, archive_dir / "manifest.json")
+    shutil.copy2(summary_path, archive_dir / "summary.json")
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
     report = render_report(summary, sha256_file(manifest_path))
-    (PROJECT_ROOT / "docs" / "PHASE5_C2_GENERALIZATION_REPORT.md").write_text(
+    (archive_dir / "report.md").write_text(
         report,
         encoding="utf-8",
     )
@@ -1746,6 +1787,7 @@ def run_validation(
     runner: Runner = run_model_benchmark,
     expected_rows: int = 40,
 ) -> dict[str, Any]:
+    validate_run_id(config.run_id)
     assert_fixed_environment()
     assert_fixed_config(config)
     scope_status = experiment_scope_status()
@@ -1880,7 +1922,7 @@ def run_validation(
     }
     write_json(prior_summary_path, summary)
     if config.final_2023:
-        archive_final_artifacts(config.root, manifest_path, prior_summary_path)
+        archive_final_artifacts(config.run_id, manifest_path, prior_summary_path)
     return summary
 ```
 
@@ -1933,7 +1975,7 @@ if __name__ == "__main__":
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `36 passed`。
+Expected: `38 passed`。
 
 - [ ] **Step 6: 运行关联回归测试**
 
@@ -2011,7 +2053,7 @@ python scripts/run_phase5_c2_generalization.py --run-id phase5-c2-generalization
 python scripts/run_phase5_c2_generalization.py --run-id phase5-c2-generalization-v1 --final-2023 --candidate-id candidate-direct-c2-v1
 ```
 
-Expected: 2023 运行完成后生成 `docs/PHASE5_C2_GENERALIZATION_REPORT.md` 和 `docs/phase5/` 下两份审计 JSON；只有报告为 `PROMOTE` 才进入 MingLi-Bench 非退化验证。
+Expected: 2023 运行完成后生成 `docs/phase5/phase5-c2-generalization-v1/{report.md,manifest.json,summary.json}`；不同 run_id 使用不同目录，不会相互覆盖，同一 run 的恢复运行可幂等刷新本目录。只有报告为 `PROMOTE` 才进入 MingLi-Bench 非退化验证。
 
 如果 2023 首次运行中断，使用完全相同参数并增加 `--resume`；`final_manifest.json` 的指纹必须完全匹配。
 
