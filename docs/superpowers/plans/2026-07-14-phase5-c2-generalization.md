@@ -506,6 +506,10 @@ def build_manifest(
         "apb": False,
         "two_stage": False,
         "seed": config.seed,
+        "year_schedule_seeds": {
+            str(year): year_schedule_seed(config, year)
+            for year in config.years
+        },
         "years": list(config.years),
         "candidate_id": config.candidate_id,
         "prior_manifest_sha256": prior_manifest_sha256,
@@ -771,6 +775,13 @@ def test_balanced_schedule_is_reproducible():
     assert all(set(pair) == {"direct", "direct_c2"} for _, pair in first)
 
 
+def test_each_year_has_a_recorded_derived_schedule_seed(tmp_path: Path):
+    config = phase5.ExperimentConfig("r1", tmp_path, (2021, 2022), seed=7)
+
+    assert phase5.year_schedule_seed(config, 2021) == 2028
+    assert phase5.year_schedule_seed(config, 2022) == 2029
+
+
 def test_run_attempt_passes_no_case_details_and_persists(tmp_path: Path):
     calls = []
 
@@ -871,6 +882,10 @@ Expected: FAIL because scheduling and attempt functions do not exist。
 追加到脚本：
 
 ```python
+def year_schedule_seed(config: ExperimentConfig, year: int) -> int:
+    return config.seed + year
+
+
 def build_schedule(
     cases: list[dict[str, Any]],
     seed: int,
@@ -1018,7 +1033,7 @@ def run_initial_pairs(
     runner: Runner = run_model_benchmark,
 ) -> list[dict[str, Any]]:
     records = []
-    for case, arms in build_schedule(cases, config.seed + year):
+    for case, arms in build_schedule(cases, year_schedule_seed(config, year)):
         for arm in arms:
             records.append(run_attempt(config, year, case, arm, 1, attempts_path, runner))
     return records
@@ -1030,7 +1045,7 @@ def run_initial_pairs(
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `19 passed`。
+Expected: `20 passed`。
 
 - [ ] **Step 5: 运行现有 runner 关联测试**
 
@@ -1112,6 +1127,26 @@ def test_all_invalid_is_counted_separately():
     assert result["all_invalid"] is True
 
 
+def test_repeat_consistency_distinguishes_unanimous_majority_and_unresolved():
+    rows = [
+        attempt("same", "direct", 1, "B"),
+        attempt("same", "direct", 2, "B"),
+        attempt("same", "direct", 3, "B"),
+        attempt("split", "direct_c2", 1, "A"),
+        attempt("split", "direct_c2", 2, "B"),
+        attempt("split", "direct_c2", 3, "B"),
+        attempt("invalid", "direct", 1, "A"),
+        attempt("invalid", "direct", 2, "B"),
+        attempt("invalid", "direct", 3, None, valid=False),
+    ]
+
+    assert phase5.summarize_repeat_consistency(rows) == {
+        "unanimous": 1,
+        "majority_2_to_1": 1,
+        "unresolved": 1,
+    }
+
+
 def test_initial_regression_stop_triggers_at_four():
     rows = []
     for index in range(4):
@@ -1169,6 +1204,29 @@ def resolve_arm(rows: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def summarize_repeat_consistency(rows: list[dict[str, Any]]) -> dict[str, int]:
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in rows:
+        grouped.setdefault((row["case_id"], row["arm"]), []).append(row)
+    summary = {"unanimous": 0, "majority_2_to_1": 0, "unresolved": 0}
+    for arm_rows in grouped.values():
+        if len(arm_rows) != 3:
+            continue
+        valid_choices = [
+            row.get("predicted_answer")
+            for row in arm_rows
+            if row.get("parser_valid") is True and row.get("predicted_answer")
+        ]
+        resolved = resolve_arm(arm_rows)
+        if len(valid_choices) == 3 and len(set(valid_choices)) == 1:
+            summary["unanimous"] += 1
+        elif resolved["unresolved"]:
+            summary["unresolved"] += 1
+        else:
+            summary["majority_2_to_1"] += 1
+    return summary
+
+
 def count_initial_rescues_regressions(rows: list[dict[str, Any]]) -> dict[str, int]:
     by_case_arm = {
         (row["case_id"], row["arm"]): row
@@ -1218,11 +1276,13 @@ def run_disagreement_retests(
     return records
 ```
 
+attempt 2/3 必须继续使用 `config.temperature == 0.0`。复测测量的是相同配置下已在 `docs/BAZIQA_TRACE_DIAGNOSIS_REPORT.md` 实测出现的 API 非确定性；改成 `0.4` 会引入新的实验变量，使多数票不再代表原配置的稳定结论。若三次完全一致，`summarize_repeat_consistency()` 将其记录为 `unanimous` 确定性行为证据，而不是判为复测失败。
+
 - [ ] **Step 4: 运行 Task 5 测试确认通过**
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `23 passed`。
+Expected: `25 passed`。
 
 - [ ] **Step 5: 提交自适应复测**
 
@@ -1375,6 +1435,8 @@ def summarize_stable_results(
         "both_correct": sum(row["direct"]["correct"] and row["direct_c2"]["correct"] for row in results),
         "both_wrong": sum(not row["direct"]["correct"] and not row["direct_c2"]["correct"] for row in results),
         "non_degrading_years": sum(item["non_degrading"] for item in by_year.values()),
+        "parser_valid_attempts": parser_valid,
+        "parser_total_attempts": len(attempts),
         "parser_valid_rate": parser_valid / len(attempts) if attempts else 0.0,
         "all_invalid": sum(row[arm]["all_invalid"] for row in results for arm in ("direct", "direct_c2")),
         "unresolved": sum(row[arm]["unresolved"] for row in results for arm in ("direct", "direct_c2")),
@@ -1382,6 +1444,7 @@ def summarize_stable_results(
         "elapsed_seconds": elapsed_seconds,
         "pacing_seconds": pacing_seconds,
         "estimated_model_seconds": max(0.0, elapsed_seconds - pacing_seconds),
+        "repeat_consistency": summarize_repeat_consistency(attempts),
         "mcnemar_exact_p": exact_mcnemar_pvalue(regressions, rescues),
         "by_year": by_year,
         "by_domain": by_domain,
@@ -1411,7 +1474,7 @@ def decide_final(metrics: dict[str, Any]) -> dict[str, Any]:
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `30 passed`。
+Expected: `32 passed`。
 
 - [ ] **Step 5: 提交统计判定**
 
@@ -1503,6 +1566,57 @@ def test_run_validation_uses_fake_runner_and_writes_summary(tmp_path: Path, monk
     assert phase5.sha256_file(config.root / "manifest.json") == initial_manifest_hash
 
 
+def test_run_validation_persists_auditable_year_stop(tmp_path: Path, monkeypatch):
+    cases = [sample_case(f"c{i}") for i in range(4)]
+    source = tmp_path / "source-2021.jsonl"
+    write_jsonl(source, cases)
+    monkeypatch.setattr(phase5, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(phase5, "EXPERIMENT_SCOPE", ())
+    monkeypatch.setattr(phase5, "git_output", lambda *args: "deadbeef")
+    monkeypatch.setattr(phase5, "experiment_scope_status", lambda: {})
+    monkeypatch.setattr(phase5, "enrich_row", fake_enrich)
+    monkeypatch.setattr(
+        phase5,
+        "summarize_scores",
+        lambda rows: {**passing_metrics(), "n_cases": len(rows), "cases": []},
+    )
+
+    def harmful_c2_runner(cases, provider, model, prompt_version, **kwargs):
+        case = cases[0]
+        choice = "A" if kwargs["phase4_direct_c2"] else case["answer"]
+        return {
+            "case_details": [{
+                "case_id": case["case_id"],
+                "expected_answer": case["answer"],
+                "predicted_answer": choice,
+                "raw_answer": choice,
+                "parser_source": "legacy",
+                "parser_valid": True,
+                "correct": choice == case["answer"],
+                "call_success": True,
+                "phase4_option_scores": [],
+                "retrieved_answer_leak": False,
+            }],
+            "failed_cases": [],
+        }
+
+    config = phase5.ExperimentConfig("stop-r1", tmp_path / "stop-work", (2021,))
+    summary = phase5.run_validation(
+        config,
+        {2021: source},
+        runner=harmful_c2_runner,
+        expected_rows=4,
+    )
+
+    assert summary["decision"] == "ROLLBACK"
+    assert summary["reason"] == "year_stop"
+    assert summary["initial_stop_metrics"]["regressions"] == 4
+    assert len(summary["case_results"]) == 4
+    assert summary["attempts_seen"] == 8
+    persisted = json.loads((config.root / "summary.json").read_text(encoding="utf-8"))
+    assert persisted == summary
+
+
 def test_render_report_contains_gate_evidence():
     summary = {
         **decision_input(2, 2),
@@ -1519,6 +1633,8 @@ def test_render_report_contains_gate_evidence():
 
     assert "NON_INFERIOR" in report
     assert "McNemar" in report
+    assert "Discordant pairs: 4" in report
+    assert "fewer than 10 discordant pairs" in report
     assert "abc123" in report
     assert "MingLi-Bench" not in report
 
@@ -1560,9 +1676,12 @@ def render_report(summary: dict[str, Any], manifest_sha256: str) -> str:
         f"- Direct: {summary['direct_correct']}/{summary['total']}",
         f"- Direct+C2: {summary['c2_correct']}/{summary['total']}",
         f"- Rescues / regressions: {summary['rescues']} / {summary['regressions']}",
-        f"- Parser valid rate: {summary['parser_valid_rate']:.1%}",
+        f"- Parser valid rate (attempt-weighted): {summary['parser_valid_rate']:.1%} "
+        f"({summary.get('parser_valid_attempts', 0)}/{summary.get('parser_total_attempts', 0)})",
         f"- Unresolved / all-invalid: {summary['unresolved']} / {summary['all_invalid']}",
+        f"- Repeat consistency: {json.dumps(summary.get('repeat_consistency', {}), ensure_ascii=False)}",
         f"- Exact two-sided McNemar p: {summary['mcnemar_exact_p']:.6f}",
+        f"- Discordant pairs: {summary['rescues'] + summary['regressions']}",
         f"- Elapsed / pacing seconds: {summary.get('elapsed_seconds', 0.0):.1f} / {summary.get('pacing_seconds', 0.0):.1f}",
         f"- Manifest SHA-256: `{manifest_sha256}`",
         "",
@@ -1573,6 +1692,11 @@ def render_report(summary: dict[str, Any], manifest_sha256: str) -> str:
         f"- {name}: {'PASS' if passed else 'FAIL'}"
         for name, passed in summary["gates"].items()
     )
+    if summary["rescues"] + summary["regressions"] < 10:
+        lines.append(
+            "- Statistical caution: fewer than 10 discordant pairs; "
+            "the exact p-value is highly sensitive to individual cases."
+        )
     lines.extend(["", "## Per-year results", ""])
     for year, metrics in summary.get("by_year", {}).items():
         lines.append(
@@ -1706,12 +1830,22 @@ def run_validation(
         initial = run_initial_pairs(config, year, cases_by_year[year], attempts_path, runner)
         initial_valid_rate = sum(row["parser_valid"] for row in initial) / len(initial)
         initial_leaks = sum(bool(row.get("retrieved_answer_leak")) for row in initial)
+        initial_cross = count_initial_rescues_regressions(initial)
         if initial_valid_rate < 0.95 or initial_leaks > 0 or should_stop_after_initial(initial):
+            initial_case_results = stable_case_results(cases_by_year[year], initial)
             summary = {
                 "decision": "ROLLBACK",
                 "reason": "year_stop",
                 "year": year,
                 "years": completed_years,
+                "case_results": all_cases + initial_case_results,
+                "attempts_seen": len(all_attempts) + len(initial),
+                "attempts_path": str(attempts_path),
+                "initial_stop_metrics": {
+                    **initial_cross,
+                    "parser_valid_rate": initial_valid_rate,
+                    "confirmed_answer_leaks": initial_leaks,
+                },
             }
             write_json(prior_summary_path, summary)
             return summary
@@ -1720,17 +1854,20 @@ def run_validation(
         stable = stable_case_results(cases_by_year[year], attempts)
         year_summary = summarize_stable_results(stable, attempts)
         completed_years[str(year)] = year_summary
+        all_cases.extend(stable)
+        all_attempts.extend(attempts)
         if year_summary["parser_valid_rate"] < 0.95 or year_summary["confirmed_answer_leaks"] > 0:
             summary = {
                 "decision": "ROLLBACK",
                 "reason": "year_infrastructure_stop",
                 "year": year,
                 "years": completed_years,
+                "case_results": all_cases,
+                "attempts_seen": len(all_attempts),
+                "attempts_path": str(attempts_path),
             }
             write_json(prior_summary_path, summary)
             return summary
-        all_cases.extend(stable)
-        all_attempts.extend(attempts)
 
     metrics = summarize_stable_results(all_cases, all_attempts)
     verdict = decide_final(metrics)
@@ -1796,7 +1933,7 @@ if __name__ == "__main__":
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `33 passed`。
+Expected: `36 passed`。
 
 - [ ] **Step 6: 运行关联回归测试**
 
@@ -1808,7 +1945,7 @@ Expected: all selected tests PASS。
 
 Run: `python -m pytest -m "not e2e" -q`
 
-Expected: all non-E2E tests PASS；若存在与当前改动无关的既有失败，记录准确测试名与错误，不修改无关测试。
+Expected: all non-E2E tests PASS。若出现任何失败，记录准确测试名与错误并停止本任务；不得修改无关测试，也不得执行 Step 9。若确认是既有无关失败，先向用户报告并取得是否提交的决定。
 
 - [ ] **Step 8: 做静态完整性检查**
 
@@ -1820,7 +1957,7 @@ Run: `git diff --check`
 
 Expected: exit code 0。
 
-- [ ] **Step 9: 提交完整编排器**
+- [ ] **Step 9: 仅在测试门禁通过后提交完整编排器**
 
 ```powershell
 git add scripts/run_phase5_c2_generalization.py tests/test_phase5_c2_generalization.py
