@@ -43,6 +43,8 @@ Phase 5 不继续增加模板规则数量。第一优先级是验证当前 C2 �
 | 2021/2022 | 独立泛化验证集 | 当前 C2 scorer-only gate 与自适应 direct/direct+C2 配对实验 |
 | 2023 | 密封最终集 | Phase 5 选定 Prompt 后的一次最终配对验证 |
 
+2026-07-14 的实现方案审计曾加载 2023 JSONL，仅统计结构与时间/地点题数量；未查看、输出或使用答案，也未计算 scorer/准确率指标。用户明确决定 2023 仍作为最终集。manifest 必须记录这项 seal audit note；在正式 `--final-2023` 前不得再次读取 2023。
+
 仓库现有三个年度 holdout 均为 40 题，但 `chart_input` 覆盖率为 0。C2 依赖 `chart_input.shishen_stats`、地支关系、神煞和五行统计，因此不得直接对原始文件运行 C2。
 
 ### 3.1 Enrichment
@@ -60,6 +62,7 @@ Phase 5 不继续增加模板规则数量。第一优先级是验证当前 C2 �
 - 对应原始 holdout 文件在运行开始时存在且可读。
 - 40 行、40 个唯一 `case_id`。
 - `chart_input` 覆盖率为 100%。
+- `chart_input.shishen_stats.counts` 非空，且 `chart_input.wuxing_stats.strongest` 存在；任一题缺失视为 enrichment 基础设施失败，整年度停止，不删除题目或缩小分母。
 - enrichment 前后 `case_id`、人员 ID、题目、选项、答案和来源年份完全一致。
 - 文件写完后计算 SHA-256；实验开始后不得改写。
 
@@ -76,6 +79,8 @@ Phase 5 不继续增加模板规则数量。第一优先级是验证当前 C2 �
 - enrichment 时间和命盘计算器文件哈希。
 - 固定调度 seed、运行 ID 和创建时间。
 - 与实验作用域相关文件的 `git status --short` 快照；不得记录 `.env`、密钥文件或无关路径。
+- 指纹范围声明：显式列出纳入 SHA-256 的文件，并说明不会自动发现完整 Python 间接依赖闭包。
+- 2023 seal audit note，以及用户确认其仍可作为最终集的决定。
 
 设计时的工作区状态显示 C2 相关代码尚未全部纳入 Git；正式运行时必须重新检查 Git 状态，并始终以单文件哈希作为实验实现的最终标识。manifest 不得保存 API key 或其他密钥。
 
@@ -117,6 +122,8 @@ Phase 5 不继续增加模板规则数量。第一优先级是验证当前 C2 �
 scorer-only gate 只是“C2 能在该年度产生基本可区分信号”的成本止损条件，不是泛化证据。通过该 gate 不构成准确率提升、非退化或 `PROMOTE` 依据；泛化结论只由模型 API 配对结果决定。2021/2022 任一年度 gate 失败时，本轮整体判定为 `ROLLBACK`，2023 保持密封。
 
 终端日志、年度 offline JSON 和最终报告都必须输出四项指标的具体值、阈值、裕量和判定，便于判断门槛是否过严或过松；本轮运行期间不得根据这些数值修改门槛。
+
+`score_options()` 对时间/地点题返回空列表，因此 `summarize_scores()` 的四项指标只覆盖 C2 生效题。每年度必须额外记录 `c2_effective_cases`、`c2_noop_cases`、对应 case_id 和占比。该分层用于解释信号覆盖范围，不改变后续 API 总体分母。
 
 2023 在最终候选选定前不得运行 scorer-only；读取其答案计算 scorer 指标同样视为打开密封集。
 
@@ -198,6 +205,8 @@ case 3: direct -> direct+C2
 
 报告额外输出年度/领域准确率、救回数、回退数、共同正确/共同错误、分歧题多数票，以及基于不一致配对数的精确二项 McNemar 检验；不使用大样本卡方近似。统计显著性用于表达证据强弱，不替代硬门槛。
 
+报告同时按 `c2_effective` 与 `c2_noop` 分层输出总题数、direct/direct+C2 正确数、救回、回退、共同正确和共同错误。总体 gate 始终使用 2021–2023 全部 120 题，不得改成只对 C2 生效题判定。报告还必须按 direct/direct+C2 两臂输出 `parser_source` 分布，用于识别评分格式回吐导致的解析偏移。
+
 通过 BaziQA `PROMOTE` 后，下一步是 MingLi-Bench 非退化验证；在此之前不得把 C2 设为默认生产路径。
 
 ## 8. 实现结构
@@ -214,11 +223,14 @@ case 3: direct -> direct+C2
 复用现有接口：
 
 - `scripts.enrich_holdout_chart_input.enrich_row()` / IO helpers。
+- `scripts.enrich_baziqa_chart_input.py` 作为 holdout enrichment 的实际委托实现，纳入实验作用域哈希。
 - `benchmark.runners.per_option_scorer.summarize_scores()`。
 - `benchmark.runners.run_benchmark.run_model_benchmark()`，以单题列表、`case_details_jsonl=None` 调用。
 - `benchmark.scorers.choice_accuracy` 的答案解析逻辑。
 
 编排器拥有全部跨调用持久化职责。`run_model_benchmark()` 内置的每题 1 秒 pacing 保留，用于避免高频请求；预算报告单独记录模型调用耗时和 pacing 开销。
+
+按约 380 次调用估算，runner 内置 pacing 约增加 380 秒（约 6.3 分钟），另加 API 实际延迟。
 
 运行产物结构：
 
@@ -231,12 +243,12 @@ case 3: direct -> direct+C2
   runs/2022/
   runs/2023/
   summary.json
-docs/PHASE5_C2_GENERALIZATION_REPORT.md
-docs/phase5/phase5_c2_generalization_manifest.json
-docs/phase5/phase5_c2_generalization_summary.json
+docs/phase5/<run_id>/report.md
+docs/phase5/<run_id>/manifest.json
+docs/phase5/<run_id>/summary.json
 ```
 
-`.tmp/` 中保存可恢复的运行中状态。实验完成并通过完整性检查后，将最终 manifest 与 summary 复制为 `docs/phase5/` 下的审计证据；报告引用其 SHA-256，避免清理 `.tmp/` 后失去复现依据。
+`.tmp/` 中保存可恢复的运行中状态。实验完成并通过完整性检查后，将最终 manifest、summary 与报告归档到独立的 `docs/phase5/<run_id>/`；报告引用 manifest 的 SHA-256，避免清理 `.tmp/` 后失去复现依据，也避免不同 run 相互覆盖。
 
 ## 9. 失败处理与恢复
 
@@ -268,6 +280,9 @@ docs/phase5/phase5_c2_generalization_summary.json
 12. 单题 runner 调用固定传 `case_details_jsonl=None`，attempt JSONL 由编排器追加且恢复时不被截断。
 13. 作用域内 dirty 文件需要 `--allow-dirty-scope`，且其 Git 状态与哈希写入 manifest。
 14. `--resume` 只接受 manifest 完全匹配的 run，参数或哈希漂移必须拒绝。
+15. C2 生效/空转题识别与分层汇总，且总体 gate 分母保持全部题目。
+16. enrichment 核心信号字段缺失时中止，不排除题目继续运行。
+17. direct/direct+C2 两臂的 `parser_source` 分布进入 summary 和报告。
 
 迭代阶段先运行新增测试及 C2/runner 关联测试；最终实现完成后运行非 E2E 测试集。真实 API 实验与单元测试分离，不能把网络结果伪装成测试通过。
 

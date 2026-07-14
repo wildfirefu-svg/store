@@ -174,6 +174,36 @@ def test_enrich_dataset_requires_expected_holdout_size(tmp_path: Path):
 
     with pytest.raises(ValueError, match="expected 40 rows"):
         phase5.enrich_dataset(source, tmp_path / "out.jsonl", enrich_fn=fake_enrich)
+
+
+def test_validate_enriched_rejects_missing_core_chart_signals():
+    source = sample_case()
+    incomplete = {
+        **source,
+        "chart_input": {
+            "shishen_stats": {"counts": {}},
+            "wuxing_stats": {"strongest": None},
+        },
+    }
+
+    with pytest.raises(ValueError, match="incomplete chart signals"):
+        phase5.validate_enriched_rows([source], [incomplete])
+
+
+def test_classify_c2_applicability_separates_effective_and_noop_cases():
+    cases = [sample_case("active"), sample_case("noop")]
+    result = phase5.classify_c2_applicability(
+        cases,
+        score_fn=lambda case: [{"score": 50}] if case["case_id"] == "active" else [],
+    )
+
+    assert result == {
+        "c2_effective_cases": 1,
+        "c2_noop_cases": 1,
+        "c2_effective_case_ids": ["active"],
+        "c2_noop_case_ids": ["noop"],
+        "c2_effective_rate": 0.5,
+    }
 ```
 
 - [ ] **Step 2: 运行测试确认因模块缺失而失败**
@@ -209,7 +239,7 @@ from typing import Any, Callable, Iterable
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from benchmark.runners.per_option_scorer import summarize_scores
+from benchmark.runners.per_option_scorer import score_options, summarize_scores
 from benchmark.runners.run_benchmark import run_model_benchmark
 from benchmark.scorers.choice_accuracy import extract_choice
 from scripts.enrich_holdout_chart_input import enrich_row
@@ -229,7 +259,13 @@ EXPERIMENT_SCOPE = (
     "benchmark/formatters/baziqa_prompt.py",
     "benchmark/runners/run_benchmark.py",
     "scripts/enrich_holdout_chart_input.py",
+    "scripts/enrich_baziqa_chart_input.py",
     "bazi_calculator.py",
+)
+SEAL_AUDIT_NOTE = (
+    "2026-07-14 audit loaded the 2023 JSONL only for structural and "
+    "time/location classification; no answers or accuracy metrics were used. "
+    "User approved retaining 2023 as the final set."
 )
 OFFLINE_THRESHOLDS = {
     "top_score_hit_rate": (">", 0.35),
@@ -316,6 +352,30 @@ def validate_enriched_rows(
                 )
         if not enriched.get("chart_input"):
             raise ValueError(f"missing chart_input: {source.get('case_id')}")
+        chart = enriched["chart_input"]
+        counts = ((chart.get("shishen_stats") or {}).get("counts") or {})
+        strongest = (chart.get("wuxing_stats") or {}).get("strongest")
+        if not counts or not strongest:
+            raise ValueError(f"incomplete chart signals: {source.get('case_id')}")
+
+
+def classify_c2_applicability(
+    cases: list[dict[str, Any]],
+    score_fn: Callable[[dict[str, Any]], list[dict[str, Any]]] = score_options,
+) -> dict[str, Any]:
+    effective = []
+    noop = []
+    for case in cases:
+        target = effective if score_fn(case) else noop
+        target.append(case["case_id"])
+    total = len(cases)
+    return {
+        "c2_effective_cases": len(effective),
+        "c2_noop_cases": len(noop),
+        "c2_effective_case_ids": effective,
+        "c2_noop_case_ids": noop,
+        "c2_effective_rate": len(effective) / total if total else 0.0,
+    }
 
 
 def enrich_dataset(
@@ -362,6 +422,7 @@ def describe_dataset(
             Path(output).stat().st_mtime,
             timezone.utc,
         ).isoformat(),
+        "c2_applicability": classify_c2_applicability(enriched_rows),
     }
 ```
 
@@ -369,7 +430,7 @@ def describe_dataset(
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `4 passed`。
+Expected: `6 passed`。
 
 - [ ] **Step 5: 提交基础实现**
 
@@ -441,6 +502,7 @@ def test_manifest_declares_explicit_fingerprint_scope(tmp_path: Path, monkeypatc
         "files": [],
         "indirect_dependencies_fingerprinted": False,
     }
+    assert manifest["seal_audit_note"] == phase5.SEAL_AUDIT_NOTE
 ```
 
 - [ ] **Step 2: 运行新增测试确认函数不存在**
@@ -533,6 +595,7 @@ def build_manifest(
         "years": list(config.years),
         "candidate_id": config.candidate_id,
         "prior_manifest_sha256": prior_manifest_sha256,
+        "seal_audit_note": SEAL_AUDIT_NOTE,
     }
     return {
         **immutable,
@@ -598,7 +661,7 @@ def assert_fixed_config(config: ExperimentConfig) -> None:
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `9 passed`。
+Expected: `11 passed`。
 
 - [ ] **Step 5: 提交 manifest 实现**
 
@@ -733,6 +796,7 @@ def run_offline_gate(
         "year": year,
         "gate": evaluate_offline_gate(summary),
         "scorer_summary": summary,
+        "c2_applicability": classify_c2_applicability(cases),
     }
     write_json(output, result)
     return result
@@ -768,7 +832,7 @@ CLI 主流程必须先对 2021 和 2022 全部执行 `run_offline_gate()`，确�
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `16 passed`。
+Expected: `18 passed`。
 
 - [ ] **Step 5: 提交离线门禁**
 
@@ -1072,7 +1136,7 @@ def run_initial_pairs(
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `21 passed`。
+Expected: `23 passed`。
 
 - [ ] **Step 5: 运行现有 runner 关联测试**
 
@@ -1313,7 +1377,7 @@ attempt 2/3 必须继续使用 `config.temperature == 0.0`。复测测量的是�
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `26 passed`。
+Expected: `28 passed`。
 
 - [ ] **Step 5: 提交自适应复测**
 
@@ -1372,6 +1436,40 @@ def test_any_hard_gate_failure_rolls_back(field: str, value):
     metrics = decision_input(3, 2)
     metrics[field] = value
     assert phase5.decide_final(metrics)["decision"] == "ROLLBACK"
+
+
+def test_summary_stratifies_c2_applicability_and_parser_sources():
+    results = [
+        {
+            "case_id": "active",
+            "year": 2021,
+            "domain": "wealth",
+            "c2_effective": True,
+            "direct": {"correct": False, "all_invalid": False, "unresolved": False},
+            "direct_c2": {"correct": True, "all_invalid": False, "unresolved": False},
+        },
+        {
+            "case_id": "noop",
+            "year": 2021,
+            "domain": "unknown",
+            "c2_effective": False,
+            "direct": {"correct": True, "all_invalid": False, "unresolved": False},
+            "direct_c2": {"correct": True, "all_invalid": False, "unresolved": False},
+        },
+    ]
+    attempts = [
+        {"case_id": "active", "arm": "direct", "parser_source": "final_answer", "parser_valid": True},
+        {"case_id": "active", "arm": "direct_c2", "parser_source": "confidence", "parser_valid": True},
+    ]
+
+    summary = phase5.summarize_stable_results(results, attempts)
+
+    assert summary["by_c2_applicability"]["effective"]["rescues"] == 1
+    assert summary["by_c2_applicability"]["noop"]["both_correct"] == 1
+    assert summary["parser_source_by_arm"] == {
+        "direct": {"final_answer": 1},
+        "direct_c2": {"confidence": 1},
+    }
 ```
 
 - [ ] **Step 2: 运行新增测试确认失败**
@@ -1409,12 +1507,14 @@ def stable_case_results(
         case_id = case["case_id"]
         expected = extract_choice(case.get("answer"))
         direct = resolve_arm(grouped[(case_id, "direct")])
-        c2 = resolve_arm(grouped[(case_id, "direct_c2")])
+        c2_rows = grouped[(case_id, "direct_c2")]
+        c2 = resolve_arm(c2_rows)
         results.append({
             "case_id": case_id,
             "year": int(case["source_year"]),
             "domain": case.get("domain", "unknown"),
             "expected_answer": expected,
+            "c2_effective": any(row.get("phase4_option_scores") for row in c2_rows),
             "direct": {**direct, "correct": direct["choice"] == expected},
             "direct_c2": {**c2, "correct": c2["choice"] == expected},
         })
@@ -1455,6 +1555,26 @@ def summarize_stable_results(
             "c2_correct": sum(row["direct_c2"]["correct"] for row in domain_rows),
         }
     parser_valid = sum(row.get("parser_valid") is True for row in attempts)
+    parser_source_by_arm = {
+        arm: dict(Counter(
+            row.get("parser_source") or "none"
+            for row in attempts
+            if row.get("arm") == arm
+        ))
+        for arm in ("direct", "direct_c2")
+    }
+    by_c2_applicability = {}
+    for label, effective in (("effective", True), ("noop", False)):
+        group = [row for row in results if row.get("c2_effective") is effective]
+        by_c2_applicability[label] = {
+            "total": len(group),
+            "direct_correct": sum(row["direct"]["correct"] for row in group),
+            "c2_correct": sum(row["direct_c2"]["correct"] for row in group),
+            "rescues": sum(row["direct_c2"]["correct"] and not row["direct"]["correct"] for row in group),
+            "regressions": sum(row["direct"]["correct"] and not row["direct_c2"]["correct"] for row in group),
+            "both_correct": sum(row["direct"]["correct"] and row["direct_c2"]["correct"] for row in group),
+            "both_wrong": sum(not row["direct"]["correct"] and not row["direct_c2"]["correct"] for row in group),
+        }
     elapsed_seconds = sum(float(row.get("elapsed_seconds", 0.0)) for row in attempts)
     pacing_seconds = sum(float(row.get("runner_pacing_seconds", 0.0)) for row in attempts)
     return {
@@ -1479,6 +1599,8 @@ def summarize_stable_results(
         "mcnemar_exact_p": exact_mcnemar_pvalue(regressions, rescues),
         "by_year": by_year,
         "by_domain": by_domain,
+        "by_c2_applicability": by_c2_applicability,
+        "parser_source_by_arm": parser_source_by_arm,
     }
 
 
@@ -1505,7 +1627,7 @@ def decide_final(metrics: dict[str, Any]) -> dict[str, Any]:
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `33 passed`。
+Expected: `36 passed`。
 
 - [ ] **Step 5: 提交统计判定**
 
@@ -1665,6 +1787,8 @@ def test_render_report_contains_gate_evidence():
         "mcnemar_exact_p": 1.0,
         "all_invalid": 0,
         "unresolved": 0,
+        "both_correct": 0,
+        "both_wrong": 0,
         "by_year": {},
         "by_domain": {},
         "offline": {},
@@ -1687,6 +1811,8 @@ def test_promote_report_recommends_mingli_without_inventing_command():
         "mcnemar_exact_p": 0.5,
         "all_invalid": 0,
         "unresolved": 0,
+        "both_correct": 0,
+        "both_wrong": 0,
         "by_year": {},
         "by_domain": {},
         "offline": {},
@@ -1716,6 +1842,7 @@ def render_report(summary: dict[str, Any], manifest_sha256: str) -> str:
         f"- Direct: {summary['direct_correct']}/{summary['total']}",
         f"- Direct+C2: {summary['c2_correct']}/{summary['total']}",
         f"- Rescues / regressions: {summary['rescues']} / {summary['regressions']}",
+        f"- Both correct / both wrong: {summary['both_correct']} / {summary['both_wrong']}",
         f"- Parser valid rate (attempt-weighted): {summary['parser_valid_rate']:.1%} "
         f"({summary.get('parser_valid_attempts', 0)}/{summary.get('parser_total_attempts', 0)})",
         f"- Unresolved arms / all-invalid arms: {summary['unresolved']} / {summary['all_invalid']}",
@@ -1752,6 +1879,22 @@ def render_report(summary: dict[str, Any], manifest_sha256: str) -> str:
                 f"{metric['threshold']:.6f}; margin={metric['margin']:.6f}; "
                 f"{'PASS' if metric['passed'] else 'FAIL'}"
             )
+        applicability = payload.get("c2_applicability", {})
+        lines.append(
+            f"- C2 effective/noop: {applicability.get('c2_effective_cases', 0)} / "
+            f"{applicability.get('c2_noop_cases', 0)}"
+        )
+    lines.extend(["", "## C2 applicability strata", ""])
+    for label, metrics in summary.get("by_c2_applicability", {}).items():
+        lines.append(
+            f"- {label}: total={metrics['total']}, "
+            f"direct={metrics['direct_correct']}, direct+C2={metrics['c2_correct']}, "
+            f"rescues={metrics['rescues']}, regressions={metrics['regressions']}, "
+            f"both_correct={metrics['both_correct']}, both_wrong={metrics['both_wrong']}"
+        )
+    lines.extend(["", "## Parser source by arm", ""])
+    for arm, distribution in summary.get("parser_source_by_arm", {}).items():
+        lines.append(f"- {arm}: {json.dumps(distribution, ensure_ascii=False, sort_keys=True)}")
     lines.extend(["", "## Per-domain results", ""])
     for domain, metrics in summary.get("by_domain", {}).items():
         lines.append(
@@ -1975,7 +2118,7 @@ if __name__ == "__main__":
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `38 passed`。
+Expected: `41 passed`。
 
 - [ ] **Step 6: 运行关联回归测试**
 
@@ -2026,14 +2169,14 @@ Expected: key reports `SET`，RAG/few-shot/APB 均为 `off`。不得输出 key �
 Run:
 
 ```powershell
-git status --short -- benchmark/runners/per_option_scorer.py benchmark/formatters/baziqa_prompt.py benchmark/runners/run_benchmark.py scripts/enrich_holdout_chart_input.py bazi_calculator.py
+git status --short -- benchmark/runners/per_option_scorer.py benchmark/formatters/baziqa_prompt.py benchmark/runners/run_benchmark.py scripts/enrich_holdout_chart_input.py scripts/enrich_baziqa_chart_input.py bazi_calculator.py
 ```
 
 Expected: clean；如果存在改动，先审查并提交属于 Phase 4/C2 的必要实现。只有用户明确接受以未提交代码作为实验实现时，才使用 `--allow-dirty-scope`。
 
 - [ ] **Step 3: 等待用户授权真实 API 成本后启动 2021/2022**
 
-真实调用会产生费用和外部状态，执行前向用户报告 offline gate 数值及预计调用上限。获授权后运行：
+真实调用会产生费用和外部状态，执行前向用户报告 offline gate 数值及预计调用上限。约 380 次调用还包含 runner 固定 pacing 约 380 秒（约 6.3 分钟），总耗时需再加 API 延迟。获授权后运行：
 
 ```powershell
 python scripts/run_phase5_c2_generalization.py --run-id phase5-c2-generalization-v1
@@ -2064,6 +2207,9 @@ Expected: 2023 运行完成后生成 `docs/phase5/phase5-c2-generalization-v1/{r
 - 所有模型 attempt 逐条追加且 `fsync`，恢复时唯一键不会重复调用。
 - runner 的每次单题调用固定 `case_details_jsonl=None`、`n_samples=1`、`temperature=0`、RAG/few-shot/APB/two-stage off。
 - offline gate 四项数值、阈值、margin 和 pass/fail 均落盘。
+- manifest 记录 C2 生效/空转题数、case_id、占比和 2023 seal audit note。
+- enrichment 核心信号字段 100% 完整；缺失时中止，不排除题目继续运行。
+- 报告按 C2 生效/空转分层并按两臂输出 parser source 分布；总体 gate 仍使用全部 120 题。
 - 分母不因 API/parser 失败缩小；`unresolved` 和 `all_invalid` 单独统计。
 - 最终使用精确双侧二项 McNemar，不使用卡方近似；显著性不替代硬门槛。
 - `PROMOTE`、`NON_INFERIOR`、`ROLLBACK` 的所有边界测试通过。
