@@ -503,6 +503,13 @@ def test_manifest_declares_explicit_fingerprint_scope(tmp_path: Path, monkeypatc
         "indirect_dependencies_fingerprinted": False,
     }
     assert manifest["seal_audit_note"] == phase5.SEAL_AUDIT_NOTE
+
+
+def test_fixed_environment_rejects_rag(monkeypatch):
+    monkeypatch.setenv("BAZI_RAG", "1")
+
+    with pytest.raises(RuntimeError, match="BAZI_RAG"):
+        phase5.assert_fixed_environment()
 ```
 
 - [ ] **Step 2: 运行新增测试确认函数不存在**
@@ -661,7 +668,7 @@ def assert_fixed_config(config: ExperimentConfig) -> None:
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `11 passed`。
+Expected: `12 passed`。
 
 - [ ] **Step 5: 提交 manifest 实现**
 
@@ -832,7 +839,7 @@ CLI 主流程必须先对 2021 和 2022 全部执行 `run_offline_gate()`，确�
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `18 passed`。
+Expected: `19 passed`。
 
 - [ ] **Step 5: 提交离线门禁**
 
@@ -1136,7 +1143,7 @@ def run_initial_pairs(
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `23 passed`。
+Expected: `24 passed`。
 
 - [ ] **Step 5: 运行现有 runner 关联测试**
 
@@ -1377,7 +1384,7 @@ attempt 2/3 必须继续使用 `config.temperature == 0.0`。复测测量的是�
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `28 passed`。
+Expected: `29 passed`。
 
 - [ ] **Step 5: 提交自适应复测**
 
@@ -1627,7 +1634,7 @@ def decide_final(metrics: dict[str, Any]) -> dict[str, Any]:
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `36 passed`。
+Expected: `37 passed`。
 
 - [ ] **Step 5: 提交统计判定**
 
@@ -1721,6 +1728,85 @@ def test_run_validation_uses_fake_runner_and_writes_summary(tmp_path: Path, monk
     assert (archive_dir / "manifest.json").is_file()
     assert (archive_dir / "summary.json").is_file()
     assert (archive_dir / "report.md").is_file()
+
+
+def test_run_validation_rejects_rag_before_model_call(tmp_path: Path, monkeypatch):
+    called = {"runner": False}
+
+    def forbidden_runner(*args, **kwargs):
+        called["runner"] = True
+        raise AssertionError("runner must not be called")
+
+    monkeypatch.setenv("BAZI_RAG", "1")
+    config = phase5.ExperimentConfig("rag-off", tmp_path / "work", (2021, 2022))
+
+    with pytest.raises(RuntimeError, match="BAZI_RAG"):
+        phase5.run_validation(config, {}, runner=forbidden_runner)
+
+    assert called["runner"] is False
+
+
+def test_final_2023_offline_failure_preserves_prior_results(tmp_path: Path, monkeypatch):
+    work = tmp_path / "work"
+    source_2023 = tmp_path / "source-2023.jsonl"
+    write_jsonl(source_2023, [{**sample_case("final-c1"), "source_year": "2023"}])
+    prior_case_results = [{"case_id": "prior-c1", "year": 2021}]
+    prior_years = {
+        "2021": {"total": 40, "direct_correct": 10, "c2_correct": 11},
+        "2022": {"total": 40, "direct_correct": 12, "c2_correct": 12},
+    }
+    prior_summary = {
+        "decision": "NON_INFERIOR",
+        "years": prior_years,
+        "case_results": prior_case_results,
+        "offline": {
+            "2021": {"gate": {"passed": True}},
+            "2022": {"gate": {"passed": True}},
+        },
+    }
+    phase5.write_json(work / "manifest.json", {"run_id": "r1"})
+    phase5.write_json(work / "summary.json", prior_summary)
+    monkeypatch.setattr(phase5, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(phase5, "EXPERIMENT_SCOPE", ())
+    monkeypatch.setattr(phase5, "git_output", lambda *args: "deadbeef")
+    monkeypatch.setattr(phase5, "experiment_scope_status", lambda: {})
+    monkeypatch.setattr(phase5, "enrich_row", fake_enrich)
+    monkeypatch.setattr(
+        phase5,
+        "summarize_scores",
+        lambda rows: {
+            **passing_metrics(),
+            "top_score_hit_rate": 0.35,
+            "n_cases": len(rows),
+            "cases": [],
+        },
+    )
+    called = {"runner": False}
+
+    def forbidden_runner(*args, **kwargs):
+        called["runner"] = True
+        raise AssertionError("runner must not be called after offline gate failure")
+
+    config = phase5.ExperimentConfig(
+        "r1",
+        work,
+        (2023,),
+        final_2023=True,
+        candidate_id="candidate-direct-c2-v1",
+    )
+    summary = phase5.run_validation(
+        config,
+        {2023: source_2023},
+        runner=forbidden_runner,
+        expected_rows=1,
+    )
+
+    assert summary["decision"] == "ROLLBACK"
+    assert summary["reason"] == "offline_gate_failed"
+    assert summary["years"] == prior_years
+    assert summary["case_results"] == prior_case_results
+    assert set(summary["offline"]) == {"2021", "2022", "2023"}
+    assert called["runner"] is False
 
 
 def test_run_id_rejects_path_traversal():
@@ -1985,6 +2071,8 @@ def run_validation(
     load_or_validate_manifest(manifest_path, manifest, config.resume)
 
     offline = dict((prior_summary or {}).get("offline", {})) if config.final_2023 else {}
+    completed_years = dict((prior_summary or {}).get("years", {})) if config.final_2023 else {}
+    all_cases = list((prior_summary or {}).get("case_results", [])) if config.final_2023 else []
     for year in config.years:
         offline[str(year)] = run_offline_gate(
             year,
@@ -1997,14 +2085,13 @@ def run_validation(
             "decision": "ROLLBACK",
             "reason": "offline_gate_failed",
             "offline": offline,
-            "years": {},
+            "years": completed_years,
+            "case_results": all_cases,
         }
         write_json(prior_summary_path, summary)
         return summary
 
-    all_cases = list((prior_summary or {}).get("case_results", [])) if config.final_2023 else []
     all_attempts = []
-    completed_years = dict((prior_summary or {}).get("years", {})) if config.final_2023 else {}
     if config.final_2023:
         for prior_year in (2021, 2022):
             all_attempts.extend(
@@ -2022,6 +2109,7 @@ def run_validation(
                 "decision": "ROLLBACK",
                 "reason": "year_stop",
                 "year": year,
+                "offline": offline,
                 "years": completed_years,
                 "case_results": all_cases + initial_case_results,
                 "attempts_seen": len(all_attempts) + len(initial),
@@ -2046,6 +2134,7 @@ def run_validation(
                 "decision": "ROLLBACK",
                 "reason": "year_infrastructure_stop",
                 "year": year,
+                "offline": offline,
                 "years": completed_years,
                 "case_results": all_cases,
                 "attempts_seen": len(all_attempts),
@@ -2118,7 +2207,7 @@ if __name__ == "__main__":
 
 Run: `python -m pytest tests/test_phase5_c2_generalization.py -q`
 
-Expected: `41 passed`。
+Expected: `44 passed`。
 
 - [ ] **Step 6: 运行关联回归测试**
 
@@ -2206,7 +2295,9 @@ Expected: 2023 运行完成后生成 `docs/phase5/phase5-c2-generalization-v1/{r
 - 默认路径无法读取、enrich、score 或运行 2023；缺少 `--final-2023`、先前结果或 `candidate_id` 任一项都失败。
 - 所有模型 attempt 逐条追加且 `fsync`，恢复时唯一键不会重复调用。
 - runner 的每次单题调用固定 `case_details_jsonl=None`、`n_samples=1`、`temperature=0`、RAG/few-shot/APB/two-stage off。
+- `BAZI_RAG=1` 时编排器必须在读取数据或调用模型前失败，fake runner 测试确认没有发生调用。
 - offline gate 四项数值、阈值、margin 和 pass/fail 均落盘。
+- 2023 任一提前 `ROLLBACK` 路径中，`summary.json` 仍保留已完成的 2021/2022 `years`、`case_results` 与 offline 证据。
 - manifest 记录 C2 生效/空转题数、case_id、占比和 2023 seal audit note。
 - enrichment 核心信号字段 100% 完整；缺失时中止，不排除题目继续运行。
 - 报告按 C2 生效/空转分层并按两臂输出 parser source 分布；总体 gate 仍使用全部 120 题。
