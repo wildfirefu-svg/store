@@ -561,3 +561,108 @@ def run_initial_pairs(
         for arm in arms:
             records.append(run_attempt(config, year, case, arm, 1, attempts_path, runner))
     return records
+
+
+def disagreement_case_ids(rows: list[dict[str, Any]]) -> list[str]:
+    initial = {
+        (row["case_id"], row["arm"]): row
+        for row in rows
+        if int(row["attempt"]) == 1
+    }
+    case_ids = sorted({row["case_id"] for row in rows})
+    return [
+        case_id
+        for case_id in case_ids
+        if initial[(case_id, "direct")].get("predicted_answer")
+        != initial[(case_id, "direct_c2")].get("predicted_answer")
+    ]
+
+
+def resolve_arm(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    valid_choices = [
+        row.get("predicted_answer")
+        for row in rows
+        if row.get("parser_valid") is True and row.get("predicted_answer")
+    ]
+    counts = Counter(valid_choices)
+    winner = counts.most_common(1)[0][0] if counts else None
+    has_majority = winner is not None and counts[winner] > len(valid_choices) / 2
+    return {
+        "choice": winner if has_majority else None,
+        "unresolved": not has_majority,
+        "all_invalid": not valid_choices,
+        "valid_votes": len(valid_choices),
+        "vote_counts": dict(counts),
+    }
+
+
+def summarize_repeat_consistency(rows: list[dict[str, Any]]) -> dict[str, int]:
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in rows:
+        grouped.setdefault((row["case_id"], row["arm"]), []).append(row)
+    summary = {"unanimous": 0, "majority_2_to_1": 0, "unresolved": 0}
+    for arm_rows in grouped.values():
+        if len(arm_rows) != 3:
+            continue
+        valid_choices = [
+            row.get("predicted_answer")
+            for row in arm_rows
+            if row.get("parser_valid") is True and row.get("predicted_answer")
+        ]
+        resolved = resolve_arm(arm_rows)
+        if len(valid_choices) == 3 and len(set(valid_choices)) == 1:
+            summary["unanimous"] += 1
+        elif resolved["unresolved"]:
+            summary["unresolved"] += 1
+        else:
+            summary["majority_2_to_1"] += 1
+    return summary
+
+
+def count_initial_rescues_regressions(rows: list[dict[str, Any]]) -> dict[str, int]:
+    by_case_arm = {
+        (row["case_id"], row["arm"]): row
+        for row in rows
+        if int(row["attempt"]) == 1
+    }
+    rescues = 0
+    regressions = 0
+    for case_id in {row["case_id"] for row in rows}:
+        direct = by_case_arm[(case_id, "direct")].get("correct") is True
+        c2 = by_case_arm[(case_id, "direct_c2")].get("correct") is True
+        rescues += int(c2 and not direct)
+        regressions += int(direct and not c2)
+    return {"rescues": rescues, "regressions": regressions}
+
+
+def should_stop_after_initial(rows: list[dict[str, Any]]) -> bool:
+    cross = count_initial_rescues_regressions(rows)
+    return cross["regressions"] - cross["rescues"] >= 4
+
+
+def run_disagreement_retests(
+    config: ExperimentConfig,
+    year: int,
+    cases: list[dict[str, Any]],
+    attempts_path: str | Path,
+    runner: Runner = run_model_benchmark,
+) -> list[dict[str, Any]]:
+    existing = load_jsonl(attempts_path)
+    disagreements = set(disagreement_case_ids(existing))
+    case_map = {case["case_id"]: case for case in cases}
+    records = []
+    for case_id in sorted(disagreements):
+        for attempt_number in (2, 3):
+            for arm in ("direct", "direct_c2"):
+                records.append(
+                    run_attempt(
+                        config,
+                        year,
+                        case_map[case_id],
+                        arm,
+                        attempt_number,
+                        attempts_path,
+                        runner,
+                    )
+                )
+    return records

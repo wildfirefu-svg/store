@@ -372,3 +372,92 @@ def test_failure_marker_is_persisted(tmp_path: Path):
     assert row["parser_valid"] is False
     assert row["failure"] == "TimeoutError: temporary timeout"
     assert len(phase5.load_jsonl(path)) == 1
+
+
+def attempt(case_id: str, arm: str, number: int, choice: str | None, valid: bool = True) -> dict:
+    return {
+        "run_id": "r1",
+        "year": 2021,
+        "case_id": case_id,
+        "arm": arm,
+        "attempt": number,
+        "predicted_answer": choice,
+        "expected_answer": "B",
+        "parser_valid": valid,
+        "correct": valid and choice == "B",
+        "call_success": valid,
+        "retrieved_answer_leak": False,
+    }
+
+
+def test_only_initial_disagreements_are_retested(tmp_path: Path):
+    rows = [
+        attempt("same", "direct", 1, "B"),
+        attempt("same", "direct_c2", 1, "B"),
+        attempt("diff", "direct", 1, "A"),
+        attempt("diff", "direct_c2", 1, "B"),
+    ]
+
+    assert phase5.disagreement_case_ids(rows) == ["diff"]
+
+
+def test_majority_vote_uses_only_valid_votes_and_marks_tie_unresolved():
+    majority = phase5.resolve_arm([
+        attempt("c1", "direct", 1, "B"),
+        attempt("c1", "direct", 2, "B"),
+        attempt("c1", "direct", 3, None, valid=False),
+    ])
+    tie = phase5.resolve_arm([
+        attempt("c1", "direct", 1, "A"),
+        attempt("c1", "direct", 2, "B"),
+        attempt("c1", "direct", 3, None, valid=False),
+    ])
+
+    assert majority["choice"] == "B"
+    assert majority["unresolved"] is False
+    assert tie["choice"] is None
+    assert tie["unresolved"] is True
+
+
+def test_all_invalid_is_counted_separately():
+    result = phase5.resolve_arm([
+        attempt("c1", "direct", 1, None, valid=False),
+        attempt("c1", "direct", 2, None, valid=False),
+        attempt("c1", "direct", 3, None, valid=False),
+    ])
+
+    assert result["unresolved"] is True
+    assert result["all_invalid"] is True
+
+
+def test_repeat_consistency_distinguishes_unanimous_majority_and_unresolved():
+    rows = [
+        attempt("same", "direct", 1, "B"),
+        attempt("same", "direct", 2, "B"),
+        attempt("same", "direct", 3, "B"),
+        attempt("split", "direct_c2", 1, "A"),
+        attempt("split", "direct_c2", 2, "B"),
+        attempt("split", "direct_c2", 3, "B"),
+        attempt("invalid", "direct", 1, "A"),
+        attempt("invalid", "direct", 2, "B"),
+        attempt("invalid", "direct", 3, None, valid=False),
+    ]
+
+    assert phase5.summarize_repeat_consistency(rows) == {
+        "unanimous": 1,
+        "majority_2_to_1": 1,
+        "unresolved": 1,
+    }
+
+
+def test_initial_regression_stop_triggers_at_four():
+    rows = []
+    for index in range(4):
+        case_id = f"c{index}"
+        rows.extend([
+            attempt(case_id, "direct", 1, "B"),
+            attempt(case_id, "direct_c2", 1, "A"),
+        ])
+
+    assert phase5.count_initial_rescues_regressions(rows) == {"rescues": 0, "regressions": 4}
+    assert phase5.should_stop_after_initial(rows) is True
