@@ -408,3 +408,156 @@ def assert_year_access(
         raise RuntimeError("2023 requires completed 2021 and 2022 results")
     if (prior_summary or {}).get("decision") == "ROLLBACK":
         raise RuntimeError("2023 remains sealed after validation ROLLBACK")
+
+
+def build_schedule(
+    cases: list[dict[str, Any]],
+    seed: int,
+) -> list[tuple[dict[str, Any], tuple[str, str]]]:
+    ordered = list(cases)
+    random.Random(seed).shuffle(ordered)
+    return [
+        (case, ("direct", "direct_c2") if index % 2 == 0 else ("direct_c2", "direct"))
+        for index, case in enumerate(ordered)
+    ]
+
+
+def attempt_key(row: dict[str, Any]) -> tuple[str, int, str, str, int]:
+    return (
+        row["run_id"],
+        int(row["year"]),
+        row["case_id"],
+        row["arm"],
+        int(row["attempt"]),
+    )
+
+
+def load_attempt_index(path: str | Path) -> dict[tuple[str, int, str, str, int], dict[str, Any]]:
+    target = Path(path)
+    if not target.exists():
+        return {}
+    rows = load_jsonl(target)
+    index: dict[tuple[str, int, str, str, int], dict[str, Any]] = {}
+    for row in rows:
+        key = attempt_key(row)
+        if key in index:
+            raise RuntimeError(f"duplicate attempt key: {key}")
+        index[key] = row
+    return index
+
+
+def run_attempt(
+    config: ExperimentConfig,
+    year: int,
+    case: dict[str, Any],
+    arm: str,
+    attempt: int,
+    attempts_path: str | Path,
+    runner: Runner = run_model_benchmark,
+) -> dict[str, Any]:
+    if arm not in {"direct", "direct_c2"}:
+        raise ValueError(f"unsupported arm: {arm}")
+    key = (config.run_id, year, case["case_id"], arm, attempt)
+    existing = load_attempt_index(attempts_path).get(key)
+    if existing is not None:
+        return existing
+    started = time.perf_counter()
+    manifest_path = config.root / ("final_manifest.json" if config.final_2023 else "manifest.json")
+    manifest_fingerprint = json.loads(
+        manifest_path.read_text(encoding="utf-8")
+    )["fingerprint"]
+    try:
+        result = runner(
+            [case],
+            config.provider,
+            config.model,
+            config.prompt_version,
+            max_cases=1,
+            method=config.method,
+            temperature=config.temperature,
+            case_details_jsonl=None,
+            rag_k=2,
+            n_samples=1,
+            phase4_direct_c2=arm == "direct_c2",
+        )
+        details = result.get("case_details") or []
+        if len(details) != 1:
+            raise RuntimeError("single-case runner did not return exactly one detail")
+        detail = details[0]
+        record = {
+            "run_id": config.run_id,
+            "year": year,
+            "case_id": case["case_id"],
+            "arm": arm,
+            "attempt": attempt,
+            "provider": config.provider,
+            "model": config.model,
+            "method": config.method,
+            "prompt_version": config.prompt_version,
+            "temperature": config.temperature,
+            "rag": False,
+            "few_shot": False,
+            "apb": False,
+            "two_stage": False,
+            "manifest_fingerprint": manifest_fingerprint,
+            "raw_answer": detail.get("raw_answer"),
+            "predicted_answer": detail.get("predicted_answer"),
+            "expected_answer": extract_choice(case.get("answer")),
+            "parser_source": detail.get("parser_source"),
+            "parser_valid": detail.get("parser_valid") is True,
+            "correct": detail.get("correct") is True,
+            "call_success": detail.get("call_success") is not False,
+            "failure": None,
+            "transport_retry_count": detail.get("transport_retry_count"),
+            "phase4_option_scores": detail.get("phase4_option_scores", []),
+            "retrieved_answer_leak": detail.get("retrieved_answer_leak", False),
+            "elapsed_seconds": time.perf_counter() - started,
+            "runner_pacing_seconds": 1.0,
+        }
+    except Exception as exc:
+        record = {
+            "run_id": config.run_id,
+            "year": year,
+            "case_id": case["case_id"],
+            "arm": arm,
+            "attempt": attempt,
+            "provider": config.provider,
+            "model": config.model,
+            "method": config.method,
+            "prompt_version": config.prompt_version,
+            "temperature": config.temperature,
+            "rag": False,
+            "few_shot": False,
+            "apb": False,
+            "two_stage": False,
+            "manifest_fingerprint": manifest_fingerprint,
+            "raw_answer": None,
+            "predicted_answer": None,
+            "expected_answer": extract_choice(case.get("answer")),
+            "parser_source": "none",
+            "parser_valid": False,
+            "correct": False,
+            "call_success": False,
+            "failure": f"{type(exc).__name__}: {exc}",
+            "transport_retry_count": None,
+            "phase4_option_scores": [],
+            "retrieved_answer_leak": False,
+            "elapsed_seconds": time.perf_counter() - started,
+            "runner_pacing_seconds": 0.0,
+        }
+    append_jsonl(attempts_path, record)
+    return record
+
+
+def run_initial_pairs(
+    config: ExperimentConfig,
+    year: int,
+    cases: list[dict[str, Any]],
+    attempts_path: str | Path,
+    runner: Runner = run_model_benchmark,
+) -> list[dict[str, Any]]:
+    records = []
+    for case, arms in build_schedule(cases, year_schedule_seed(config, year)):
+        for arm in arms:
+            records.append(run_attempt(config, year, case, arm, 1, attempts_path, runner))
+    return records

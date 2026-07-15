@@ -262,3 +262,113 @@ def test_2023_requires_prior_results_and_frozen_candidate(tmp_path: Path):
             2023,
             prior_summary=prior,
         )
+
+
+def test_balanced_schedule_is_reproducible():
+    cases = [sample_case(f"c{i}") for i in range(5)]
+
+    first = phase5.build_schedule(cases, seed=7)
+    second = phase5.build_schedule(cases, seed=7)
+
+    assert first == second
+    assert abs(
+        sum(pair[0] == "direct" for _, pair in first)
+        - sum(pair[0] == "direct_c2" for _, pair in first)
+    ) <= 1
+    assert all(set(pair) == {"direct", "direct_c2"} for _, pair in first)
+
+
+def test_each_year_has_a_recorded_derived_schedule_seed(tmp_path: Path):
+    config = phase5.ExperimentConfig("r1", tmp_path, (2021, 2022), seed=7)
+
+    assert phase5.year_schedule_seed(config, 2021) == 2028
+    assert phase5.year_schedule_seed(config, 2022) == 2029
+
+
+def test_run_attempt_passes_no_case_details_and_persists(tmp_path: Path):
+    calls = []
+
+    def fake_runner(cases, provider, model, prompt_version, **kwargs):
+        calls.append(kwargs)
+        case = cases[0]
+        return {
+            "case_details": [{
+                "case_id": case["case_id"],
+                "expected_answer": case["answer"],
+                "predicted_answer": "B",
+                "raw_answer": "B",
+                "parser_source": "legacy",
+                "parser_valid": True,
+                "correct": True,
+                "call_success": True,
+                "phase4_option_scores": [],
+            }],
+            "failed_cases": [],
+        }
+
+    path = tmp_path / "attempts.jsonl"
+    config = phase5.ExperimentConfig("r1", tmp_path, (2021,))
+    phase5.write_json(config.root / "manifest.json", {"fingerprint": "fp"})
+    row = phase5.run_attempt(
+        config,
+        2021,
+        sample_case(),
+        "direct_c2",
+        1,
+        path,
+        fake_runner,
+    )
+
+    assert calls[0]["case_details_jsonl"] is None
+    assert calls[0]["phase4_direct_c2"] is True
+    assert calls[0]["n_samples"] == 1
+    assert row["arm"] == "direct_c2"
+    assert phase5.load_jsonl(path) == [row]
+
+
+def test_completed_attempt_is_not_called_again(tmp_path: Path):
+    path = tmp_path / "attempts.jsonl"
+    existing = {
+        "run_id": "r1",
+        "year": 2021,
+        "case_id": "c1",
+        "arm": "direct",
+        "attempt": 1,
+    }
+    phase5.append_jsonl(path, existing)
+    calls = []
+
+    result = phase5.run_attempt(
+        phase5.ExperimentConfig("r1", tmp_path, (2021,), resume=True),
+        2021,
+        sample_case(),
+        "direct",
+        1,
+        path,
+        lambda *args, **kwargs: calls.append((args, kwargs)),
+    )
+
+    assert result == existing
+    assert calls == []
+
+
+def test_failure_marker_is_persisted(tmp_path: Path):
+    def failing_runner(*args, **kwargs):
+        raise TimeoutError("temporary timeout")
+
+    path = tmp_path / "attempts.jsonl"
+    phase5.write_json(tmp_path / "manifest.json", {"fingerprint": "fp"})
+    row = phase5.run_attempt(
+        phase5.ExperimentConfig("r1", tmp_path, (2021,)),
+        2021,
+        sample_case(),
+        "direct",
+        1,
+        path,
+        failing_runner,
+    )
+
+    assert row["call_success"] is False
+    assert row["parser_valid"] is False
+    assert row["failure"] == "TimeoutError: temporary timeout"
+    assert len(phase5.load_jsonl(path)) == 1
