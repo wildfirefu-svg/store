@@ -1,5 +1,10 @@
 def format_birth_line(case):
-    person = case.get("person", {}) if isinstance(case, dict) else {}
+    if not isinstance(case, dict):
+        person = {}
+    elif "person" in case:
+        person = case.get("person") or {}
+    else:
+        person = case
     birth = person.get("birth", {})
     lines = [
         f"姓名：{person.get('name', '')}",
@@ -41,6 +46,44 @@ def format_direct_choice_prompt(case):
         case.get("question", ""),
         "## 选项",
         format_options(case.get("options", [])),
+        "请直接回答选项字母。",
+    ])
+
+
+def format_direct_c2_prompt(case, option_scores):
+    score_lines = []
+    for item in option_scores or []:
+        support = item.get("support") or []
+        reject = item.get("reject") or []
+        parts = []
+        if support:
+            parts.append("support: " + ", ".join(support[:3]))
+        if reject:
+            parts.append("reject: " + ", ".join(reject[:3]))
+        reason_text = f" [{'; '.join(parts)}]" if parts else ""
+        score_lines.append(
+            f"{item.get('label')}. {item.get('text')} -> "
+            f"{item.get('score')}/100 ({item.get('verdict')}){reason_text}"
+        )
+    summary = " | ".join(
+        f"{item.get('label')}={item.get('score')} {item.get('verdict')}"
+        for item in option_scores or []
+    )
+    evidence = "\n".join(
+        ["【逐选项命理评分】", *score_lines, "", "【逐选项评分汇总】", summary]
+    )
+    return "\n\n".join([
+        "你是一位严谨的八字命理评测助手。",
+        "请根据命主信息、RAG 证据和逐选项命理评分回答四选一题。请直接回答选项字母 A/B/C/D，不要解释。",
+        "逐选项命理评分是结构化参考证据，不得仅因某选项分数最高而选择。",
+        "## 命主信息",
+        format_birth_line(case),
+        "## 问题",
+        case.get("question", ""),
+        "## 选项",
+        format_options(case.get("options", [])),
+        "## C2 参考证据",
+        evidence,
         "请直接回答选项字母。",
     ])
 

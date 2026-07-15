@@ -13,6 +13,7 @@ from benchmark.runners.shuffle_options import shuffle_options as _shuffle_option
 from benchmark.runners.self_consistency import majority_vote, sample_answers
 from benchmark.formatters.baziqa_prompt import (
     format_direct_choice_prompt,
+    format_direct_c2_prompt,
     format_structured_reasoning_prompt,
     format_multi_turn_context,
     format_multi_turn_question,
@@ -40,9 +41,9 @@ def run_offline_benchmark(cases, predictions):
     return score_choice_answers(cases, predictions)
 
 
-def build_benchmark_prompt(case, method='direct_choice'):
+def build_benchmark_prompt(case, method='direct_choice', phase4_exp_a=False):
     if method == 'two_stage_reasoning':
-        return format_stage1_prompt(case)
+        return format_stage1_prompt(case, exp_a=phase4_exp_a)
     if method == 'structured_reasoning':
         return format_structured_reasoning_prompt(case)
     if method in ('direct_choice', 'multi_turn'):
@@ -313,9 +314,54 @@ def _retrieval_call_kwargs(rag_k, retrieval_mode='legacy', option_evidence_k=2):
     return kwargs
 
 
-def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None, n_samples=1, sample_temperature=0.4, aggregate='majority', phase4_evidence_mode='all'):
+def _load_stage1_cache(path):
+    if not path:
+        return {}
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            return data
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        return {}
+    return {}
+
+
+def _save_stage1_cache(path, cache):
+    if not path:
+        return
+    out_path = os.path.abspath(path)
+    parent = os.path.dirname(out_path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    with open(out_path, 'w', encoding='utf-8') as f:
+        json.dump(cache, f, ensure_ascii=False, indent=2, sort_keys=True)
+
+
+def _phase4_runtime_config(provider, model, prompt_version, rag_k, retrieval_mode, option_evidence_k):
+    return {
+        "provider": provider,
+        "model": model,
+        "prompt_version": prompt_version,
+        "rag": os.environ.get('BAZI_RAG') == '1',
+        "rag_corpus": os.environ.get('BAZI_RAG_CORPUS') or "",
+        "rag_k": rag_k,
+        "retrieval_mode": retrieval_mode,
+        "option_evidence_k": option_evidence_k,
+        "fewshot_file": os.environ.get('BAZI_FEWSHOT_FILE') or "",
+        "fewshot": "on" if os.environ.get('BAZI_FEWSHOT_FILE') else "off",
+        "apb_block": os.environ.get('BAZI_APB_BLOCK') == '1',
+    }
+
+
+def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None, n_samples=1, sample_temperature=0.4, aggregate='majority', phase4_evidence_mode='all', phase4_stage1_cache=None, phase4_exp_b=False, phase4_exp_a=False, phase4_exp_c=False, phase4_exp_c2=False, phase4_direct_c2=False):
     if method == 'multi_turn':
         return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases, temperature=temperature, case_details_jsonl=case_details_jsonl, rag_k=rag_k, config_id=config_id, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k)
+    if phase4_exp_c and phase4_exp_c2:
+        raise ValueError("run_model_benchmark: --phase4-exp-c and --phase4-exp-c2 are mutually exclusive")
+    if phase4_direct_c2 and method != 'direct_choice':
+        raise ValueError("run_model_benchmark: --phase4-direct-c2 requires --method direct_choice")
+    runtime_config = _phase4_runtime_config(provider, model, prompt_version, rag_k, retrieval_mode, option_evidence_k)
 
     if not isinstance(n_samples, int) or n_samples < 1:
         raise ValueError(f"run_model_benchmark: n_samples must be a positive int, got {n_samples!r}")
@@ -338,8 +384,9 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
     case_details = []
     failed_cases = []
 
-    # Stage 1 cache for two_stage_reasoning (cross-perm optimization)
-    stage1_cache = {}
+    # Stage 1 cache for two_stage_reasoning. The optional file path lets
+    # separate perm/mode subprocesses share the same Stage 1 hypotheses.
+    stage1_cache = _load_stage1_cache(phase4_stage1_cache)
 
     limited_cases = cases[:max_cases]
     print(f"Running model benchmark on {len(limited_cases)} cases...")
@@ -348,15 +395,23 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
         case_id = case['case_id']
         print(f"  [{i+1}/{len(limited_cases)}] {case_id}")
 
-        prompt = build_benchmark_prompt(case, method=method)
+        option_scores = None
+        if phase4_direct_c2:
+            from benchmark.runners.per_option_scorer import score_options
+
+            option_scores = score_options(case)
+            prompt = format_direct_c2_prompt(case, option_scores)
+        else:
+            prompt = build_benchmark_prompt(case, method=method, phase4_exp_a=phase4_exp_a)
 
         # Two-stage reasoning path
         if method == 'two_stage_reasoning':
             try:
                 # Stage 1: label-blind reasoning (suppress RAG/APB)
                 cached = stage1_cache.get(case_id)
-                if cached is not None:
-                    raw1, hypothesis = cached
+                stage1_cache_hit = cached is not None
+                if stage1_cache_hit:
+                    raw1, hypothesis = cached.get("raw"), cached.get("hypothesis")
                     print(f"    [Stage 1 cached]")
                 else:
                     raw1 = call_model_sync(
@@ -369,7 +424,8 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                         suppress_apb=True,
                     )
                     hypothesis = parse_stage1_result(raw1)
-                    stage1_cache[case_id] = (raw1, hypothesis)
+                    stage1_cache[case_id] = {"raw": raw1, "hypothesis": hypothesis}
+                    _save_stage1_cache(phase4_stage1_cache, stage1_cache)
 
                 # Parse failure → fallback to structured_reasoning
                 if hypothesis is None:
@@ -389,12 +445,21 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                     fallback_reason = "stage1_parse_failed"
                 else:
                     # Stage 2: option matching with evidence
-                    print(f"    [Stage 2 with hypothesis]")
-                    is_time = is_time_location_question(case.get('question', ''), case.get('options', []))
-                    # evidence_mode: 'all' for smoke (default), 'top2' only for formal if hit rate >= 0.85
-                    evidence_mode = phase4_evidence_mode if phase4_evidence_mode in ('all', 'top2') else 'all'
-                    evidence = build_stage2_evidence(case, hypothesis, mode=evidence_mode)
-                    stage2_prompt = format_stage2_prompt(case, hypothesis, evidence, is_time=is_time)
+                    if phase4_exp_b:
+                        # Experiment B: skip Stage 1 hypothesis, use evidence only
+                        print(f"    [Stage 2 EXP-B: no hypothesis]")
+                        is_time = is_time_location_question(case.get('question', ''), case.get('options', []))
+                        evidence_mode = phase4_evidence_mode if phase4_evidence_mode in ('all', 'top2') else 'all'
+                        evidence = build_stage2_evidence(case, "", mode=evidence_mode, exp_c=phase4_exp_c, exp_c2=phase4_exp_c2)
+                        stage2_prompt = format_stage2_prompt(case, hypothesis=None, evidence=evidence, is_time=is_time)
+                    else:
+                        # Normal mode: with Stage 1 hypothesis
+                        print(f"    [Stage 2 with hypothesis]")
+                        is_time = is_time_location_question(case.get('question', ''), case.get('options', []))
+                        # evidence_mode: 'all' for smoke (default), 'top2' only for formal if hit rate >= 0.85
+                        evidence_mode = phase4_evidence_mode if phase4_evidence_mode in ('all', 'top2') else 'all'
+                        evidence = build_stage2_evidence(case, hypothesis, mode=evidence_mode, exp_c=phase4_exp_c, exp_c2=phase4_exp_c2)
+                        stage2_prompt = format_stage2_prompt(case, hypothesis, evidence, is_time=is_time)
 
                     # Self-consistency for Stage 2: multiple samples with majority vote
                     if n_samples > 1:
@@ -488,6 +553,8 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                     # Phase 4 fields
                     "phase4_stage1_raw": raw1 if not fallback else None,
                     "phase4_stage1_hypothesis": hypothesis if not fallback else None,
+                    "phase4_stage1_cache_hit": stage1_cache_hit,
+                    "phase4_stage1_call_made": not stage1_cache_hit,
                     "phase4_stage2_raw": answer if not fallback else None,
                     "phase4_fallback": fallback,
                     "phase4_fallback_reason": fallback_reason,
@@ -496,6 +563,14 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                     "phase4_evidence_mode": evidence_mode if not fallback else None,
                     "phase4_sc_samples": sample_records if sample_records else None,
                 }
+                if phase4_exp_c2:
+                    from benchmark.runners.per_option_scorer import score_options
+
+                    phase4_scores = score_options(case)
+                    detail["phase4_exp_c2"] = True
+                    detail["phase4_option_scores"] = phase4_scores
+                    detail["phase4_option_score_domain"] = phase4_scores[0]["domain"] if phase4_scores else None
+                    detail["phase4_runtime_config"] = runtime_config
                 parser_failure_reason = classify_parser_failure(
                     raw_answer=answer,
                     parsed_choice=predicted,
@@ -547,6 +622,9 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                     "phase4_fallback": True,
                     "phase4_fallback_reason": "model_call_failed",
                 }
+                if phase4_exp_c2:
+                    failure_detail["phase4_exp_c2"] = True
+                    failure_detail["phase4_runtime_config"] = runtime_config
                 case_details.append(failure_detail)
                 _append_jsonl(case_details_jsonl, failure_detail)
                 time.sleep(1)
@@ -636,6 +714,11 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                 failure_detail["answer_label_map"] = label_map
                 failure_detail["original_expected_answer"] = case.get('_original_answer')
                 failure_detail["original_predicted_answer"] = None
+            if phase4_direct_c2:
+                failure_detail["phase4_direct_c2"] = True
+                failure_detail["phase4_option_scores"] = option_scores or []
+                failure_detail["phase4_option_score_domain"] = option_scores[0]["domain"] if option_scores else None
+                failure_detail["phase4_runtime_config"] = runtime_config
             case_details.append(failure_detail)
             _append_jsonl(case_details_jsonl, failure_detail)
             time.sleep(1)
@@ -688,6 +771,11 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
             "correct_identity": case.get('_original_answer'),
             "mode": "on-3" if case.get('answer_label_map') else "off-3",
         }
+        if phase4_direct_c2:
+            detail["phase4_direct_c2"] = True
+            detail["phase4_option_scores"] = option_scores or []
+            detail["phase4_option_score_domain"] = option_scores[0]["domain"] if option_scores else None
+            detail["phase4_runtime_config"] = runtime_config
         parser_failure_reason = classify_parser_failure(
             raw_answer=answer,
             parsed_choice=predicted,
@@ -753,7 +841,39 @@ def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0
                     **_retrieval_call_kwargs(rag_k, retrieval_mode, option_evidence_k),
                 )
             except RuntimeError as e:
-                failed_cases.append({'case_id': case_id, 'error': str(e)[:120]})
+                err_msg = str(e)[:120]
+                failed_cases.append({'case_id': case_id, 'error': err_msg})
+                expected = extract_choice(case.get('answer'))
+                detail = {
+                    "case_id": case_id,
+                    "domain": case.get('domain', 'unknown'),
+                    "question": case.get('question', '')[:50],
+                    "expected_answer": expected,
+                    "predicted_answer": None,
+                    "raw_answer": "",
+                    "correct": False,
+                    "error": err_msg,
+                    "evidence_coverage": 0.0,
+                    "safety_score": 0.0,
+                    "parser_source": None,
+                    "parser_valid": False,
+                    "rag_k": rag_k,
+                    "retrieval_mode": retrieval_mode,
+                    "rag_trace": [],
+                    "option_evidence": {},
+                    "option_evidence_coverage": {},
+                    "retrieved_answer_leak": False,
+                    "config_id": config_id,
+                    "call_success": False,
+                    "permutation_id": case.get('_permutation_id'),
+                    "label_map": case.get('answer_label_map') or {},
+                    "predicted_identity": None,
+                    "correct_identity": case.get('_original_answer'),
+                    "mode": "on-3" if case.get('answer_label_map') else "off-3",
+                    "parser_failure_reason": "model_call_failed",
+                }
+                case_details.append(detail)
+                _append_jsonl(case_details_jsonl, detail)
                 continue
 
             predictions[case_id] = answer
@@ -837,7 +957,19 @@ def main(argv=None):
     parser.add_argument('--aggregate', default='majority', choices=['majority'], help='Aggregation strategy over samples')
     parser.add_argument('--apb-block', action='store_true', help='Append anti-position-bias instruction to system prompt (Phase 3)')
     parser.add_argument('--phase4-evidence-mode', default='all', choices=['all', 'top2'], help='Phase 4: evidence mode for Stage 2 (all=retrieve all options, top2=top-2 TF-IDF match)')
+    parser.add_argument('--phase4-stage1-cache', help='Phase 4: JSON cache path for sharing Stage 1 hypotheses across subprocesses')
+    parser.add_argument('--phase4-exp-b', action='store_true', help='Phase 4: Experiment B - skip Stage 1 hypothesis, run Stage 2 with evidence only')
+    parser.add_argument('--phase4-exp-a', action='store_true', help='Phase 4: Experiment A - Stage 1 without options, force neutral description')
+    parser.add_argument('--phase4-exp-c', action='store_true', help='Phase 4: Experiment C - structured命理 evidence for non-time Stage 2')
+    parser.add_argument('--phase4-exp-c2', action='store_true', help='Phase 4: Experiment C2 - per-option scoring evidence for non-time Stage 2')
+    parser.add_argument('--phase4-direct-c2', action='store_true', help='Phase 4: inject C2 per-option scoring evidence into direct_choice prompt')
     args = parser.parse_args(argv)
+    if args.phase4_exp_c and args.phase4_exp_c2:
+        raise ValueError("--phase4-exp-c and --phase4-exp-c2 are mutually exclusive")
+    if args.phase4_direct_c2 and args.method != 'direct_choice':
+        raise ValueError("--phase4-direct-c2 requires --method direct_choice")
+    if (args.phase4_exp_c2 or args.phase4_direct_c2) and os.environ.get('BAZI_FEWSHOT_FILE') and not args.fewshot_file:
+        raise ValueError("C2 evaluation requires fewshot=off; clear BAZI_FEWSHOT_FILE or pass an explicit comparable --fewshot-file")
 
     if args.rag:
         os.environ['BAZI_RAG'] = '1'
@@ -872,6 +1004,12 @@ def main(argv=None):
             sample_temperature=args.sample_temperature,
             aggregate=args.aggregate,
             phase4_evidence_mode=args.phase4_evidence_mode,
+            phase4_stage1_cache=args.phase4_stage1_cache,
+            phase4_exp_b=args.phase4_exp_b,
+            phase4_exp_a=args.phase4_exp_a,
+            phase4_exp_c=args.phase4_exp_c,
+            phase4_exp_c2=args.phase4_exp_c2,
+            phase4_direct_c2=args.phase4_direct_c2,
         )
 
         model_cases = model_result['cases']
