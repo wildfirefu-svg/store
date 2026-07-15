@@ -126,3 +126,65 @@ def test_classify_c2_applicability_separates_effective_and_noop_cases():
         "c2_noop_case_ids": ["noop"],
         "c2_effective_rate": 0.5,
     }
+
+
+def test_dirty_scope_requires_explicit_override():
+    dirty = {"benchmark/runners/per_option_scorer.py": "??"}
+
+    with pytest.raises(RuntimeError, match="--allow-dirty-scope"):
+        phase5.enforce_dirty_scope(dirty, allow_dirty_scope=False)
+
+    phase5.enforce_dirty_scope(dirty, allow_dirty_scope=True)
+
+
+def test_manifest_resume_requires_exact_fingerprint(tmp_path: Path):
+    path = tmp_path / "manifest.json"
+    expected = {"fingerprint": "abc", "run_id": "r1"}
+    phase5.write_json(path, expected)
+
+    assert phase5.load_or_validate_manifest(path, expected, resume=True) == expected
+    with pytest.raises(RuntimeError, match="manifest mismatch"):
+        phase5.load_or_validate_manifest(
+            path,
+            {"fingerprint": "changed", "run_id": "r1"},
+            resume=True,
+        )
+
+
+def test_existing_manifest_requires_resume(tmp_path: Path):
+    path = tmp_path / "manifest.json"
+    phase5.write_json(path, {"fingerprint": "abc"})
+
+    with pytest.raises(RuntimeError, match="--resume"):
+        phase5.load_or_validate_manifest(path, {"fingerprint": "abc"}, resume=False)
+
+
+def test_resume_requires_existing_manifest(tmp_path: Path):
+    with pytest.raises(RuntimeError, match="cannot resume missing manifest"):
+        phase5.load_or_validate_manifest(
+            tmp_path / "missing.json",
+            {"fingerprint": "abc"},
+            resume=True,
+        )
+
+
+def test_manifest_declares_explicit_fingerprint_scope(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(phase5, "EXPERIMENT_SCOPE", ())
+    monkeypatch.setattr(phase5, "git_output", lambda *args: "deadbeef")
+    config = phase5.ExperimentConfig("r1", tmp_path, (2021, 2022))
+
+    manifest = phase5.build_manifest(config, datasets={}, scope_status={})
+
+    assert manifest["fingerprint_scope"] == {
+        "coverage": "explicit_experiment_files_only",
+        "files": [],
+        "indirect_dependencies_fingerprinted": False,
+    }
+    assert manifest["seal_audit_note"] == phase5.SEAL_AUDIT_NOTE
+
+
+def test_fixed_environment_rejects_rag(monkeypatch):
+    monkeypatch.setenv("BAZI_RAG", "1")
+
+    with pytest.raises(RuntimeError, match="BAZI_RAG"):
+        phase5.assert_fixed_environment()

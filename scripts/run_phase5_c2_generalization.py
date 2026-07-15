@@ -205,3 +205,146 @@ def describe_dataset(
         ).isoformat(),
         "c2_applicability": classify_c2_applicability(enriched_rows),
     }
+
+
+def year_schedule_seed(config: ExperimentConfig, year: int) -> int:
+    return config.seed + year
+
+
+def git_output(*args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=PROJECT_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
+    return result.stdout.strip()
+
+
+def experiment_scope_status() -> dict[str, str]:
+    output = git_output("status", "--short", "--", *EXPERIMENT_SCOPE)
+    status: dict[str, str] = {}
+    for line in output.splitlines():
+        if not line:
+            continue
+        status[line[3:]] = line[:2]
+    return status
+
+
+def enforce_dirty_scope(status: dict[str, str], allow_dirty_scope: bool) -> None:
+    if status and not allow_dirty_scope:
+        paths = ", ".join(sorted(status))
+        raise RuntimeError(
+            f"experiment scope has uncommitted changes: {paths}; "
+            "pass --allow-dirty-scope to record and run them"
+        )
+
+
+def stable_fingerprint(payload: dict[str, Any]) -> str:
+    encoded = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def build_manifest(
+    config: ExperimentConfig,
+    datasets: dict[str, dict[str, Any]],
+    scope_status: dict[str, str],
+    prior_manifest_sha256: str | None = None,
+) -> dict[str, Any]:
+    scope_hashes = {
+        path: sha256_file(PROJECT_ROOT / path)
+        for path in EXPERIMENT_SCOPE
+    }
+    immutable = {
+        "run_id": config.run_id,
+        "datasets": datasets,
+        "git_commit": git_output("rev-parse", "HEAD"),
+        "scope_status": scope_status,
+        "scope_hashes": scope_hashes,
+        "fingerprint_scope": {
+            "coverage": "explicit_experiment_files_only",
+            "files": list(EXPERIMENT_SCOPE),
+            "indirect_dependencies_fingerprinted": False,
+        },
+        "provider": config.provider,
+        "model": config.model,
+        "method": config.method,
+        "prompt_version": config.prompt_version,
+        "temperature": config.temperature,
+        "rag": False,
+        "few_shot": False,
+        "apb": False,
+        "two_stage": False,
+        "seed": config.seed,
+        "year_schedule_seeds": {
+            str(year): year_schedule_seed(config, year)
+            for year in config.years
+        },
+        "years": list(config.years),
+        "candidate_id": config.candidate_id,
+        "prior_manifest_sha256": prior_manifest_sha256,
+        "seal_audit_note": SEAL_AUDIT_NOTE,
+    }
+    return {
+        **immutable,
+        "fingerprint": stable_fingerprint(immutable),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "worktree_dirty_warning": bool(git_output("status", "--short")),
+    }
+
+
+def load_or_validate_manifest(
+    path: str | Path,
+    expected: dict[str, Any],
+    resume: bool,
+) -> dict[str, Any]:
+    target = Path(path)
+    if not target.exists():
+        if resume:
+            raise RuntimeError(f"cannot resume missing manifest: {target}")
+        write_json(target, expected)
+        return expected
+    if not resume:
+        raise RuntimeError(f"run already exists at {target}; use --resume")
+    actual = json.loads(target.read_text(encoding="utf-8"))
+    if actual.get("fingerprint") != expected.get("fingerprint"):
+        raise RuntimeError("manifest mismatch; create a new run_id")
+    return actual
+
+
+def assert_fixed_environment() -> None:
+    forbidden = {
+        "BAZI_RAG": "1",
+        "BAZI_APB_BLOCK": "1",
+    }
+    active = [name for name, value in forbidden.items() if os.environ.get(name) == value]
+    if os.environ.get("BAZI_FEWSHOT_FILE"):
+        active.append("BAZI_FEWSHOT_FILE")
+    if active:
+        raise RuntimeError(f"fixed Phase 5 configuration violated by: {', '.join(active)}")
+
+
+def validate_run_id(run_id: str) -> None:
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}", run_id):
+        raise ValueError(
+            "run_id must be 1-80 characters using only letters, digits, '.', '_' or '-'"
+        )
+
+
+def assert_fixed_config(config: ExperimentConfig) -> None:
+    actual = (
+        config.provider,
+        config.model,
+        config.method,
+        config.temperature,
+    )
+    expected = ("deepseek", "deepseek-chat", "direct_choice", 0.0)
+    if actual != expected:
+        raise RuntimeError(f"fixed Phase 5 configuration mismatch: {actual!r}")
