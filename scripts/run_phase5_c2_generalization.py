@@ -666,3 +666,101 @@ def run_disagreement_retests(
                     )
                 )
     return records
+
+
+def exact_mcnemar_pvalue(b: int, c: int) -> float:
+    n = b + c
+    if n == 0:
+        return 1.0
+    k = min(b, c)
+    two_tailed = 2 * sum(math.comb(n, i) for i in range(k + 1)) / (2 ** n)
+    return min(1.0, two_tailed)
+
+
+def summarize_stable_results(
+    results: list[dict[str, Any]],
+    attempts: list[dict[str, Any]],
+) -> dict[str, Any]:
+    effective: dict[str, int] = {
+        "total": 0,
+        "both_correct": 0,
+        "both_wrong": 0,
+        "rescues": 0,
+        "regressions": 0,
+        "unresolved_direct": 0,
+        "unresolved_c2": 0,
+    }
+    noop: dict[str, int] = dict(effective)
+    by_domain: dict[str, dict[str, int]] = {}
+    for result in results:
+        direct = result["direct"]
+        c2 = result["direct_c2"]
+        bucket = effective if result["c2_effective"] else noop
+        bucket["total"] += 1
+        if direct["correct"] and c2["correct"]:
+            bucket["both_correct"] += 1
+        elif not direct["correct"] and not c2["correct"]:
+            bucket["both_wrong"] += 1
+        elif c2["correct"] and not direct["correct"]:
+            bucket["rescues"] += 1
+        else:
+            bucket["regressions"] += 1
+        if direct["unresolved"]:
+            bucket["unresolved_direct"] += 1
+        if c2["unresolved"]:
+            bucket["unresolved_c2"] += 1
+        domain = result.get("domain", "unknown")
+        entry = by_domain.setdefault(domain, dict(effective))
+        entry["total"] += 1
+        if c2["correct"] and not direct["correct"]:
+            entry["rescues"] += 1
+        elif direct["correct"] and not c2["correct"]:
+            entry["regressions"] += 1
+        elif direct["correct"] and c2["correct"]:
+            entry["both_correct"] += 1
+        elif not direct["correct"] and not c2["correct"]:
+            entry["both_wrong"] += 1
+    parser_source_by_arm: dict[str, dict[str, int]] = {"direct": {}, "direct_c2": {}}
+    for attempt_row in attempts:
+        arm = attempt_row.get("arm")
+        if arm not in parser_source_by_arm or not attempt_row.get("parser_valid"):
+            continue
+        source = attempt_row.get("parser_source", "unknown")
+        parser_source_by_arm[arm][source] = parser_source_by_arm[arm].get(source, 0) + 1
+    return {
+        "by_c2_applicability": {"effective": effective, "noop": noop},
+        "by_domain": by_domain,
+        "parser_source_by_arm": parser_source_by_arm,
+    }
+
+
+def decide_final(metrics: dict[str, Any]) -> dict[str, Any]:
+    hard_gates = {
+        "c2_not_below_direct": int(metrics["c2_correct"]) >= int(metrics["direct_correct"]),
+        "non_degrading_years": int(metrics["non_degrading_years"]) >= 2,
+        "regressions_cap": int(metrics["regressions"]) <= 12,
+        "parser_valid_rate": float(metrics["parser_valid_rate"]) >= 0.95,
+        "no_answer_leak": int(metrics["confirmed_answer_leaks"]) == 0,
+    }
+    all_passed = all(hard_gates.values())
+    rescues = int(metrics["rescues"])
+    regressions = int(metrics["regressions"])
+    if not all_passed:
+        decision = "ROLLBACK"
+    elif rescues > regressions:
+        decision = "PROMOTE"
+    elif rescues == regressions:
+        decision = "NON_INFERIOR"
+    else:
+        decision = "ROLLBACK"
+    b = rescues
+    c = regressions
+    return {
+        "decision": decision,
+        "hard_gates": hard_gates,
+        "rescues": rescues,
+        "regressions": regressions,
+        "mcnemar_b": b,
+        "mcnemar_c": c,
+        "mcnemar_pvalue": exact_mcnemar_pvalue(b, c),
+    }

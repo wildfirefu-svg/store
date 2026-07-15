@@ -461,3 +461,78 @@ def test_initial_regression_stop_triggers_at_four():
 
     assert phase5.count_initial_rescues_regressions(rows) == {"rescues": 0, "regressions": 4}
     assert phase5.should_stop_after_initial(rows) is True
+
+
+def test_exact_mcnemar_uses_two_sided_binomial():
+    assert phase5.exact_mcnemar_pvalue(0, 0) == 1.0
+    assert phase5.exact_mcnemar_pvalue(1, 5) == pytest.approx(0.21875)
+    assert phase5.exact_mcnemar_pvalue(5, 1) == pytest.approx(0.21875)
+
+
+def decision_input(rescues: int, regressions: int) -> dict:
+    return {
+        "total": 120,
+        "direct_correct": 40,
+        "c2_correct": 40 + rescues - regressions,
+        "rescues": rescues,
+        "regressions": regressions,
+        "non_degrading_years": 2,
+        "parser_valid_rate": 0.96,
+        "confirmed_answer_leaks": 0,
+    }
+
+
+def test_final_decision_boundaries():
+    assert phase5.decide_final(decision_input(3, 2))["decision"] == "PROMOTE"
+    assert phase5.decide_final(decision_input(2, 2))["decision"] == "NON_INFERIOR"
+    assert phase5.decide_final(decision_input(2, 3))["decision"] == "ROLLBACK"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("c2_correct", 39),
+        ("non_degrading_years", 1),
+        ("regressions", 13),
+        ("parser_valid_rate", 0.949),
+        ("confirmed_answer_leaks", 1),
+    ],
+)
+def test_any_hard_gate_failure_rolls_back(field: str, value):
+    metrics = decision_input(3, 2)
+    metrics[field] = value
+    assert phase5.decide_final(metrics)["decision"] == "ROLLBACK"
+
+
+def test_summary_stratifies_c2_applicability_and_parser_sources():
+    results = [
+        {
+            "case_id": "active",
+            "year": 2021,
+            "domain": "wealth",
+            "c2_effective": True,
+            "direct": {"correct": False, "all_invalid": False, "unresolved": False},
+            "direct_c2": {"correct": True, "all_invalid": False, "unresolved": False},
+        },
+        {
+            "case_id": "noop",
+            "year": 2021,
+            "domain": "unknown",
+            "c2_effective": False,
+            "direct": {"correct": True, "all_invalid": False, "unresolved": False},
+            "direct_c2": {"correct": True, "all_invalid": False, "unresolved": False},
+        },
+    ]
+    attempts = [
+        {"case_id": "active", "arm": "direct", "parser_source": "final_answer", "parser_valid": True},
+        {"case_id": "active", "arm": "direct_c2", "parser_source": "confidence", "parser_valid": True},
+    ]
+
+    summary = phase5.summarize_stable_results(results, attempts)
+
+    assert summary["by_c2_applicability"]["effective"]["rescues"] == 1
+    assert summary["by_c2_applicability"]["noop"]["both_correct"] == 1
+    assert summary["parser_source_by_arm"] == {
+        "direct": {"final_answer": 1},
+        "direct_c2": {"confidence": 1},
+    }
