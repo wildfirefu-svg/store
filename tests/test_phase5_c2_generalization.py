@@ -536,3 +536,258 @@ def test_summary_stratifies_c2_applicability_and_parser_sources():
         "direct": {"final_answer": 1},
         "direct_c2": {"confidence": 1},
     }
+
+
+def test_run_validation_uses_fake_runner_and_writes_summary(tmp_path: Path, monkeypatch):
+    cases = [sample_case("c1"), sample_case("c2")]
+    for year in (2021, 2022):
+        year_rows = [{**row, "source_year": str(year)} for row in cases]
+        write_jsonl(tmp_path / f"source-{year}.jsonl", year_rows)
+
+    monkeypatch.setattr(phase5, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(phase5, "EXPERIMENT_SCOPE", ())
+    monkeypatch.setattr(phase5, "git_output", lambda *args: "deadbeef")
+    monkeypatch.setattr(phase5, "experiment_scope_status", lambda: {})
+    monkeypatch.setattr(phase5, "enrich_row", fake_enrich)
+    monkeypatch.setattr(
+        phase5,
+        "summarize_scores",
+        lambda rows: {**passing_metrics(), "n_cases": len(rows), "cases": []},
+    )
+
+    def fake_runner(cases, provider, model, prompt_version, **kwargs):
+        case = cases[0]
+        return {
+            "case_details": [{
+                "case_id": case["case_id"],
+                "expected_answer": case["answer"],
+                "predicted_answer": case["answer"],
+                "raw_answer": case["answer"],
+                "parser_source": "legacy",
+                "parser_valid": True,
+                "correct": True,
+                "call_success": True,
+                "phase4_option_scores": [],
+                "retrieved_answer_leak": False,
+            }],
+            "failed_cases": [],
+        }
+
+    config = phase5.ExperimentConfig("r1", tmp_path / "work", (2021, 2022))
+    source_paths = {year: tmp_path / f"source-{year}.jsonl" for year in config.years}
+    result = phase5.run_validation(
+        config,
+        source_paths,
+        runner=fake_runner,
+        expected_rows=2,
+    )
+
+    assert result["decision"] == "NON_INFERIOR"
+    assert result["total"] == 4
+    assert (config.root / "summary.json").is_file()
+    assert (config.root / "runs" / "2021" / "attempts.jsonl").is_file()
+    initial_manifest_hash = phase5.sha256_file(config.root / "manifest.json")
+
+    rows_2023 = [{**row, "source_year": "2023"} for row in cases]
+    source_2023 = tmp_path / "source-2023.jsonl"
+    write_jsonl(source_2023, rows_2023)
+    final_config = phase5.ExperimentConfig(
+        "r1",
+        config.root,
+        (2023,),
+        final_2023=True,
+        candidate_id="candidate-direct-c2-v1",
+    )
+    final = phase5.run_validation(
+        final_config,
+        {2023: source_2023},
+        runner=fake_runner,
+        expected_rows=2,
+    )
+
+    assert final["total"] == 6
+    assert (config.root / "final_manifest.json").is_file()
+    assert phase5.sha256_file(config.root / "manifest.json") == initial_manifest_hash
+    archive_dir = tmp_path / "docs" / "phase5" / "r1"
+    assert (archive_dir / "manifest.json").is_file()
+    assert (archive_dir / "summary.json").is_file()
+    assert (archive_dir / "report.md").is_file()
+
+
+def test_run_validation_rejects_rag_before_model_call(tmp_path: Path, monkeypatch):
+    called = {"runner": False}
+
+    def forbidden_runner(*args, **kwargs):
+        called["runner"] = True
+        raise AssertionError("runner must not be called")
+
+    monkeypatch.setenv("BAZI_RAG", "1")
+    config = phase5.ExperimentConfig("rag-off", tmp_path / "work", (2021, 2022))
+
+    with pytest.raises(RuntimeError, match="BAZI_RAG"):
+        phase5.run_validation(config, {}, runner=forbidden_runner)
+
+    assert called["runner"] is False
+
+
+def test_final_2023_offline_failure_preserves_prior_results(tmp_path: Path, monkeypatch):
+    work = tmp_path / "work"
+    source_2023 = tmp_path / "source-2023.jsonl"
+    write_jsonl(source_2023, [{**sample_case("final-c1"), "source_year": "2023"}])
+    prior_case_results = [{"case_id": "prior-c1", "year": 2021}]
+    prior_years = {
+        "2021": {"total": 40, "direct_correct": 10, "c2_correct": 11},
+        "2022": {"total": 40, "direct_correct": 12, "c2_correct": 12},
+    }
+    prior_summary = {
+        "decision": "NON_INFERIOR",
+        "years": prior_years,
+        "case_results": prior_case_results,
+        "offline": {
+            "2021": {"gate": {"passed": True}},
+            "2022": {"gate": {"passed": True}},
+        },
+    }
+    phase5.write_json(work / "manifest.json", {"run_id": "r1"})
+    phase5.write_json(work / "summary.json", prior_summary)
+    monkeypatch.setattr(phase5, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(phase5, "EXPERIMENT_SCOPE", ())
+    monkeypatch.setattr(phase5, "git_output", lambda *args: "deadbeef")
+    monkeypatch.setattr(phase5, "experiment_scope_status", lambda: {})
+    monkeypatch.setattr(phase5, "enrich_row", fake_enrich)
+    monkeypatch.setattr(
+        phase5,
+        "summarize_scores",
+        lambda rows: {
+            **passing_metrics(),
+            "top_score_hit_rate": 0.35,
+            "n_cases": len(rows),
+            "cases": [],
+        },
+    )
+    called = {"runner": False}
+
+    def forbidden_runner(*args, **kwargs):
+        called["runner"] = True
+        raise AssertionError("runner must not be called after offline gate failure")
+
+    config = phase5.ExperimentConfig(
+        "r1",
+        work,
+        (2023,),
+        final_2023=True,
+        candidate_id="candidate-direct-c2-v1",
+    )
+    summary = phase5.run_validation(
+        config,
+        {2023: source_2023},
+        runner=forbidden_runner,
+        expected_rows=1,
+    )
+
+    assert summary["decision"] == "ROLLBACK"
+    assert summary["reason"] == "offline_gate_failed"
+    assert summary["years"] == prior_years
+    assert summary["case_results"] == prior_case_results
+    assert set(summary["offline"]) == {"2021", "2022", "2023"}
+    assert called["runner"] is False
+
+
+def test_run_id_rejects_path_traversal():
+    with pytest.raises(ValueError, match="run_id must be"):
+        phase5.validate_run_id("../overwrite")
+
+
+def test_run_validation_persists_auditable_year_stop(tmp_path: Path, monkeypatch):
+    cases = [sample_case(f"c{i}") for i in range(4)]
+    source = tmp_path / "source-2021.jsonl"
+    write_jsonl(source, cases)
+    monkeypatch.setattr(phase5, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(phase5, "EXPERIMENT_SCOPE", ())
+    monkeypatch.setattr(phase5, "git_output", lambda *args: "deadbeef")
+    monkeypatch.setattr(phase5, "experiment_scope_status", lambda: {})
+    monkeypatch.setattr(phase5, "enrich_row", fake_enrich)
+    monkeypatch.setattr(
+        phase5,
+        "summarize_scores",
+        lambda rows: {**passing_metrics(), "n_cases": len(rows), "cases": []},
+    )
+
+    def harmful_c2_runner(cases, provider, model, prompt_version, **kwargs):
+        case = cases[0]
+        choice = "A" if kwargs["phase4_direct_c2"] else case["answer"]
+        return {
+            "case_details": [{
+                "case_id": case["case_id"],
+                "expected_answer": case["answer"],
+                "predicted_answer": choice,
+                "raw_answer": choice,
+                "parser_source": "legacy",
+                "parser_valid": True,
+                "correct": choice == case["answer"],
+                "call_success": True,
+                "phase4_option_scores": [],
+                "retrieved_answer_leak": False,
+            }],
+            "failed_cases": [],
+        }
+
+    config = phase5.ExperimentConfig("stop-r1", tmp_path / "stop-work", (2021,))
+    summary = phase5.run_validation(
+        config,
+        {2021: source},
+        runner=harmful_c2_runner,
+        expected_rows=4,
+    )
+
+    assert summary["decision"] == "ROLLBACK"
+    assert summary["reason"] == "year_stop"
+    assert summary["initial_stop_metrics"]["regressions"] == 4
+    assert len(summary["case_results"]) == 4
+    assert summary["attempts_seen"] == 8
+    persisted = json.loads((config.root / "summary.json").read_text(encoding="utf-8"))
+    assert persisted == summary
+
+
+def test_render_report_contains_gate_evidence():
+    summary = {
+        **decision_input(2, 2),
+        "decision": "NON_INFERIOR",
+        "gates": {"c2_not_worse": True},
+        "mcnemar_exact_p": 1.0,
+        "all_invalid": 0,
+        "unresolved": 0,
+        "both_correct": 0,
+        "both_wrong": 0,
+        "by_year": {},
+        "by_domain": {},
+        "offline": {},
+    }
+    report = phase5.render_report(summary, manifest_sha256="abc123")
+
+    assert "NON_INFERIOR" in report
+    assert "McNemar" in report
+    assert "Discordant pairs: 4" in report
+    assert "fewer than 10 discordant pairs" in report
+    assert "abc123" in report
+    assert "MingLi-Bench" not in report
+
+
+def test_promote_report_recommends_mingli_without_inventing_command():
+    summary = {
+        **decision_input(3, 2),
+        "decision": "PROMOTE",
+        "gates": {},
+        "mcnemar_exact_p": 0.5,
+        "all_invalid": 0,
+        "unresolved": 0,
+        "both_correct": 0,
+        "both_wrong": 0,
+        "by_year": {},
+        "by_domain": {},
+        "offline": {},
+    }
+    report = phase5.render_report(summary, manifest_sha256="abc123")
+
+    assert "进入 MingLi-Bench 非退化验证" in report
+    assert "--c2-enabled" not in report

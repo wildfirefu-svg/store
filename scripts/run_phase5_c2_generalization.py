@@ -681,86 +681,399 @@ def summarize_stable_results(
     results: list[dict[str, Any]],
     attempts: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    effective: dict[str, int] = {
-        "total": 0,
-        "both_correct": 0,
-        "both_wrong": 0,
-        "rescues": 0,
-        "regressions": 0,
-        "unresolved_direct": 0,
-        "unresolved_c2": 0,
+    direct_correct = sum(row["direct"]["correct"] for row in results)
+    c2_correct = sum(row["direct_c2"]["correct"] for row in results)
+    rescues = sum(
+        row["direct_c2"]["correct"] and not row["direct"]["correct"]
+        for row in results
+    )
+    regressions = sum(
+        row["direct"]["correct"] and not row["direct_c2"]["correct"]
+        for row in results
+    )
+    by_year = {}
+    for year in sorted({row["year"] for row in results}):
+        year_rows = [row for row in results if row["year"] == year]
+        year_direct = sum(row["direct"]["correct"] for row in year_rows)
+        year_c2 = sum(row["direct_c2"]["correct"] for row in year_rows)
+        by_year[str(year)] = {
+            "total": len(year_rows),
+            "direct_correct": year_direct,
+            "c2_correct": year_c2,
+            "non_degrading": year_c2 >= year_direct,
+        }
+    by_domain = {}
+    for domain in sorted({row["domain"] for row in results}):
+        domain_rows = [row for row in results if row["domain"] == domain]
+        by_domain[domain] = {
+            "total": len(domain_rows),
+            "direct_correct": sum(row["direct"]["correct"] for row in domain_rows),
+            "c2_correct": sum(row["direct_c2"]["correct"] for row in domain_rows),
+        }
+    parser_valid = sum(row.get("parser_valid") is True for row in attempts)
+    parser_source_by_arm = {
+        arm: dict(Counter(
+            row.get("parser_source") or "none"
+            for row in attempts
+            if row.get("arm") == arm
+        ))
+        for arm in ("direct", "direct_c2")
     }
-    noop: dict[str, int] = dict(effective)
-    by_domain: dict[str, dict[str, int]] = {}
-    for result in results:
-        direct = result["direct"]
-        c2 = result["direct_c2"]
-        bucket = effective if result["c2_effective"] else noop
-        bucket["total"] += 1
-        if direct["correct"] and c2["correct"]:
-            bucket["both_correct"] += 1
-        elif not direct["correct"] and not c2["correct"]:
-            bucket["both_wrong"] += 1
-        elif c2["correct"] and not direct["correct"]:
-            bucket["rescues"] += 1
-        else:
-            bucket["regressions"] += 1
-        if direct["unresolved"]:
-            bucket["unresolved_direct"] += 1
-        if c2["unresolved"]:
-            bucket["unresolved_c2"] += 1
-        domain = result.get("domain", "unknown")
-        entry = by_domain.setdefault(domain, dict(effective))
-        entry["total"] += 1
-        if c2["correct"] and not direct["correct"]:
-            entry["rescues"] += 1
-        elif direct["correct"] and not c2["correct"]:
-            entry["regressions"] += 1
-        elif direct["correct"] and c2["correct"]:
-            entry["both_correct"] += 1
-        elif not direct["correct"] and not c2["correct"]:
-            entry["both_wrong"] += 1
-    parser_source_by_arm: dict[str, dict[str, int]] = {"direct": {}, "direct_c2": {}}
-    for attempt_row in attempts:
-        arm = attempt_row.get("arm")
-        if arm not in parser_source_by_arm or not attempt_row.get("parser_valid"):
-            continue
-        source = attempt_row.get("parser_source", "unknown")
-        parser_source_by_arm[arm][source] = parser_source_by_arm[arm].get(source, 0) + 1
+    by_c2_applicability = {}
+    for label, effective in (("effective", True), ("noop", False)):
+        group = [row for row in results if row.get("c2_effective") is effective]
+        by_c2_applicability[label] = {
+            "total": len(group),
+            "direct_correct": sum(row["direct"]["correct"] for row in group),
+            "c2_correct": sum(row["direct_c2"]["correct"] for row in group),
+            "rescues": sum(row["direct_c2"]["correct"] and not row["direct"]["correct"] for row in group),
+            "regressions": sum(row["direct"]["correct"] and not row["direct_c2"]["correct"] for row in group),
+            "both_correct": sum(row["direct"]["correct"] and row["direct_c2"]["correct"] for row in group),
+            "both_wrong": sum(not row["direct"]["correct"] and not row["direct_c2"]["correct"] for row in group),
+        }
+    elapsed_seconds = sum(float(row.get("elapsed_seconds", 0.0)) for row in attempts)
+    pacing_seconds = sum(float(row.get("runner_pacing_seconds", 0.0)) for row in attempts)
     return {
-        "by_c2_applicability": {"effective": effective, "noop": noop},
+        "total": len(results),
+        "direct_correct": direct_correct,
+        "c2_correct": c2_correct,
+        "rescues": rescues,
+        "regressions": regressions,
+        "both_correct": sum(row["direct"]["correct"] and row["direct_c2"]["correct"] for row in results),
+        "both_wrong": sum(not row["direct"]["correct"] and not row["direct_c2"]["correct"] for row in results),
+        "non_degrading_years": sum(item["non_degrading"] for item in by_year.values()),
+        "parser_valid_attempts": parser_valid,
+        "parser_total_attempts": len(attempts),
+        "parser_valid_rate": parser_valid / len(attempts) if attempts else 0.0,
+        "all_invalid": sum(row[arm]["all_invalid"] for row in results for arm in ("direct", "direct_c2")),
+        "unresolved": sum(row[arm]["unresolved"] for row in results for arm in ("direct", "direct_c2")),
+        "confirmed_answer_leaks": sum(bool(row.get("retrieved_answer_leak")) for row in attempts),
+        "elapsed_seconds": elapsed_seconds,
+        "pacing_seconds": pacing_seconds,
+        "estimated_model_seconds": max(0.0, elapsed_seconds - pacing_seconds),
+        "repeat_consistency": summarize_repeat_consistency(attempts),
+        "mcnemar_exact_p": exact_mcnemar_pvalue(regressions, rescues),
+        "by_year": by_year,
         "by_domain": by_domain,
+        "by_c2_applicability": by_c2_applicability,
         "parser_source_by_arm": parser_source_by_arm,
     }
 
 
 def decide_final(metrics: dict[str, Any]) -> dict[str, Any]:
-    hard_gates = {
-        "c2_not_below_direct": int(metrics["c2_correct"]) >= int(metrics["direct_correct"]),
-        "non_degrading_years": int(metrics["non_degrading_years"]) >= 2,
-        "regressions_cap": int(metrics["regressions"]) <= 12,
-        "parser_valid_rate": float(metrics["parser_valid_rate"]) >= 0.95,
-        "no_answer_leak": int(metrics["confirmed_answer_leaks"]) == 0,
+    gates = {
+        "c2_not_worse": metrics["c2_correct"] >= metrics["direct_correct"],
+        "two_non_degrading_years": metrics["non_degrading_years"] >= 2,
+        "regressions_at_most_12": metrics["regressions"] <= 12,
+        "parser_valid_at_least_95pct": metrics["parser_valid_rate"] >= 0.95,
+        "no_confirmed_answer_leak": metrics["confirmed_answer_leaks"] == 0,
     }
-    all_passed = all(hard_gates.values())
-    rescues = int(metrics["rescues"])
-    regressions = int(metrics["regressions"])
-    if not all_passed:
+    if not all(gates.values()):
         decision = "ROLLBACK"
-    elif rescues > regressions:
+    elif metrics["rescues"] > metrics["regressions"]:
         decision = "PROMOTE"
-    elif rescues == regressions:
-        decision = "NON_INFERIOR"
     else:
-        decision = "ROLLBACK"
-    b = rescues
-    c = regressions
-    return {
-        "decision": decision,
-        "hard_gates": hard_gates,
-        "rescues": rescues,
-        "regressions": regressions,
-        "mcnemar_b": b,
-        "mcnemar_c": c,
-        "mcnemar_pvalue": exact_mcnemar_pvalue(b, c),
+        decision = "NON_INFERIOR"
+    return {"decision": decision, "gates": gates}
+
+
+def stable_case_results(
+    cases: list[dict[str, Any]],
+    attempts: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for row in attempts:
+        grouped.setdefault((row["case_id"], row["arm"]), []).append(row)
+    results = []
+    for case in cases:
+        case_id = case["case_id"]
+        expected = extract_choice(case.get("answer"))
+        direct = resolve_arm(grouped[(case_id, "direct")])
+        c2_rows = grouped[(case_id, "direct_c2")]
+        c2 = resolve_arm(c2_rows)
+        results.append({
+            "case_id": case_id,
+            "year": int(case["source_year"]),
+            "domain": case.get("domain", "unknown"),
+            "expected_answer": expected,
+            "c2_effective": any(row.get("phase4_option_scores") for row in c2_rows),
+            "direct": {**direct, "correct": direct["choice"] == expected},
+            "direct_c2": {**c2, "correct": c2["choice"] == expected},
+        })
+    return results
+
+
+def render_report(summary: dict[str, Any], manifest_sha256: str) -> str:
+    lines = [
+        "# Phase 5 C2 Independent Generalization Report",
+        "",
+        f"- Decision: **{summary['decision']}**",
+        f"- Direct: {summary['direct_correct']}/{summary['total']}",
+        f"- Direct+C2: {summary['c2_correct']}/{summary['total']}",
+        f"- Rescues / regressions: {summary['rescues']} / {summary['regressions']}",
+        f"- Both correct / both wrong: {summary['both_correct']} / {summary['both_wrong']}",
+        f"- Parser valid rate (attempt-weighted): {summary['parser_valid_rate']:.1%} "
+        f"({summary.get('parser_valid_attempts', 0)}/{summary.get('parser_total_attempts', 0)})",
+        f"- Unresolved arms / all-invalid arms: {summary['unresolved']} / {summary['all_invalid']}",
+        f"- Repeat consistency: {json.dumps(summary.get('repeat_consistency', {}), ensure_ascii=False)}",
+        f"- Exact two-sided McNemar p: {summary['mcnemar_exact_p']:.6f}",
+        f"- Discordant pairs: {summary['rescues'] + summary['regressions']}",
+        f"- Elapsed / pacing seconds: {summary.get('elapsed_seconds', 0.0):.1f} / {summary.get('pacing_seconds', 0.0):.1f}",
+        f"- Manifest SHA-256: `{manifest_sha256}`",
+        "",
+        "## Hard gates",
+        "",
+    ]
+    lines.extend(
+        f"- {name}: {'PASS' if passed else 'FAIL'}"
+        for name, passed in summary["gates"].items()
+    )
+    if summary["rescues"] + summary["regressions"] < 10:
+        lines.append(
+            "- Statistical caution: fewer than 10 discordant pairs; "
+            "the exact p-value is highly sensitive to individual cases."
+        )
+    lines.extend(["", "## Per-year results", ""])
+    for year, metrics in summary.get("by_year", {}).items():
+        lines.append(
+            f"- {year}: direct {metrics['direct_correct']}/{metrics['total']}, "
+            f"direct+C2 {metrics['c2_correct']}/{metrics['total']}"
+        )
+    lines.extend(["", "## Offline scorer gates", ""])
+    for year, payload in summary.get("offline", {}).items():
+        lines.append(f"### {year}")
+        for name, metric in payload["gate"]["metrics"].items():
+            lines.append(
+                f"- {name}: {metric['value']:.6f} {metric['operator']} "
+                f"{metric['threshold']:.6f}; margin={metric['margin']:.6f}; "
+                f"{'PASS' if metric['passed'] else 'FAIL'}"
+            )
+        applicability = payload.get("c2_applicability", {})
+        lines.append(
+            f"- C2 effective/noop: {applicability.get('c2_effective_cases', 0)} / "
+            f"{applicability.get('c2_noop_cases', 0)}"
+        )
+    lines.extend(["", "## C2 applicability strata", ""])
+    for label, metrics in summary.get("by_c2_applicability", {}).items():
+        lines.append(
+            f"- {label}: total={metrics['total']}, "
+            f"direct={metrics['direct_correct']}, direct+C2={metrics['c2_correct']}, "
+            f"rescues={metrics['rescues']}, regressions={metrics['regressions']}, "
+            f"both_correct={metrics['both_correct']}, both_wrong={metrics['both_wrong']}"
+        )
+    lines.extend(["", "## Parser source by arm", ""])
+    for arm, distribution in summary.get("parser_source_by_arm", {}).items():
+        lines.append(f"- {arm}: {json.dumps(distribution, ensure_ascii=False, sort_keys=True)}")
+    lines.extend(["", "## Per-domain results", ""])
+    for domain, metrics in summary.get("by_domain", {}).items():
+        lines.append(
+            f"- {domain}: direct {metrics['direct_correct']}/{metrics['total']}, "
+            f"direct+C2 {metrics['c2_correct']}/{metrics['total']}"
+        )
+    if summary["decision"] == "PROMOTE":
+        lines.extend(["", "下一步：进入 MingLi-Bench 非退化验证。"])
+    return "\n".join(lines) + "\n"
+
+
+def archive_final_artifacts(
+    run_id: str,
+    manifest_path: Path,
+    summary_path: Path,
+) -> None:
+    validate_run_id(run_id)
+    archive_dir = PROJECT_ROOT / "docs" / "phase5" / run_id
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(manifest_path, archive_dir / "manifest.json")
+    shutil.copy2(summary_path, archive_dir / "summary.json")
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    report = render_report(summary, sha256_file(manifest_path))
+    (archive_dir / "report.md").write_text(
+        report,
+        encoding="utf-8",
+    )
+
+
+def run_validation(
+    config: ExperimentConfig,
+    source_paths: dict[int, Path],
+    runner: Runner = run_model_benchmark,
+    expected_rows: int = 40,
+) -> dict[str, Any]:
+    validate_run_id(config.run_id)
+    assert_fixed_environment()
+    assert_fixed_config(config)
+    scope_status = experiment_scope_status()
+    enforce_dirty_scope(scope_status, config.allow_dirty_scope)
+    prior_summary_path = config.root / "summary.json"
+    prior_summary = (
+        json.loads(prior_summary_path.read_text(encoding="utf-8"))
+        if prior_summary_path.exists() else None
+    )
+    initial_manifest_path = config.root / "manifest.json"
+    manifest_path = (
+        config.root / "final_manifest.json"
+        if config.final_2023 else initial_manifest_path
+    )
+    if manifest_path.exists() and not config.resume:
+        raise RuntimeError(f"run already exists at {manifest_path}; use --resume")
+    if config.resume and not manifest_path.exists():
+        raise RuntimeError(f"cannot resume missing manifest: {manifest_path}")
+
+    datasets = {}
+    cases_by_year = {}
+    for year in config.years:
+        assert_year_access(config, year, prior_summary)
+        output = config.root / "datasets" / f"baziqa_{year}_enriched.jsonl"
+        if output.exists() and config.resume:
+            datasets[str(year)] = describe_dataset(
+                source_paths[year],
+                output,
+                expected_rows=expected_rows,
+            )
+            cases = load_jsonl(output)
+        else:
+            datasets[str(year)] = enrich_dataset(
+                source_paths[year],
+                output,
+                enrich_fn=enrich_row,
+                expected_rows=expected_rows,
+            )
+            cases = load_jsonl(output)
+        cases_by_year[year] = cases
+
+    prior_manifest_sha256 = (
+        sha256_file(initial_manifest_path)
+        if config.final_2023 and initial_manifest_path.is_file() else None
+    )
+    manifest = build_manifest(
+        config,
+        datasets,
+        scope_status,
+        prior_manifest_sha256=prior_manifest_sha256,
+    )
+    load_or_validate_manifest(manifest_path, manifest, config.resume)
+
+    offline = dict((prior_summary or {}).get("offline", {})) if config.final_2023 else {}
+    completed_years = dict((prior_summary or {}).get("years", {})) if config.final_2023 else {}
+    all_cases = list((prior_summary or {}).get("case_results", [])) if config.final_2023 else []
+    for year in config.years:
+        offline[str(year)] = run_offline_gate(
+            year,
+            cases_by_year[year],
+            config.root / "offline" / f"{year}.json",
+            scorer=summarize_scores,
+        )
+    if not all(item["gate"]["passed"] for item in offline.values()):
+        summary = {
+            "decision": "ROLLBACK",
+            "reason": "offline_gate_failed",
+            "offline": offline,
+            "years": completed_years,
+            "case_results": all_cases,
+        }
+        write_json(prior_summary_path, summary)
+        return summary
+
+    all_attempts = []
+    if config.final_2023:
+        for prior_year in (2021, 2022):
+            all_attempts.extend(
+                load_jsonl(config.root / "runs" / str(prior_year) / "attempts.jsonl")
+            )
+    for year in config.years:
+        attempts_path = config.root / "runs" / str(year) / "attempts.jsonl"
+        initial = run_initial_pairs(config, year, cases_by_year[year], attempts_path, runner)
+        initial_valid_rate = sum(row["parser_valid"] for row in initial) / len(initial)
+        initial_leaks = sum(bool(row.get("retrieved_answer_leak")) for row in initial)
+        initial_cross = count_initial_rescues_regressions(initial)
+        if initial_valid_rate < 0.95 or initial_leaks > 0 or should_stop_after_initial(initial):
+            initial_case_results = stable_case_results(cases_by_year[year], initial)
+            summary = {
+                "decision": "ROLLBACK",
+                "reason": "year_stop",
+                "year": year,
+                "offline": offline,
+                "years": completed_years,
+                "case_results": all_cases + initial_case_results,
+                "attempts_seen": len(all_attempts) + len(initial),
+                "attempts_path": str(attempts_path),
+                "initial_stop_metrics": {
+                    **initial_cross,
+                    "parser_valid_rate": initial_valid_rate,
+                    "confirmed_answer_leaks": initial_leaks,
+                },
+            }
+            write_json(prior_summary_path, summary)
+            return summary
+        run_disagreement_retests(config, year, cases_by_year[year], attempts_path, runner)
+        attempts = load_jsonl(attempts_path)
+        stable = stable_case_results(cases_by_year[year], attempts)
+        year_summary = summarize_stable_results(stable, attempts)
+        completed_years[str(year)] = year_summary
+        all_cases.extend(stable)
+        all_attempts.extend(attempts)
+        if year_summary["parser_valid_rate"] < 0.95 or year_summary["confirmed_answer_leaks"] > 0:
+            summary = {
+                "decision": "ROLLBACK",
+                "reason": "year_infrastructure_stop",
+                "year": year,
+                "offline": offline,
+                "years": completed_years,
+                "case_results": all_cases,
+                "attempts_seen": len(all_attempts),
+                "attempts_path": str(attempts_path),
+            }
+            write_json(prior_summary_path, summary)
+            return summary
+
+    metrics = summarize_stable_results(all_cases, all_attempts)
+    verdict = decide_final(metrics)
+    summary = {
+        **metrics,
+        **verdict,
+        "years": completed_years,
+        "offline": offline,
+        "case_results": all_cases,
     }
+    write_json(prior_summary_path, summary)
+    if config.final_2023:
+        archive_final_artifacts(config.run_id, manifest_path, prior_summary_path)
+    return summary
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run Phase 5 C2 generalization validation")
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--root", type=Path, default=DEFAULT_ROOT)
+    parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--allow-dirty-scope", action="store_true")
+    parser.add_argument("--final-2023", action="store_true")
+    parser.add_argument("--candidate-id")
+    parser.add_argument("--seed", type=int, default=20260714)
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    years = (2023,) if args.final_2023 else (2021, 2022)
+    config = ExperimentConfig(
+        run_id=args.run_id,
+        root=args.root,
+        years=years,
+        seed=args.seed,
+        allow_dirty_scope=args.allow_dirty_scope,
+        resume=args.resume,
+        final_2023=args.final_2023,
+        candidate_id=args.candidate_id,
+    )
+    sources = {
+        year: PROJECT_ROOT / "benchmark" / "datasets" / f"baziqa_contest8_{year}_holdout.jsonl"
+        for year in years
+    }
+    summary = run_validation(config, sources)
+    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    return 0 if summary["decision"] != "ROLLBACK" else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
