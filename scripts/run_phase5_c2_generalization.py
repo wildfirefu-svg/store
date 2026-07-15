@@ -348,3 +348,63 @@ def assert_fixed_config(config: ExperimentConfig) -> None:
     expected = ("deepseek", "deepseek-chat", "direct_choice", 0.0)
     if actual != expected:
         raise RuntimeError(f"fixed Phase 5 configuration mismatch: {actual!r}")
+
+
+def evaluate_offline_gate(summary: dict[str, Any]) -> dict[str, Any]:
+    metrics: dict[str, dict[str, Any]] = {}
+    for name, (operator, threshold) in OFFLINE_THRESHOLDS.items():
+        value = float(summary[name])
+        passed = value > threshold if operator == ">" else value < threshold
+        margin = value - threshold if operator == ">" else threshold - value
+        metrics[name] = {
+            "value": value,
+            "operator": operator,
+            "threshold": threshold,
+            "margin": margin,
+            "passed": passed,
+        }
+    return {
+        "passed": all(metric["passed"] for metric in metrics.values()),
+        "metrics": metrics,
+    }
+
+
+def run_offline_gate(
+    year: int,
+    cases: list[dict[str, Any]],
+    output: str | Path,
+    scorer: Callable[[list[dict]], dict] = summarize_scores,
+) -> dict[str, Any]:
+    summary = scorer(cases)
+    result = {
+        "year": year,
+        "gate": evaluate_offline_gate(summary),
+        "scorer_summary": summary,
+        "c2_applicability": classify_c2_applicability(cases),
+    }
+    write_json(output, result)
+    return result
+
+
+def assert_year_access(
+    config: ExperimentConfig,
+    year: int,
+    prior_summary: dict[str, Any] | None,
+) -> None:
+    if year != 2023:
+        return
+    if not config.final_2023:
+        raise RuntimeError("2023 is sealed; pass --final-2023 only after candidate freeze")
+    if not config.candidate_id:
+        raise RuntimeError("2023 requires a frozen candidate_id")
+    initial_manifest_path = config.root / "manifest.json"
+    if not initial_manifest_path.is_file():
+        raise RuntimeError("2023 requires the immutable 2021/2022 manifest")
+    initial_manifest = json.loads(initial_manifest_path.read_text(encoding="utf-8"))
+    if initial_manifest.get("run_id") != config.run_id:
+        raise RuntimeError("2023 run_id does not match the validation manifest")
+    years = (prior_summary or {}).get("years", {})
+    if not {"2021", "2022"}.issubset(years):
+        raise RuntimeError("2023 requires completed 2021 and 2022 results")
+    if (prior_summary or {}).get("decision") == "ROLLBACK":
+        raise RuntimeError("2023 remains sealed after validation ROLLBACK")

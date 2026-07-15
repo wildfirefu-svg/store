@@ -188,3 +188,77 @@ def test_fixed_environment_rejects_rag(monkeypatch):
 
     with pytest.raises(RuntimeError, match="BAZI_RAG"):
         phase5.assert_fixed_environment()
+
+
+def passing_metrics() -> dict:
+    return {
+        "top_score_hit_rate": 0.36,
+        "score_answer_correlation": 0.11,
+        "neutral_option_rate": 0.49,
+        "strong_signal_option_rate": 0.31,
+    }
+
+
+def test_offline_gate_reports_values_thresholds_margins():
+    result = phase5.evaluate_offline_gate(passing_metrics())
+
+    assert result["passed"] is True
+    assert result["metrics"]["top_score_hit_rate"] == {
+        "value": 0.36,
+        "operator": ">",
+        "threshold": 0.35,
+        "margin": pytest.approx(0.01),
+        "passed": True,
+    }
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("top_score_hit_rate", 0.35),
+        ("score_answer_correlation", 0.10),
+        ("neutral_option_rate", 0.50),
+        ("strong_signal_option_rate", 0.30),
+    ],
+)
+def test_offline_gate_uses_strict_boundaries(name: str, value: float):
+    metrics = passing_metrics()
+    metrics[name] = value
+    assert phase5.evaluate_offline_gate(metrics)["passed"] is False
+
+
+def test_2023_cannot_be_read_without_final_unlock(tmp_path: Path):
+    config = phase5.ExperimentConfig(
+        run_id="r1",
+        root=tmp_path,
+        years=(2023,),
+        final_2023=False,
+    )
+
+    with pytest.raises(RuntimeError, match="2023 is sealed"):
+        phase5.assert_year_access(config, 2023, prior_summary=None)
+
+
+def test_2023_requires_prior_results_and_frozen_candidate(tmp_path: Path):
+    config = phase5.ExperimentConfig(
+        run_id="r1",
+        root=tmp_path,
+        years=(2023,),
+        final_2023=True,
+        candidate_id="candidate-a",
+    )
+    prior = {"years": {"2021": {}, "2022": {}}, "decision": "NON_INFERIOR"}
+    phase5.write_json(tmp_path / "manifest.json", {"run_id": "r1"})
+
+    phase5.assert_year_access(config, 2023, prior_summary=prior)
+    with pytest.raises(RuntimeError, match="candidate_id"):
+        phase5.assert_year_access(
+            phase5.ExperimentConfig(
+                run_id="r1",
+                root=tmp_path,
+                years=(2023,),
+                final_2023=True,
+            ),
+            2023,
+            prior_summary=prior,
+        )
