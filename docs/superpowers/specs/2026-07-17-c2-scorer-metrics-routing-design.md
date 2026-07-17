@@ -88,8 +88,11 @@ if is_temporal_event_question(question, options):
 在检测年份前，移除仅描述身份的出生年份片段：
 
 - `1970年出生`
+- `1970年生`
 - `出生于1980年`
 - `生于1980年`
+
+该移除只作用于时间锚点检测使用的文本副本，不修改原问题或最终 prompt。实现采用窄匹配：只识别 `18xx`、`19xx`、`20xx` 四位公历年份；后置形式仅匹配 `<四位年份>年生` 和 `<四位年份>年出生`，前置形式仅匹配 `出生于<四位年份>` 和 `生于<四位年份>`；所有形式的片段后都必须紧接 `的`、标点、空白或文本结尾。不得把 `2011年生意失败`、`2020年生活困难` 中的 `年生` 误判为出生年份。`民国70年生` 不属于四位年份锚点，本次不做历法换算。
 
 移除后没有其他时间锚点时不得判为 temporal event。例如：
 
@@ -111,8 +114,11 @@ if is_temporal_event_question(question, options):
 应返回 `False`：
 
 - `1970年出生的游先生，他的婚姻状况如何？`
+- `1970年生，命主的职业状况如何？`
 - `命主的健康状况怎样？`
 - `命主目前的职业是什么？`
+
+边界反例：`2011年生意失败，原因是什么？` 和 `2020年生活困难，哪项描述正确？` 仍应返回 `True`。
 
 ## 5. 新增 scorer 指标
 
@@ -128,6 +134,7 @@ if is_temporal_event_question(question, options):
 - 正确答案与 `k` 个选项并列最高：`1 / k`
 
 因此四项全为 50 分时只得 `0.25`，不再等价于唯一正确最高。
+当 `n_cases=0` 时，`tie_adjusted_top_credit` 返回 `0.0`。
 
 #### `unique_top_case_rate`
 
@@ -162,8 +169,10 @@ margin = correct_option_score - max(wrong_option_scores)
 - `positive_margin_case_rate`
 - `zero_margin_case_rate`
 - `negative_margin_case_rate`
+- `valid_margin_cases`
+- `invalid_correct_label_cases`
 
-三种 rate 的分母均为 `n_cases`，之和必须为 `1.0`（浮点误差除外）。
+margin 只对正确答案 label 存在于该题 scores 中，且至少存在一个错误选项的题计算。正确 label 缺失的题仍计入现有 `n_cases` 及其它适用指标，但不计入 margin；同时计入 `invalid_correct_label_cases`。三种 rate 和 margin mean 的分母均为 `valid_margin_cases`；当该值大于 0 时三种 rate 之和必须为 `1.0`（浮点误差除外），为 0 时三种 rate 和 mean 均返回 `0.0`。
 
 ### 5.3 规则覆盖
 
@@ -229,7 +238,7 @@ else:
 
 1. 明确年份事件题返回 `True`，`score_options()` 返回 `[]`。
 2. 年份区间、年龄区间和大运期间题返回 `True`。
-3. 出生年份从时间锚点中排除。
+3. `1970年出生`、`1970年生`、`出生于1980年`、`生于1980年` 从时间锚点中排除；`2011年生意失败`、`2020年生活困难` 不得被误删。
 4. 无时间锚点的健康、职业题仍正常评分。
 5. 现有 time/location 用例保持通过。
 
@@ -239,9 +248,10 @@ else:
 
 1. 四项并列且正确答案在其中：旧 top hit 为 `1.0`，tie-adjusted credit 为 `0.25`。
 2. 唯一正确最高、唯一错误最高、并列最高混合样本验证 unique 指标。
-3. 正、零、负 margin 各一题，验证平均值和三种 rate。
+3. 正、零、负 margin 各一题，验证平均值、三种 rate 和 `valid_margin_cases`。
 4. 正确项、错误项和整题无规则覆盖的组合验证覆盖指标与计数。
-5. 空输入的所有新增 rate 返回 `0.0`，计数返回 `0`。
+5. 正确答案 label 缺失时，该题不进入 margin 分母并计入 `invalid_correct_label_cases`；其余现有指标仍按原逻辑汇总。
+6. 空输入的所有新增 rate、mean 和 `tie_adjusted_top_credit` 返回 `0.0`，计数返回 `0`。
 
 ### 8.3 Runner 测试
 
