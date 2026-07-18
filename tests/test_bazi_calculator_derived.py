@@ -75,13 +75,12 @@ def test_gong_positions_legal():
         assert fp[key]['gan'] in bc.TIANGAN
         assert fp[key]['zhi'] in bc.DIZHI
         assert fp[key]['nayin']
-    # 直接调用覆盖（附录 A 矩阵）
-    ty = bc.get_taiyuan(fp['month']['gan'], fp['month']['zhi'], fp['year']['gan'], fp['year']['zhi'])
-    assert ty['gan'] in bc.TIANGAN and ty['zhi'] in bc.DIZHI
-    mg = bc.get_minggong(fp['month']['zhi'], fp['hour']['zhi'])
-    assert mg['zhi'] in bc.DIZHI
-    sg = bc.get_shengong(fp['month']['zhi'], fp['hour']['zhi'])
-    assert sg['zhi'] in bc.DIZHI
+    # 直接调用覆盖（附录 A 矩阵；三个辅助函数返回形状各异，已实证：
+    # get_taiyuan → (gan, zhi) 元组；get_minggong / get_shengong → 地支字符串）
+    ty_gan, ty_zhi = bc.get_taiyuan(fp['month']['gan'], fp['month']['zhi'], fp['year']['gan'], fp['year']['zhi'])
+    assert ty_gan in bc.TIANGAN and ty_zhi in bc.DIZHI
+    assert bc.get_minggong(fp['month']['zhi'], fp['hour']['zhi']) in bc.DIZHI
+    assert bc.get_shengong(fp['month']['zhi'], fp['hour']['zhi']) in bc.DIZHI
 
 
 # ── 十二长生（教科书五行长生：阳顺阴逆。缺陷#4 红色证据，Task 10 修复后转绿）──
