@@ -92,6 +92,28 @@ def run_tests(suite='test_charts.json'):
 
     return report
 
+def test_golden_accuracy():
+    """pytest 入口：100 例金标四柱/大运回归（原 run_tests 脚本接入 pytest 收集）。
+
+    run_tests() 本身不写文件；但 __main__ 脚本模式会重写跟踪文件 accuracy_report.json，
+    为防止该写逻辑未来被移入 run_tests，这里先备份、结束后恢复（当前为无害空操作）。
+    """
+    report_path = os.path.join(os.path.dirname(__file__), 'accuracy_report.json')
+    backup = None
+    if os.path.exists(report_path):
+        with open(report_path, 'rb') as f:
+            backup = f.read()
+    try:
+        report = run_tests()
+    finally:
+        if backup is not None:
+            with open(report_path, 'wb') as f:
+                f.write(backup)
+    assert report['failed'] == 0, (
+        f"{report['failed']}/{report['total_cases']} 例金标失败: "
+        f"{json.dumps(report.get('error_details', [])[:5], ensure_ascii=False)}"
+    )
+
 if __name__ == '__main__':
     import argparse
     ap = argparse.ArgumentParser()
