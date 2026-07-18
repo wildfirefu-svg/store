@@ -661,8 +661,8 @@ def detect_branch_relations(four_pillars):
             if (z1, z2) in LIUHAI or (z2, z1) in LIUHAI:
                 relations.append({'type':'六害','pillars':f'{k1}-{k2}','detail':f'{z1}{z2}害'})
 
-    # Check 三合
-    for group in SANHE:
+    # Check 三合（sorted 固定迭代顺序：SANHE 为集合，字符串哈希随机化会导致跨进程顺序漂移）
+    for group in sorted(SANHE):
         matches = []
         for k, z in branches.items():
             if z in group:
