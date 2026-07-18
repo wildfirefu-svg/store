@@ -1,0 +1,144 @@
+# Task 6 红色证据：缺陷 #1 三合系取组
+
+- 日期：2026-07-18
+- 分支：`codex/bazi-calculator-test-suite`（worktree `G:/project/agent-bazi-test-suite`）
+- 缺陷：`bazi_calculator.py:944` `group = _find_taohua_group(zhi)` —— `calculate_shensha` 以**候选支自身**定三合局，未按教科书规则以年支/日支为参考支定局。
+- 本任务只追加测试与记录证据，**未改动任何引擎代码**（修复属 Task 7）。
+
+## 运行命令与总计数
+
+```
+$ G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_shensha.py -v -k "sanhe"
+=========== 56 failed, 24 passed, 4 skipped, 4 deselected in 0.71s ============
+```
+
+A 组回归（Task 5 既有测试，应保持绿）：
+
+```
+$ G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_shensha.py -v -k "tianyi or wenchang or yangren or enhance"
+====================== 4 passed, 84 deselected in 0.34s =======================
+```
+
+## 失败分布（按测试名 × 神煞）
+
+| 测试 | 失败神煞 | 失败数 | 通过/跳过 |
+|---|---|---|---|
+| `test_sanhe_by_year_branch`（36 例） | 桃花、驿马、劫煞、灾煞、亡神、三合禄 × 4 局 | 24 | 华盖、将星 × 4 局 PASSED（8）；紫微 × 4 局 SKIPPED |
+| `test_sanhe_by_day_branch`（36 例） | 桃花、驿马、劫煞、灾煞、亡神、紫微、三合禄 × 4 局 | 28 | 华盖、将星 × 4 局 PASSED（8） |
+| `test_sanhe_negative`（9 例） | 华盖、将星（反例误命中） | 2 | 其余 7 例 PASSED |
+| `test_sanhe_negative_ziwei_year_only` | — | 0 | PASSED |
+| `test_sanhe_merge_year_and_day` | 并集合并不生效（桃花不命中） | 1 | — |
+| `test_sanhe_no_duplicate` | 桃花完全未命中（count 0 ≠ 1） | 1 | — |
+
+合计 **56 failed / 24 passed / 4 skipped**。与预期一致：桃花/驿马/劫煞/灾煞/亡神/紫微/三合禄在 by_year/by_day 正例不命中；华盖/将星在 negative 反例误命中（这两煞的目标支恰为局内成员，候选支自身定局在正例上偶然命中、反例上必然误命中）。
+
+## 代表性断言信息（原样摘录）
+
+正例不命中（by_year，桃花）：
+
+```
+>       assert name in ss['hour'], f'年支{group[0]}属{"".join(group)}局，时支{target}应命中{name}'
+E       AssertionError: 年支申属申子辰局，时支酉应命中桃花
+E       assert '桃花' in ['流霞', '飞刃', '将星']
+tests\test_bazi_calculator_shensha.py:76: AssertionError
+```
+
+正例不命中（by_year，驿马）：
+
+```
+E       AssertionError: 年支申属申子辰局，时支寅应命中驿马
+E       assert '驿马' in ['禄神', '词馆']
+tests\test_bazi_calculator_shensha.py:76: AssertionError
+```
+
+反例误命中（negative，华盖 / 将星）：
+
+```
+E       AssertionError: 年/日支均不属寅午戌局，时支戌不应命中华盖
+E       assert '华盖' not in ['国印贵人', '华盖', '寡宿', '吊客', '天罗']
+tests\test_bazi_calculator_shensha.py:94: AssertionError
+
+E       AssertionError: 年/日支均不属寅午戌局，时支午不应命中将星
+E       assert '将星' not in ['太极贵人', '红艳煞', '将星', '血刃']
+tests\test_bazi_calculator_shensha.py:94: AssertionError
+```
+
+并集合并不生效（merge）与去重前提不成立（no_duplicate）：
+
+```
+>       assert '桃花' in bc.calculate_shensha(fp1, '甲')['hour']
+E       AssertionError: assert '桃花' in ['流霞', '飞刃', '将星']
+tests\test_bazi_calculator_shensha.py:107: AssertionError
+
+>       assert ss['hour'].count('桃花') == 1
+E       AssertionError: assert 0 == 1
+E        +  where 0 = ['流霞', '飞刃', '将星'].count
+tests\test_bazi_calculator_shensha.py:115: AssertionError
+```
+
+## 完整失败清单（pytest short summary 原样）
+
+```
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group0-桃花-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group0-驿马-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group0-劫煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group0-灾煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group0-亡神-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group0-三合禄-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group1-桃花-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group1-驿马-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group1-劫煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group1-灾煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group1-亡神-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group1-三合禄-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group2-桃花-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group2-驿马-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group2-劫煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group2-灾煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group2-亡神-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group2-三合禄-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group3-桃花-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group3-驿马-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group3-劫煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group3-灾煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group3-亡神-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_year_branch[group3-三合禄-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group0-桃花-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group0-驿马-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group0-劫煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group0-灾煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group0-亡神-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group0-紫微-<lambda>-day_only]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group0-三合禄-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group1-桃花-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group1-驿马-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group1-劫煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group1-灾煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group1-亡神-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group1-紫微-<lambda>-day_only]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group1-三合禄-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group2-桃花-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group2-驿马-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group2-劫煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group2-灾煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group2-亡神-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group2-紫微-<lambda>-day_only]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group2-三合禄-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group3-桃花-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group3-驿马-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group3-劫煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group3-灾煞-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group3-亡神-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group3-紫微-<lambda>-day_only]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_by_day_branch[group3-三合禄-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_negative[华盖-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_negative[将星-<lambda>-year_or_day]
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_merge_year_and_day
+FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_no_duplicate
+```
+
+（注：终端实际输出中参数 id 以 `\uXXXX` 转义形式打印，上表已解码为可读中文；分组：group0=申子辰、group1=寅午戌、group2=巳酉丑、group3=亥卯未。）
+
+## 下一步（Task 7，另一代理）
+
+按教科书规则修复 `calculate_shensha` 三合系取组：以年支/日支（紫微仅日支）定三合局并取并集，目标支命中且同年/日同局不重复计入。修复后本文件 B 部分应整体转绿。
