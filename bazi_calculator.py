@@ -998,14 +998,15 @@ def calculate_shensha(four_pillars, day_master):
         if zhi == _diaoke.get(year_zhi):               ss.append('吊客')
         if zhi == _baihu.get(year_zhi):                ss.append('白虎')
 
-        # ── 日柱系 ──
-        if gan + zhi in KUIGANG:                       ss.append('魁罡')
-        if gan + zhi in _guluan:                       ss.append('孤鸾煞')
-        if gan + zhi in _yincha:                       ss.append('阴差阳错')
-        if gan + zhi in _shiedabai:                    ss.append('十恶大败')
-        if gan + zhi in _bazhuan:                      ss.append('八专')
-        if gan + zhi in _xuanzhen:                     ss.append('悬针')
-        if gan + zhi in _tianshe:                      ss.append('天赦')
+        # ── 日柱系（7 张表注释均为"日柱为"，仅以日柱论）──
+        if key == 'day':
+            if gan + zhi in KUIGANG:                   ss.append('魁罡')
+            if gan + zhi in _guluan:                   ss.append('孤鸾煞')
+            if gan + zhi in _yincha:                   ss.append('阴差阳错')
+            if gan + zhi in _shiedabai:                ss.append('十恶大败')
+            if gan + zhi in _bazhuan:                  ss.append('八专')
+            if gan + zhi in _xuanzhen:                 ss.append('悬针')
+            if gan + zhi in _tianshe:                  ss.append('天赦')
 
         # ── 全局系 ──
         if zhi == '戌':                                ss.append('天罗')
