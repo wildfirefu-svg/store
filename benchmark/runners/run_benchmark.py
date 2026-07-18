@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -37,17 +38,304 @@ SYSTEM_PROMPT_BENCHMARK = (
 )
 
 
+# ---- Phase 6：attempt key / 终态 / 重试与预算账本 / resume manifest（设计 §4.3/§4.4）----
+
+ATTEMPT_KEY_FIELDS: tuple = (
+    "dataset_id", "profile_id", "arm", "attempt_stage", "provider", "model",
+    "case_id", "repeat_idx", "sample_idx", "permutation_id",
+)
+ATTEMPT_STAGES = ("main", "bazi", "ziwei", "judge", "diversity_probe", "anchor")
+TERMINAL_STATES = ("parsed", "invalid", "unresolved", "judge_unresolved", "call_failed")
+
+
+def build_attempt_key(dataset_id, profile_id, arm, attempt_stage, provider, model,
+                      case_id, repeat_idx, sample_idx, permutation_id):
+    return (dataset_id, profile_id, arm, attempt_stage, provider, model,
+            str(case_id), int(repeat_idx), int(sample_idx), permutation_id or "p0")
+
+
+def compute_hard_cap(scheduled_calls: int) -> int:
+    import math
+    reserve = int(math.ceil(scheduled_calls * 0.10 / 10.0)) * 10
+    return scheduled_calls + reserve
+
+
+def load_completed_keys(detail_path) -> set:
+    keys = set()
+    if not detail_path or not os.path.exists(detail_path):
+        return keys
+    with open(detail_path, "r", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            key = row.get("attempt_key")
+            if key and row.get("terminal_state") in TERMINAL_STATES:
+                keys.add(tuple(key))
+    return keys
+
+
+def load_retry_counts(events_path) -> dict:
+    """只数 kind=="model_call_failed" 事件，按 attempt_key 取 retry_idx 最大值。"""
+    counts: dict = {}
+    if not events_path or not os.path.exists(events_path):
+        return counts
+    with open(events_path, "r", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            if row.get("kind") != "model_call_failed":
+                continue
+            key = tuple(row["attempt_key"])
+            counts[key] = max(counts.get(key, 0), int(row["retry_idx"]))
+    return counts
+
+
+def load_call_attempt_count(events_path) -> int:
+    """数 kind=="call_attempt" 事件行数——calls_attempted 跨 resume 恢复的唯一依据。"""
+    if not events_path or not os.path.exists(events_path):
+        return 0
+    n = 0
+    with open(events_path, "r", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            if json.loads(line).get("kind") == "call_attempt":
+                n += 1
+    return n
+
+
+def resolve_method(profile_name, explicit_method):
+    if profile_name:
+        from benchmark.runners.profiles import derive_method, resolve_profile
+        derived = derive_method(resolve_profile(profile_name))
+        if explicit_method and explicit_method != derived:
+            raise SystemExit(2)
+        return derived
+    return explicit_method or "direct_choice"
+
+
+# ---- resume manifest（设计 L168：temperature/模板/代码/数据哈希不进 attempt key，由 manifest 约束）----
+
+RESUME_MANIFEST_FIELDS: tuple = (
+    "dataset_sha256", "case_ids_sha256", "profile_id", "chart_schema_version",
+    "arm", "repeat_idx", "provider", "model",
+    "temperature", "sample_temperature", "n_samples", "aggregate", "method",
+    "prompt_template_sha256", "code_sha256", "scheduled_calls", "hard_cap",
+)
+
+_CODE_SCOPE: tuple = (
+    "benchmark/runners/run_benchmark.py",
+    "benchmark/runners/profiles.py",
+    "benchmark/formatters/chart_context.py",
+    "benchmark/formatters/baziqa_prompt.py",
+    "benchmark/formatters/mingli_prompt.py",
+    "benchmark/formatters/leak_scan.py",
+)
+
+
+def _sha256_file(path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _code_fingerprint() -> str:
+    """实验范围代码 SHA-256：范围内文件 bytes 按序拼接；任一文件改动 → 指纹变化 → resume 拒绝。"""
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    h = hashlib.sha256()
+    for rel in _CODE_SCOPE:
+        h.update(rel.encode())
+        p = os.path.join(root, rel)
+        h.update(open(p, "rb").read() if os.path.exists(p) else b"<missing>")
+    return h.hexdigest()
+
+
+def _atomic_write_json(path: str, payload: dict) -> None:
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, path)
+
+
+def build_resume_manifest(args, profile) -> dict:
+    """当前运行的 manifest 字段全集；args.case_ids_file 为 None 时 case_ids_sha256 记 None
+    （全集运行由 dataset_sha256 约束）。method 记录 resolve_method 后的生效值
+    （接线顺序保证 resolve 先于本函数）；temperature 是 n_samples=1 时真正控制模型调用的
+    温度（仓库 `--temperature` 默认 0.0），sample_temperature 仅 n_samples>1 生效仍记录。"""
+    from benchmark.runners.profiles import prompt_fingerprint
+    return {
+        "dataset_sha256": _sha256_file(os.path.abspath(args.dataset)),
+        "case_ids_sha256": (_sha256_file(os.path.abspath(args.case_ids_file))
+                            if args.case_ids_file else None),
+        "profile_id": profile.profile_id,
+        "chart_schema_version": profile.chart_schema_version,
+        "arm": args.arm or "default",
+        "repeat_idx": args.repeat_idx,
+        "provider": args.provider,
+        "model": args.model,
+        "temperature": args.temperature,
+        "sample_temperature": args.sample_temperature,
+        "n_samples": args.n_samples,
+        "aggregate": args.aggregate,
+        "method": args.method,
+        "prompt_template_sha256": prompt_fingerprint(profile),
+        "code_sha256": _code_fingerprint(),
+        "scheduled_calls": args.scheduled_calls,
+        "hard_cap": args.hard_cap,
+    }
+
+
+def check_resume_manifest(manifest_path: str, current: dict) -> None:
+    """--resume 前置校验：字段完整性 + 逐字段完全匹配。缺失字段记 "<MISSING>" 进 diff
+    （不得用 stored.get(k)——"字段缺失且 current 为 None"会误判相等放行）；任一不一致
+    打印 diff 并 SystemExit(2)，禁止续跑。"""
+    with open(manifest_path, "r", encoding="utf-8") as f:
+        stored = json.load(f)
+    diff = {}
+    for k in RESUME_MANIFEST_FIELDS:
+        if k not in stored:
+            diff[k] = {"stored": "<MISSING>", "current": current.get(k)}
+        elif stored[k] != current.get(k):
+            diff[k] = {"stored": stored[k], "current": current.get(k)}
+    if diff:
+        print(json.dumps({"status": "MANIFEST_MISMATCH", "diff": diff}, ensure_ascii=False))
+        raise SystemExit(2)
+
+
+class _HardCapExhausted(Exception):
+    """hard_cap 耗尽：非 RuntimeError，循环体的 except RuntimeError 不捕获，冒泡到 main。"""
+
+
+class Phase6Context:
+    def __init__(self, dataset_id, profile_id, arm, attempt_stage, provider, model,
+                 repeat_idx, detail_path, events_path, scheduled_calls, hard_cap, resume):
+        self.dataset_id = dataset_id
+        self.profile_id = profile_id
+        self.arm = arm or "default"
+        self.attempt_stage = attempt_stage
+        self.provider = provider
+        self.model = model
+        self.repeat_idx = int(repeat_idx or 0)
+        self.detail_path = detail_path
+        self.events_path = events_path
+        self.scheduled_calls = scheduled_calls
+        self.hard_cap = hard_cap
+        # 事件即账本：成功/失败调用都有 call_attempt 事件，resume 时全量恢复计数
+        self.calls_attempted = load_call_attempt_count(events_path) if resume else 0
+        self.retry_counts = load_retry_counts(events_path) if resume else {}
+
+    def attempt_key_for(self, case, sample_idx=0):
+        return build_attempt_key(
+            self.dataset_id, self.profile_id, self.arm, self.attempt_stage,
+            self.provider, self.model, case.get("case_id"), self.repeat_idx,
+            sample_idx, case.get("_permutation_id") or "p0",
+        )
+
+    def before_call(self, key):
+        if self.hard_cap is not None and self.calls_attempted >= self.hard_cap:
+            raise _HardCapExhausted(f"hard_cap {self.hard_cap} 耗尽")
+        _append_jsonl(self.events_path, {
+            "kind": "call_attempt", "attempt_key": list(key),
+            "retry_idx": None, "error_type": None,
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        })
+        self.calls_attempted += 1   # 先写事件记账，再发起调用（含每次重试）
+
+    def record_failure(self, key, exc):
+        retry_idx = self.retry_counts.get(key, 0) + 1
+        self.retry_counts[key] = retry_idx
+        _append_jsonl(self.events_path, {
+            "kind": "model_call_failed",
+            "attempt_key": list(key), "retry_idx": retry_idx,
+            "error_type": str(exc)[:120],
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        })
+        return retry_idx
+
+    def enrich_row(self, row):
+        key = self.attempt_key_for({"case_id": row.get("case_id"),
+                                    "_permutation_id": row.get("permutation_id")})
+        row["attempt_key"] = list(key)
+        if row.get("terminal_state") in TERMINAL_STATES:
+            # 调用方已显式标记终态（如可见性门禁 unresolved）：保留不重算（执行偏离）
+            pass
+        elif row.get("error") or row.get("parser_failure_reason") == "model_call_failed":
+            row["terminal_state"] = "call_failed"
+        elif row.get("parser_valid") is False:
+            row["terminal_state"] = "invalid"
+        else:
+            row["terminal_state"] = "parsed"
+        row["raw_response_path"] = self.detail_path
+        return row
+
+
+_PHASE6_CTX: Phase6Context | None = None
+
+
+def init_phase6_context(ctx: Phase6Context | None) -> None:
+    global _PHASE6_CTX
+    _PHASE6_CTX = ctx
+
+
+def _mingli_data_ready() -> bool:
+    return os.path.exists(os.path.join("data", "mingli", "data.json")) and \
+        os.path.exists(os.path.join("data", "mingli", "fortune_api_results.json"))
+
+
+def _attempt_with_ledger(case, call_once):
+    """Phase 6 模型调用重试账本。执行偏离（Task 6 崩溃传播链修正）：
+
+    - ctx 为 None（非 profile 运行）：直接调用，由调用方保留旧包装行为（零行为变化）；
+    - ctx 激活：call_once 不再把异常包成 model_call_failed——
+      RuntimeError 且无 model_call_failed 标记（如崩溃模拟）→ 直接冒泡，不占重试；
+      RuntimeError 有标记 / 其他 Exception（真实网络/provider 异常）→ 记重试账本并重试；
+    - before_call 先记账后调用（Policy A）：每次 attempt（含重试、含崩溃当次）都有
+      call_attempt 事件，test_resume_first_crash_artifacts_guard 锁定此语义。
+    """
+    ctx = _PHASE6_CTX
+    if ctx is None:
+        return call_once()
+    key = ctx.attempt_key_for(case or {})
+    while True:
+        if ctx.retry_counts.get(key, 0) >= 3:
+            raise RuntimeError(f"model_call_failed: retry budget exhausted ({key[6]})")
+        ctx.before_call(key)
+        try:
+            return call_once()
+        except RuntimeError as exc:
+            if not str(exc).startswith("model_call_failed"):
+                raise   # 崩溃类 RuntimeError（如进程崩溃模拟）直接冒泡，不算重试
+            ctx.record_failure(key, exc)
+        except Exception as exc:
+            # 真实网络/provider 异常（未经 RuntimeError 包装）→ 计入重试账本
+            ctx.record_failure(key, exc)
+
+
 def run_offline_benchmark(cases, predictions):
     return score_choice_answers(cases, predictions)
 
 
-def build_benchmark_prompt(case, method='direct_choice', phase4_exp_a=False):
+def build_benchmark_prompt(case, method='direct_choice', phase4_exp_a=False,
+                           chart_schema_version=None, profile_formatter=None):
+    if profile_formatter == 'format_official_cot_prompt':
+        # 裁决 2A（执行偏离）：官方 CoT 为单参签名，astro 取自
+        # case["chart_input"]["official_astro"]，不再经 render_chart_context 两参传入。
+        from benchmark.formatters.mingli_prompt import format_official_cot_prompt
+        return format_official_cot_prompt(case)
     if method == 'two_stage_reasoning':
         return format_stage1_prompt(case, exp_a=phase4_exp_a)
     if method == 'structured_reasoning':
         return format_structured_reasoning_prompt(case)
     if method in ('direct_choice', 'multi_turn'):
-        return format_direct_choice_prompt(case)
+        context_text = None
+        if chart_schema_version:
+            from benchmark.formatters.chart_context import render_chart_context
+            context_text = render_chart_context(case, chart_schema_version)
+        return format_direct_choice_prompt(case, chart_context_text=context_text)
     raise ValueError(f"Unsupported benchmark method: {method}")
 
 
@@ -227,37 +515,51 @@ def _resolve_system_prompt_inner(case, rag_k=2, retrieval_mode='legacy', option_
 _BENCH_CASE_INDEX = None
 
 
+def _call_once_messages(messages, provider, model, case=None, temperature=None, timeout=300,
+                        rag_k=2, retrieval_mode='legacy', option_evidence_k=2,
+                        suppress_rag=False, suppress_apb=False):
+    """单次模型调用（不包装异常）。系统 prompt 解析与网络调用都在内，异常原样抛出。"""
+    from claude_api import call_model_messages_sync
+    response = call_model_messages_sync(
+        messages,
+        provider=provider,
+        model=model,
+        system_prompt=_resolve_system_prompt(case, rag_k=rag_k, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k, suppress_rag=suppress_rag, suppress_apb=suppress_apb),
+        temperature=temperature,
+        timeout=timeout,
+    )
+    return str(response).strip()
+
+
+def _call_with_optional_ledger(messages, provider, model, case, temperature, timeout,
+                               rag_k, retrieval_mode, option_evidence_k,
+                               suppress_rag, suppress_apb):
+    # 执行偏离（Task 6）：计划要求两函数各抽一份 _call_once 闭包；实现合并为单一
+    # 共享入口，语义等价且消除重复。ctx=None 时保留原"包装一切异常"旧行为（零变化）；
+    # ctx 激活时交 _attempt_with_ledger（崩溃冒泡 / 网络失败重试记账）。
+    call_once = lambda: _call_once_messages(  # noqa: E731
+        messages, provider, model, case=case, temperature=temperature, timeout=timeout,
+        rag_k=rag_k, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k,
+        suppress_rag=suppress_rag, suppress_apb=suppress_apb)
+    if _PHASE6_CTX is None:
+        try:
+            return call_once()
+        except Exception as e:
+            raise RuntimeError(f"model_call_failed: {type(e).__name__}: {str(e)[:120]}") from e
+    return _attempt_with_ledger(case, call_once)
+
+
 def call_model_sync(prompt, provider, model, case=None, temperature=None, timeout=300, rag_k=2, retrieval_mode='legacy', option_evidence_k=2, suppress_rag=False, suppress_apb=False):
-    try:
-        from claude_api import call_model_messages_sync
-        messages = [{"role": "user", "content": prompt}]
-        response = call_model_messages_sync(
-            messages,
-            provider=provider,
-            model=model,
-            system_prompt=_resolve_system_prompt(case, rag_k=rag_k, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k, suppress_rag=suppress_rag, suppress_apb=suppress_apb),
-            temperature=temperature,
-            timeout=timeout,
-        )
-        return str(response).strip()
-    except Exception as e:
-        raise RuntimeError(f"model_call_failed: {type(e).__name__}: {str(e)[:120]}") from e
+    messages = [{"role": "user", "content": prompt}]
+    return _call_with_optional_ledger(
+        messages, provider, model, case, temperature, timeout,
+        rag_k, retrieval_mode, option_evidence_k, suppress_rag, suppress_apb)
 
 
 def call_model_messages_with_history(messages, provider, model, case=None, temperature=None, timeout=300, rag_k=2, retrieval_mode='legacy', option_evidence_k=2, suppress_rag=False, suppress_apb=False):
-    try:
-        from claude_api import call_model_messages_sync
-        response = call_model_messages_sync(
-            messages,
-            provider=provider,
-            model=model,
-            system_prompt=_resolve_system_prompt(case, rag_k=rag_k, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k, suppress_rag=suppress_rag, suppress_apb=suppress_apb),
-            temperature=temperature,
-            timeout=timeout,
-        )
-        return str(response).strip()
-    except Exception as e:
-        raise RuntimeError(f"model_call_failed: {type(e).__name__}: {str(e)[:120]}") from e
+    return _call_with_optional_ledger(
+        messages, provider, model, case, temperature, timeout,
+        rag_k, retrieval_mode, option_evidence_k, suppress_rag, suppress_apb)
 
 
 def _group_cases_by_person(cases):
@@ -288,6 +590,9 @@ def _prepare_jsonl(path):
 def _append_jsonl(path, row):
     if not path:
         return None
+    if _PHASE6_CTX is not None and _PHASE6_CTX.detail_path and \
+            os.path.abspath(path) == os.path.abspath(_PHASE6_CTX.detail_path):
+        row = _PHASE6_CTX.enrich_row(row)
     out_path = os.path.abspath(path)
     parent = os.path.dirname(out_path)
     if parent:
@@ -354,9 +659,9 @@ def _phase4_runtime_config(provider, model, prompt_version, rag_k, retrieval_mod
     }
 
 
-def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None, n_samples=1, sample_temperature=0.4, aggregate='majority', phase4_evidence_mode='all', phase4_stage1_cache=None, phase4_exp_b=False, phase4_exp_a=False, phase4_exp_c=False, phase4_exp_c2=False, phase4_direct_c2=False):
+def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None, n_samples=1, sample_temperature=0.4, aggregate='majority', phase4_evidence_mode='all', phase4_stage1_cache=None, phase4_exp_b=False, phase4_exp_a=False, phase4_exp_c=False, phase4_exp_c2=False, phase4_direct_c2=False, chart_schema_version=None, profile_formatter=None, resume_append=False):
     if method == 'multi_turn':
-        return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases, temperature=temperature, case_details_jsonl=case_details_jsonl, rag_k=rag_k, config_id=config_id, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k)
+        return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases, temperature=temperature, case_details_jsonl=case_details_jsonl, rag_k=rag_k, config_id=config_id, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k, chart_schema_version=chart_schema_version, resume_append=resume_append)
     if phase4_exp_c and phase4_exp_c2:
         raise ValueError("run_model_benchmark: --phase4-exp-c and --phase4-exp-c2 are mutually exclusive")
     if phase4_direct_c2 and method != 'direct_choice':
@@ -376,7 +681,8 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
             for idx, case in enumerate(cases)
         ]
 
-    _prepare_jsonl(case_details_jsonl)
+    if not resume_append:
+        _prepare_jsonl(case_details_jsonl)
 
     predictions = {}
     evidence_results = []
@@ -402,7 +708,9 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
             option_scores = score_options(case)
             prompt = format_direct_c2_prompt(case, option_scores)
         else:
-            prompt = build_benchmark_prompt(case, method=method, phase4_exp_a=phase4_exp_a)
+            prompt = build_benchmark_prompt(case, method=method, phase4_exp_a=phase4_exp_a,
+                                            chart_schema_version=chart_schema_version,
+                                            profile_formatter=profile_formatter)
 
         # Two-stage reasoning path
         if method == 'two_stage_reasoning':
@@ -674,6 +982,8 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                 predicted = None
                 sample_records = None
         except RuntimeError as e:
+            if _PHASE6_CTX is not None and not str(e).startswith("model_call_failed"):
+                raise  # Phase 6：崩溃类异常直接冒泡（保证崩溃续跑/预算语义可测）
             err_msg = str(e)[:120]
             failed_cases.append({'case_id': case_id, 'error': err_msg})
             # Persist a failure-marker detail so case_details / JSONL denominator
@@ -808,8 +1118,9 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
     }
 
 
-def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2):
-    _prepare_jsonl(case_details_jsonl)
+def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, chart_schema_version=None, resume_append=False):
+    if not resume_append:
+        _prepare_jsonl(case_details_jsonl)
     limited_cases = cases[:max_cases]
     predictions = {}
     evidence_results = []
@@ -821,7 +1132,14 @@ def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0
     print(f"Running multi-turn benchmark on {len(limited_cases)} cases across {len(groups)} persons...")
 
     for group_idx, (person_id, person_cases) in enumerate(groups):
-        context_text = format_multi_turn_context(person_cases[0])
+        if chart_schema_version:
+            from benchmark.formatters.chart_context import render_chart_context
+            context_text = format_multi_turn_context(
+                person_cases[0],
+                chart_context_text=render_chart_context(person_cases[0], chart_schema_version),
+            )
+        else:
+            context_text = format_multi_turn_context(person_cases[0])
         history = [
             {"role": "user", "content": context_text},
             {"role": "assistant", "content": "已记住命主信息，请提问。"},
@@ -841,6 +1159,8 @@ def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0
                     **_retrieval_call_kwargs(rag_k, retrieval_mode, option_evidence_k),
                 )
             except RuntimeError as e:
+                if _PHASE6_CTX is not None and not str(e).startswith("model_call_failed"):
+                    raise  # Phase 6：崩溃类异常直接冒泡（保证崩溃续跑/预算语义可测）
                 err_msg = str(e)[:120]
                 failed_cases.append({'case_id': case_id, 'error': err_msg})
                 expected = extract_choice(case.get('answer'))
@@ -930,6 +1250,57 @@ def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0
     }
 
 
+def _phase6_visibility_filter(cases, profile, profile_formatter, args):
+    """裁决 1B（计划 Task 6 增补）：per-case 可见性门禁。违规 case 不进入模型运行，
+    直接以 terminal_state=unresolved 追加 detail（经 _append_jsonl 富化 attempt_key）；
+    官方臂 gate 文本取官方 prompt，其余取 render_chart_context。"""
+    from benchmark.runners.profiles import assert_visibility
+    detail_abs = os.path.abspath(args.case_details_jsonl) if args.case_details_jsonl else None
+    passed = []
+    for case in cases:
+        if profile_formatter == 'format_official_cot_prompt':
+            from benchmark.formatters.mingli_prompt import format_official_cot_prompt
+            gate_text = format_official_cot_prompt(case)
+        else:
+            from benchmark.formatters.chart_context import render_chart_context
+            gate_text = render_chart_context(case, profile.chart_schema_version)
+        violations = assert_visibility(gate_text, profile, profile.chart_schema_version)
+        if violations:
+            print(f"  [gate BLOCKED] {case.get('case_id')}: {len(violations)} violations")
+            _append_jsonl(detail_abs, {
+                "case_id": case.get("case_id"),
+                "gate_blocked": True,
+                "violations": violations,
+                "expected_answer": extract_choice(case.get("answer")),
+                "predicted_answer": None,
+                "raw_answer": "",
+                "correct": False,
+                "call_success": False,
+                "terminal_state": "unresolved",
+            })
+        else:
+            passed.append(case)
+    return passed
+
+
+def _write_phase6_summary(args, status):
+    ctx = _PHASE6_CTX
+    summary = {
+        "status": status,
+        "profile_id": args.profile,
+        "arm": args.arm,
+        "repeat_idx": args.repeat_idx,
+        "scheduled_calls": args.scheduled_calls,
+        "hard_cap": args.hard_cap,
+        "calls_attempted": ctx.calls_attempted if ctx else None,
+        "retry_total": sum(ctx.retry_counts.values()) if ctx else None,
+    }
+    os.makedirs(os.path.abspath(args.output_dir), exist_ok=True)
+    with open(os.path.join(os.path.abspath(args.output_dir), "summary.json"),
+              "w", encoding="utf-8") as f:
+        json.dump(summary, f, ensure_ascii=False, indent=2)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description='Run BaziQA-style benchmark')
     parser.add_argument('--dataset', required=True, help='Path to JSONL dataset')
@@ -940,7 +1311,7 @@ def main(argv=None):
     parser.add_argument('--prompt-version', default='srp_v1', help='Prompt version')
     parser.add_argument('--output-dir', default='benchmark/outputs', help='Report output directory')
     parser.add_argument('--max-cases', type=int, default=20, help='Max cases to run (model mode)')
-    parser.add_argument('--method', default='direct_choice', choices=['direct_choice', 'multi_turn', 'structured_reasoning', 'two_stage_reasoning'])
+    parser.add_argument('--method', default=None, choices=['direct_choice', 'multi_turn', 'structured_reasoning', 'two_stage_reasoning'])
     parser.add_argument('--rag', action='store_true', help='Enable BaziQA case retrieval augmentation (sets BAZI_RAG=1).')
     parser.add_argument('--rag-corpus', default='', help='JSONL corpus file used when --rag is enabled')
     parser.add_argument('--fewshot-file', default='', help='Optional JSONL file with few-shot example questions injected into the system prompt')
@@ -963,7 +1334,83 @@ def main(argv=None):
     parser.add_argument('--phase4-exp-c', action='store_true', help='Phase 4: Experiment C - structured命理 evidence for non-time Stage 2')
     parser.add_argument('--phase4-exp-c2', action='store_true', help='Phase 4: Experiment C2 - per-option scoring evidence for non-time Stage 2')
     parser.add_argument('--phase4-direct-c2', action='store_true', help='Phase 4: inject C2 per-option scoring evidence into direct_choice prompt')
+    # Phase 6 五维 profile（profile 是 dataset/prompt_style/interaction_mode/schema/scoring 唯一来源；
+    # 不注册 --overwrite：设计 §4.4.3 禁止任何启动路径截断，重跑只能换新 run/slice 目录）
+    parser.add_argument('--profile', default=None, help='Phase 6 五维 profile（唯一五维来源）')
+    parser.add_argument('--chart-schema-version', default=None, choices=['legacy_v0', 'approved_v1'])
+    parser.add_argument('--arm', default=None)
+    parser.add_argument('--repeat-idx', type=int, default=0)
+    parser.add_argument('--case-ids-file', default=None, help='JSON 数组文件：仅运行其中 case_id')
+    parser.add_argument('--resume', action='store_true', help='续跑：跳过已完成 attempt key')
+    parser.add_argument('--scheduled-calls', type=int, default=None)
+    parser.add_argument('--hard-cap', type=int, default=None)
     args = parser.parse_args(argv)
+
+    # 防跨测试/跨调用污染（执行偏离）：每次 main 启动先清空全局 ctx，profile 分支再设真值
+    init_phase6_context(None)
+
+    profile = None
+    profile_formatter = None
+    if args.profile:
+        from benchmark.runners.profiles import derive_formatter, resolve_profile
+        profile = resolve_profile(args.profile, args.chart_schema_version)
+        if profile.dataset == "mingli" and not _mingli_data_ready():
+            print(json.dumps({"status": "BLOCKED",
+                              "reason": "MingLi 数据前置未完成：先运行 scripts/fetch_mingli_bench.py"},
+                             ensure_ascii=False))
+            return 4
+        args.method = resolve_method(args.profile, args.method)
+        profile_formatter = derive_formatter(profile)
+        detail_abs = os.path.abspath(args.case_details_jsonl) if args.case_details_jsonl else None
+        events_abs = None                                  # detail_abs 为空时保持 None（旧行为）
+        if detail_abs:
+            manifest_path = (detail_abs[:-6] + ".manifest.json"
+                             if detail_abs.endswith(".jsonl")
+                             else detail_abs + ".manifest.json")
+            events_abs = (detail_abs[:-6] + ".events.jsonl"
+                          if detail_abs.endswith(".jsonl")
+                          else detail_abs + ".events.jsonl")
+            detail_exists = os.path.exists(detail_abs)
+            manifest_exists = os.path.exists(manifest_path)
+            artifact_exists = (detail_exists or manifest_exists
+                               or os.path.exists(events_abs))
+            if artifact_exists and not args.resume:
+                # 任一运行产物存在（含 --resume 首跑崩溃残留的 manifest/events，此时
+                # detail 可能不存在）→ 拒绝；否则 Phase6Context(resume=False) 不恢复
+                # events 中的 calls_attempted，会静默重置单切片预算
+                print(json.dumps({"status": "ARTIFACT_EXISTS", "detail": detail_abs,
+                                  "reason": "已有 Phase 6 运行产物（detail/events/manifest 任一）；"
+                                            "必须 --resume 续跑，或换用新的 run/slice 目录重跑"
+                                            "（禁止任何启动路径截断，设计 §4.4.3）"},
+                                 ensure_ascii=False))
+                raise SystemExit(2)
+            current_manifest = build_resume_manifest(args, profile)
+            if manifest_exists:
+                check_resume_manifest(manifest_path, current_manifest)  # 不一致 SystemExit(2)
+            elif detail_exists or os.path.exists(events_abs):
+                # 旧 detail/events 在而 manifest 缺失（被删或旧版本遗留）→ fail-closed，
+                # 不得基于当前配置新建 manifest 混合旧结果
+                print(json.dumps({"status": "MANIFEST_MISSING",
+                                  "detail": detail_abs, "manifest": manifest_path,
+                                  "reason": "detail/events 已存在但 manifest 缺失，无法验证旧结果"
+                                            "与当前配置一致，禁止续跑（fail-closed，设计 L168）"},
+                                 ensure_ascii=False))
+                raise SystemExit(2)
+            else:
+                _atomic_write_json(manifest_path, current_manifest)     # 三态全无 → 首跑创建（含 --resume 首跑）
+        init_phase6_context(Phase6Context(
+            dataset_id=os.path.splitext(os.path.basename(args.dataset))[0],
+            profile_id=profile.profile_id,
+            arm=args.arm, attempt_stage="main",
+            provider=args.provider, model=args.model,
+            repeat_idx=args.repeat_idx,
+            detail_path=detail_abs,
+            events_path=events_abs,
+            scheduled_calls=args.scheduled_calls, hard_cap=args.hard_cap,
+            resume=args.resume,
+        ))
+    else:
+        args.method = args.method or "direct_choice"
     if args.phase4_exp_c and args.phase4_exp_c2:
         raise ValueError("--phase4-exp-c and --phase4-exp-c2 are mutually exclusive")
     if args.phase4_direct_c2 and args.method != 'direct_choice':
@@ -982,35 +1429,65 @@ def main(argv=None):
 
     cases = load_jsonl(args.dataset)
 
+    if args.case_ids_file:
+        with open(args.case_ids_file, "r", encoding="utf-8") as f:
+            wanted = {str(x) for x in json.load(f)}
+        cases = [c for c in cases if str(c.get("case_id")) in wanted]
+    if args.profile and args.resume:
+        completed = load_completed_keys(os.path.abspath(args.case_details_jsonl))
+        ctx = _PHASE6_CTX
+        cases = [c for c in cases if ctx.attempt_key_for(c) not in completed]
+
     if args.model_runner:
         run_id = str(uuid.uuid4().hex[:8])
 
-        model_result = run_model_benchmark(
-            cases,
-            args.provider,
-            args.model,
-            args.prompt_version,
-            args.max_cases,
-            method=args.method,
-            temperature=args.temperature,
-            case_details_jsonl=args.case_details_jsonl,
-            rag_k=args.rag_k,
-            config_id=args.config_id,
-            retrieval_mode=args.retrieval_mode,
-            option_evidence_k=args.option_evidence_k,
-            shuffle_options=args.shuffle_options,
-            shuffle_seed=args.shuffle_seed,
-            n_samples=args.n_samples,
-            sample_temperature=args.sample_temperature,
-            aggregate=args.aggregate,
-            phase4_evidence_mode=args.phase4_evidence_mode,
-            phase4_stage1_cache=args.phase4_stage1_cache,
-            phase4_exp_b=args.phase4_exp_b,
-            phase4_exp_a=args.phase4_exp_a,
-            phase4_exp_c=args.phase4_exp_c,
-            phase4_exp_c2=args.phase4_exp_c2,
-            phase4_direct_c2=args.phase4_direct_c2,
-        )
+        gated_cases = cases
+        if profile is not None:
+            if not cases:
+                # resume 后无剩余 case（全部完成）→ 零调用直接完成（执行偏离：防空跑全链路）
+                _write_phase6_summary(args, "OK")
+                return 0
+            gated_cases = _phase6_visibility_filter(cases, profile, profile_formatter, args)
+            if not gated_cases:
+                # 全部被可见性门禁 BLOCK：任何模型调用之前短路（裁决 1B，零调用测试锁定）
+                _write_phase6_summary(args, "BLOCKED_PRECONDITION")
+                return 0
+
+        try:
+            model_result = run_model_benchmark(
+                gated_cases,
+                args.provider,
+                args.model,
+                args.prompt_version,
+                args.max_cases,
+                method=args.method,
+                temperature=args.temperature,
+                case_details_jsonl=args.case_details_jsonl,
+                rag_k=args.rag_k,
+                config_id=args.config_id,
+                retrieval_mode=args.retrieval_mode,
+                option_evidence_k=args.option_evidence_k,
+                shuffle_options=args.shuffle_options,
+                shuffle_seed=args.shuffle_seed,
+                n_samples=args.n_samples,
+                sample_temperature=args.sample_temperature,
+                aggregate=args.aggregate,
+                phase4_evidence_mode=args.phase4_evidence_mode,
+                phase4_stage1_cache=args.phase4_stage1_cache,
+                phase4_exp_b=args.phase4_exp_b,
+                phase4_exp_a=args.phase4_exp_a,
+                phase4_exp_c=args.phase4_exp_c,
+                phase4_exp_c2=args.phase4_exp_c2,
+                phase4_direct_c2=args.phase4_direct_c2,
+                chart_schema_version=profile.chart_schema_version if profile else None,
+                profile_formatter=profile_formatter,
+                # 执行偏离（Task 6）：计划为 resume_append=args.resume；改为 profile 模式
+                # 恒增量——门禁 BLOCK 行先于模型运行写入 detail，_prepare_jsonl 会将其抹掉。
+                resume_append=bool(profile),
+            )
+        except _HardCapExhausted:
+            _write_phase6_summary(args, "BLOCKED_INCOMPLETE")
+            return 3
 
         model_cases = model_result['cases']
         predictions = model_result['predictions']
@@ -1055,9 +1532,12 @@ def main(argv=None):
 
         report_path = save_report(report_data, output_dir)
         print(f"\nReport saved to: {report_path}")
-        case_details_path = _write_jsonl(args.case_details_jsonl, case_details)
-        if case_details_path:
-            print(f"Case details JSONL saved to: {case_details_path}")
+        if not args.profile:
+            # 非 profile 旧行为：尾部重写全量 detail；profile 模式 detail 全靠增量 append
+            # （门禁 BLOCK 行不在 case_details 中，重写会丢行——执行偏离，计划原为 not args.resume）
+            case_details_path = _write_jsonl(args.case_details_jsonl, case_details)
+            if case_details_path:
+                print(f"Case details JSONL saved to: {case_details_path}")
 
         data_store.save_benchmark_run(
             id=run_id,
@@ -1088,6 +1568,9 @@ def main(argv=None):
         print(f"  Evidence Coverage: {round(avg_evidence * 100)}%")
         print(f"  Safety Score: {round(avg_safety * 100)}%")
         print("="*60)
+
+        if args.profile:
+            _write_phase6_summary(args, "OK")
 
     else:
         if not args.predictions:

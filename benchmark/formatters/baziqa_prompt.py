@@ -36,12 +36,12 @@ def format_options(options):
     return "\n".join(str(opt) for opt in options)
 
 
-def format_direct_choice_prompt(case):
+def format_direct_choice_prompt(case, chart_context_text=None):
     return "\n\n".join([
         "你是一位严谨的八字命理评测助手。",
         "请根据命主信息回答四选一题。请直接回答选项字母 A/B/C/D，不要解释。",
         "## 命主信息",
-        format_birth_line(case),
+        chart_context_text or format_birth_line(case),
         "## 问题",
         case.get("question", ""),
         "## 选项",
@@ -88,11 +88,11 @@ def format_direct_c2_prompt(case, option_scores):
     ])
 
 
-def format_multi_turn_context(case):
+def format_multi_turn_context(case, chart_context_text=None):
     return "\n\n".join([
         "你是一位严谨的八字命理评测助手。以下是命主资料，后续问题都围绕此命主。",
         "## 命主信息",
-        format_birth_line(case),
+        chart_context_text or format_birth_line(case),
         f"领域：{case.get('domain', 'unknown')}",
     ])
 
