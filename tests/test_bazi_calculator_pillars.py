@@ -149,3 +149,10 @@ def test_zi_hour_day_pillar_not_rolled():
     assert f"{early['day']['gan']}{early['day']['zhi']}" == f"{late['day']['gan']}{late['day']['zhi']}"
     assert early['hour']['zhi'] == late['hour']['zhi'] == '子'
     assert early['hour']['gan'] != late['hour']['gan']
+
+
+def test_get_day_pillar_known_date():
+    # get_day_pillar 直接调用断言（覆盖矩阵"直接调用"要求，已实证）：
+    # 金标 TC001（1989-01-15 → 乙亥）；函数 docstring 自证参考（2018-11-06 → 壬寅）
+    assert bc.get_day_pillar(1989, 1, 15) == ('乙', '亥')
+    assert bc.get_day_pillar(2018, 11, 6) == ('壬', '寅')
