@@ -102,6 +102,18 @@ def test_visibility_denylist_label_caught():
     assert any("【流年】" in v for v in violations)
 
 
+def test_visibility_official_profile_has_own_required():
+    """裁决 1B：mingli_official_cot_astro 独立官方 astro required，不与 xjz 共享。"""
+    from benchmark.runners.profiles import visibility_requirements
+
+    official_req, _ = visibility_requirements(resolve_profile("mingli_official_cot_astro"), "approved_v1")
+    xjz_req, _ = visibility_requirements(resolve_profile("mingli_xjz_direct"), "approved_v1")
+    assert official_req != xjz_req
+    assert "八字命盘信息：" in official_req
+    assert "【四柱】" not in official_req
+    assert "【四柱】" in xjz_req
+
+
 def test_prompt_fingerprint_stable_and_sensitive(monkeypatch):
     """resume manifest 字段：指纹跨调用确定；模板版本/渲染源码任一变化 → 指纹变化。"""
     from benchmark.formatters import chart_context

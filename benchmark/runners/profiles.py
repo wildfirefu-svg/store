@@ -82,6 +82,9 @@ _MINGLI_BAZI_CORE_MARKERS = frozenset({
 # 可见性测试必失败。裸名已核实仅在紫微段出现，无误杀；同时兼容带"宫"后缀的变体。
 _ZIWEI_MARKERS = frozenset({"【紫微斗数·本命】", "夫妻", "财帛", "官禄"})
 _DENYLIST_MARKERS = frozenset({"【流年】", "空亡：", "空亡（"})
+# 裁决 1B：官方臂独立 required（结构性 astro 标记，astro 块注入即恒真，
+# 不依赖有星宫位，避免误杀）；不与 mingli_xjz_direct 共享 required。
+_OFFICIAL_ASTRO_MARKERS = frozenset({"八字命盘信息：", "紫微命盘信息：", "十二宫位星曜分布："})
 _APPROVED_ONLY_MARKERS = frozenset({
     "【四柱】", "【日主】", "【大运】", "【神煞】", "【紫微斗数·本命】",
     "【胎元／命宫／身宫】", "【真太阳时校正】", "【纳音五行】", "【五行统计】",
@@ -96,8 +99,12 @@ def visibility_requirements(
         # 旧上下文对照臂：自身 schema 由渲染器逐字节等价保证；此处只做串扰检测。
         return frozenset(), _APPROVED_ONLY_MARKERS | _DENYLIST_MARKERS
     if chart_schema_version == "approved_v1":
+        if profile.profile_id == "mingli_official_cot_astro":
+            # 裁决 1B：官方臂 required 按 profile_id 独立，不随 dataset 共享。
+            return _OFFICIAL_ASTRO_MARKERS, _DENYLIST_MARKERS
         if profile.dataset == "mingli":
-            # 决策记录 3：MingLi 源数据只有八字核心六字段 + palaces；缺口入报告。
+            # 决策记录 3 + 裁决 1B：xjz 臂维持六段标+紫微；真实数据 0 结构化
+            # bazi → 必然 BLOCKED_PRECONDITION，缺口如实入报告。
             return _MINGLI_BAZI_CORE_MARKERS | _ZIWEI_MARKERS, _DENYLIST_MARKERS
         return _APPROVED_BAZI_MARKERS, _DENYLIST_MARKERS
     raise SystemExit(f"未知 chart_schema_version: {chart_schema_version!r}")
@@ -111,6 +118,16 @@ def assert_visibility(
     violations = [f"required 缺失: {m}" for m in sorted(required) if m not in rendered_text]
     violations += [f"forbidden 命中: {m}" for m in sorted(forbidden) if m in rendered_text]
     return violations
+
+
+def visibility_gate(
+    rendered_text: str, profile: EvalProfile, chart_schema_version: str,
+) -> str:
+    """runner 短路契约（裁决 1B）：返回 "PASS" | "BLOCKED_PRECONDITION"；
+    BLOCKED_PRECONDITION 时 runner 禁止任何模型调用（Task 6 接线并以零调用测试断言）。"""
+    if assert_visibility(rendered_text, profile, chart_schema_version):
+        return "BLOCKED_PRECONDITION"
+    return "PASS"
 
 
 def prompt_fingerprint(profile: EvalProfile) -> str:
@@ -133,6 +150,7 @@ def prompt_fingerprint(profile: EvalProfile) -> str:
     if formatter == "format_official_cot_prompt":
         from benchmark.formatters import mingli_prompt
         parts += [mingli_prompt.OFFICIAL_COT_TEMPLATE_VERSION,
+                  mingli_prompt.OFFICIAL_SYSTEM_PROMPT,
                   inspect.getsource(mingli_prompt.format_official_cot_prompt)]
     elif formatter == "format_direct_choice_prompt":
         parts.append(inspect.getsource(baziqa_prompt.format_direct_choice_prompt))

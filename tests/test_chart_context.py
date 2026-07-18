@@ -129,3 +129,16 @@ def test_ziwei_section_rendered_when_present(i: int):
     rendered = render_chart_context(case, "approved_v1", as_of_date=AS_OF)
     if case["chart_input"].get("ziwei"):
         assert "【紫微斗数·本命】" in rendered
+
+
+def test_render_tolerates_partial_chart_input():
+    """MingLi 归一化输入仅含部分八字键：缺失段跳过，不抛异常、不虚构。"""
+    case = load_fixture(1)
+    case["chart_input"] = {
+        "four_pillars": case["chart_input"]["four_pillars"],
+        "day_master": case["chart_input"]["day_master"],
+    }
+    rendered = render_chart_context(case, "approved_v1", as_of_date=AS_OF)
+    assert "【四柱】" in rendered
+    assert "【大运】" not in rendered
+    assert "【神煞】" not in rendered
