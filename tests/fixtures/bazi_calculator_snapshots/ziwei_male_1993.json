@@ -1,0 +1,276 @@
+{
+  "_meta": {
+    "generator": "tests/fixtures/bazi_calculator_snapshots/regenerate.py",
+    "lunar_backend": "builtin"
+  },
+  "data": {
+    "minggong": "亥",
+    "minggong_gan": "癸",
+    "mingzhu_star": "巨门",
+    "palaces": {
+      "仆役": {
+        "aux_stars": [
+          {
+            "brightness": "",
+            "name": "天空"
+          }
+        ],
+        "daxian": "72-81",
+        "gan": "丙",
+        "is_shengong": false,
+        "stars": [
+          {
+            "brightness": "庙",
+            "name": "贪狼"
+          }
+        ],
+        "zhi": "辰"
+      },
+      "兄弟": {
+        "aux_stars": [
+          {
+            "brightness": "",
+            "name": "火星"
+          }
+        ],
+        "daxian": "12-21",
+        "gan": "壬",
+        "is_shengong": false,
+        "stars": [
+          {
+            "brightness": "庙",
+            "name": "武曲"
+          }
+        ],
+        "zhi": "戌"
+      },
+      "命宫": {
+        "aux_stars": [
+          {
+            "brightness": "",
+            "name": "文曲"
+          },
+          {
+            "brightness": "",
+            "name": "陀罗"
+          },
+          {
+            "brightness": "",
+            "name": "天马"
+          }
+        ],
+        "daxian": "2-11",
+        "gan": "癸",
+        "is_shengong": false,
+        "stars": [
+          {
+            "brightness": "陷",
+            "name": "太阳"
+          }
+        ],
+        "zhi": "亥"
+      },
+      "夫妻": {
+        "aux_stars": [],
+        "daxian": "22-31",
+        "gan": "辛",
+        "is_shengong": false,
+        "stars": [
+          {
+            "brightness": "平",
+            "name": "天同"
+          }
+        ],
+        "zhi": "酉"
+      },
+      "子女": {
+        "aux_stars": [
+          {
+            "brightness": "",
+            "name": "左辅"
+          }
+        ],
+        "daxian": "32-41",
+        "gan": "庚",
+        "is_shengong": false,
+        "stars": [
+          {
+            "brightness": "庙",
+            "name": "七杀"
+          }
+        ],
+        "zhi": "申"
+      },
+      "官禄": {
+        "aux_stars": [
+          {
+            "brightness": "",
+            "name": "文昌"
+          },
+          {
+            "brightness": "",
+            "name": "天魁"
+          }
+        ],
+        "daxian": "82-91",
+        "gan": "乙",
+        "is_shengong": false,
+        "stars": [
+          {
+            "brightness": "陷",
+            "name": "太阴"
+          }
+        ],
+        "zhi": "卯"
+      },
+      "父母": {
+        "aux_stars": [
+          {
+            "brightness": "",
+            "name": "禄存"
+          },
+          {
+            "brightness": "",
+            "name": "天喜"
+          }
+        ],
+        "daxian": "112-121",
+        "gan": "甲",
+        "is_shengong": false,
+        "stars": [
+          {
+            "brightness": "庙",
+            "name": "破军"
+          }
+        ],
+        "zhi": "子"
+      },
+      "田宅": {
+        "aux_stars": [],
+        "daxian": "92-101",
+        "gan": "甲",
+        "is_shengong": false,
+        "stars": [
+          {
+            "brightness": "旺",
+            "name": "紫微"
+          },
+          {
+            "brightness": "庙",
+            "name": "天府"
+          }
+        ],
+        "zhi": "寅"
+      },
+      "疾厄": {
+        "aux_stars": [
+          {
+            "brightness": "",
+            "name": "右弼"
+          },
+          {
+            "brightness": "",
+            "name": "红鸾"
+          },
+          {
+            "brightness": "",
+            "name": "地劫"
+          }
+        ],
+        "daxian": "52-61",
+        "gan": "戊",
+        "is_shengong": false,
+        "stars": [
+          {
+            "brightness": "平",
+            "name": "廉贞"
+          },
+          {
+            "brightness": "庙",
+            "name": "天相"
+          }
+        ],
+        "zhi": "午"
+      },
+      "福德": {
+        "aux_stars": [
+          {
+            "brightness": "",
+            "name": "擎羊"
+          }
+        ],
+        "daxian": "102-111",
+        "gan": "乙",
+        "is_shengong": true,
+        "stars": [
+          {
+            "brightness": "陷",
+            "name": "天机"
+          }
+        ],
+        "zhi": "丑"
+      },
+      "财帛": {
+        "aux_stars": [],
+        "daxian": "42-51",
+        "gan": "己",
+        "is_shengong": false,
+        "stars": [
+          {
+            "brightness": "旺",
+            "name": "天梁"
+          }
+        ],
+        "zhi": "未"
+      },
+      "迁移": {
+        "aux_stars": [
+          {
+            "brightness": "",
+            "name": "铃星"
+          },
+          {
+            "brightness": "",
+            "name": "天姚"
+          },
+          {
+            "brightness": "",
+            "name": "天钺"
+          }
+        ],
+        "daxian": "62-71",
+        "gan": "丁",
+        "is_shengong": false,
+        "stars": [
+          {
+            "brightness": "旺",
+            "name": "巨门"
+          }
+        ],
+        "zhi": "巳"
+      }
+    },
+    "shengong": "丑",
+    "shenzhu_star": "天同",
+    "sihua": {
+      "化忌": {
+        "palace_idx": 4,
+        "star": "贪狼"
+      },
+      "化权": {
+        "palace_idx": 5,
+        "star": "巨门"
+      },
+      "化禄": {
+        "palace_idx": 0,
+        "star": "破军"
+      },
+      "化科": {
+        "palace_idx": 3,
+        "star": "太阴"
+      }
+    },
+    "wuxing_ju": "大海水→水二局",
+    "wuxing_ju_num": 2
+  }
+}
