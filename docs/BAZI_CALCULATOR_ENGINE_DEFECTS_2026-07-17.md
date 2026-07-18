@@ -38,7 +38,10 @@
 
 ## 验证基线
 - 新套件验收：188 passed, 4 skipped in 6.60s（命令：pytest 6 个新测试文件 + test_accuracy.py -q；< 60s 达标；4 skipped 均为 shensha.py:76 紫微年支用例，按"紫微仅日支"口径主动跳过）
-- 全量回归：783 passed, 4 failed, 6 skipped, 7 errors in 95.63s，失败/错误清单为基线 14 项的子集，无新增红
+- **全量回归（可复现命令，干净 worktree 可直接执行）**：
+  `G:/project/agent/.venv/Scripts/python -m pytest tests/ -q --tb=no --ignore=tests/test_accuracy_stats.py --ignore=tests/test_api.py --ignore=tests/test_claude_api.py --ignore=tests/test_clients_api.py --ignore=tests/test_rate_limit.py --ignore=tests/test_visualization_api.py -p no:cacheprovider`
+  结果（2026-07-18 复跑）：783 passed, 4 failed, 6 skipped, 7 errors in 95.63s，失败/错误清单为基线 14 项的子集，无新增红
+  说明：6 个 `--ignore` 模块为 HEAD 预存在收集错误（HEAD 版 config.py 缺 DEEPSEEK_API_KEY、benchmark/reports/accuracy_stats.py 缺失，均为主仓未提交改动的配套项，与本套件无关）；验收口径固定为"同一命令、失败清单无新增"，不依赖主工作区任何未提交内容。
   - 与基线（606 passed, 7 failed, 7 errors, 2 skipped）逐项一致的部分：
     - FAILED tests/test_bazi_kb.py::TestCLI::test_search_cli（缺 bazi_kb.db 构建产物）
     - FAILED tests/test_mcp.py::TestBaziKBSearch::test_returns_results / test_empty_query_handled（缺 bazi_kb.db）

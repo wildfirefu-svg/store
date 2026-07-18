@@ -1,6 +1,6 @@
 # bazi_calculator 专属单元测试套件 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 为 2,351 行的排盘核心引擎 `bazi_calculator.py` 建立专属单元测试套件（混合策略：手工规则断言 + 金标快照 + 不变量），并借权威规则测试修复 4 例已实测确认的生产缺陷。
 
@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-07-17-bazi-calculator-test-suite-design.md`（终审放行 + 缺陷 4 例同步）
 
-**审核修订:** 本计划历经四轮审核修订——第二轮（2026-07-18 review 报告）12 项；第三轮 7 项（Task 0 隔离、helper 导入推迟、solar_time 语义、大运补全、format_to_spec 直调、长生路径 A、去 tail 管道）；第四轮 5 项：全部命令改为绝对解释器路径、Task 0 增加未跟踪文档迁移与 `codex/` 分支约定、路径 A 决策来源书面化并要求执行前复述确认、`test_golden_accuracy` 增加 accuracy_report.json 备份恢复、Task 0 git 检查拆分为独立命令。
+**审核修订:** 本计划历经五轮审核修订——第二轮（2026-07-18 review 报告）12 项；第三轮 7 项（Task 0 隔离、helper 导入推迟、solar_time 语义、大运补全、format_to_spec 直调、长生路径 A、去 tail 管道）；第四轮 5 项（绝对解释器路径、Task 0 文档迁移与 `codex/` 分支、路径 A 书面化、accuracy_report 备份恢复、git 检查拆分）；第五轮 5 项（实施后）：验收命令固定为带 `--ignore` 的可复现形式（Task 1/14）、补 `get_day_pillar` 直接调用测试（60a4fec）、缺陷 #5（SANHE 集合迭代序，实施中快照发现）正式纳入变更条款、67 个 checkbox 全部回填、附录 A 行数 27→26 勘误。
 
 **执行纪律（仓库规则）：**
 - 所有 `git commit` 需用户确认后执行；计划中的 commit 步骤给出建议信息，执行者确认后再跑。
@@ -35,7 +35,7 @@
 | `tests/bazi_snapshot_helper.py`（新） | 快照用例定义、时变字段剥离、后端冻结、快照读写与字段级 diff（**Task 13 才创建**） |
 | `tests/fixtures/bazi_calculator_snapshots/regenerate.py`（新） | 基线再生成脚本（手动运行） |
 | `tests/fixtures/bazi_calculator_snapshots/*.json`（生成） | 9 份快照基线（e2e×5、shensha×3、ziwei×1） |
-| `bazi_calculator.py`（改，4 次独立提交） | 修复 #1 三合系取组（:944/:962-970）、#2 日柱系位置（:996-1003）、#3 compare 键名（:2174-2183）、#4 长生表（:616-627） |
+| `bazi_calculator.py`（改，5 次独立提交） | 修复 #1 三合系取组（:944/:962-970）、#2 日柱系位置（:996-1003）、#3 compare 键名（:2174-2183）、#4 长生表（:616-627）、#5 SANHE 集合迭代序（:665，实施中快照发现的计划外缺陷，已纳入变更条款） |
 | `docs/BAZI_CALCULATOR_ENGINE_DEFECTS_2026-07-17.md`（新） | 缺陷证据与修复记录 |
 
 ---
@@ -44,13 +44,13 @@
 
 **Files:** 无（git 操作 + 复制 3 份已批准文档）
 
-- [ ] **Step 1: 检查工作区实况（两条独立命令）**
+- [x] **Step 1: 检查工作区实况（两条独立命令）**
 
 Run: `git status --short`
 Run: `git worktree list`
 Expected: 主工作区存在用户未提交改动——本计划的多个红灯/修复提交不得与之混杂。同时确认 `docs/superpowers/specs/2026-07-17-bazi-calculator-test-suite-design.md`、`docs/superpowers/plans/2026-07-17-bazi-calculator-test-suite.md`、`docs/superpowers/plans/2026-07-17-bazi-calculator-test-suite-review.md` 三份文档处于未跟踪（`??`）状态。
 
-- [ ] **Step 2: 创建独立 worktree（经用户确认后执行；在主仓兄弟目录新建目录，需文件系统授权）**
+- [x] **Step 2: 创建独立 worktree（经用户确认后执行；在主仓兄弟目录新建目录，需文件系统授权）**
 
 ```bash
 git worktree add ../agent-bazi-test-suite -b codex/bazi-calculator-test-suite
@@ -58,7 +58,7 @@ git worktree add ../agent-bazi-test-suite -b codex/bazi-calculator-test-suite
 
 Expected: 在 `G:/project/agent-bazi-test-suite` 创建 worktree，新分支 `codex/bazi-calculator-test-suite`。**注意：worktree 从 HEAD 创建，不包含 Step 1 中的三份未跟踪文档，下一步显式迁移。**
 
-- [ ] **Step 3: 迁移已批准文档（仅这三份，不带入其他任何脏改动）**
+- [x] **Step 3: 迁移已批准文档（仅这三份，不带入其他任何脏改动）**
 
 ```bash
 mkdir -p ../agent-bazi-test-suite/docs/superpowers/specs ../agent-bazi-test-suite/docs/superpowers/plans
@@ -67,7 +67,7 @@ cp docs/superpowers/plans/2026-07-17-bazi-calculator-test-suite.md ../agent-bazi
 cp docs/superpowers/plans/2026-07-17-bazi-calculator-test-suite-review.md ../agent-bazi-test-suite/docs/superpowers/plans/
 ```
 
-- [ ] **Step 4: 在 worktree 提交文档（首个提交，确认后）**
+- [x] **Step 4: 在 worktree 提交文档（首个提交，确认后）**
 
 ```bash
 cd ../agent-bazi-test-suite
@@ -77,7 +77,7 @@ git commit -m "docs: add bazi_calculator test suite spec, plan and review report
 
 **后续所有任务均在 `G:/project/agent-bazi-test-suite` 根目录执行。**
 
-- [ ] **Step 5: 确认 worktree 可用性**
+- [x] **Step 5: 确认 worktree 可用性**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_location_matching.py -q`
 Expected: 3 passed（确认主仓 venv 绝对路径可在 worktree 中驱动测试）
@@ -89,12 +89,12 @@ Expected: 3 passed（确认主仓 venv 绝对路径可在 worktree 中驱动测�
 **Files:**
 - Modify: `tests/test_accuracy.py`（在 `run_tests` 之后、`__main__` 之前插入包装函数）
 
-- [ ] **Step 1: 捕获全量基线（Task 14 对照用）**
+- [x] **Step 1: 捕获全量基线（Task 14 对照用）**
 
-Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/ -q`
-Expected: 记录通过/失败数（当前应全绿）。把输出数字记入实施笔记。
+Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/ -q --tb=no --ignore=tests/test_accuracy_stats.py --ignore=tests/test_api.py --ignore=tests/test_claude_api.py --ignore=tests/test_clients_api.py --ignore=tests/test_rate_limit.py --ignore=tests/test_visualization_api.py -p no:cacheprovider`
+Expected: **606 passed, 7 failed, 7 errors, 2 skipped**（第五轮审核修订：干净 worktree 的 HEAD 存在 6 个预存在收集错误模块——HEAD 版 `config.py` 缺 `DEEPSEEK_API_KEY`、`benchmark/reports/accuracy_stats.py` 缺失，均为主仓未提交改动的配套项，与本套件无关；故验收命令固定为带上述 `--ignore` 的可复现形式。7 failed + 7 errors 亦为预存在：test_mcp/test_bazi_kb 缺 bazi_kb.db 构建产物、test_report_to_pdf×3、test_bazi_kb CLI×1、test_benchmark_runner×1、test_e2e×7 需真实服务器）。Task 14 用同一命令对照"失败清单无新增"。
 
-- [ ] **Step 2: 写包装测试（含 accuracy_report.json 备份恢复）**
+- [x] **Step 2: 写包装测试（含 accuracy_report.json 备份恢复）**
 
 在 `tests/test_accuracy.py` 的 `return report`（:93）之后、`if __name__ == '__main__':` 之前插入：
 
@@ -122,7 +122,7 @@ def test_golden_accuracy():
     )
 ```
 
-- [ ] **Step 3: 确认 pytest 现在能收集到它且工作区保持干净**
+- [x] **Step 3: 确认 pytest 现在能收集到它且工作区保持干净**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_accuracy.py -v`
 Expected: `1 passed`（改造前收集 0 项）
@@ -130,7 +130,7 @@ Expected: `1 passed`（改造前收集 0 项）
 Run: `git status --short -- tests/accuracy_report.json`
 Expected: 无输出（备份恢复生效，文件未被弄脏）
 
-- [ ] **Step 4: 确认脚本用法不受影响，并恢复生成物**
+- [x] **Step 4: 确认脚本用法不受影响，并恢复生成物**
 
 Run: `G:/project/agent/.venv/Scripts/python tests/test_accuracy.py`
 Expected: 正常跑完 100 例，输出 accuracy 报告
@@ -141,7 +141,7 @@ Expected: 仅 `test_date`/`elapsed_sec` 等生成字段变化（属脚本固有�
 Run: `git restore -- tests/accuracy_report.json`
 Expected: 工作区恢复干净（提交 `test_accuracy.py` 前必须执行，不夹带生成物）
 
-- [ ] **Step 5: Commit（确认后）**
+- [x] **Step 5: Commit（确认后）**
 
 ```bash
 git add tests/test_accuracy.py
@@ -155,7 +155,7 @@ git commit -m "test: wire golden accuracy suite into pytest collection"
 **Files:**
 - Create: `tests/test_bazi_calculator_pillars.py`
 
-- [ ] **Step 1: 写测试文件**
+- [x] **Step 1: 写测试文件**
 
 ```python
 """四柱与边界测试：规则断言 + 金标参数化 + 节气边界 fixture + 早/晚子时。
@@ -224,12 +224,12 @@ def test_nayin_cangan_present():
         assert fp[key]['cangan_detail']
 ```
 
-- [ ] **Step 2: 跑测试确认全绿**
+- [x] **Step 2: 跑测试确认全绿**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_pillars.py -v`
 Expected: 13 passed（8 金标 + 5 规则）
 
-- [ ] **Step 3: Commit（确认后）**
+- [x] **Step 3: Commit（确认后）**
 
 ```bash
 git add tests/test_bazi_calculator_pillars.py
@@ -243,7 +243,7 @@ git commit -m "test: add pillar rule assertions for bazi_calculator"
 **Files:**
 - Modify: `tests/test_bazi_calculator_pillars.py`（追加）
 
-- [ ] **Step 1: 追加边界测试**
+- [x] **Step 1: 追加边界测试**
 
 ```python
 # ── 节气边界（冻结 fixture：solar_terms.json 中 verified=True 条目，UTC+8）──
@@ -333,12 +333,12 @@ def test_zi_hour_day_pillar_not_rolled():
     assert early['hour']['gan'] != late['hour']['gan']
 ```
 
-- [ ] **Step 2: 跑测试确认全绿**
+- [x] **Step 2: 跑测试确认全绿**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_pillars.py -v`
 Expected: 22 passed（13 + 9 新增）
 
-- [ ] **Step 3: Commit（确认后）**
+- [x] **Step 3: Commit（确认后）**
 
 ```bash
 git add tests/test_bazi_calculator_pillars.py
@@ -352,7 +352,7 @@ git commit -m "test: add solar-term boundary and zi-hour characterization tests"
 **Files:**
 - Create: `tests/test_bazi_calculator_dayun.py`
 
-- [ ] **Step 1: 写测试文件**
+- [x] **Step 1: 写测试文件**
 
 ```python
 """大运与流年测试：四种方向组合、起运区间、10 步递进、流年序列。"""
@@ -427,12 +427,12 @@ def test_liunian_sequence():
         assert (cur - prev) % 60 == 1
 ```
 
-- [ ] **Step 2: 跑测试确认全绿**
+- [x] **Step 2: 跑测试确认全绿**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_dayun.py -v`
 Expected: 9 passed
 
-- [ ] **Step 3: Commit（确认后）**
+- [x] **Step 3: Commit（确认后）**
 
 ```bash
 git add tests/test_bazi_calculator_dayun.py
@@ -448,7 +448,7 @@ git commit -m "test: add dayun/liunian/sexagenary tests"
 
 **导入纪律（第三轮审核修订）**：本文件此刻**只导入 `pytest` 与 `bazi_calculator`**——`bazi_snapshot_helper` 到 Task 13 才创建，快照相关的 import 与测试统一在 Task 13 追加。任何"先写 import 再临时注释"的做法都会让 pytest 收集阶段全红，禁止使用。
 
-- [ ] **Step 1: 写测试文件（A 部分，无快照 import）**
+- [x] **Step 1: 写测试文件（A 部分，无快照 import）**
 
 ```python
 """神煞测试：A 日干系 / B 三合系(缺陷#1) / C 日柱系(缺陷#2) / enhance / 快照(Task 13 追加)。
@@ -500,12 +500,12 @@ def test_enhance_shensha_meaning():
     assert any(i['name'] == '天乙贵人' and i['meaning'] for i in enh)
 ```
 
-- [ ] **Step 2: 跑 A 组测试**
+- [x] **Step 2: 跑 A 组测试**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_shensha.py -v`
 Expected: 4 passed
 
-- [ ] **Step 3: Commit（确认后）**
+- [x] **Step 3: Commit（确认后）**
 
 ```bash
 git add tests/test_bazi_calculator_shensha.py
@@ -519,7 +519,7 @@ git commit -m "test: add day-stem shensha assertions"
 **Files:**
 - Modify: `tests/test_bazi_calculator_shensha.py`（追加 B 部分）
 
-- [ ] **Step 1: 追加三合系矩阵测试**
+- [x] **Step 1: 追加三合系矩阵测试**
 
 ```python
 # ── B. 三合系（缺陷#1：:944 以候选支自身定局。按教科书规则断言，修复后转绿）──
@@ -590,12 +590,12 @@ def test_sanhe_no_duplicate():
     assert ss['hour'].count('桃花') == 1
 ```
 
-- [ ] **Step 2: 跑 B 组，记录红色证据**
+- [x] **Step 2: 跑 B 组，记录红色证据**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_shensha.py -v -k "sanhe"`
 Expected: **大量 FAIL**——桃花/驿马/劫煞/灾煞/亡神/紫微/三合禄在 by_year/by_day 正例上不命中；华盖/将星在 negative 反例上误命中（自分组过度触发）。把失败计数与代表性失败信息**原样粘贴**到实施笔记（Task 14 缺陷记录用）。
 
-- [ ] **Step 3: Commit 红色证据（确认后）**
+- [x] **Step 3: Commit 红色证据（确认后）**
 
 ```bash
 git add tests/test_bazi_calculator_shensha.py
@@ -609,7 +609,7 @@ git commit -m "test: add sanhe-series shensha matrix exposing grouping defect (r
 **Files:**
 - Modify: `bazi_calculator.py:934-970`
 
-- [ ] **Step 1: 改 `calculate_shensha` 的参考局取法**
+- [x] **Step 1: 改 `calculate_shensha` 的参考局取法**
 
 `bazi_calculator.py:939-945` 当前：
 
@@ -672,17 +672,17 @@ git commit -m "test: add sanhe-series shensha matrix exposing grouping defect (r
 
 **纪律**：不碰 `:981` 月德取组（`month_zhi` 参考是对的）及其他神煞逻辑。
 
-- [ ] **Step 2: 跑 B 组矩阵确认转绿**
+- [x] **Step 2: 跑 B 组矩阵确认转绿**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_shensha.py -v -k "sanhe"`
 Expected: 全绿——应为 **80 passed + 4 skipped**（by_year 36 例中紫微 4 例 skip 余 32 pass；by_day 36 pass；negative 9 pass；ziwei_year_only/merge/no_duplicate 各 1 pass；以实际 ran 输出为准）
 
-- [ ] **Step 3: 跑 A 组与已建套件确认无回归**
+- [x] **Step 3: 跑 A 组与已建套件确认无回归**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_shensha.py tests/test_bazi_calculator_pillars.py tests/test_bazi_calculator_dayun.py tests/test_accuracy.py -q`
 Expected: 全绿
 
-- [ ] **Step 4: Commit（独立提交，确认后）**
+- [x] **Step 4: Commit（独立提交，确认后）**
 
 ```bash
 git add bazi_calculator.py
@@ -697,7 +697,7 @@ git commit -m "fix: resolve sanhe-series shensha by year/day branch group instea
 - Modify: `tests/test_bazi_calculator_shensha.py`（追加 C 部分）
 - Modify: `bazi_calculator.py:996-1003`
 
-- [ ] **Step 1: 追加日柱系测试**
+- [x] **Step 1: 追加日柱系测试**
 
 ```python
 # ── C. 日柱系（缺陷#2：:996-1003 无 key=='day' 限制。修复后转绿）──
@@ -727,19 +727,19 @@ def test_day_pillar_position_negative(name, ganzhi, pos):
     assert name not in bc.calculate_shensha(fp, '甲')[pos]
 ```
 
-- [ ] **Step 2: 跑 C 组，记录红色证据**
+- [x] **Step 2: 跑 C 组，记录红色证据**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_shensha.py -v -k "day_pillar"`
 Expected: 7 正例 passed；21 位置反例 **FAIL**（非日柱误报）。失败计数记入实施笔记。
 
-- [ ] **Step 3: Commit 红色证据（确认后）**
+- [x] **Step 3: Commit 红色证据（确认后）**
 
 ```bash
 git add tests/test_bazi_calculator_shensha.py
 git commit -m "test: add day-pillar-only shensha position assertions (red evidence)"
 ```
 
-- [ ] **Step 4: 修引擎——加日柱位置限制**
+- [x] **Step 4: 修引擎——加日柱位置限制**
 
 `bazi_calculator.py:996-1003` 当前：
 
@@ -770,12 +770,12 @@ git commit -m "test: add day-pillar-only shensha position assertions (red eviden
 
 **纪律**：不改 7 张表内容；天赦季节细化不做（spec §8 非目标）。
 
-- [ ] **Step 5: 跑 C 组转绿 + 全文件回归**
+- [x] **Step 5: 跑 C 组转绿 + 全文件回归**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_shensha.py -v`
 Expected: 全绿（含 A/B 组无回归）
 
-- [ ] **Step 6: Commit（独立提交，确认后）**
+- [x] **Step 6: Commit（独立提交，确认后）**
 
 ```bash
 git add bazi_calculator.py
@@ -789,7 +789,7 @@ git commit -m "fix: restrict day-pillar shensha (kuigang etc.) to day pillar onl
 **Files:**
 - Create: `tests/test_bazi_calculator_derived.py`
 
-- [ ] **Step 1: 写测试文件**
+- [x] **Step 1: 写测试文件**
 
 ```python
 """衍生计算测试：统计不变量 / 支关系 / 宫位 / 长生 / 自合 / 五运六气 / format_to_spec。
@@ -937,12 +937,12 @@ def test_format_to_spec_direct_20_keys():
     assert set(result.keys()) == FORMAT_SPEC_KEYS
 ```
 
-- [ ] **Step 2: 跑测试——changsheng 红色证据，其余绿**
+- [x] **Step 2: 跑测试——changsheng 红色证据，其余绿**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_derived.py -v`
 Expected: `test_changsheng_textbook` 多数 FAIL（已实测 `get_changsheng('甲','亥')` 返回 `'养'`；`CHANGSHENG_TABLE` 各行数据与其自身注释矛盾），其余测试 passed。失败详情**原样粘贴**到实施笔记（Task 14 缺陷记录用）。
 
-- [ ] **Step 3: Commit 红色证据（确认后）**
+- [x] **Step 3: Commit 红色证据（确认后）**
 
 ```bash
 git add tests/test_bazi_calculator_derived.py
@@ -958,7 +958,7 @@ git commit -m "test: add derived-calculation tests exposing changsheng table def
 
 **决策依据（书面化，第三轮审核要求）**：用户于 2026-07-17 在 Kimi Code 会话中经结构化问答（AskUserQuestion）明确选择"路径 A：修复为教科书表"。spec §2 缺陷 #4 已据此登记。**执行本任务前向用户复述该决策并再次确认**；若用户翻转为路径 B，则本任务跳过、Task 9 的 changsheng 测试改为特征化断言（注释"引擎现行口径，待命理复核"）。
 
-- [ ] **Step 1: 替换 CHANGSHENG_TABLE 为教科书表（阳顺阴逆）**
+- [x] **Step 1: 替换 CHANGSHENG_TABLE 为教科书表（阳顺阴逆）**
 
 `bazi_calculator.py:616-627` 当前数据行与注释矛盾，整体替换为：
 
@@ -979,17 +979,17 @@ CHANGSHENG_TABLE = {
 
 **注意**：此修复改变 `changsheng` 与 `day_master.shier_changsheng` 生产输出，Task 13 快照必须在此之后生成。
 
-- [ ] **Step 2: 跑 changsheng 转绿 + 全文件回归**
+- [x] **Step 2: 跑 changsheng 转绿 + 全文件回归**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_derived.py -q`
 Expected: 全绿
 
-- [ ] **Step 3: 跑已建套件确认无回归**
+- [x] **Step 3: 跑已建套件确认无回归**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_derived.py tests/test_bazi_calculator_shensha.py tests/test_bazi_calculator_pillars.py tests/test_bazi_calculator_dayun.py tests/test_accuracy.py -q`
 Expected: 全绿
 
-- [ ] **Step 4: Commit（独立提交，确认后）**
+- [x] **Step 4: Commit（独立提交，确认后）**
 
 ```bash
 git add bazi_calculator.py
@@ -1004,7 +1004,7 @@ git commit -m "fix: correct twelve-growth (changsheng) table to textbook yang-fo
 - Modify: `tests/test_bazi_calculator_derived.py`（追加）
 - Modify: `bazi_calculator.py:2174-2183`
 
-- [ ] **Step 1: 追加 compare_charts 测试**
+- [x] **Step 1: 追加 compare_charts 测试**
 
 ```python
 # ── compare_charts（缺陷#3：按中文键读 pinyin 键，占比恒 0。修复后转绿）──
@@ -1047,19 +1047,19 @@ def test_compare_identical_charts_zero_diff():
     assert all(v['diff'] == 0 for v in cc['wuxing_compare'].values())
 ```
 
-- [ ] **Step 2: 跑 compare 组，记录红色证据**
+- [x] **Step 2: 跑 compare 组，记录红色证据**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_derived.py -v -k "compare"`
 Expected: `pct_sums_100` / `nonzero` / `matches_input` **FAIL**（占比恒 0.0），structure 与 zero_diff passed。失败信息记入实施笔记。
 
-- [ ] **Step 3: Commit 红色证据（确认后）**
+- [x] **Step 3: Commit 红色证据（确认后）**
 
 ```bash
 git add tests/test_bazi_calculator_derived.py
 git commit -m "test: add compare_charts wuxing numeric assertions (red evidence)"
 ```
 
-- [ ] **Step 4: 修引擎——键名映射对齐**
+- [x] **Step 4: 修引擎——键名映射对齐**
 
 `bazi_calculator.py:2174-2183` 当前：
 
@@ -1092,12 +1092,12 @@ git commit -m "test: add compare_charts wuxing numeric assertions (red evidence)
         wuxing_compare[e] = {'chart1_pct': pct1, 'chart2_pct': pct2, 'diff': round(pct1 - pct2, 1)}
 ```
 
-- [ ] **Step 5: 跑 compare 组转绿 + 全文件回归**
+- [x] **Step 5: 跑 compare 组转绿 + 全文件回归**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_derived.py -q`
 Expected: 全绿
 
-- [ ] **Step 6: Commit（独立提交，确认后）**
+- [x] **Step 6: Commit（独立提交，确认后）**
 
 ```bash
 git add bazi_calculator.py
@@ -1113,7 +1113,7 @@ git commit -m "fix: read pinyin wuxing keys in compare_charts percentage calcula
 
 **导入纪律（同 Task 5）**：本文件此刻**只导入 `pytest` 与 `bazi_calculator`**；快照 import 与 `test_ziwei_snapshot` 统一在 Task 13 追加。
 
-- [ ] **Step 1: 写测试文件（仅结构测试，无快照 import）**
+- [x] **Step 1: 写测试文件（仅结构测试，无快照 import）**
 
 ```python
 """紫微结构测试（calculate_ziwei 为仓库内纯 Python 实现，无 iztro 运行时依赖）。
@@ -1159,12 +1159,12 @@ def test_ziwei_position():
             assert isinstance(pos, int)
 ```
 
-- [ ] **Step 2: 跑结构测试**
+- [x] **Step 2: 跑结构测试**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_ziwei.py -v`
 Expected: 4 passed
 
-- [ ] **Step 3: Commit（确认后）**
+- [x] **Step 3: Commit（确认后）**
 
 ```bash
 git add tests/test_bazi_calculator_ziwei.py
@@ -1183,7 +1183,7 @@ git commit -m "test: add ziwei structural tests"
 - Modify: `tests/test_bazi_calculator_ziwei.py`（顶部加 import、末尾加快照测试）
 - Generate: `tests/fixtures/bazi_calculator_snapshots/*.json`（9 份）
 
-- [ ] **Step 1: 写快照辅助模块**
+- [x] **Step 1: 写快照辅助模块**
 
 ```python
 """bazi_calculator 快照测试辅助：用例定义、时变字段剥离、农历后端冻结、快照读写与字段级 diff。
@@ -1268,7 +1268,7 @@ def assert_snapshot_equal(expected, actual, path=''):
         assert expected == actual, f'{path}: 期望 {expected!r}，实际 {actual!r}'
 ```
 
-- [ ] **Step 2: 写再生成脚本（三层 sys.path 上溯到仓库根）**
+- [x] **Step 2: 写再生成脚本（三层 sys.path 上溯到仓库根）**
 
 ```python
 """手动再生成全部快照基线。变更引擎后运行，并人工 review diff 再提交（spec §5）。"""
@@ -1304,7 +1304,7 @@ if __name__ == '__main__':
     main()
 ```
 
-- [ ] **Step 3: 写 e2e 测试文件（use_solar_time 语义已实测修正）**
+- [x] **Step 3: 写 e2e 测试文件（use_solar_time 语义已实测修正）**
 
 ```python
 """compute_chart 端到端：22 键 schema + 5 盘快照 + 时变字段结构断言 + solar_time 开关。"""
@@ -1372,7 +1372,7 @@ def test_use_solar_time_flag_controls_auto_correction():
     assert pre_adjusted['four_pillars']['hour']['zhi'] == '辰'
 ```
 
-- [ ] **Step 4: 向 shensha 文件追加快照 import 与测试**
+- [x] **Step 4: 向 shensha 文件追加快照 import 与测试**
 
 在 `tests/test_bazi_calculator_shensha.py` 顶部 `import bazi_calculator as bc` 之后追加：
 
@@ -1396,7 +1396,7 @@ def test_shensha_snapshot(case, monkeypatch):
     assert_snapshot_equal(expected, actual)
 ```
 
-- [ ] **Step 5: 向 ziwei 文件追加快照 import 与测试**
+- [x] **Step 5: 向 ziwei 文件追加快照 import 与测试**
 
 在 `tests/test_bazi_calculator_ziwei.py` 顶部 `import bazi_calculator as bc` 之后追加：
 
@@ -1418,19 +1418,19 @@ def test_ziwei_snapshot(monkeypatch):
     assert_snapshot_equal(expected, actual)
 ```
 
-- [ ] **Step 6: 生成基线**
+- [x] **Step 6: 生成基线**
 
 Run: `G:/project/agent/.venv/Scripts/python tests/fixtures/bazi_calculator_snapshots/regenerate.py`
 Expected: `regenerated 9 snapshots in ...`
 
 **人工 review**：`git status` + 抽查 1 份基线（如 `e2e_male_1993.json`）确认 `_meta.lunar_backend == "builtin"`、无 `liu_nian` 键、`da_yun` 各柱无 `is_current`、`changsheng` 字段为 Task 10 新表输出。
 
-- [ ] **Step 7: 全部快照测试转绿**
+- [x] **Step 7: 全部快照测试转绿**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_e2e.py tests/test_bazi_calculator_ziwei.py tests/test_bazi_calculator_shensha.py -q`
 Expected: 全绿（含 9 个快照用例）
 
-- [ ] **Step 8: Commit（确认后）**
+- [x] **Step 8: Commit（确认后）**
 
 ```bash
 git add tests/bazi_snapshot_helper.py tests/test_bazi_calculator_e2e.py tests/fixtures/bazi_calculator_snapshots/ tests/test_bazi_calculator_shensha.py tests/test_bazi_calculator_ziwei.py
@@ -1444,21 +1444,22 @@ git commit -m "test: add snapshot infrastructure and e2e/shensha/ziwei baselines
 **Files:**
 - Create: `docs/BAZI_CALCULATOR_ENGINE_DEFECTS_2026-07-17.md`
 
-- [ ] **Step 1: 新套件整体验收（spec §7.1）**
+- [x] **Step 1: 新套件整体验收（spec §7.1）**
 
 Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_pillars.py tests/test_bazi_calculator_dayun.py tests/test_bazi_calculator_shensha.py tests/test_bazi_calculator_ziwei.py tests/test_bazi_calculator_derived.py tests/test_bazi_calculator_e2e.py tests/test_accuracy.py -q`
 Expected: 全绿，总耗时 < 60s
 
-- [ ] **Step 2: 全量回归对照基线（spec §7.2）**
+- [x] **Step 2: 全量回归对照基线（spec §7.2）**
 
-Run: `G:/project/agent/.venv/Scripts/python -m pytest tests/ -q`
-Expected: 与 Task 1 Step 1 基线相比**无新增失败**（通过数应增加本套件用例数）；并确认 `git status --short -- tests/accuracy_report.json` 无输出（备份恢复生效）
+Run（与 Task 1 Step 1 完全相同的可复现命令，干净 worktree 可直接执行）: `G:/project/agent/.venv/Scripts/python -m pytest tests/ -q --tb=no --ignore=tests/test_accuracy_stats.py --ignore=tests/test_api.py --ignore=tests/test_claude_api.py --ignore=tests/test_clients_api.py --ignore=tests/test_rate_limit.py --ignore=tests/test_visualization_api.py -p no:cacheprovider`
+Expected: 失败/错误清单与基线 14 项**完全一致、无新增失败**（通过数应增加本套件用例数）；并确认 `git status --short -- tests/accuracy_report.json` 无输出（备份恢复生效）
+实际结果（2026-07-18 复跑）：**783 passed, 4 failed, 6 skipped, 7 errors**——失败/错误清单为基线 14 项的子集（test_report_to_pdf×3 转绿属环境层面，与本套件无关），无新增红；计数闭合 606−14+188+3=783
 
-- [ ] **Step 3: 覆盖矩阵核对（spec §7.3）**
+- [x] **Step 3: 覆盖矩阵核对（spec §7.3）**
 
-逐行对照 spec 附录 A 的 27 行矩阵，确认每行都有对应测试且通过。在执行总结中列出勾选结果。
+逐行对照 spec 附录 A 的 26 行矩阵（实际 26 个数据行，此前文档误写 27），确认每行都有对应测试且通过。在执行总结中列出勾选结果。实施后增补：`get_day_pillar` 直接调用断言 `test_get_day_pillar_known_date`（提交 60a4fec），矩阵"直接调用"要求严格满足。
 
-- [ ] **Step 4: 写缺陷记录**
+- [x] **Step 4: 写缺陷记录**
 
 创建 `docs/BAZI_CALCULATOR_ENGINE_DEFECTS_2026-07-17.md`，模板：
 
@@ -1491,24 +1492,30 @@ Expected: 与 Task 1 Step 1 基线相比**无新增失败**（通过数应增加
 - 修复： 整体替换为教科书阳顺阴逆表，独立提交 <commit-hash>
 - 生产影响： changsheng 与 day_master.shier_changsheng 输出变化
 
+## 缺陷 #5：detect_branch_relations 输出顺序不确定（已修复；实施中快照发现，第五轮审核纳入变更条款）
+- 现象： SANHE 为 set，:665 迭代顺序随进程 PYTHONHASHSEED 随机化，branch_relations 列表顺序跨进程翻转，快照基线无法稳定；属可观察行为变化（列表顺序确定化）
+- 证据： 同一用例 seed 0/42 与 seed 3/5/7/99 输出互翻；快照首跑 1 红
+- 修复： for group in sorted(SANHE)（1 行），独立提交 <commit-hash>
+- 遗留： knowledge-base/hehun.py:104 存在同样未排序迭代（不在本次快照路径内，未动，建议后续同样处理）
+
 ## 待命理复核口径（非本轮修复）
 - 紫微神煞仅日支（源码注释"日支三合查"，暂定工程口径）
 - 三合禄年/日支并集（外部依据弱，暂定工程口径）
 - 天赦季节细化
 ```
 
-- [ ] **Step 4b: 回填 commit hash**
+- [x] **Step 4b: 回填 commit hash**
 
 提交前检查：缺陷记录中所有 `<commit-hash>` 占位符已替换为实际提交哈希（`git log --oneline` 查取）。**含占位符的文档不得提交。**
 
-- [ ] **Step 5: Commit（确认后）**
+- [x] **Step 5: Commit（确认后）**
 
 ```bash
 git add docs/BAZI_CALCULATOR_ENGINE_DEFECTS_2026-07-17.md
 git commit -m "docs: record bazi_calculator engine defects found by test suite"
 ```
 
-- [ ] **Step 6: 合并回主分支（用户决策，不在本计划内自动执行）**
+- [x] **Step 6: 合并回主分支（用户决策，不在本计划内自动执行）**
 
 向用户报告 worktree 分支 `codex/bazi-calculator-test-suite` 的全部提交与验证结果，由用户决定合并方式（merge / rebase / 先评审）。
 
@@ -1522,6 +1529,8 @@ git commit -m "docs: record bazi_calculator engine defects found by test suite"
 
 **3. 类型一致性**：`mk_fp`/`_ganzhi_for`（Task 5 定义）在 Task 6/8 复用一致；`NEUTRAL_FP`（Task 8 定义）自洽；`PINYIN_ELEMENTS`（Task 9 定义）在 Task 11 复用一致；`FORMAT_SPEC_KEYS`（Task 9 定义）与 e2e `EXPECTED_TOP_KEYS`（Task 13 定义）为 20/22 键互补关系；`SNAPSHOT_CASES`/`freeze_lunar_backend`/`compute_*`/`load_snapshot`/`assert_snapshot_equal`（Task 13 定义）在 Task 13 各 Step 引用一致；`SOLAR_TERMS_PATH`（Task 2 定义）在 Task 3 复用一致。
 
-**4. 顺序依赖**：`bazi_snapshot_helper` 在 Task 13 创建，Task 5/12 的文件均不提前 import；快照基线在 4 例引擎修复全部完成后的 Task 13 Step 6 生成；Task 0 隔离环境（含三份未跟踪文档迁移）是所有任务的前置。
+**4. 顺序依赖**：`bazi_snapshot_helper` 在 Task 13 创建，Task 5/12 的文件均不提前 import；快照基线在引擎修复全部完成（含实施中发现的 #5）后的 Task 13 Step 6 生成；Task 0 隔离环境（含三份未跟踪文档迁移）是所有任务的前置。
 
 **5. 四轮审核修订核对**：第二轮 12 项 → 见各 Task 标注；第三轮 7 项（Task 0 隔离/helper 导入推迟/solar_time 语义/大运补全/format_to_spec 直调/长生路径 A/去 tail）→ 同上；第四轮 5 项——绝对解释器路径 → 全部 Run 命令；未跟踪文档迁移 + `codex/` 分支 → Task 0 Step 3/4/2；路径 A 决策书面化 + 执行前复述确认 → Task 10 决策依据段（spec §2/§8 同步登记）；accuracy_report.json 备份恢复 → Task 1 Step 2/3/4 与 Task 14 Step 2；git 检查拆分为独立命令 + 文件系统授权提示 → Task 0 Step 1/2。**24 项全部落入。**
+
+**6. 第五轮审核修订核对（实施后）**：① 验收命令固定可复现——Task 1 Step 1 与 Task 14 Step 2 统一为带 6 个 `--ignore` 的命令，干净 worktree 可直接执行，2026-07-18 复跑结果 783 passed, 4 failed, 6 skipped, 7 errors 已落盘（失败清单为基线子集，无新增红）；② `get_day_pillar` 直接调用测试 `test_get_day_pillar_known_date`（60a4fec）——矩阵"直接调用"严格满足；③ 缺陷 #5（SANHE 集合迭代序，实施中快照发现，1 行 sorted 修复 564cc7e）正式纳入变更条款（File Structure 表、Task 14 模板、缺陷记录）；④ 67 个 checkbox 全部回填 [x]；⑤ 附录 A 行数勘误 27→26。**5 项全部落入，计划与实施实况一致。**
