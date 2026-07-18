@@ -2179,13 +2179,14 @@ def compare_charts(chart1, chart2):
     # ---- 1. Five Elements comparison ----
     ws1 = chart1.get('wuxing_stats', {})
     ws2 = chart2.get('wuxing_stats', {})
-    all_elements = ['金', '木', '水', '火', '土']
-    total1 = sum(ws1.get(e, 0) for e in all_elements) or 1
-    total2 = sum(ws2.get(e, 0) for e in all_elements) or 1
+    # wuxing_stats 产出 pinyin 键（calculate_wuxing_stats）——按键名映射对齐
+    pinyin_elements = [('jin', '金'), ('mu', '木'), ('shui', '水'), ('huo', '火'), ('tu', '土')]
+    total1 = sum(ws1.get(k, 0) for k, _ in pinyin_elements) or 1
+    total2 = sum(ws2.get(k, 0) for k, _ in pinyin_elements) or 1
     wuxing_compare = {}
-    for e in all_elements:
-        pct1 = round(ws1.get(e, 0) / total1 * 100, 1)
-        pct2 = round(ws2.get(e, 0) / total2 * 100, 1)
+    for k, e in pinyin_elements:
+        pct1 = round(ws1.get(k, 0) / total1 * 100, 1)
+        pct2 = round(ws2.get(k, 0) / total2 * 100, 1)
         wuxing_compare[e] = {'chart1_pct': pct1, 'chart2_pct': pct2, 'diff': round(pct1 - pct2, 1)}
 
     # ---- 2. Day Master relationship ----
