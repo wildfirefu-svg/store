@@ -142,3 +142,42 @@ FAILED tests/test_bazi_calculator_shensha.py::test_sanhe_no_duplicate
 ## 下一步（Task 7，另一代理）
 
 按教科书规则修复 `calculate_shensha` 三合系取组：以年支/日支（紫微仅日支）定三合局并取并集，目标支命中且同年/日同局不重复计入。修复后本文件 B 部分应整体转绿。
+
+
+## Task 8 红色证据：缺陷 #2 日柱系位置限制缺失
+
+命令：`python -m pytest tests/test_bazi_calculator_shensha.py -v -k "day_pillar"`
+
+结果：**21 failed, 7 passed, 88 deselected**。7 个正例（干支位于日柱）全部 passed；21 个位置反例（同一干支仅位于年/月/时柱）全部 FAIL——`calculate_shensha` 在四柱循环内无 `key == 'day'` 限制，非日柱命中 7 张日柱系表即误报。
+
+失败清单（逐字）：
+
+```
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[year-魁罡-庚辰]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[year-孤鸾煞-甲寅]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[year-阴差阳错-丙子]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[year-十恶大败-甲辰]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[year-八专-丁未]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[year-悬针-甲午]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[year-天赦-戊寅]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[month-魁罡-庚辰]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[month-孤鸾煞-甲寅]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[month-阴差阳错-丙子]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[month-十恶大败-甲辰]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[month-八专-丁未]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[month-悬针-甲午]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[month-天赦-戊寅]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[hour-魁罡-庚辰]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[hour-孤鸾煞-甲寅]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[hour-阴差阳错-丙子]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[hour-十恶大败-甲辰]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[hour-八专-丁未]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[hour-悬针-甲午]
+FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[hour-天赦-戊寅]
+```
+
+（注：同前，终端实际输出中参数 id 以 `\uXXXX` 转义形式打印，上表已解码为可读中文；7 张日柱系表为魁罡/孤鸾煞/阴差阳错/十恶大败/八专/悬针/天赦，源码注释口径均为"日柱为"。）
+
+## 下一步（Task 8 后半，同代理）
+
+最小修复：`bazi_calculator.py` 日柱系判定块整体包入 `if key == 'day':`。不改 7 张表内容、不碰其他神煞逻辑、不做天赦季节细化。修复后本文件 C 部分应转绿且 A/B 无回归。

@@ -113,3 +113,30 @@ def test_sanhe_no_duplicate():
     # 年支(申)与日支(辰)同属申子辰局 → 同柱桃花只出现一次
     ss = bc.calculate_shensha(mk_fp('甲申', '甲子', '甲辰', '乙酉'), '甲')
     assert ss['hour'].count('桃花') == 1
+
+
+# ── C. 日柱系（缺陷#2：:996-1003 无 key=='day' 限制。修复后转绿）──
+
+DAY_PILLAR_CASES = [
+    ('魁罡', '庚辰'), ('孤鸾煞', '甲寅'), ('阴差阳错', '丙子'),
+    ('十恶大败', '甲辰'), ('八专', '丁未'), ('悬针', '甲午'), ('天赦', '戊寅'),
+]
+
+# 填充柱均不在 7 张日柱系表内——日柱系仅读本柱干支，他柱内容不进入判定逻辑
+NEUTRAL_FP = ('乙丑', '丙寅', '丁卯', '戊辰')
+
+
+@pytest.mark.parametrize('name, ganzhi', DAY_PILLAR_CASES)
+def test_day_pillar_positive(name, ganzhi):
+    # 对应干支位于日柱时命中（7 张表注释均为"日柱为"）
+    fp = mk_fp('甲子', '甲子', ganzhi, '甲子')
+    assert name in bc.calculate_shensha(fp, '甲')['day']
+
+
+@pytest.mark.parametrize('name, ganzhi', DAY_PILLAR_CASES)
+@pytest.mark.parametrize('pos', ['year', 'month', 'hour'])
+def test_day_pillar_position_negative(name, ganzhi, pos):
+    # 同一干支仅位于年/月/时柱时不命中（其余柱填充互不相同的非表干支）
+    fp = mk_fp(*NEUTRAL_FP)
+    fp[pos] = {'gan': ganzhi[0], 'zhi': ganzhi[1]}
+    assert name not in bc.calculate_shensha(fp, '甲')[pos]
