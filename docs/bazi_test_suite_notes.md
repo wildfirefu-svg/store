@@ -239,3 +239,70 @@ E   TypeError: tuple indices must be integers or slices, not str
 
 原因：`bc.get_taiyuan` 返回 `tuple`（实测 `('戊', '戌')`），测试按 dict 访问 `ty['gan']`。
 按任务约定测试未修改，留待 Task 10 决定修测试还是修引擎返回类型。
+
+---
+
+## Task 11 红色证据：缺陷 #3 compare_charts 五行键名不匹配
+
+命令：`pytest tests/test_bazi_calculator_derived.py -v -k "compare"`
+
+预期与实测一致：`pct_sums_100` / `nonzero` / `matches_input` 三个数值断言 FAIL（占比恒 0.0），`structure` 与 `zero_diff` passed。原始输出：
+
+```
+============================= test session starts =============================
+platform win32 -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- G:\project\agent\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: G:\project\agent-bazi-test-suite
+configfile: pytest.ini
+plugins: anyio-4.14.2, timeout-2.4.0
+collecting ... collected 27 items / 22 deselected / 5 selected
+
+tests/test_bazi_calculator_derived.py::test_compare_structure PASSED     [ 20%]
+tests/test_bazi_calculator_derived.py::test_compare_wuxing_pct_sums_100 FAILED [ 40%]
+tests/test_bazi_calculator_derived.py::test_compare_wuxing_nonzero FAILED [ 60%]
+tests/test_bazi_calculator_derived.py::test_compare_wuxing_matches_input FAILED [ 80%]
+tests/test_bazi_calculator_derived.py::test_compare_identical_charts_zero_diff PASSED [100%]
+
+================================== FAILURES ===================================
+______________________ test_compare_wuxing_pct_sums_100 _______________________
+
+    def test_compare_wuxing_pct_sums_100():
+        cc = bc.compare_charts(*_two_charts())
+        for side in ['chart1_pct', 'chart2_pct']:
+            total = sum(v[side] for v in cc['wuxing_compare'].values())
+>           assert abs(total - 100) <= 0.6, f'{side} 总和 {total}（修复前恒为 0）'
+E           AssertionError: chart1_pct 总和 0.0（修复前恒为 0）
+E           assert 100.0 <= 0.6
+E            +  where 100.0 = abs((0.0 - 100))
+
+tests\test_bazi_calculator_derived.py:162: AssertionError
+_________________________ test_compare_wuxing_nonzero _________________________
+
+    def test_compare_wuxing_nonzero():
+        cc = bc.compare_charts(*_two_charts())
+>       assert any(v['chart1_pct'] > 0 for v in cc['wuxing_compare'].values())
+E       assert False
+E        +  where False = any(<generator object test_compare_wuxing_nonzero.<locals>.<genexpr> at 0x000001FEF5014D40>)
+
+tests\test_bazi_calculator_derived.py:167: AssertionError
+______________________ test_compare_wuxing_matches_input ______________________
+
+    def test_compare_wuxing_matches_input():
+        c1, _ = _two_charts()
+        cc = bc.compare_charts(*_two_charts())
+        ws = c1['wuxing_stats']
+        total = sum(ws[k] for k, _ in PINYIN_ELEMENTS)
+        for k, e in PINYIN_ELEMENTS:
+>           assert cc['wuxing_compare'][e]['chart1_pct'] == round(ws[k] / total * 100, 1)
+E           assert 0.0 == 25.0
+E            +  where 25.0 = round(((2 / 8) * 100), 1)
+
+tests\test_bazi_calculator_derived.py:176: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_bazi_calculator_derived.py::test_compare_wuxing_pct_sums_100
+FAILED tests/test_bazi_calculator_derived.py::test_compare_wuxing_nonzero - a...
+FAILED tests/test_bazi_calculator_derived.py::test_compare_wuxing_matches_input
+================= 3 failed, 2 passed, 22 deselected in 3.75s ==================
+```
+
+根因：`compare_charts` 按中文键 `金/木/水/火/土` 读 `wuxing_stats`，而 `calculate_wuxing_stats` 产出 pinyin 键 `jin/mu/shui/huo/tu`，`ws.get(e, 0)` 全部落空，占比恒 0.0。

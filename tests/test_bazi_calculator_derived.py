@@ -141,3 +141,42 @@ def test_format_to_spec_direct_20_keys():
     true_solar_info = {'method': 'no_correction'}
     result = bc.format_to_spec(fp, dayun, shensha, ziwei, wuyun, wuxing, shishen, liunian, true_solar_info)
     assert set(result.keys()) == FORMAT_SPEC_KEYS
+
+# ── compare_charts（缺陷#3：按中文键读 pinyin 键，占比恒 0。修复后转绿）──
+
+def _two_charts():
+    c1 = bc.compute_chart(1993, 7, 15, 14, 0, 'male', 'Beijing', False)
+    c2 = bc.compute_chart(1988, 2, 20, 10, 0, 'female', 'Beijing', False)
+    return c1, c2
+
+
+def test_compare_structure():
+    cc = bc.compare_charts(*_two_charts())
+    assert {'wuxing_compare', 'dm_relation', 'nayin', 'shensha', 'dayun'} <= set(cc.keys())
+
+
+def test_compare_wuxing_pct_sums_100():
+    cc = bc.compare_charts(*_two_charts())
+    for side in ['chart1_pct', 'chart2_pct']:
+        total = sum(v[side] for v in cc['wuxing_compare'].values())
+        assert abs(total - 100) <= 0.6, f'{side} 总和 {total}（修复前恒为 0）'
+
+
+def test_compare_wuxing_nonzero():
+    cc = bc.compare_charts(*_two_charts())
+    assert any(v['chart1_pct'] > 0 for v in cc['wuxing_compare'].values())
+
+
+def test_compare_wuxing_matches_input():
+    c1, _ = _two_charts()
+    cc = bc.compare_charts(*_two_charts())
+    ws = c1['wuxing_stats']
+    total = sum(ws[k] for k, _ in PINYIN_ELEMENTS)
+    for k, e in PINYIN_ELEMENTS:
+        assert cc['wuxing_compare'][e]['chart1_pct'] == round(ws[k] / total * 100, 1)
+
+
+def test_compare_identical_charts_zero_diff():
+    c1, _ = _two_charts()
+    cc = bc.compare_charts(c1, c1)
+    assert all(v['diff'] == 0 for v in cc['wuxing_compare'].values())
