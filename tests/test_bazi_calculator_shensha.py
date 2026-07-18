@@ -5,6 +5,10 @@ B/C 两部分先按教科书规则写断言跑出红色证据，再按 spec §8 
 import pytest
 
 import bazi_calculator as bc
+from bazi_snapshot_helper import (
+    SNAPSHOT_CASES, SNAPSHOT_DIR,
+    assert_snapshot_equal, compute_shensha, freeze_lunar_backend, load_snapshot,
+)
 
 
 def mk_fp(year, month, day, hour):
@@ -140,3 +144,13 @@ def test_day_pillar_position_negative(name, ganzhi, pos):
     fp = mk_fp(*NEUTRAL_FP)
     fp[pos] = {'gan': ganzhi[0], 'zhi': ganzhi[1]}
     assert name not in bc.calculate_shensha(fp, '甲')[pos]
+
+
+# ── 快照（引擎修复后生成基线）──
+
+@pytest.mark.parametrize('case', SNAPSHOT_CASES[:3], ids=lambda c: c['name'])
+def test_shensha_snapshot(case, monkeypatch):
+    freeze_lunar_backend(monkeypatch)
+    actual = compute_shensha(case)
+    expected = load_snapshot(SNAPSHOT_DIR / f"shensha_{case['name']}.json")
+    assert_snapshot_equal(expected, actual)

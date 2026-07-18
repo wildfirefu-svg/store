@@ -1,0 +1,63 @@
+{
+  "_meta": {
+    "generator": "tests/fixtures/bazi_calculator_snapshots/regenerate.py",
+    "lunar_backend": "builtin"
+  },
+  "data": [
+    {
+      "meaning": "遇之主逢凶化吉，贵人提携",
+      "name": "天乙贵人",
+      "position": "year_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "将星",
+      "position": "year_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "金舆",
+      "position": "month_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "寡宿",
+      "position": "month_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "吊客",
+      "position": "month_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "太极贵人",
+      "position": "day_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "学堂",
+      "position": "day_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "劫煞",
+      "position": "day_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "十恶大败",
+      "position": "day_zhi"
+    },
+    {
+      "meaning": "聪明孤独，有宗教艺术天赋",
+      "name": "华盖",
+      "position": "hour_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "地网",
+      "position": "hour_zhi"
+    }
+  ]
+}

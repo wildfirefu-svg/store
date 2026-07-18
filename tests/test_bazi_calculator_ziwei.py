@@ -5,6 +5,10 @@
 import pytest
 
 import bazi_calculator as bc
+from bazi_snapshot_helper import (
+    SNAPSHOT_CASES, SNAPSHOT_DIR,
+    assert_snapshot_equal, compute_ziwei, freeze_lunar_backend, load_snapshot,
+)
 
 MAIN_STARS = {'紫微', '天机', '太阳', '武曲', '天同', '廉贞', '天府',
               '太阴', '贪狼', '巨门', '天相', '天梁', '七杀', '破军'}
@@ -39,3 +43,11 @@ def test_ziwei_position():
         for day in [1, 15, 30]:
             pos = bc.ziwei_position(ju, day)
             assert isinstance(pos, int)
+
+
+def test_ziwei_snapshot(monkeypatch):
+    freeze_lunar_backend(monkeypatch)
+    case = SNAPSHOT_CASES[0]
+    actual = compute_ziwei(case)
+    expected = load_snapshot(SNAPSHOT_DIR / f"ziwei_{case['name']}.json")
+    assert_snapshot_equal(expected, actual)
