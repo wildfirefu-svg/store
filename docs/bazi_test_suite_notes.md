@@ -181,3 +181,61 @@ FAILED tests/test_bazi_calculator_shensha.py::test_day_pillar_position_negative[
 ## 下一步（Task 8 后半，同代理）
 
 最小修复：`bazi_calculator.py` 日柱系判定块整体包入 `if key == 'day':`。不改 7 张表内容、不碰其他神煞逻辑、不做天赦季节细化。修复后本文件 C 部分应转绿且 A/B 无回归。
+
+## Task 9 红色证据：缺陷 #4 十二长生表
+
+来源：`tests/test_bazi_calculator_derived.py::test_changsheng_textbook`（10 组教科书五行长生断言，阳顺阴逆），
+运行 `G:/project/agent/.venv/Scripts/python -m pytest tests/test_bazi_calculator_derived.py -v`。
+
+### 测试结果汇总
+
+- 总计 22 项：11 passed / 11 failed
+- 10 组 changsheng 参数化断言**全部 FAILED**（预期红色证据，Task 10 修复引擎后转绿）
+- 另有 `test_gong_positions_legal` FAILED（TypeError，与 changsheng 无关，见文末备注）
+
+### changsheng 10 组 (gan, zhi) 实际返回值
+
+教科书期望全部为 `长生`；逐一调用 `bc.get_changsheng(gan, zhi)` 实测：
+
+| (gan, zhi) | 期望 | 实际返回 |
+|---|---|---|
+| 甲亥 | 长生 | 养 |
+| 乙午 | 长生 | 冠带 |
+| 丙寅 | 长生 | 墓 |
+| 戊寅 | 长生 | 墓 |
+| 庚巳 | 长生 | 绝 |
+| 辛子 | 长生 | 胎 |
+| 壬申 | 长生 | 绝 |
+| 癸卯 | 长生 | 胎 |
+| 丁酉 | 长生 | 绝 |
+| 己酉 | 长生 | 绝 |
+
+### pytest -v 失败输出（节选，原样）
+
+```
+FAILED tests/test_bazi_calculator_derived.py::test_changsheng_textbook[甲-亥] - AssertionError: assert '养' == '长生'
+FAILED tests/test_bazi_calculator_derived.py::test_changsheng_textbook[乙-午] - AssertionError: assert '冠带' == '长生'
+FAILED tests/test_bazi_calculator_derived.py::test_changsheng_textbook[丙-寅] - AssertionError: assert '墓' == '长生'
+FAILED tests/test_bazi_calculator_derived.py::test_changsheng_textbook[戊-寅] - AssertionError: assert '墓' == '长生'
+FAILED tests/test_bazi_calculator_derived.py::test_changsheng_textbook[庚-巳] - AssertionError: assert '绝' == '长生'
+FAILED tests/test_bazi_calculator_derived.py::test_changsheng_textbook[辛-子] - AssertionError: assert '胎' == '长生'
+FAILED tests/test_bazi_calculator_derived.py::test_changsheng_textbook[壬-申] - AssertionError: assert '绝' == '长生'
+FAILED tests/test_bazi_calculator_derived.py::test_changsheng_textbook[癸-卯] - AssertionError: assert '胎' == '长生'
+FAILED tests/test_bazi_calculator_derived.py::test_changsheng_textbook[丁-酉] - AssertionError: assert '绝' == '长生'
+FAILED tests/test_bazi_calculator_derived.py::test_changsheng_textbook[己-酉] - AssertionError: assert '绝' == '长生'
+```
+
+（注：终端原始输出中参数 id 以 `\uXXXX` 转义形式打印，上表已解码为可读中文。）
+
+### 备注：changsheng 之外的失败（按要求未改测试，原样记录）
+
+`test_gong_positions_legal` FAILED：
+
+```
+    ty = bc.get_taiyuan(fp['month']['gan'], fp['month']['zhi'], fp['year']['gan'], fp['year']['zhi'])
+>   assert ty['gan'] in bc.TIANGAN and ty['zhi'] in bc.DIZHI
+E   TypeError: tuple indices must be integers or slices, not str
+```
+
+原因：`bc.get_taiyuan` 返回 `tuple`（实测 `('戊', '戌')`），测试按 dict 访问 `ty['gan']`。
+按任务约定测试未修改，留待 Task 10 决定修测试还是修引擎返回类型。
