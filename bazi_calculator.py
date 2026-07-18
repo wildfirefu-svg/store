@@ -936,12 +936,18 @@ def calculate_shensha(four_pillars, day_master):
     all_zhis = [four_pillars[k]['zhi'] for k in ['year','month','day','hour']]
     all_gans = [four_pillars[k]['gan'] for k in ['year','month','day','hour']]
 
+    day_zhi = four_pillars['day']['zhi']
+    # 三合系参考局：年支/日支所属三合局并集（紫微仅日支）——spec §4.3 B 口径冻结表
+    # 12 地支全覆盖四个三合局，_find_taohua_group 对合法地支永不返回 None（不变式）；
+    # 若该不变式未来被破坏，set 推导的 if g 过滤与下方 sanhe_day_group 的假值判定仍可安全降级
+    sanhe_ref_groups = {g for g in (_find_taohua_group(year_zhi), _find_taohua_group(day_zhi)) if g}
+    sanhe_day_group = _find_taohua_group(day_zhi)
+
     result = {}
     for key in ['year', 'month', 'day', 'hour']:
         p = four_pillars[key]
         gan, zhi = p['gan'], p['zhi']
         ss = []
-        group = _find_taohua_group(zhi)  # shared 三合 group for this zhi
 
         # ── 日干系 (check all pillars) ──
         if zhi in TIANYI_GUIREN.get(day_master, ()): ss.append('天乙贵人')
@@ -957,17 +963,16 @@ def calculate_shensha(four_pillars, day_master):
         if day_master in YANGREN_MAP and zhi == YANGREN_MAP[day_master]: ss.append('羊刃')
         if day_master in _feiren and zhi == _feiren[day_master]: ss.append('飞刃')
 
-        # ── 三合系 (check per-pillar zhi) ──
-        if group:
-            if zhi == TAOHUA_MAP.get(group):          ss.append('桃花')
-            if zhi == YIMA_MAP.get(group):             ss.append('驿马')
-            if zhi == HUAGAI_MAP.get(group):           ss.append('华盖')
-            if zhi == _jiangxing.get(group):           ss.append('将星')
-            if zhi == _jiesha.get(group):              ss.append('劫煞')
-            if zhi == _zaisha.get(group):              ss.append('灾煞')
-            if zhi == _wangshen.get(group):            ss.append('亡神')
-            if zhi == _ziwei_ss.get(group):            ss.append('紫微')
-            if zhi == _sanhelu.get(group):             ss.append('三合禄')
+        # ── 三合系：以年支/日支所属三合局为参考（紫微仅以日支）──
+        if any(zhi == TAOHUA_MAP.get(g) for g in sanhe_ref_groups):   ss.append('桃花')
+        if any(zhi == YIMA_MAP.get(g) for g in sanhe_ref_groups):     ss.append('驿马')
+        if any(zhi == HUAGAI_MAP.get(g) for g in sanhe_ref_groups):   ss.append('华盖')
+        if any(zhi == _jiangxing.get(g) for g in sanhe_ref_groups):   ss.append('将星')
+        if any(zhi == _jiesha.get(g) for g in sanhe_ref_groups):      ss.append('劫煞')
+        if any(zhi == _zaisha.get(g) for g in sanhe_ref_groups):      ss.append('灾煞')
+        if any(zhi == _wangshen.get(g) for g in sanhe_ref_groups):    ss.append('亡神')
+        if sanhe_day_group and zhi == _ziwei_ss.get(sanhe_day_group): ss.append('紫微')
+        if any(zhi == _sanhelu.get(g) for g in sanhe_ref_groups):     ss.append('三合禄')
 
         # ── 孤辰寡宿 (四正局) — keyed by year_zhi group → target zhi ──
         for sg, gz in _guchen.items():
