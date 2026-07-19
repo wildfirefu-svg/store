@@ -196,3 +196,12 @@ def test_invalid_parse_is_terminal_not_retried(tmp_path, monkeypatch):
     assert rows[0]["terminal_state"] == "invalid"
     assert env.read_events("model_call_failed") == []  # 解析失败不占网络重试额度
     assert len(env.read_events("call_attempt")) == 1   # 但成功记账一次调用
+
+
+def test_code_scope_covers_model_call_path():
+    """评审收口（6A0 CONDITIONAL_COMPLETE 项 1）：_CODE_SCOPE 必须覆盖真实模型调用路径
+    config.py / claude_api.py——provider 配置或调用代码改动必须产生 code_sha256 漂移，
+    否则 resume manifest 无法拒绝这类变更（6A0 实验期间该指纹缺失被发现）。"""
+    from benchmark.runners.run_benchmark import _CODE_SCOPE
+    assert "config.py" in _CODE_SCOPE
+    assert "claude_api.py" in _CODE_SCOPE

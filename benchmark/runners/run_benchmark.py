@@ -132,6 +132,10 @@ _CODE_SCOPE: tuple = (
     "benchmark/formatters/baziqa_prompt.py",
     "benchmark/formatters/mingli_prompt.py",
     "benchmark/formatters/leak_scan.py",
+    # 评审收口（6A0 CONDITIONAL_COMPLETE）：真实模型调用路径——provider 配置与
+    # API 客户端改动必须产生 code_sha256 漂移，否则 resume manifest 无法拒绝。
+    "config.py",
+    "claude_api.py",
 )
 
 
