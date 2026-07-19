@@ -1,0 +1,17 @@
+{
+  "run_id": "6a0-2024-001",
+  "year": 2024,
+  "status": "OK",
+  "as_of_date": "2026-07-17",
+  "per_repeat_delta_pp": [
+    -5.0,
+    -5.0,
+    -5.0
+  ],
+  "delta_dev_pp": -5.0,
+  "verdict": "ROLLBACK",
+  "call_failed": 0,
+  "pollution_flag": false,
+  "stage_scheduled": 260,
+  "stage_hard_cap": 290
+}
