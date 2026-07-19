@@ -337,8 +337,18 @@ def write_report(config: AblationConfig, case_ids: list[str]) -> dict:
             continue
         for detail in sorted(runs_dir.glob("slice_*/detail.jsonl")):   # 每切片独立目录聚合
             for line in detail.read_text(encoding="utf-8").splitlines():
-                if line.strip():
-                    rows.append(json.loads(line))
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                # 执行期修正（Task 10）：真实 runner detail 行只在 attempt_key 内携带
+                # arm/repeat_idx（smoke 实测确认），顶层缺省时以目录臂 + attempt_key[7]
+                # 归一化——否则 aggregate_delta 过滤为空集，260 次真实调用后报错。
+                row.setdefault("arm", arm)
+                if row.get("repeat_idx") is None:
+                    ak = row.get("attempt_key") or []
+                    if len(ak) >= 8:
+                        row["repeat_idx"] = ak[7]
+                rows.append(row)
     enriched_rows = load_jsonl(config.enriched_path)
     agg = aggregate_delta(rows, config.repeats)
     n_cases = len(case_ids)

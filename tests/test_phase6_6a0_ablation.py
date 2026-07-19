@@ -282,3 +282,41 @@ def test_offline_gate_passes_and_detects_leak(tmp_path):
     _write_enriched(enriched, ["c0", "c1"], leak="（正确答案：B）")
     failures = offline_gate(config)
     assert any("leak" in f or "泄漏" in f for f in failures)
+
+
+def _runner_real_row(case_id, correct, repeat_idx, arm):
+    """真实 runner detail 行形状（Task 10 smoke 实测）：arm/repeat_idx 只在 attempt_key 内。"""
+    return {
+        "case_id": case_id,
+        "correct": correct,
+        "terminal_state": "parsed",
+        "attempt_key": ["ds", PROFILE_ID, arm, "main", "deepseek", "deepseek-chat",
+                        case_id, repeat_idx, 0, "p0"],
+    }
+
+
+def test_write_report_normalizes_runner_real_rows(tmp_path, monkeypatch):
+    # 执行期修正（Task 10）：smoke 真实产物证明 runner 不写顶层 arm/repeat_idx；
+    # write_report 必须从目录臂 + attempt_key[7] 归一化，否则聚合在 260 次调用后空集报错。
+    import scripts.run_phase6_6a0_ablation as mod
+    monkeypatch.setattr(mod, "PROJECT_ROOT", tmp_path)
+    enriched = tmp_path / "enriched.jsonl"
+    _write_enriched(enriched, CASE_IDS)
+    config = fake_config(root=tmp_path, enriched_path=enriched, run_id="realrows")
+    group_a, group_b = split_ab_ba(CASE_IDS, config.seed)
+    for arm, hit in (("ctx_approved", 12), ("ctx_legacy", 10)):
+        rows = []
+        for repeat in range(3):
+            for i, cid in enumerate(group_a):
+                rows.append(_runner_real_row(cid, i < hit, repeat, arm))
+            for i, cid in enumerate(group_b):
+                rows.append(_runner_real_row(cid, i < hit, repeat, arm))
+        rows.append(_runner_real_row(group_a[0], True, -1, arm))  # smoke 行不得进主指标
+        d = tmp_path / arm / "runs" / config.run_id / "slice_main_0_group_x"
+        d.mkdir(parents=True)
+        write_jsonl(d / "detail.jsonl", rows)
+    summary = mod.write_report(config, CASE_IDS)
+    assert summary["per_repeat_delta_pp"] == [10.0, 10.0, 10.0]
+    assert summary["delta_dev_pp"] == 10.0
+    assert summary["verdict"] == "ADOPT"
+    assert (tmp_path / "docs" / "phase6" / "realrows" / "summary.json").exists()
