@@ -70,5 +70,11 @@
   "model": "deepseek-chat",
   "code_hash": "9992d8568060d1248cb0767aca20991607b3f108",
   "enriched_path": ".tmp\\phase6\\datasets\\baziqa_contest8_2024_holdout_enriched.jsonl",
-  "reproducibility_note": "请求不携带 seed；复现依赖 detail 行 raw_answer 与调用顺序"
+  "reproducibility_note": "请求不携带 seed；复现依赖 detail 行 raw_answer 与调用顺序",
+  "dataset_sha256": "3bbd28b4d424b36a1dde847dff9dbbd59ee226b85acb845a3ee51b14c4b56024",
+  "config_py_sha256": "d91a3fa750d7cd6792a68f9ceeb6b44e2e1b802c211f98c5a78046f0ed05688e",
+  "claude_api_py_sha256": "169e407940757d8e6161c4ce70ebb35a5bb05a9b46270757c9b9b17ef5751c78",
+  "code_scope_note": "切片 manifest 的 code_sha256 为实验时 6 文件 scope；config.py/claude_api.py 于评审收口补录（提交 8ca46ac 起纳入 scope）",
+  "audit_index": "audit_index.json",
+  "evidence_dir": "evidence/"
 }
