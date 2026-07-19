@@ -1496,7 +1496,10 @@ def main(argv=None):
         case_details = model_result['case_details']
         failed_cases = model_result['failed_cases']
 
-        if failed_cases and not predictions:
+        if failed_cases and not predictions and not args.profile:
+            # 执行偏离（Task 7）：Phase 6 profile 模式跳过全灭 return 2——call_failed 是
+            # 设计 §4.4.2 的合法终态（按错误计入分母），全灭 run 仍以 summary+detail 交付，
+            # 退出码 0；非 profile 旧行为不变。
             print(f"Error: all model calls failed ({len(failed_cases)} cases)")
             return 2
 
