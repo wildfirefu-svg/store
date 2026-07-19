@@ -440,7 +440,7 @@ def fake_config(**overrides) -> AblationConfig:
 1. **身份头策略 = `passthrough`**：approved_v1 身份头与 legacy_v0 前 4 行逐字节一致。理由：AB/BA 消融要求两臂唯一变量是批准字段段；若 approved 臂另换 subject ID 方案，身份呈现差异会成为第二变量。设计 §4.2.4 的"BaziQA 使用匿名化 subject ID"由数据集自身满足（`person.name` 形如"1980年广东出生女性"，已伪匿名化）。manifest 声明 `identity_strategy = "passthrough_pseudo_anonymized_dataset"`。
 2. **神煞渲染规则 = 计算器输出按输入顺序全量渲染**：设计 §4.2.1 写"神煞（批准子集）"但未枚举子集，属设计缺口；本计划不发明子集，按 `shensha[]` 输入顺序全量渲染（确定性由输入顺序保证），作为决策记录呈现。
 
-- [ ] **Step 1：提取完整 case fixture（3 个不同 person_id，含 `person` 与 `chart_input`）**
+- [x] **Step 1：提取完整 case fixture（3 个不同 person_id，含 `person` 与 `chart_input`）**
 
 先写提取脚本 `.tmp/extract_phase6_fixtures.py`：
 
@@ -479,7 +479,7 @@ python .tmp/extract_phase6_fixtures.py
 
 验收：打印 3 个互不相同的 person_id；`tests/fixtures/phase6/case_sample_{1,2,3}.json` 各含完整 `person`（姓名/性别/嵌套 birth/place）与 `chart_input`。
 
-- [ ] **Step 2：写失败测试 `tests/test_chart_context.py`（完整代码）**
+- [x] **Step 2：写失败测试 `tests/test_chart_context.py`（完整代码）**
 
 ```python
 from __future__ import annotations
@@ -611,7 +611,7 @@ def test_ziwei_section_rendered_when_present(i: int):
         assert "【紫微斗数·本命】" in rendered
 ```
 
-- [ ] **Step 3：运行确认全部失败**
+- [x] **Step 3：运行确认全部失败**
 
 ```powershell
 python -m pytest tests/test_chart_context.py -q
@@ -619,7 +619,7 @@ python -m pytest tests/test_chart_context.py -q
 
 预期：`ModuleNotFoundError: No module named 'benchmark.formatters.chart_context'`（golden 测试也不例外，因为 import 阶段即失败）。
 
-- [ ] **Step 4：实现 `benchmark/formatters/chart_context.py`（完整代码）**
+- [x] **Step 4：实现 `benchmark/formatters/chart_context.py`（完整代码）**
 
 key 路径均经真实 enriched 数据核实（`four_pillars.<year|month|day|hour>.{gan,zhi,gan_wuxing,zhi_wuxing,shi_shen_gan,shi_shen_zhi_main,cang_gan[],cang_gan_shi_shen[],nayin,kong_wang占位}`、`day_master.{gan,wuxing,yinyang,shier_changsheng}`、`da_yun[].{index,gan,zhi,start_age,end_age,shi_shen_gan,shi_shen_zhi,is_current}`、`dayun_summary.{direction,starting_age,current_pillar}`、`tai_yuan/ming_gong/shen_gong.{gan,zhi,nayin}`、`true_solar_info.{original_time,adjusted_time,adjustment_minutes,method,location_matched}`、`shensha[].{name,position,meaning}`、`branch_relations[].{type,pillars,detail}`、`wuxing_stats.{jin,mu,shui,huo,tu,missing,strongest,weakest}`、`shishen_stats.{counts,missing,missing_human}`、`nayin_wuxing.{year,month,day,hour}`、`ziwei.{basic_info,twelve_palaces,si_hua}`）：
 
@@ -877,7 +877,7 @@ def _render_ziwei(ziwei: dict) -> str:
     return "\n".join(lines)
 ```
 
-- [ ] **Step 5：生成 golden 快照并人工复核**
+- [x] **Step 5：生成 golden 快照并人工复核**
 
 ```powershell
 $env:PHASE6_UPDATE_GOLDEN="1"
@@ -891,7 +891,7 @@ Remove-Item Env:PHASE6_UPDATE_GOLDEN
 python -m pytest tests/test_chart_context.py -q
 ```
 
-- [ ] **Step 6：提交（精确路径，禁止 `git add tests/`）**
+- [x] **Step 6：提交（精确路径，禁止 `git add tests/`）**
 
 ```powershell
 git add benchmark/formatters/chart_context.py tests/test_chart_context.py tests/fixtures/phase6/case_sample_1.json tests/fixtures/phase6/case_sample_2.json tests/fixtures/phase6/case_sample_3.json tests/fixtures/phase6/approved_v1_case1.txt tests/fixtures/phase6/approved_v1_case2.txt tests/fixtures/phase6/approved_v1_case3.txt tests/fixtures/phase6/legacy_v0_case1.txt
@@ -904,7 +904,7 @@ git commit -m "feat(phase6): 6A0 已批准上下文渲染器（schema 版本化 
 
 **目的**：落地设计 §4.2.4——硬失败三类（答案元数据、选项块外额外暴露正确选项、历史评测结果），明确豁免正常 A/B/C/D 选项块与身份字段。纯函数，供编排器离线 gate 与 runner 运行期抽查共用。
 
-- [ ] **Step 1：写失败测试 `tests/test_leak_scan.py`（完整代码）**
+- [x] **Step 1：写失败测试 `tests/test_leak_scan.py`（完整代码）**
 
 ```python
 from __future__ import annotations
@@ -964,9 +964,9 @@ def test_identity_fields_exempt():
     assert scan_prompt_for_leaks(prompt, case) == []
 ```
 
-- [ ] **Step 2：运行确认失败** `python -m pytest tests/test_leak_scan.py -q` → `ModuleNotFoundError`。
+- [x] **Step 2：运行确认失败** `python -m pytest tests/test_leak_scan.py -q` → `ModuleNotFoundError`。
 
-- [ ] **Step 3：实现 `benchmark/formatters/leak_scan.py`（完整代码）**
+- [x] **Step 3：实现 `benchmark/formatters/leak_scan.py`（完整代码）**
 
 ```python
 """防泄漏分级扫描（设计 §4.2.4）。
@@ -1063,9 +1063,9 @@ def _options_block_span(prompt: str, options: list) -> tuple[int, int] | None:
 
 误报纪律：选项块外重复出现正确选项文本一律保守判硬失败；确属自然文本误报时人工复核记录，不自动豁免、不改扫描器放行。
 
-- [ ] **Step 4：运行确认全绿** `python -m pytest tests/test_leak_scan.py -q`
+- [x] **Step 4：运行确认全绿** `python -m pytest tests/test_leak_scan.py -q`
 
-- [ ] **Step 5：提交（精确路径）**
+- [x] **Step 5：提交（精确路径）**
 
 ```powershell
 git add benchmark/formatters/leak_scan.py tests/test_leak_scan.py
@@ -1080,7 +1080,7 @@ git commit -m "feat(phase6): 防泄漏分级扫描（三类硬失败 + 选项块
 
 **已知易变字段纪律（写入报告）**：`da_yun[].is_current` 与 `dayun_summary.current_pillar` 随运行日期漂移；enrichment 产物对同一运行日确定，跨日再生成时这些字段与文件 SHA-256 可能变化，属预期。**配对实验两臂必须共用同一 enriched 文件与 manifest 条目，禁止两臂各自生成。**
 
-- [ ] **Step 1：写失败测试 `tests/test_enrich_phase6_chart_input.py`（完整代码）**
+- [x] **Step 1：写失败测试 `tests/test_enrich_phase6_chart_input.py`（完整代码）**
 
 ```python
 from __future__ import annotations
@@ -1199,9 +1199,9 @@ def test_strip_denylisted():
     assert enrich6.strip_denylisted(obj) == {"a": {"b": [{"c": 3}]}}
 ```
 
-- [ ] **Step 2：运行确认失败** `python -m pytest tests/test_enrich_phase6_chart_input.py -q` → `ModuleNotFoundError`。
+- [x] **Step 2：运行确认失败** `python -m pytest tests/test_enrich_phase6_chart_input.py -q` → `ModuleNotFoundError`。
 
-- [ ] **Step 3：实现 `scripts/enrich_phase6_chart_input.py`（完整代码）**
+- [x] **Step 3：实现 `scripts/enrich_phase6_chart_input.py`（完整代码）**
 
 ```python
 """Phase 6A0 enrichment 薄封装：固定 as_of_date、输出 .tmp/phase6/datasets/、SHA-256 manifest。
@@ -1318,9 +1318,9 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-- [ ] **Step 4：运行确认全绿** `python -m pytest tests/test_enrich_phase6_chart_input.py -q`
+- [x] **Step 4：运行确认全绿** `python -m pytest tests/test_enrich_phase6_chart_input.py -q`
 
-- [ ] **Step 5：真实 enrichment（2021/2022/2024/2025，真实计算器，无网络）**
+- [x] **Step 5：真实 enrichment（2021/2022/2024/2025，真实计算器，无网络）**
 
 ```powershell
 python scripts/enrich_phase6_chart_input.py --as-of-date 2026-07-17
@@ -1328,7 +1328,7 @@ python scripts/enrich_phase6_chart_input.py --as-of-date 2026-07-17
 
 验收：`.tmp/phase6/datasets/` 四个 enriched 文件；`.tmp/phase6/enrich_manifest.json` 覆盖率全部 `40/40`（各年度题量以实际为准）；打印 years = [2021, 2022, 2024, 2025]。
 
-- [ ] **Step 6：与已提交 2024/2025 enriched 的一致性核对（denylist 剔除后）**
+- [x] **Step 6：与已提交 2024/2025 enriched 的一致性核对（denylist 剔除后）**
 
 ```powershell
 python -c "import json,sys;sys.path.insert(0,'.');from scripts.enrich_phase6_chart_input import strip_denylisted;old=[json.loads(x) for x in open('benchmark/datasets/baziqa_contest8_2024_holdout_enriched.jsonl',encoding='utf-8')];new=[json.loads(x) for x in open('.tmp/phase6/datasets/baziqa_contest8_2024_holdout_enriched.jsonl',encoding='utf-8')];diff=[r['case_id'] for r,n in zip(old,new) if strip_denylisted(r.get('chart_input',{}).get('four_pillars',{}))!=strip_denylisted(n.get('chart_input',{}).get('four_pillars',{}))];print('four_pillars 不一致行:',diff)"
@@ -1336,7 +1336,7 @@ python -c "import json,sys;sys.path.insert(0,'.');from scripts.enrich_phase6_cha
 
 预期输出 `four_pillars 不一致行: []`；非空则说明计算器行为漂移，停下来人工复核，不得继续。`is_current`/`current_pillar` 等易变字段不在本断言内（纪律见上）。
 
-- [ ] **Step 7：提交（精确路径；`.tmp/` 产物不入 Git）**
+- [x] **Step 7：提交（精确路径；`.tmp/` 产物不入 Git）**
 
 ```powershell
 git add scripts/enrich_phase6_chart_input.py tests/test_enrich_phase6_chart_input.py
@@ -1353,7 +1353,7 @@ git commit -m "feat(phase6): enrichment 薄封装（as_of_date + SHA-256 manifes
 
 **任务边界**：本任务只交付 profiles 模块与纯函数单测；runner 接线（`--profile`、`resolve_method`、四条端到端路由测试）在 Task 6。
 
-- [ ] **Step 1：写失败测试 `tests/test_phase6_profiles.py`（完整代码）**
+- [x] **Step 1：写失败测试 `tests/test_phase6_profiles.py`（完整代码）**
 
 ```python
 from __future__ import annotations
@@ -1472,9 +1472,9 @@ def test_prompt_fingerprint_stable_and_sensitive(monkeypatch):
     assert prompt_fingerprint(p) != fp1
 ```
 
-- [ ] **Step 2：运行确认失败** `python -m pytest tests/test_phase6_profiles.py -q` → `ModuleNotFoundError`。
+- [x] **Step 2：运行确认失败** `python -m pytest tests/test_phase6_profiles.py -q` → `ModuleNotFoundError`。
 
-- [ ] **Step 3：实现 `benchmark/runners/profiles.py`（完整代码）**
+- [x] **Step 3：实现 `benchmark/runners/profiles.py`（完整代码）**
 
 ```python
 """五维评测 profile 注册表与路由（设计 §4.3）。profile 是五维唯一来源。
@@ -1615,9 +1615,9 @@ def prompt_fingerprint(profile: EvalProfile) -> str:
     return hashlib.sha256("\x00".join(parts).encode()).hexdigest()
 ```
 
-- [ ] **Step 4：运行确认全绿** `python -m pytest tests/test_phase6_profiles.py -q`
+- [x] **Step 4：运行确认全绿** `python -m pytest tests/test_phase6_profiles.py -q`
 
-- [ ] **Step 5：提交（精确路径）**
+- [x] **Step 5：提交（精确路径）**
 
 ```powershell
 git add benchmark/runners/profiles.py tests/test_phase6_profiles.py
@@ -1663,7 +1663,7 @@ git commit -m "feat(phase6): 五维 profile 注册表 + (profile,schema) 可见�
 
 ---
 
-- [ ] **Step 1：写 fetcher 失败测试 `tests/test_fetch_mingli_bench.py`（完整代码）**
+- [x] **Step 1：写 fetcher 失败测试 `tests/test_fetch_mingli_bench.py`（完整代码）**
 
 ```python
 from __future__ import annotations
@@ -1720,9 +1720,9 @@ def test_missing_source_dir_blocked(tmp_path, monkeypatch, capsys):
     assert "BLOCKED" in capsys.readouterr().out
 ```
 
-- [ ] **Step 2：运行确认失败** `python -m pytest tests/test_fetch_mingli_bench.py -q` → `ModuleNotFoundError`。
+- [x] **Step 2：运行确认失败** `python -m pytest tests/test_fetch_mingli_bench.py -q` → `ModuleNotFoundError`。
 
-- [ ] **Step 3：实现 `scripts/fetch_mingli_bench.py`（完整代码；commit 钉死 `b7433280fd86d7a7c27debbc47d0303c218f0bfd`，经 GitHub API 核实为 2026-05-09 最新）**
+- [x] **Step 3：实现 `scripts/fetch_mingli_bench.py`（完整代码；commit 钉死 `b7433280fd86d7a7c27debbc47d0303c218f0bfd`，经 GitHub API 核实为 2026-05-09 最新）**
 
 ```python
 """MingLi-Bench 数据获取前置（设计 §3.2）。
@@ -1830,7 +1830,7 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-- [ ] **Step 4：fetcher 单测全绿后，真实获取（需网络）**
+- [x] **Step 4：fetcher 单测全绿后，真实获取（需网络）**
 
 ```powershell
 python -m pytest tests/test_fetch_mingli_bench.py -q
@@ -1840,7 +1840,7 @@ python scripts/fetch_mingli_bench.py
 - 输出 `"status": "OK"`：继续 Step 5。
 - 输出 `"status": "BLOCKED"`（无网络 / 仓库不可达 / commit 不存在）：按设计 §3.2/§10 记 BLOCKED——MingLi 线全部 gate 记 BLOCKED 并写明原因，**不阻塞 BaziQA 线**；Step 5–8 标记 BLOCKED，直接进 Task 6。
 
-- [ ] **Step 5：schema 勘察（数据存在时执行；输出决定映射表与 fixture 形状）**
+- [x] **Step 5：schema 勘察（数据存在时执行；输出决定映射表与 fixture 形状）**
 
 ```powershell
 python -c "import json;d=json.load(open('data/mingli/data.json',encoding='utf-8'));r=d[0] if isinstance(d,list) else d['questions'][0];print('data keys:',sorted(r));f=json.load(open('data/mingli/fortune_api_results.json',encoding='utf-8'));k=next(iter(f)) if isinstance(f,dict) else 0;e=(f[k] if isinstance(f,dict) else f[0]);print('fortune keys:',sorted(e));b=e.get('bazi');print('bazi keys:',sorted(b) if isinstance(b,dict) else type(b).__name__);a=(((e.get('api_response') or {}).get('data') or {}).get('data') or {});print('api data keys:',sorted(a) if isinstance(a,dict) else type(a).__name__);p=(a.get('palaces') or []) if isinstance(a,dict) else [];print('palace[0]:',json.dumps(p[0],ensure_ascii=False)[:600] if p else 'NONE')"
@@ -1857,7 +1857,7 @@ python -c "import json,pathlib;f=json.load(open('data/mingli/fortune_api_results
 - 仓库含官方模板且与本计划冻结版 `mingli_official_cot_v1`（Step 8 代码）存在**实质差异**（指令结构、答案行格式、选项呈现方式任一不同）→ **停下汇报**：模板原文保存为 `tests/fixtures/phase6/mingli_official_prompt_template.txt` 供对照，作为偏离发现提交用户裁决，禁止继续后续 Step。
 - 仓库不含官方模板，或仅措辞/空白差异 → 将勘察结论（来源文件路径，或"来源：README 协议描述，仓库无官方模板文件"）写入 `mingli_official_prompt_template.txt` 头部，继续以冻结版生成 golden。
 
-- [ ] **Step 6：写归一化 / 可见性 / CoT 失败测试 `tests/test_mingli_canonical.py`（完整代码）**
+- [x] **Step 6：写归一化 / 可见性 / CoT 失败测试 `tests/test_mingli_canonical.py`（完整代码）**
 
 ```python
 from __future__ import annotations
@@ -1971,9 +1971,9 @@ def test_render_tolerates_partial_chart_input():
     assert "【神煞】" not in rendered
 ```
 
-- [ ] **Step 7：运行确认失败** `python -m pytest tests/test_mingli_canonical.py -q` → `ImportError`（`to_canonical_chart_input` / `mingli_prompt` 不存在）。
+- [x] **Step 7：运行确认失败** `python -m pytest tests/test_mingli_canonical.py -q` → `ImportError`（`to_canonical_chart_input` / `mingli_prompt` 不存在）。
 
-- [ ] **Step 8：实现 adapter `to_canonical_chart_input` 与 `benchmark/formatters/mingli_prompt.py`**
+- [x] **Step 8：实现 adapter `to_canonical_chart_input` 与 `benchmark/formatters/mingli_prompt.py`**
 
 `benchmark/runners/mingli_bench_adapter.py` 追加（`load_and_normalize` 第 164 行调用点由 `_extract_chart_input` 改为 `to_canonical_chart_input`，`_extract_chart_input` 保留不动）：
 
@@ -2067,7 +2067,7 @@ def format_official_cot_prompt(case: dict, chart_context_text: str) -> str:
     ])
 ```
 
-- [ ] **Step 9：生成 golden 并复核**
+- [x] **Step 9：生成 golden 并复核**
 
 ```powershell
 $env:PHASE6_UPDATE_GOLDEN="1"
@@ -2077,11 +2077,11 @@ Remove-Item Env:PHASE6_UPDATE_GOLDEN
 
 人工 diff `mingli_prompt_golden.txt`：确认模板为冻结版 `mingli_official_cot_v1`、含 CoT 指令与"最终答案：X"格式，且勘察结论已写入 `mingli_official_prompt_template.txt` 头部。复核后 `python -m pytest tests/test_mingli_canonical.py tests/test_chart_context.py tests/test_phase6_profiles.py -q` 全绿。
 
-- [ ] **Step 10：`.gitignore` 追加外部数据目录**
+- [x] **Step 10：`.gitignore` 追加外部数据目录**
 
 在 `.gitignore` 末尾追加一行 `data/mingli/`（Read 后 Edit，不顺手改其他行）。
 
-- [ ] **Step 11：提交（精确路径）**
+- [x] **Step 11：提交（精确路径）**
 
 ```powershell
 git add scripts/fetch_mingli_bench.py tests/test_fetch_mingli_bench.py benchmark/runners/mingli_bench_adapter.py benchmark/formatters/mingli_prompt.py tests/test_mingli_canonical.py tests/test_chart_context.py tests/fixtures/phase6/mingli_fortune_sample.json tests/fixtures/phase6/mingli_official_prompt_template.txt tests/fixtures/phase6/mingli_prompt_golden.txt .gitignore
@@ -2108,7 +2108,7 @@ git commit -m "feat(phase6): MingLi 数据前置(钉死 commit) + canonical 归�
 
 **Task 6 增补（2026-07-18 用户裁决 1B 配套）**：runner 接线必须在 `assert_visibility` 失败（`visibility_gate(...) == "BLOCKED_PRECONDITION"`）时于**任何模型调用之前**短路；`test_phase6_runner_routing.py` 必须包含零调用测试——XJZ profile 可见性失败后，断言模型 runner 调用次数为 0（该要求原列于 Task 5，因 runner 生产锚点在 Task 6 而移交）。
 
-- [ ] **Step 0：测试设施增补（`tests/phase6_helpers.py`，精确替换/追加）**
+- [x] **Step 0：测试设施增补（`tests/phase6_helpers.py`，精确替换/追加）**
 
 替换 `RunnerEnv.__init__` 与 `_fake_call`，追加 `read_summary`：
 
@@ -2149,7 +2149,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from benchmark.runners.run_benchmark import main  # noqa: F401
 ```
 
-- [ ] **Step 1：写失败测试 A `tests/test_phase6_resume.py`（完整代码）**
+- [x] **Step 1：写失败测试 A `tests/test_phase6_resume.py`（完整代码）**
 
 ```python
 from __future__ import annotations
@@ -2352,7 +2352,7 @@ def test_invalid_parse_is_terminal_not_retried(tmp_path, monkeypatch):
     assert len(env.read_events("call_attempt")) == 1   # 但成功记账一次调用
 ```
 
-- [ ] **Step 2：写失败测试 B `tests/test_phase6_runner_routing.py`（完整代码）**
+- [x] **Step 2：写失败测试 B `tests/test_phase6_runner_routing.py`（完整代码）**
 
 ```python
 from __future__ import annotations
@@ -2460,7 +2460,7 @@ def test_method_profile_conflict_exit_2(tmp_path, monkeypatch):
     assert exc.value.code == 2
 ```
 
-- [ ] **Step 3：运行确认失败**
+- [x] **Step 3：运行确认失败**
 
 ```powershell
 python -m pytest tests/test_phase6_resume.py tests/test_phase6_runner_routing.py -q
@@ -2468,7 +2468,7 @@ python -m pytest tests/test_phase6_resume.py tests/test_phase6_runner_routing.py
 
 预期：`ImportError`（`build_attempt_key` 等不存在）/ 路由断言失败（`--profile` 未实现）。
 
-- [ ] **Step 4：实现 runner 修改（逐处，行号为当前文件锚点）**
+- [x] **Step 4：实现 runner 修改（逐处，行号为当前文件锚点）**
 
 **4a. `benchmark/formatters/baziqa_prompt.py`**：`format_direct_choice_prompt` 与 `format_multi_turn_context` 增加可选参数 `chart_context_text=None`，`## 命主信息` 段改用 `chart_context_text or format_birth_line(case)`；其余不动。
 
@@ -2918,7 +2918,7 @@ def _write_phase6_summary(args, status):
         json.dump(summary, f, ensure_ascii=False, indent=2)
 ```
 
-- [ ] **Step 5：调用方审计（截断守卫影响面）——审计已执行，结论：0 个调用方需要适配（v4 修正）**
+- [x] **Step 5：调用方审计（截断守卫影响面）——审计已执行，结论：0 个调用方需要适配（v4 修正）**
 
 审计命令（已跑）：
 
@@ -2952,7 +2952,7 @@ git grep -n -e "case-details-jsonl" -e "_prepare_jsonl" -e "run_benchmark.py" --
 
 执行代理核对义务：实现 4e 后，用 `git grep -n -- "--profile" -- "scripts/*.py" "scripts/*.ps1"` 再确认一次无旧调用方传 `--profile`；若有新增调用方传入，再评估是否受影响。
 
-- [ ] **Step 6：全绿 + 回归**
+- [x] **Step 6：全绿 + 回归**
 
 ```powershell
 python -m pytest tests/test_phase6_resume.py tests/test_phase6_runner_routing.py -q
@@ -2961,7 +2961,7 @@ python -m pytest tests/ -q -m "not e2e"
 
 全绿方进 Step 7。
 
-- [ ] **Step 7：提交（精确路径；禁止 `git add -A`）**
+- [x] **Step 7：提交（精确路径；禁止 `git add -A`）**
 
 ```powershell
 git add benchmark/runners/run_benchmark.py benchmark/formatters/baziqa_prompt.py tests/test_phase6_resume.py tests/test_phase6_runner_routing.py tests/phase6_helpers.py tests/run_benchmark_proxy.py
@@ -2974,7 +2974,7 @@ git commit -m "feat(phase6): runner 五维 profile 接线 + 截断守卫（无 -
 
 **目的**：设计 §4.4.2 的完整行为验证——重试上限 3 跨 resume 不重置、`call_failed` 计入分母、hard_cap 耗尽判 BLOCKED_INCOMPLETE（退出码 3）且不得进入决策。
 
-- [ ] **Step 1：写失败测试 `tests/test_phase6_retry_budget.py`（完整代码）**
+- [x] **Step 1：写失败测试 `tests/test_phase6_retry_budget.py`（完整代码）**
 
 ```python
 from __future__ import annotations
@@ -3064,22 +3064,22 @@ def test_calls_attempted_restored_across_resume(tmp_path, monkeypatch):
     assert len(env.read_detail()) == 2                 # c3 未再执行
 ```
 
-- [ ] **Step 2：运行确认失败** `python -m pytest tests/test_phase6_retry_budget.py -q`
+- [x] **Step 2：运行确认失败** `python -m pytest tests/test_phase6_retry_budget.py -q`
 
 预期：`compute_hard_cap` ImportError / 预算行为断言失败（Task 6 已给实现骨架；本任务验证并补齐缺口）。
 
-- [ ] **Step 3：补齐实现缺口**
+- [x] **Step 3：补齐实现缺口**
 
 Task 6 的 4b/4c/4e 已包含 `compute_hard_cap` 与账本主体；本步只处理 Step 2 暴露的差异（如 `_write_phase6_summary` 在 `_HardCapExhausted` 时 `calls_attempted` 计数、summary 字段）。改动必须让 Step 1 全部转绿，且不回改测试。
 
-- [ ] **Step 4：全绿 + 回归**
+- [x] **Step 4：全绿 + 回归**
 
 ```powershell
 python -m pytest tests/test_phase6_retry_budget.py tests/test_phase6_resume.py -q
 python -m pytest tests/ -q -m "not e2e"
 ```
 
-- [ ] **Step 5：提交（精确路径）**
+- [x] **Step 5：提交（精确路径）**
 
 ```powershell
 git add benchmark/runners/run_benchmark.py tests/test_phase6_retry_budget.py
@@ -3092,7 +3092,7 @@ git commit -m "feat(phase6): 重试账本跨 resume + 双列预算 BLOCKED_INCOM
 
 **目的**：设计 §2.1/§4.5——MingLi 以 trimmed mean 为主指标、BaziQA 辅助。6A0 只交付统计函数与报告机制；MingLi 官方截尾比例待 Task 5 勘察核实，未核实前报告中 trimmed mean 仅作描述性附列、不入任何 gate。
 
-- [ ] **Step 1：写失败测试 `tests/test_trimmed_mean.py`（完整代码）**
+- [x] **Step 1：写失败测试 `tests/test_trimmed_mean.py`（完整代码）**
 
 ```python
 from __future__ import annotations
@@ -3142,9 +3142,9 @@ def test_report_omits_trimmed_mean_when_absent():
     assert "截尾均值" not in generate_markdown_report(result)
 ```
 
-- [ ] **Step 2：运行确认失败** `python -m pytest tests/test_trimmed_mean.py -q` → `ImportError`。
+- [x] **Step 2：运行确认失败** `python -m pytest tests/test_trimmed_mean.py -q` → `ImportError`。
 
-- [ ] **Step 3：实现**
+- [x] **Step 3：实现**
 
 `benchmark/reports/accuracy_stats.py` 追加：
 
@@ -3160,14 +3160,14 @@ def trimmed_mean(values: Iterable[float], proportion: float = 0.1) -> float:
 
 `benchmark/reports/generate_report.py`：`generate_markdown_report` 的"本报告生成信息"表中，当 `result.get("accuracy_trimmed_mean") is not None` 时追加一行 `| 截尾均值 | {result["accuracy_trimmed_mean"]} |`（Read 后 Edit，只动该表区域）。
 
-- [ ] **Step 4：全绿 + 回归**
+- [x] **Step 4：全绿 + 回归**
 
 ```powershell
 python -m pytest tests/test_trimmed_mean.py -q
 python -m pytest tests/ -q -m "not e2e"
 ```
 
-- [ ] **Step 5：提交（精确路径）**
+- [x] **Step 5：提交（精确路径）**
 
 ```powershell
 git add benchmark/reports/accuracy_stats.py benchmark/reports/generate_report.py tests/test_trimmed_mean.py
@@ -3184,7 +3184,7 @@ git commit -m "feat(phase6): trimmed_mean 统计与报告附列（描述性，�
 
 **成本口径（如实声明）**：模型 API 只回文本、不返回 token usage；报告的"token 与成本对比"以**各臂 prompt 字符数 + 调用次数**为代理指标并明确标注，不伪造 token 数。`call_failed` 计数单列，超过题目数 5% 标注"环境污染"（设计 §12.6）。
 
-- [ ] **Step 1：写失败测试 `tests/test_phase6_6a0_ablation.py`（完整代码）**
+- [x] **Step 1：写失败测试 `tests/test_phase6_6a0_ablation.py`（完整代码）**
 
 ```python
 from __future__ import annotations
@@ -3473,9 +3473,9 @@ def test_offline_gate_passes_and_detects_leak(tmp_path):
     assert any("leak" in f or "泄漏" in f for f in failures)
 ```
 
-- [ ] **Step 2：运行确认失败** `python -m pytest tests/test_phase6_6a0_ablation.py -q` → `ModuleNotFoundError`。
+- [x] **Step 2：运行确认失败** `python -m pytest tests/test_phase6_6a0_ablation.py -q` → `ModuleNotFoundError`。
 
-- [ ] **Step 3：实现 `scripts/run_phase6_6a0_ablation.py`（完整代码）**
+- [x] **Step 3：实现 `scripts/run_phase6_6a0_ablation.py`（完整代码）**
 
 ```python
 """Phase 6 6A0 编排器：离线 gate、AB/BA 12 切片调度、双列预算接线、Δ 与判定、报告。
@@ -3908,14 +3908,14 @@ if __name__ == "__main__":
 
 注意 `run_ablation(config, schedule, slice_runner=None)` 的边界契约：schedule 由**调用方**构建（`main()` 在 `--smoke-only` 时先过滤再传入），函数内不得重建——否则 smoke 过滤失效（阻 1）；`slice_runner` 缺省时内部绑定 config 走 `run_slice` 子进程，测试以 RunnerSpy 替换；阶段预算由 `BudgetLedger`（`config.root/budget/<run_id>.jsonl`）**按 slice_id 幂等记账**（resume 覆盖旧值不重复累计），溢出即 `FAILED/stage budget overflow`（阻 3）。
 
-- [ ] **Step 4：运行确认全绿 + 回归**
+- [x] **Step 4：运行确认全绿 + 回归**
 
 ```powershell
 python -m pytest tests/test_phase6_6a0_ablation.py -q
 python -m pytest tests/ -q -m "not e2e"
 ```
 
-- [ ] **Step 5：提交（精确路径）**
+- [x] **Step 5：提交（精确路径）**
 
 ```powershell
 git add scripts/run_phase6_6a0_ablation.py tests/test_phase6_6a0_ablation.py
@@ -3928,7 +3928,7 @@ git commit -m "feat(phase6): 6A0 编排器（AB/BA 12 切片 + 离线 gate + Δ 
 
 **前置核对（全部满足才执行）**：Task 1–9 已合入且 `python -m pytest tests/ -q -m "not e2e"` 全绿；`.env` 含 `DEEPSEEK_API_KEY`；Task 3 enrichment 产物与 manifest 在位（覆盖率 40/40 × 4 年度）；工作区干净（`git status`）。
 
-- [ ] **Step 1：离线 gate + smoke canary（20 次调用）**
+- [x] **Step 1：离线 gate + smoke canary（20 次调用）**
 
 ```powershell
 python scripts/run_phase6_6a0_ablation.py --run-id 6a0-2024-001 --year 2024 --smoke-only --yes
@@ -3936,7 +3936,7 @@ python scripts/run_phase6_6a0_ablation.py --run-id 6a0-2024-001 --year 2024 --sm
 
 预期：离线 gate 通过（无 `OFFLINE_GATE_FAILED`）；smoke 切片退出码 0，输出 `"status": "SMOKE_OK"`。任何失败：停下排查，不得直接进全量。
 
-- [ ] **Step 2：全量执行（scheduled 260 / hard_cap 290）**
+- [x] **Step 2：全量执行（scheduled 260 / hard_cap 290）**
 
 ```powershell
 python scripts/run_phase6_6a0_ablation.py --run-id 6a0-2024-001 --year 2024 --yes
@@ -3944,7 +3944,7 @@ python scripts/run_phase6_6a0_ablation.py --run-id 6a0-2024-001 --year 2024 --ye
 
 预期时长约 1–2 小时（260 次调用 ×（模型延迟 + 1s sleep），重试从 30 次储备支出）。中断可直接重跑同一命令（`--resume` 默认开，切片级续跑）。
 
-- [ ] **Step 3：读取结果（由运行生成，禁止伪造）**
+- [x] **Step 3：读取结果（由运行生成，禁止伪造）**
 
 产物：`docs/phase6/6a0-2024-001/{report.md, summary.json, manifest.json}`。判读：
 
@@ -3953,7 +3953,7 @@ python scripts/run_phase6_6a0_ablation.py --run-id 6a0-2024-001 --year 2024 --ye
 - `verdict = ADOPT_FOUNDATION`（0 ≤ Δ < +2pp）：默认采用（地基性质），报告中标注。
 - `verdict = ROLLBACK`（Δ < 0）：回退记录，**6A1 沿用旧上下文 legacy_v0 继续**（设计 §10 阻塞规则：增强臂失败回退上一稳定基线，不整体停工）。
 
-- [ ] **Step 4：结果归档提交（精确路径）**
+- [x] **Step 4：结果归档提交（精确路径）**
 
 ```powershell
 git add docs/phase6/6a0-2024-001/report.md docs/phase6/6a0-2024-001/summary.json docs/phase6/6a0-2024-001/manifest.json
@@ -4007,3 +4007,34 @@ git commit -m "docs(phase6): 6A0 2024 dev gate 运行结果（verdict=<实际判
 5. **设计缺口处理**：神煞"批准子集"未枚举、MingLi 官方截尾比例未核实、`si_hua` 结构未定——按计划内决策记录呈现，不发明、不静默放宽。
 6. **状态纪律**：本计划已为 **APPROVED**（v7，第七轮评审 CONDITIONAL_APPROVAL 的唯一附带项已补齐并经评审授权直接批准），允许进入 Task 1 执行；执行中偏离计划的每一处都要在任务提交的 commit 信息中说明理由。
 7. **密钥纪律**：`DEEPSEEK_API_KEY` 只读 `.env`；日志/报告/manifest 中不得出现密钥。
+
+
+---
+
+## 执行完成与评审收口记录（2026-07-19 回填）
+
+**执行状态：Task 1–10 全部完成（61/61 Step 勾选回填）**，每任务完成后均经用户审核通过。
+
+### 真实实验结果（6a0-2024-001）
+
+- smoke 20 次调用通过；全量 260/260 次调用完成，`call_failed=0`，重试 0 消耗，阶段账本恰好 260/290。
+- 结果：`ctx_approved` 37.5%（15/40 ×3）vs `ctx_legacy` 42.5%（17/40 ×3），**Δ_dev = −5.0pp → ROLLBACK**。
+- 按设计 §10：6A1 沿用 `legacy_v0` 上下文继续，不整体停工。
+- 产物：`docs/phase6/6a0-2024-001/{report.md, summary.json, manifest.json, audit_index.json, evidence/}`。
+
+### 评审判定 CONDITIONAL_COMPLETE → 四项收口
+
+| # | 问题 | 收口 | 提交 |
+| --- | --- | --- | --- |
+| 1 | 干净 checkout 无法 import claude_api（tracked config.py 缺 provider 变量）；`_CODE_SCOPE` 不含模型调用路径 | config.py provider 修复独立提交（与实验时工作区逐字节一致）；`_CODE_SCOPE` 纳入 config.py/claude_api.py + membership 回归测试；归档 manifest 补记两文件 SHA-256 | `7c2707f`、`8ca46ac`、`934402f` |
+| 2 | 原始证据只在 `.tmp` | 65 个证据文件（13 切片 detail/events/manifest/case_ids/summary + 预算账本）持久化到 `evidence/`，逐文件 SHA-256 校验；`audit_index.json` 从原始行独立复算两臂每轮正确数与 Δ（与归档一致）；`scripts/build_phase6_audit_index.py` 可复用 | `934402f` |
+| 3 | E2E 门禁未过（Chromium 未装，7 errors） | `playwright install chromium` 后 E2E **7 passed**；全量 `python -m pytest tests/ -q`：**973 passed, 7 skipped, 0 errors**（113s） | 本回填提交 |
+| 4 | 计划勾选未回填 | 61/61 Step 已勾选；本节记录收口过程 | 本回填提交 |
+
+### 执行期修正累计登记（计划外偏差，均已写入对应提交信息）
+
+1. Task 9：`offline_gate` 删除计划里未使用的局部变量 `profile`。
+2. Task 10：`write_report` 归一化真实 runner detail 行（`arm`/`repeat_idx` 只在 `attempt_key` 内，计划假设的顶层字段不存在；smoke 拦截，避免 260 次调用后聚合空集报错）→ `9992d85`。
+3. 收口 1b：`_CODE_SCOPE` 由 6 文件扩为 8 文件，已完成运行的切片 manifest 仍为旧指纹（新 run 起用新指纹）→ `8ca46ac`。
+
+**最终验收状态：功能实现完成；专项与非 E2E 测试通过；真实 6A0 实验完成；ROLLBACK 结论有效；可复现性硬化完成；最终全量门禁通过（973 passed / 7 skipped / 0 errors，含 E2E 7 条）。**
