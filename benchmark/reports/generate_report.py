@@ -148,6 +148,9 @@ def generate_markdown_report(result):
     lines.append(f"| 推理协议 | {_md_cell(reasoning_protocol)} |")
     lines.append(f"| 依据覆盖 | {round(evidence_score * 100)}% |")
     lines.append(f"| 安全边界 | {'已启用' if safety_score is not None else '未知'} |")
+    if result.get("accuracy_trimmed_mean") is not None:
+        # Phase 6（设计 §4.5）：trimmed mean 描述性附列，不入任何 gate
+        lines.append(f"| 截尾均值 | {result['accuracy_trimmed_mean']} |")
     lines.append(f"| 生成时间 | {result.get('run_date', '')} |")
     lines.append("")
     lines.append("---")
