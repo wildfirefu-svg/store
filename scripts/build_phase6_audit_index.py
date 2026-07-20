@@ -22,10 +22,12 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
+ARCHIVE_ROOT = PROJECT_ROOT / "docs" / "phase6"        # v6 阻断 2：归档根目录
 
 SLICE_FILES = ("detail.jsonl", "detail.events.jsonl", "detail.manifest.json",
                "case_ids.json", "summary.json")
 EVIDENCE_NOTE = "config.py/claude_api.py 为实验时工作区内容（与提交 7c2707f 一致，实验后未改）"
+TERMINAL_OK = frozenset(("parsed", "invalid", "unresolved", "judge_unresolved", "call_failed"))
 
 
 def sha256_file(path: Path) -> str:
@@ -43,12 +45,13 @@ def _read_jsonl(path: Path) -> list[dict]:
             if line.strip()]
 
 
-def collect_run(root: Path, run_id: str, year: int) -> dict:
+def collect_run(root: Path, run_id: str, year: int,
+                arms: tuple = ("ctx_approved", "ctx_legacy")) -> dict:
     """汇总运行实况：切片文件、detail 行、事件、预算账本、数据集。"""
     slices = []
     detail_rows: list[dict] = []
     events: list[dict] = []
-    for arm in ("ctx_approved", "ctx_legacy"):
+    for arm in arms:
         runs_dir = root / arm / "runs" / run_id
         if not runs_dir.exists():
             continue
@@ -69,10 +72,12 @@ def collect_run(root: Path, run_id: str, year: int) -> dict:
             "ledger_path": ledger_path, "dataset_path": dataset_path}
 
 
-def recompute_accuracy(detail_rows: list[dict], repeats: int = 3) -> dict:
+def recompute_accuracy(detail_rows: list[dict],
+                       arms: tuple = ("ctx_approved", "ctx_legacy"),
+                       repeats: int = 3) -> dict:
     """从原始 detail 行独立复算两臂每轮正确数/准确率与 Δ（attempt_key[2]=臂, [7]=repeat）。"""
     per_arm: dict = {}
-    for arm in ("ctx_approved", "ctx_legacy"):
+    for arm in arms:
         per_repeat = []
         for rep in range(repeats):
             sel = [r for r in detail_rows
@@ -82,11 +87,140 @@ def recompute_accuracy(detail_rows: list[dict], repeats: int = 3) -> dict:
             per_repeat.append({"repeat": rep, "correct": correct, "total": len(sel),
                                "accuracy": round(correct / len(sel), 4) if sel else None})
         per_arm[arm] = per_repeat
-    deltas = [round((per_arm["ctx_approved"][r]["accuracy"]
-                     - per_arm["ctx_legacy"][r]["accuracy"]) * 100, 2)
+    deltas = [round((per_arm[arms[0]][r]["accuracy"]
+                     - per_arm[arms[1]][r]["accuracy"]) * 100, 2)
               for r in range(repeats)]
     return {"per_arm": per_arm, "per_repeat_delta_pp": deltas,
             "delta_dev_pp": round(sum(deltas) / len(deltas), 2)}
+
+
+def _audit_validate_rows(detail_rows: list, expected_case_ids: list, repeats: int) -> None:
+    """v4 高优 3 + v5 高优 6：审计脚本自己的最小完整性验证（不导入生产函数）。
+    v5 新增：拒绝重复逻辑键 (case, repeat, sample_idx)（不只拒完全相同 attempt key）+
+    断言精确行数 sample==600 / anchor==120 + 验证 sample stage==main、anchor stage==anchor。"""
+    expected = set(expected_case_ids)
+    seen_sample, seen_anchor, seen_keys = set(), set(), set()
+    sample_count, anchor_count = 0, 0
+    for r in detail_rows:
+        ak = r.get("attempt_key") or [None] * 10
+        key = tuple(ak)
+        if key in seen_keys:
+            raise ValueError(f"审计完整性：重复 attempt key {key}")
+        seen_keys.add(key)
+        cid = r.get("case_id")
+        if cid not in expected:
+            raise ValueError(f"审计完整性：预期外 case {cid}")
+        arm = ak[2]
+        stage = ak[3]                  # v5: ak[3]=attempt_stage
+        rep = ak[7]
+        idx = ak[8]
+        terminal = r.get("terminal_state")
+        if terminal not in TERMINAL_OK:
+            raise ValueError(f"审计完整性：终态非法 {terminal}（{cid}）")
+        if arm == "vote5_samples":
+            if stage != "main":
+                raise ValueError(f"审计完整性：sample stage 非 main：{stage}（{cid}）")
+            if idx not in {0, 1, 2, 3, 4}:
+                raise ValueError(f"审计完整性：sample_idx 越界 {idx}（{cid}）")
+            logical = (cid, rep, idx)
+            if logical in seen_sample:
+                raise ValueError(f"审计完整性：重复逻辑键 {logical}（attempt key 不同）")
+            seen_sample.add(logical)
+            sample_count += 1
+        elif arm == "anchor_single0":
+            if stage != "anchor":
+                raise ValueError(f"审计完整性：anchor stage 非 anchor：{stage}（{cid}）")
+            if idx != 0:
+                raise ValueError(f"审计完整性：anchor sample_idx 非 0（{cid}）")
+            logical = (cid, rep)
+            if logical in seen_anchor:
+                raise ValueError(f"审计完整性：重复 anchor 逻辑键 {logical}")
+            seen_anchor.add(logical)
+            anchor_count += 1
+        else:
+            raise ValueError(f"审计完整性：未知 arm {arm}（{cid}）")
+    exp_sample = {(c, r, i) for c in expected for r in range(repeats) for i in range(5)}
+    exp_anchor = {(c, r) for c in expected for r in range(repeats)}
+    if seen_sample != exp_sample:
+        miss = len(exp_sample - seen_sample)
+        extra = len(seen_sample - exp_sample)
+        raise ValueError(f"审计完整性：sample 集合不匹配（缺失 {miss}，额外 {extra}）")
+    if seen_anchor != exp_anchor:
+        miss = len(exp_anchor - seen_anchor)
+        extra = len(seen_anchor - exp_anchor)
+        raise ValueError(f"审计完整性：anchor 集合不匹配（缺失 {miss}，额外 {extra}）")
+    if sample_count != len(expected) * repeats * 5:
+        raise ValueError(f"审计完整性：sample 行数 {sample_count} != {len(expected) * repeats * 5}")
+    if anchor_count != len(expected) * repeats:
+        raise ValueError(f"审计完整性：anchor 行数 {anchor_count} != {len(expected) * repeats}")
+
+
+def recompute_vote_accuracy(detail_rows: list, expected_case_ids: list, repeats: int = 3) -> dict:
+    """v3 阻断 1：题级投票复算 + 独立完整性检查（缺题/缺 anchor/重复 -> ValueError，不静默缩小分母）。
+    v4 高优 3：完整性检查改用审计脚本自己的 _audit_validate_rows，不再导入生产 strict_rows_complete。
+
+    按 (case, repeat) 聚合 5 样本 strict_majority，派生 vote5 / single@T(sample_idx=0) /
+    anchor 三臂准确率与 Δ1/Δ2、unresolved。与 recompute_accuracy 的区别：后者按行统计
+    （仅适用单样本臂），本函数按题级投票。"""
+    _audit_validate_rows(detail_rows, expected_case_ids, repeats)
+    from benchmark.runners.self_consistency import strict_majority
+    acc = {"vote5": [], "single_t": [], "anchor": []}
+    unresolved = 0
+    for rep in range(repeats):
+        cases = sorted(expected_case_ids)
+        n_v5 = n_st = n_an = 0
+        for cid in cases:
+            srows = sorted((r for r in detail_rows
+                            if r["case_id"] == cid
+                            and (r.get("attempt_key") or [None] * 10)[2] == "vote5_samples"
+                            and (r.get("attempt_key") or [None] * 10)[7] == rep),
+                           key=lambda r: (r.get("attempt_key") or [None] * 10)[8])
+            arow = next((r for r in detail_rows
+                         if r["case_id"] == cid
+                         and (r.get("attempt_key") or [None] * 10)[2] == "anchor_single0"
+                         and (r.get("attempt_key") or [None] * 10)[7] == rep))
+            votes = [r["predicted_answer"] if r.get("terminal_state") == "parsed" else None
+                     for r in srows]
+            v5 = strict_majority(votes)
+            if v5 is None:
+                unresolved += 1
+            exp = srows[0]["expected_answer"]
+            n_v5 += (v5 is not None and v5 == exp)
+            n_st += (srows[0].get("terminal_state") == "parsed"
+                     and srows[0]["predicted_answer"] == exp)
+            n_an += bool(arow and arow.get("terminal_state") == "parsed"
+                         and arow["predicted_answer"] == exp)
+        n = len(cases) or 1
+        acc["vote5"].append(round(n_v5 / n, 4))
+        acc["single_t"].append(round(n_st / n, 4))
+        acc["anchor"].append(round(n_an / n, 4))
+    d1 = [round((a - b) * 100, 2) for a, b in zip(acc["vote5"], acc["single_t"])]
+    d2 = [round((a - b) * 100, 2) for a, b in zip(acc["vote5"], acc["anchor"])]
+    total = len(expected_case_ids) * repeats
+    return {"acc": acc, "per_repeat_delta1": d1, "per_repeat_delta2": d2,
+            "delta1_pp": round(sum(d1) / repeats, 2),
+            "delta2_pp": round(sum(d2) / repeats, 2),
+            "unresolved": unresolved,
+            "unresolved_rate": round(unresolved / max(total, 1), 4)}
+
+
+def check_summary_match(recomputed: dict, summary_path) -> bool:
+    """v3 阻断 1：审计复算与归档 summary.json 自动比对。不一致返回 False（CLI 退出非零）。"""
+    import json as _json
+    from pathlib import Path as _Path
+    s = _json.loads(_Path(summary_path).read_text(encoding="utf-8"))
+    if abs(float(s.get("delta1_pp", 0)) - recomputed["delta1_pp"]) > 0.01:
+        return False
+    if abs(float(s.get("delta2_pp", 0)) - recomputed["delta2_pp"]) > 0.01:
+        return False
+    for arm in ("vote5", "single_t", "anchor"):
+        sa = s.get("acc", {}).get(arm, [])
+        ra = recomputed["acc"][arm]
+        if len(sa) != len(ra) or any(abs(a - b) > 0.001 for a, b in zip(sa, ra)):
+            return False
+    if abs(float(s.get("unresolved_rate", 0)) - recomputed["unresolved_rate"]) > 0.001:
+        return False
+    return True
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -94,14 +228,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--year", type=int, default=2024)
     parser.add_argument("--root", type=Path, default=Path(".tmp/phase6"))
+    parser.add_argument("--arms", default="ctx_approved,ctx_legacy")
+    parser.add_argument("--mode", choices=["row", "vote"], default="row")
+    parser.add_argument("--skip-summary-check", action="store_true",
+                        help="仅诊断用：--mode vote 时跳过与归档 summary.json 的自动比对（正式命令禁止）")
     args = parser.parse_args(argv)
 
-    run = collect_run(args.root, args.run_id, args.year)
+    arms = tuple(args.arms.split(","))
+    run = collect_run(args.root, args.run_id, args.year, arms=arms)
     if not run["slices"]:
         print(f"未找到运行切片: {args.root}/*/runs/{args.run_id}/slice_*")
         return 1
 
-    out_dir = PROJECT_ROOT / "docs" / "phase6" / args.run_id
+    out_dir = ARCHIVE_ROOT / args.run_id
     evidence_dir = out_dir / "evidence"
     # 1) 持久化原始证据并校验复制完整性
     evidence_files = []
@@ -128,13 +267,34 @@ def main(argv: list[str] | None = None) -> int:
     dataset_rows = len(_read_jsonl(run["dataset_path"])) if run["dataset_path"].exists() else 0
 
     # 2) 独立复算准确率与事件统计
-    acc = recompute_accuracy(run["detail_rows"])
+    summary_check = None
+    if args.mode == "vote":
+        # 决策 9 / v3 阻断 1：题级投票复算（非按行）；expected_case_ids 取 dataset 唯一 case ID
+        expected_case_ids = sorted({str(r.get("case_id"))
+                                    for r in _read_jsonl(run["dataset_path"])})
+        acc = recompute_vote_accuracy(run["detail_rows"], expected_case_ids, repeats=3)
+        # v4 阻断 1：--mode vote 默认必须与同目录 summary.json 比对，不一致或缺失 exit 2
+        summary_path = out_dir / "summary.json"
+        summary_status = "SKIPPED" if args.skip_summary_check else "FAIL"
+        summary_sha = None
+        if not args.skip_summary_check:
+            if summary_path.exists():
+                summary_sha = sha256_file(summary_path)
+                if check_summary_match(acc, summary_path):
+                    summary_status = "PASS"
+        summary_check = {"status": summary_status, "summary_sha256": summary_sha,
+                         "recomputed": {"delta1_pp": acc["delta1_pp"],
+                                        "delta2_pp": acc["delta2_pp"]}}
+    else:
+        acc = recompute_accuracy(run["detail_rows"], arms=arms, repeats=3)
     terminal = Counter(r.get("terminal_state") for r in run["detail_rows"])
     event_kinds = Counter(e.get("kind") for e in run["events"])
 
     # 3) 审计索引
     index = {
         "run_id": args.run_id, "year": args.year,
+        "mode": args.mode,
+        "dataset_sha256": dataset_sha,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "generator": "scripts/build_phase6_audit_index.py",
         "enriched_dataset": {"path": str(run["dataset_path"]), "sha256": dataset_sha,
@@ -154,6 +314,8 @@ def main(argv: list[str] | None = None) -> int:
         },
         "accuracy_recomputed": acc,
     }
+    if summary_check is not None:
+        index["summary_check"] = summary_check
     (out_dir / "audit_index.json").write_text(
         json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -172,9 +334,16 @@ def main(argv: list[str] | None = None) -> int:
     })
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2),
                              encoding="utf-8")
+    if args.mode == "vote" and not args.skip_summary_check:
+        # v4 阻断 1：审计索引已落盘（含 FAIL 状态），但不一致/缺失必须 exit 2
+        if summary_check["status"] != "PASS":
+            print(json.dumps({"status": "SUMMARY_MISMATCH",
+                              "summary_check": summary_check}, ensure_ascii=False))
+            return 2
     print(json.dumps({"status": "OK", "slices": len(run["slices"]),
                       "evidence_files": len(evidence_files),
-                      "delta_dev_pp": acc["delta_dev_pp"]}, ensure_ascii=False))
+                      "delta_dev_pp": acc.get("delta_dev_pp", acc.get("delta1_pp"))},
+                     ensure_ascii=False))
     return 0
 
 
