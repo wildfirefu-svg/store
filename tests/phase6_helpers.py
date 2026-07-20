@@ -108,6 +108,7 @@ class RunnerEnv:
         write_jsonl(self.dataset, [factory(f"c{i}") for i in range(n_cases)])
         self._script: list[tuple[str, object]] = []
         self.received: list = []          # 每次模型调用的 messages，按调用顺序
+        self.received_kw: list = []       # 每次模型调用的 **kw（temperature 等），按调用顺序
         # 测试副作用隔离（执行偏离，见模块 docstring）
         self.monkeypatch.setattr("data_store.save_benchmark_run", lambda **kw: None)
         self.monkeypatch.setattr(
@@ -132,8 +133,13 @@ class RunnerEnv:
         """先 N 次成功返回，再抛非重试异常模拟进程崩溃（calls_attempted 恢复测试用）。"""
         self._script = [("ok", text)] * successes + [("crash", RuntimeError("unexpected crash"))]
 
+    def model_sequence(self, texts: list) -> None:
+        """按序返回不同响应（emit_samples 逐样本差异化用）；耗尽后恒返回 "A"。"""
+        self._script = [("ok", t) for t in texts] + [("ok", "A")] * 1000
+
     def _fake_call(self, messages, **kw):
         self.received.append(messages)
+        self.received_kw.append(kw)
         action, payload = self._script.pop(0)
         if action in ("fail", "crash"):
             raise payload

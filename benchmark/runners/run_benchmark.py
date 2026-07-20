@@ -120,9 +120,10 @@ def resolve_method(profile_name, explicit_method):
 
 RESUME_MANIFEST_FIELDS: tuple = (
     "dataset_sha256", "case_ids_sha256", "profile_id", "chart_schema_version",
-    "arm", "repeat_idx", "provider", "model",
+    "arm", "attempt_stage", "repeat_idx", "provider", "model",
     "temperature", "sample_temperature", "n_samples", "aggregate", "method",
     "prompt_template_sha256", "code_sha256", "scheduled_calls", "hard_cap",
+    "as_of_date",                              # v6 高优 7：enrichment 锚定日期
 )
 
 _CODE_SCOPE: tuple = (
@@ -178,6 +179,7 @@ def build_resume_manifest(args, profile) -> dict:
         "profile_id": profile.profile_id,
         "chart_schema_version": profile.chart_schema_version,
         "arm": args.arm or "default",
+        "attempt_stage": getattr(args, "attempt_stage", "main"),
         "repeat_idx": args.repeat_idx,
         "provider": args.provider,
         "model": args.model,
@@ -190,6 +192,7 @@ def build_resume_manifest(args, profile) -> dict:
         "code_sha256": _code_fingerprint(),
         "scheduled_calls": args.scheduled_calls,
         "hard_cap": args.hard_cap,
+        "as_of_date": getattr(args, "as_of_date", ""),       # v6 高优 7
     }
 
 
@@ -262,7 +265,8 @@ class Phase6Context:
 
     def enrich_row(self, row):
         key = self.attempt_key_for({"case_id": row.get("case_id"),
-                                    "_permutation_id": row.get("permutation_id")})
+                                    "_permutation_id": row.get("permutation_id")},
+                                   sample_idx=int(row.get("sample_idx") or 0))
         row["attempt_key"] = list(key)
         if row.get("terminal_state") in TERMINAL_STATES:
             # 调用方已显式标记终态（如可见性门禁 unresolved）：保留不重算（执行偏离）
@@ -290,7 +294,7 @@ def _mingli_data_ready() -> bool:
         os.path.exists(os.path.join("data", "mingli", "fortune_api_results.json"))
 
 
-def _attempt_with_ledger(case, call_once):
+def _attempt_with_ledger(case, call_once, sample_idx=0):
     """Phase 6 模型调用重试账本。执行偏离（Task 6 崩溃传播链修正）：
 
     - ctx 为 None（非 profile 运行）：直接调用，由调用方保留旧包装行为（零行为变化）；
@@ -303,7 +307,7 @@ def _attempt_with_ledger(case, call_once):
     ctx = _PHASE6_CTX
     if ctx is None:
         return call_once()
-    key = ctx.attempt_key_for(case or {})
+    key = ctx.attempt_key_for(case or {}, sample_idx=sample_idx)
     while True:
         if ctx.retry_counts.get(key, 0) >= 3:
             raise RuntimeError(f"model_call_failed: retry budget exhausted ({key[6]})")
@@ -537,7 +541,7 @@ def _call_once_messages(messages, provider, model, case=None, temperature=None, 
 
 def _call_with_optional_ledger(messages, provider, model, case, temperature, timeout,
                                rag_k, retrieval_mode, option_evidence_k,
-                               suppress_rag, suppress_apb):
+                               suppress_rag, suppress_apb, sample_idx=0):
     # 执行偏离（Task 6）：计划要求两函数各抽一份 _call_once 闭包；实现合并为单一
     # 共享入口，语义等价且消除重复。ctx=None 时保留原"包装一切异常"旧行为（零变化）；
     # ctx 激活时交 _attempt_with_ledger（崩溃冒泡 / 网络失败重试记账）。
@@ -550,14 +554,15 @@ def _call_with_optional_ledger(messages, provider, model, case, temperature, tim
             return call_once()
         except Exception as e:
             raise RuntimeError(f"model_call_failed: {type(e).__name__}: {str(e)[:120]}") from e
-    return _attempt_with_ledger(case, call_once)
+    return _attempt_with_ledger(case, call_once, sample_idx=sample_idx)
 
 
-def call_model_sync(prompt, provider, model, case=None, temperature=None, timeout=300, rag_k=2, retrieval_mode='legacy', option_evidence_k=2, suppress_rag=False, suppress_apb=False):
+def call_model_sync(prompt, provider, model, case=None, temperature=None, timeout=300, rag_k=2, retrieval_mode='legacy', option_evidence_k=2, suppress_rag=False, suppress_apb=False, sample_idx=0):
     messages = [{"role": "user", "content": prompt}]
     return _call_with_optional_ledger(
         messages, provider, model, case, temperature, timeout,
-        rag_k, retrieval_mode, option_evidence_k, suppress_rag, suppress_apb)
+        rag_k, retrieval_mode, option_evidence_k, suppress_rag, suppress_apb,
+        sample_idx=sample_idx)
 
 
 def call_model_messages_with_history(messages, provider, model, case=None, temperature=None, timeout=300, rag_k=2, retrieval_mode='legacy', option_evidence_k=2, suppress_rag=False, suppress_apb=False):
@@ -663,7 +668,7 @@ def _phase4_runtime_config(provider, model, prompt_version, rag_k, retrieval_mod
     }
 
 
-def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None, n_samples=1, sample_temperature=0.4, aggregate='majority', phase4_evidence_mode='all', phase4_stage1_cache=None, phase4_exp_b=False, phase4_exp_a=False, phase4_exp_c=False, phase4_exp_c2=False, phase4_direct_c2=False, chart_schema_version=None, profile_formatter=None, resume_append=False):
+def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None, n_samples=1, sample_temperature=0.4, aggregate='majority', phase4_evidence_mode='all', phase4_stage1_cache=None, phase4_exp_b=False, phase4_exp_a=False, phase4_exp_c=False, phase4_exp_c2=False, phase4_direct_c2=False, chart_schema_version=None, profile_formatter=None, resume_append=False, completed_keys=None):
     if method == 'multi_turn':
         return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases, temperature=temperature, case_details_jsonl=case_details_jsonl, rag_k=rag_k, config_id=config_id, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k, chart_schema_version=chart_schema_version, resume_append=resume_append)
     if phase4_exp_c and phase4_exp_c2:
@@ -674,8 +679,13 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
 
     if not isinstance(n_samples, int) or n_samples < 1:
         raise ValueError(f"run_model_benchmark: n_samples must be a positive int, got {n_samples!r}")
-    if aggregate not in {"majority"}:
-        raise ValueError(f"run_model_benchmark: aggregate {aggregate!r} is not supported (expected 'majority')")
+    if aggregate not in {"majority", "emit_samples"}:
+        raise ValueError(f"run_model_benchmark: aggregate {aggregate!r} is not supported")
+    if aggregate == "emit_samples":
+        if not isinstance(n_samples, int) or n_samples < 2:
+            raise ValueError("emit_samples 需要 n_samples > 1（6A1 逐样本模式）")
+        if _PHASE6_CTX is None:
+            raise ValueError("emit_samples 仅支持 Phase 6 profile 模式（需 attempt 账本/续跑/manifest）")
 
     if shuffle_options:
         if shuffle_seed is None:
@@ -953,6 +963,82 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
             )
             parsed = extract_choice_with_meta(raw)
             return raw, parsed.get('choice')
+
+        if aggregate == "emit_samples":
+            # 6A1（设计 §5.2）：逐样本独立调用/记账/明细；聚合完全离线（编排器 strict_majority）。
+            # 每样本：sample_idx 入 attempt key（独立终态/重试账本/续跑），
+            # temperature=sample_temperature；失败样本写 call_failed 行（占分母）后继续。
+            expected = extract_choice(case.get('answer'))
+            ctx = _PHASE6_CTX
+            pending = [i for i in range(n_samples)
+                       if not completed_keys
+                       or ctx.attempt_key_for(case, sample_idx=i) not in completed_keys]
+            if not pending:
+                continue                    # resume：该 case 5 样本全部完成
+            for sample_idx in pending:
+                try:
+                    raw = call_model_sync(
+                        prompt, provider, model, case=case,
+                        temperature=sample_temperature, sample_idx=sample_idx,
+                        **_retrieval_call_kwargs(rag_k, retrieval_mode, option_evidence_k),
+                    )
+                    meta = extract_choice_with_meta(raw)
+                    s_pred = meta["choice"]
+                    ev = score_case_evidence(case, raw)
+                    sf = score_safety(raw)
+                    s_detail = {
+                        "case_id": case_id, "domain": case.get("domain", "unknown"),
+                        "question": case.get("question", "")[:50],
+                        "expected_answer": expected, "predicted_answer": s_pred,
+                        "raw_answer": raw, "correct": s_pred == expected,
+                        "evidence_coverage": ev.get("coverage", 0.0),
+                        "safety_score": sf.get("score", 0.0),
+                        "parser_source": meta.get("source"), "parser_valid": meta.get("valid"),
+                        "rag_k": rag_k, "retrieval_mode": retrieval_mode,
+                        "rag_trace": [], "option_evidence": {}, "option_evidence_coverage": {},
+                        "retrieved_answer_leak": False, "config_id": config_id,
+                        "call_success": True,
+                        "permutation_id": case.get("_permutation_id"),
+                        "label_map": case.get("answer_label_map") or {},
+                        "predicted_identity": s_pred,
+                        "correct_identity": case.get("_original_answer"),
+                        "mode": "off-3",
+                        "parser_failure_reason": classify_parser_failure(
+                            raw_answer=raw, parsed_choice=s_pred,
+                            valid=meta.get("valid", False),
+                            label_map=case.get("answer_label_map") or {}, call_success=True),
+                        "sample_idx": sample_idx, "n_samples": n_samples,
+                        "aggregate": aggregate,
+                    }
+                except RuntimeError as e:
+                    if not str(e).startswith("model_call_failed"):
+                        raise   # 崩溃类冒泡（Policy A）
+                    s_detail = {
+                        "case_id": case_id, "domain": case.get("domain", "unknown"),
+                        "question": case.get("question", "")[:50],
+                        "expected_answer": expected, "predicted_answer": None,
+                        "raw_answer": "", "correct": False,
+                        "error": str(e)[:120],
+                        "evidence_coverage": 0.0, "safety_score": 0.0,
+                        "parser_source": None, "parser_valid": False,
+                        "rag_k": rag_k, "retrieval_mode": retrieval_mode,
+                        "rag_trace": [], "option_evidence": {}, "option_evidence_coverage": {},
+                        "retrieved_answer_leak": False, "config_id": config_id,
+                        "call_success": False,
+                        "permutation_id": case.get("_permutation_id"),
+                        "label_map": case.get("answer_label_map") or {},
+                        "predicted_identity": None,
+                        "correct_identity": case.get("_original_answer"),
+                        "mode": "off-3",
+                        "parser_failure_reason": "model_call_failed",
+                        "sample_idx": sample_idx, "n_samples": n_samples,
+                        "aggregate": aggregate,
+                    }
+                case_details.append(s_detail)
+                _append_jsonl(case_details_jsonl, s_detail)
+                time.sleep(1)
+            predictions[case_id] = s_detail.get("raw_answer") or ""
+            continue
 
         try:
             if n_samples > 1:
@@ -1329,7 +1415,12 @@ def main(argv=None):
     parser.add_argument('--shuffle-seed', type=int, default=None, help='Integer seed required when --shuffle-options is enabled')
     parser.add_argument('--n-samples', type=int, default=1, help='Self-consistency: number of samples per case (default: 1 disables SC)')
     parser.add_argument('--sample-temperature', type=float, default=0.4, help='Sampling temperature used when --n-samples > 1')
-    parser.add_argument('--aggregate', default='majority', choices=['majority'], help='Aggregation strategy over samples')
+    parser.add_argument('--aggregate', default='majority', choices=['majority', 'emit_samples'],
+                        help='Aggregation strategy; emit_samples = Phase 6 6A1 逐样本明细（聚合离线）')
+    parser.add_argument('--attempt-stage', default='main',
+                        help='Phase 6 attempt key 的 attempt_stage（main/anchor/diversity_probe/...）')
+    parser.add_argument('--as-of-date', default='',
+                        help='v6 高优 7：enrichment 锚定日期，入 resume manifest')
     parser.add_argument('--apb-block', action='store_true', help='Append anti-position-bias instruction to system prompt (Phase 3)')
     parser.add_argument('--phase4-evidence-mode', default='all', choices=['all', 'top2'], help='Phase 4: evidence mode for Stage 2 (all=retrieve all options, top2=top-2 TF-IDF match)')
     parser.add_argument('--phase4-stage1-cache', help='Phase 4: JSON cache path for sharing Stage 1 hypotheses across subprocesses')
@@ -1405,7 +1496,7 @@ def main(argv=None):
         init_phase6_context(Phase6Context(
             dataset_id=os.path.splitext(os.path.basename(args.dataset))[0],
             profile_id=profile.profile_id,
-            arm=args.arm, attempt_stage="main",
+            arm=args.arm, attempt_stage=args.attempt_stage,
             provider=args.provider, model=args.model,
             repeat_idx=args.repeat_idx,
             detail_path=detail_abs,
@@ -1437,10 +1528,14 @@ def main(argv=None):
         with open(args.case_ids_file, "r", encoding="utf-8") as f:
             wanted = {str(x) for x in json.load(f)}
         cases = [c for c in cases if str(c.get("case_id")) in wanted]
+    completed_keys = None
     if args.profile and args.resume:
         completed = load_completed_keys(os.path.abspath(args.case_details_jsonl))
         ctx = _PHASE6_CTX
-        cases = [c for c in cases if ctx.attempt_key_for(c) not in completed]
+        if args.aggregate == "emit_samples":
+            completed_keys = completed      # emit：case 级预过滤会误丢部分完成 case，改按样本跳过
+        else:
+            cases = [c for c in cases if ctx.attempt_key_for(c) not in completed]
 
     if args.model_runner:
         run_id = str(uuid.uuid4().hex[:8])
@@ -1488,6 +1583,7 @@ def main(argv=None):
                 # 执行偏离（Task 6）：计划为 resume_append=args.resume；改为 profile 模式
                 # 恒增量——门禁 BLOCK 行先于模型运行写入 detail，_prepare_jsonl 会将其抹掉。
                 resume_append=bool(profile),
+                completed_keys=completed_keys,
             )
         except _HardCapExhausted:
             _write_phase6_summary(args, "BLOCKED_INCOMPLETE")
