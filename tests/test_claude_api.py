@@ -1,12 +1,13 @@
 import os
 
 import claude_api
+from config import DEEPSEEK_BASE_URL
 
 
 def test_detects_deepseek_for_non_anthropic_key():
     provider, url, model = claude_api._detect_provider("sk-test")
     assert provider == "deepseek"
-    assert url == "https://api.deepseek.com/chat/completions"
+    assert url == DEEPSEEK_BASE_URL
     assert model == os.environ.get("DEEPSEEK_MODEL", "deepseek-v4-pro")
 
 
@@ -122,4 +123,3 @@ def test_call_model_messages_sync_sends_temperature(monkeypatch):
 
     assert out == "A"
     assert captured["payload"]["temperature"] == 0.0
-

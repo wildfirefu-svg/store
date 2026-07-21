@@ -6,6 +6,10 @@ services:
       - "${BAZI_API_PORT:-8000}:${BAZI_API_PORT:-8000}"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - KIMI_API_KEY=${KIMI_API_KEY:-}
+      - GLM_API_KEY=${GLM_API_KEY:-}
+      - QWEN_API_KEY=${QWEN_API_KEY:-}
       - BAZI_API_KEY=${BAZI_API_KEY:-}
       - BAZI_API_PORT=${BAZI_API_PORT:-8000}
       - BAZI_CORS_ORIGINS=${BAZI_CORS_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
@@ -36,11 +40,9 @@ services:
     ports:
       - "${BAZI_MCP_PORT:-8001}:${BAZI_MCP_PORT:-8001}"
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - BAZI_MCP_PORT=${BAZI_MCP_PORT:-8001}
       - BAZI_LOG_LEVEL=${BAZI_LOG_LEVEL:-INFO}
     volumes:
-      - ./.anthropic_key:/app/.anthropic_key:ro
       - bazi_data:/app/data/charts
     restart: unless-stopped
     logging:

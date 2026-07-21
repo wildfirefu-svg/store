@@ -221,6 +221,39 @@ class TestBuildStage2Evidence:
         assert isinstance(evidence_top2, list)
         assert len(evidence_top2) <= 2
 
+    def test_build_stage2_evidence_exp_c2_injects_scores(self):
+        from benchmark.formatters.two_stage_reasoning import build_stage2_evidence
+        case = {
+            "case_id": "test_case_001",
+            "person": {"gender": "female"},
+            "question": "事业方向如何？",
+            "options": ["A. 文职/教育", "B. 武职/军警", "C. 经商/创业", "D. 自由职业"],
+            "chart_input": {
+                "shishen_stats": {
+                    "counts": {"正官": 1, "正印": 1, "食神": 1, "伤官": 0, "正财": 0, "偏财": 1},
+                    "missing": [],
+                },
+                "branch_relations": [],
+                "shensha": [],
+            },
+        }
+        evidence = build_stage2_evidence(case, "事业方向偏文职/教育", mode="all", exp_c2=True)
+        text = "\n".join(evidence)
+        assert "【逐选项命理评分】" in text
+        assert "【逐选项评分汇总】" in text
+        assert "matched_rules" not in text
+        assert "A. 文职/教育" in text
+
+    def test_build_stage2_evidence_exp_c_and_c2_are_mutex(self):
+        from benchmark.formatters.two_stage_reasoning import build_stage2_evidence
+        case = {
+            "case_id": "test_case_001",
+            "question": "事业方向如何？",
+            "options": ["A. 文职/教育", "B. 武职/军警", "C. 经商/创业", "D. 自由职业"],
+        }
+        with pytest.raises(ValueError):
+            build_stage2_evidence(case, "", exp_c=True, exp_c2=True)
+
 
 class TestRealCases:
     def test_four_unanimous_wrong_cases_trigger(self):
