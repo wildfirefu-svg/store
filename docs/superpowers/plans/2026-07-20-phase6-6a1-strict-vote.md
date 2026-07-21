@@ -131,7 +131,7 @@ probe_r1 → [probe_r2 条件]
 
 注：`Sequence`/`Optional` 导入已存在于 `self_consistency.py:3`（两轮审核均确认），无需新增导入。
 
-- [ ] **Step 1：写失败测试 `tests/test_strict_vote.py`（完整代码）**
+- [x] **Step 1：写失败测试 `tests/test_strict_vote.py`（完整代码）**
 
 ```python
 from __future__ import annotations
@@ -182,9 +182,9 @@ class TestStrictMajority:
         assert strict_majority(["A", "A", "A", "A"], threshold=4) == "A"
 ```
 
-- [ ] **Step 2：运行确认失败** `python -m pytest tests/test_strict_vote.py -q` → `ImportError`。
+- [x] **Step 2：运行确认失败** `python -m pytest tests/test_strict_vote.py -q` → `ImportError`。
 
-- [ ] **Step 3：实现（追加到 `benchmark/runners/self_consistency.py` 末尾，完整代码）**
+- [x] **Step 3：实现（追加到 `benchmark/runners/self_consistency.py` 末尾，完整代码）**
 
 ```python
 def strict_majority(votes: Sequence[Optional[str]], threshold: int = 3) -> Optional[str]:
@@ -209,9 +209,9 @@ def strict_majority(votes: Sequence[Optional[str]], threshold: int = 3) -> Optio
     return winners[0] if len(winners) == 1 else None
 ```
 
-- [ ] **Step 4：运行确认全绿 + 回归**（本文件为纯函数追加，跑 Task 文件 + g2 组即可；g1/g3/g4 提交前全跑）。
+- [x] **Step 4：运行确认全绿 + 回归**（本文件为纯函数追加，跑 Task 文件 + g2 组即可；g1/g3/g4 提交前全跑）。
 
-- [ ] **Step 5：提交（精确路径）**
+- [x] **Step 5：提交（精确路径）**
 
 ```powershell
 git add benchmark/runners/self_consistency.py tests/test_strict_vote.py
@@ -237,7 +237,7 @@ git commit -m "feat(phase6): strict_majority 严格 ≥3/5 投票（6A1，不复
 | 7 | `RESUME_MANIFEST_FIELDS` L121 + `build_resume_manifest` L168 | **加 `attempt_stage` 字段（决策 7 反转）**；旧 manifest 缺字段由 `check_resume_manifest` 自然 fail-closed |
 | 8 | `run_model_benchmark` 签名 | 加 `completed_keys=None`（配合 #5） |
 
-- [ ] **Step 0：测试设施增补（`tests/phase6_helpers.py`，精确追加）**
+- [x] **Step 0：测试设施增补（`tests/phase6_helpers.py`，精确追加）**
 
 ```python
 # RunnerEnv.__init__ 内追加（self.received 下一行）：
@@ -258,7 +258,7 @@ git commit -m "feat(phase6): strict_majority 严格 ≥3/5 投票（6A1，不复
         self._script = [("ok", t) for t in texts] + [("ok", "A")] * 1000
 ```
 
-- [ ] **Step 1：写失败测试 `tests/test_phase6_emit_samples.py`（完整代码）**
+- [x] **Step 1：写失败测试 `tests/test_phase6_emit_samples.py`（完整代码）**
 
 ```python
 from __future__ import annotations
@@ -400,9 +400,9 @@ class TestEmitSamples:
         assert exc.value.code == 2
 ```
 
-- [ ] **Step 2：运行确认失败** `python -m pytest tests/test_phase6_emit_samples.py -q`（argparse 拒绝 `--aggregate emit_samples` / `ValueError` 缺失等）。
+- [x] **Step 2：运行确认失败** `python -m pytest tests/test_phase6_emit_samples.py -q`（argparse 拒绝 `--aggregate emit_samples` / `ValueError` 缺失等）。
 
-- [ ] **Step 3：实现（8 处，完整代码）**
+- [x] **Step 3：实现（8 处，完整代码）**
 
 **(1) argparse（L1332 附近）**
 
@@ -601,9 +601,9 @@ def run_model_benchmark(cases, provider, model, prompt_version, ..., resume_appe
                         completed_keys=None):
 ```
 
-- [ ] **Step 4：运行确认全绿 + 4 组回归**。
+- [x] **Step 4：运行确认全绿 + 4 组回归**。
 
-- [ ] **Step 5：提交（精确路径）**
+- [x] **Step 5：提交（精确路径）**
 
 ```powershell
 git add benchmark/runners/run_benchmark.py tests/phase6_helpers.py tests/test_phase6_emit_samples.py
@@ -617,7 +617,7 @@ git commit -m "feat(phase6): runner emit_samples 逐样本模式 + --attempt-sta
 **职责**：离线 gate（legacy_v0 可见性 + 泄漏）、probe 多样性试测与 T 冻结（仅合法选项 + 完整性 BLOCKED）、AB/BA 12 切片调度、阶段预算（复用 6A0 `BudgetLedger`）、全量完整性检查、严格聚合与 Δ1/Δ2、配对四格表、unresolved 率、成本代理、verdict、报告与 manifest、CLI 年份封死与 dev 温度自动读取。
 **测试**：`tests/test_phase6_6a1_vote.py`。**辅助扩展**：`scripts/build_phase6_audit_index.py` 加 `--arms` + `--mode vote` + `recompute_vote_accuracy()`（决策 9，审核阻断 1）。
 
-- [ ] **Step 1：写失败测试 `tests/test_phase6_6a1_vote.py`（完整代码）**
+- [x] **Step 1：写失败测试 `tests/test_phase6_6a1_vote.py`（完整代码）**
 
 ```python
 from __future__ import annotations
@@ -1530,9 +1530,9 @@ class TestFreezeTemperatureMainCallSpy:
         assert "sample_temperature" not in info          # 传入 info 尚未含该字段
 ```
 
-- [ ] **Step 2：运行确认失败** → `ModuleNotFoundError`。
+- [x] **Step 2：运行确认失败** → `ModuleNotFoundError`。
 
-- [ ] **Step 3：实现（完整代码）**
+- [x] **Step 3：实现（完整代码）**
 
 **(a) `scripts/build_phase6_audit_index.py` 扩展（决策 9）**
 
@@ -2581,9 +2581,9 @@ if __name__ == "__main__":
 
 注意 `build_main_schedule` 里采样臂 cap 取法：按已排采样切片数索引 `SAMPLE_CAPS`（0..5）；锚定臂按序取 `ANCHOR_CAPS`。测试 `test_main_schedule_order_and_caps` 锁定 cap 和 = 660+140。
 
-- [ ] **Step 4：运行确认全绿 + 4 组回归**。
+- [x] **Step 4：运行确认全绿 + 4 组回归**。
 
-- [ ] **Step 5：提交（精确路径）**
+- [x] **Step 5：提交（精确路径）**
 
 ```powershell
 git add scripts/run_phase6_6a1_ablation.py scripts/build_phase6_audit_index.py tests/test_phase6_6a1_vote.py
@@ -2596,7 +2596,7 @@ git commit -m "feat(phase6): 6A1 编排器（probe T 冻结 + AB/BA + 全量完�
 
 **前置核对（全部满足才执行）**：Task 1–3 合入且 4 组回归全绿；**v5 门禁：完整 dev 环境**（`pip install -r requirements-dev.txt` 后 `python -m pytest tests/ -q -m "not e2e"` 全绿，含 fastapi 相关测试）；`.env` 含 `DEEPSEEK_API_KEY`；`.tmp/phase6/enrich_manifest.json` 在位且 2024 entry 通过校验（40 题、SHA 匹配）；**实验范围文件（`scripts/run_phase6_6a1_ablation.py`、`scripts/build_phase6_audit_index.py`、`benchmark/runners/run_benchmark.py`、`benchmark/runners/self_consistency.py`）无未提交修改**，scoped dirty 状态与文件 SHA 写入 manifest（`workspace_state` 字段）。
 
-- [ ] **Step 1：probe（50 次真实调用，可先无 --yes 干跑看预算）**
+- [x] **Step 1：probe（50 次真实调用，可先无 --yes 干跑看预算）**
 
 ```powershell
 python scripts/run_phase6_6a1_ablation.py --run-id 6a1-2024-001 --year 2024 --yes
@@ -2604,11 +2604,11 @@ python scripts/run_phase6_6a1_ablation.py --run-id 6a1-2024-001 --year 2024 --ye
 
 预期：离线 gate 通过；probe_r1 完成且 `probe_rows_complete` 通过；打印 T 冻结结果（`rate_r1` 与 action；若触发 probe_r2 再 50 次）。probe 完整性不过 → exit 3（BLOCKED_INCOMPLETE），排查后续跑，不得进入主实验。
 
-- [ ] **Step 2：主实验（720 次真实调用，接续同一命令自动完成；中断重跑同一命令即可，resume 幂等）**
+- [x] **Step 2：主实验（720 次真实调用，接续同一命令自动完成；中断重跑同一命令即可，resume 幂等）**
 
 预期产物：`docs/phase6/6a1-2024-001/{report.md, summary.json, manifest.json, case_details.jsonl}`。完整性不过 → exit 3，不产出 verdict。
 
-- [ ] **Step 3：审计索引归档**
+- [x] **Step 3：审计索引归档**
 
 ```powershell
 python scripts/build_phase6_audit_index.py --run-id 6a1-2024-001 --year 2024 --arms vote5_samples,anchor_single0 --mode vote
@@ -2618,7 +2618,7 @@ git commit -m "docs(phase6): 6A1 2024 dev gate 运行结果（verdict=<实际判
 
 审计复算（题级投票）默认与 `summary.json` 自动比对（v4 阻断 1：`--mode vote` 默认检查，不一致 exit 2）；不一致 -> 排查，不得归档。
 
-- [ ] **Step 4：判读（设计 §5.3）**
+- [x] **Step 4：判读（设计 §5.3）**
 
 - `PROMOTE_CANDIDATE` → 进入 Task 5（2021 复核）；
 - `AGGREGATION_EFFECT_ONLY` / `NON_INFERIOR` / `ROLLBACK` → 不进入 Task 5，protocol=single 写入结论，6B1 以 single 继续（设计 §10 不整体停工）。
@@ -2627,13 +2627,13 @@ git commit -m "docs(phase6): 6A1 2024 dev gate 运行结果（verdict=<实际判
 
 **仅当 Task 4 判 PROMOTE_CANDIDATE 才执行。** 温度由 `--dev-run-id` 自动读取 dev 归档并核验（verdict/profile/schema/provider/model/SHA-256），禁止人工转录。
 
-- [ ] **Step 1：复核运行**
+- [x] **Step 1：复核运行**
 
 ```powershell
 python scripts/run_phase6_6a1_ablation.py --run-id 6a1-2021-001 --year 2021 --recheck --dev-run-id 6a1-2024-001 --yes
 ```
 
-- [ ] **Step 2：归档与判读**
+- [x] **Step 2：归档与判读**
 
 ```powershell
 python scripts/build_phase6_audit_index.py --run-id 6a1-2021-001 --year 2021 --arms vote5_samples,anchor_single0 --mode vote
