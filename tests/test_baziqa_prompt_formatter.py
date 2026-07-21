@@ -2,6 +2,7 @@ from benchmark.formatters.baziqa_prompt import (
     format_birth_line,
     format_options,
     format_direct_choice_prompt,
+    format_direct_c2_prompt,
     format_structured_reasoning_prompt,
 )
 
@@ -43,6 +44,23 @@ def test_format_direct_choice_prompt():
     assert "请直接回答选项字母" in prompt
     assert "此命事业" in prompt
     assert "A. 稳定组织" in prompt
+
+
+def test_format_direct_c2_prompt_injects_scores_without_changing_direct_prompt():
+    prompt = format_direct_c2_prompt(
+        _case(),
+        [{
+            "label": "A",
+            "text": "稳定组织",
+            "score": 68,
+            "verdict": "weak_support",
+            "support": ["官印相生"],
+            "reject": [],
+        }],
+    )
+    assert "## C2 参考证据" in prompt
+    assert "A. 稳定组织 -> 68/100" in prompt
+    assert "不得仅因某选项分数最高而选择" in prompt
 
 
 def test_format_structured_reasoning_prompt():

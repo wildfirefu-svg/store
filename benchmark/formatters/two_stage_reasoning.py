@@ -17,7 +17,7 @@ _TIME_KEYWORDS = [
     "岁运", "年运", "年份",
 ]
 
-# Stage 1 prompt template
+# Stage 1 prompt template (normal mode with options)
 _STAGE1_PROMPT_TEMPLATE = """你是一位严谨的八字命理评测助手。
 
 ## 命主信息
@@ -46,6 +46,39 @@ _STAGE1_PROMPT_TEMPLATE = """你是一位严谨的八字命理评测助手。
 
 请在最后一行以如下格式输出你的推断：
 【内容假设】：你的推断内容
+"""
+
+# Stage 1 prompt template (Experiment A: no options, neutral description only)
+_STAGE1_PROMPT_TEMPLATE_EXP_A = """你是一位严谨的八字命理评测助手。
+
+## 命主信息
+{birth_line}
+
+## 问题
+{question}
+
+## 任务要求（重要：不看选项，只分析命局结构）
+请按以下结构化推理协议进行分析，然后直接给出你对问题答案的推断：
+
+### 第一阶段：量化扫描
+清点五行、日主强弱、十神分布、格局倾向、用神喜忌。
+
+### 第二阶段：冲突定级
+识别刑冲合害、空亡、入墓、忌神成局，并判断轻微/中度/严重。
+
+### 第三阶段：应象映射
+将命理结构映射到题目领域和现实事件。
+{time_phase}
+
+**输出约束（极其重要）**：
+- 你**没有看到任何选项**，只能基于命局结构进行纯命理分析。
+- 不要引用任何选项编号（如"选项1""选项2"），也不要引用选项中的具体内容。
+- 输出必须是**中性命理描述**，例如："该事件应发生在印星受克、忌神成局的大运流年"。
+- 不要输出"答案是A""选B"等直接选择某个选项的内容。
+- 你的推断应该聚焦于命理结构特征（五行、十神、刑冲合害、用神喜忌），让 Stage 2 根据你的描述去匹配选项。
+
+请在最后一行以如下格式输出你的推断：
+【内容假设】：你的中性命理推断内容
 """
 
 def _build_dayun_summary_for_stage1(case: dict) -> str:
@@ -139,9 +172,7 @@ _STAGE2_PROMPT_TEMPLATE = """你是一位严谨的八字命理评测助手。
 ## 选项
 {options}
 
-## Stage 1 推断假设（仅供参考，可能不准确）
-{hypothesis}
-
+{hypothesis_section}
 ## 证据（预计算数据，准确可靠，请以以下数据为准）
 {evidence}
 
@@ -149,15 +180,19 @@ _STAGE2_PROMPT_TEMPLATE = """你是一位严谨的八字命理评测助手。
 请基于上述**证据中的预计算数据**进行独立分析，从 A/B/C/D 中选择一个最符合的选项。
 
 **重要提醒**：
-- Stage 1 的推断假设是模型自行推理的，可能存在大运推算错误、流年定位偏差等问题。
 - 证据中的【预计算大运数据】和【各选项对应大运流年详析】是系统精确计算的结果，**请务必以预计算数据为准**。
-- 如果 Stage 1 假设与预计算数据矛盾，**完全忽略 Stage 1 假设**，基于预计算数据重新推理。
 - 你的分析必须基于预计算数据中的大运排布、流年干支、十神、刑冲合害关系进行。
 {time_instruction}
 
 ## 输出格式要求
 请先进行详细推理分析（包括大运对照、逐项验证、排除法等），然后在最后一行以如下格式给出最终答案：
 最终答案：X（X为A/B/C/D中的一个）"""
+
+# Stage 2 hypothesis section template (used when hypothesis is provided)
+_STAGE2_HYPOTHESIS_SECTION = """## Stage 1 推断假设（仅供参考，可能不准确）
+{hypothesis}
+
+"""
 
 # Stage 2 time-location enhancement instruction
 _STAGE2_TIME_INSTRUCTION = """## 时间定位验证（重要）
@@ -209,49 +244,59 @@ def _format_birth_line(case: dict) -> str:
     return "\n".join(lines)
 
 
-def format_stage1_prompt(case: dict) -> str:
+def format_stage1_prompt(case: dict, exp_a: bool = False) -> str:
     """Format Stage 1 (label-blind) prompt.
 
     - No A/B/C/D labels
     - Options shuffled with fixed seed (case_id hash)
     - Options shown as 选项1, 选项2, etc.
     - Time-location questions get special instruction
+    - exp_a: Experiment A mode (no options shown, neutral description only)
     """
     birth_line = _format_birth_line(case)
     question = case.get("question", "")
     options = case.get("options", [])
-
-    # Shuffle options with fixed seed based on case_id hash
-    case_id = case.get("case_id", "")
-    seed = int(hashlib.md5(case_id.encode()).hexdigest(), 16) % (2**32)
-    shuffled = options[:]
-    random.Random(seed).shuffle(shuffled)
-
-    # Format options without A/B/C/D labels
-    formatted_options = []
-    for i, opt in enumerate(shuffled, start=1):
-        # Strip A/B/C/D prefix if present
-        cleaned = re.sub(r"^[A-D]\.\s*", "", opt).strip()
-        formatted_options.append(f"选项{i}：{cleaned}")
 
     # Time-location phase instruction (injected as phase 4)
     time_phase = ""
     if is_time_location_question(question, options):
         time_phase = _TIME_PHASE_INSTRUCTION
 
-    return _STAGE1_PROMPT_TEMPLATE.format(
-        birth_line=birth_line,
-        question=question,
-        options="\n".join(formatted_options),
-        time_phase=time_phase,
-    )
+    if exp_a:
+        # Experiment A: no options shown, force neutral description
+        return _STAGE1_PROMPT_TEMPLATE_EXP_A.format(
+            birth_line=birth_line,
+            question=question,
+            time_phase=time_phase,
+        )
+    else:
+        # Normal mode: show options
+        # Shuffle options with fixed seed based on case_id hash
+        case_id = case.get("case_id", "")
+        seed = int(hashlib.md5(case_id.encode()).hexdigest(), 16) % (2**32)
+        shuffled = options[:]
+        random.Random(seed).shuffle(shuffled)
+
+        # Format options without A/B/C/D labels
+        formatted_options = []
+        for i, opt in enumerate(shuffled, start=1):
+            # Strip A/B/C/D prefix if present
+            cleaned = re.sub(r"^[A-D]\.\s*", "", opt).strip()
+            formatted_options.append(f"选项{i}：{cleaned}")
+
+        return _STAGE1_PROMPT_TEMPLATE.format(
+            birth_line=birth_line,
+            question=question,
+            options="\n".join(formatted_options),
+            time_phase=time_phase,
+        )
 
 
-def format_stage2_prompt(case: dict, hypothesis: str, evidence: List[str], is_time: bool = False) -> str:
+def format_stage2_prompt(case: dict, hypothesis: Optional[str] = None, evidence: List[str] = None, is_time: bool = False) -> str:
     """Format Stage 2 (option matching) prompt.
 
     - Includes A/B/C/D labels
-    - Includes Stage 1 hypothesis
+    - Includes Stage 1 hypothesis (if provided)
     - Includes evidence
     - Includes conflict arbitration instruction
     - For time-location questions, injects time-anchor verification instruction
@@ -263,13 +308,19 @@ def format_stage2_prompt(case: dict, hypothesis: str, evidence: List[str], is_ti
     formatted_options = "\n".join(str(opt) for opt in options)
     formatted_evidence = "\n".join(str(e) for e in evidence) if evidence else "（无额外证据）"
 
+    # Build hypothesis section (empty if no hypothesis provided)
+    if hypothesis and hypothesis.strip():
+        hypothesis_section = _STAGE2_HYPOTHESIS_SECTION.format(hypothesis=hypothesis)
+    else:
+        hypothesis_section = ""
+
     time_instruction = _STAGE2_TIME_INSTRUCTION if is_time else ""
 
     return _STAGE2_PROMPT_TEMPLATE.format(
         birth_line=birth_line,
         question=question,
         options=formatted_options,
-        hypothesis=hypothesis,
+        hypothesis_section=hypothesis_section,
         evidence=formatted_evidence,
         time_instruction=time_instruction,
     )
@@ -440,6 +491,75 @@ def _get_question_type_hints(question: str) -> List[str]:
         hints.append("迁移对应驿马、流年冲动日支或迁移宫")
 
     return hints
+
+
+# Key shensha names relevant to common life events (shared with dayun evidence)
+_KEY_SHENSHA = [
+    "桃花", "红鸾", "天喜", "丧门", "白虎", "驿马", "华盖", "天乙贵人",
+    "文昌贵人", "将星", "魁罡", "十恶大败", "阴差阳错", "孤鸾煞", "红艳煞",
+]
+
+
+def _build_nontime_structured_evidence(case: dict) -> List[str]:
+    """Build structured命理 evidence for non-time questions (Experiment C).
+
+    Unlike the default non-time path (which only lists the 4 option texts), this
+    produces independent chart-structure evidence so Stage 2 can judge options on
+   命理 merit rather than being anchored by Stage 1's hypothesis.
+    """
+    evidence = []
+    chart = case.get("chart_input") or {}
+    four_pillars = chart.get("four_pillars") or {}
+    day_master = chart.get("day_master", {})
+
+    evidence.append("【命局结构（预计算，用于选项判断）】")
+    dm_gan = day_master.get("gan", "")
+    if dm_gan:
+        evidence.append(
+            f"日主：{dm_gan}（{day_master.get('wuxing', '')}，{day_master.get('yinyang', '')}）"
+        )
+
+    # 四柱
+    pillar_names = {"year": "年柱", "month": "月柱", "day": "日柱", "hour": "时柱"}
+    pillars = []
+    for name in ("year", "month", "day", "hour"):
+        p = four_pillars.get(name) or {}
+        gan = p.get("gan", "")
+        zhi = p.get("zhi", "")
+        if gan or zhi:
+            pillars.append(f"{pillar_names[name]} {gan}{zhi}")
+    if pillars:
+        evidence.append("四柱：" + "，".join(pillars))
+
+    # 十神分布
+    shishen_stats = chart.get("shishen_stats", {})
+    missing = shishen_stats.get("missing", [])
+    if missing:
+        evidence.append(f"命局缺失十神：{', '.join(missing)}")
+
+    # 原局刑冲合害
+    branch_relations = chart.get("branch_relations") or []
+    if branch_relations:
+        rel_strs = [f"{r['detail']}（{r['type']}）" for r in branch_relations[:5]]
+        evidence.append(f"原局刑冲合害：{'; '.join(rel_strs)}")
+
+    # 关键神煞
+    shensha = chart.get("shensha") or []
+    key = [s for s in shensha if s.get("name") in _KEY_SHENSHA]
+    if key:
+        evidence.append(
+            "关键神煞：" + ", ".join(f"{s['name']}({s.get('position', '')})" for s in key[:8])
+        )
+
+    # 问题类型命理提示
+    hints = _get_question_type_hints(case.get("question", ""))
+    if hints:
+        evidence.append("")
+        evidence.append("【问题类型命理提示】")
+        for h in hints:
+            evidence.append(f"  - {h}")
+
+    return evidence
 
 
 def _build_dayun_evidence(case: dict) -> List[str]:
@@ -724,13 +844,17 @@ def _build_dayun_evidence(case: dict) -> List[str]:
     return evidence
 
 
-def build_stage2_evidence(case: dict, hypothesis: str, mode: str = "all") -> List[str]:
+def build_stage2_evidence(case: dict, hypothesis: str, mode: str = "all", exp_c: bool = False, exp_c2: bool = False) -> List[str]:
     """Build evidence list for Stage 2.
 
     Args:
         case: The case dict with question and options.
         hypothesis: The hypothesis from Stage 1.
         mode: "all" for all options, "top2" for top-2 TF-IDF matching.
+        exp_c: Experiment C — for non-time questions, prepend structured命理
+            evidence (五行/十神/刑冲合害/神煞/问题类型提示) instead of bare options.
+        exp_c2: Experiment C2 — for non-time questions, prepend per-option
+            score evidence from benchmark.runners.per_option_scorer.
 
     Returns:
         List of evidence strings.
@@ -738,6 +862,8 @@ def build_stage2_evidence(case: dict, hypothesis: str, mode: str = "all") -> Lis
     options = case.get("options", [])
     question = case.get("question", "")
     is_time = is_time_location_question(question, options)
+    if exp_c and exp_c2:
+        raise ValueError("build_stage2_evidence: exp_c and exp_c2 are mutually exclusive")
 
     evidence = []
 
@@ -745,6 +871,15 @@ def build_stage2_evidence(case: dict, hypothesis: str, mode: str = "all") -> Lis
     if is_time:
         dayun_evidence = _build_dayun_evidence(case)
         evidence.extend(dayun_evidence)
+        evidence.append("")  # Separator
+    elif exp_c:
+        # Experiment C: non-time questions get structured命理 evidence
+        evidence.extend(_build_nontime_structured_evidence(case))
+        evidence.append("")  # Separator
+    elif exp_c2:
+        from benchmark.runners.per_option_scorer import format_option_scores, score_options
+
+        evidence.extend(format_option_scores(score_options(case)))
         evidence.append("")  # Separator
 
     if mode == "all":

@@ -113,6 +113,9 @@ def build_command_list(
     fewshot_file: str,
     output_dir: str,
     n_perms: int = 3,
+    method: str = "structured_reasoning",
+    force_no_fewshot: bool = False,
+    arms: Optional[Sequence[str]] = None,
 ) -> List[Dict[str, Any]]:
     """Build the full (arm, mode, permutation) command list for a stage.
 
@@ -124,8 +127,10 @@ def build_command_list(
     perm_files = write_permuted_datasets(dataset, output_dir, stage, n_perms=n_perms)
 
     commands: List[Dict[str, Any]] = []
-    for arm in ARMS:
+    for arm in (arms or ARMS):
         ac = _arm_config(arm, fewshot_file)
+        if force_no_fewshot:
+            ac = {**ac, "fewshot": False}
         for mode in ("off-3", "on-3"):
             for perm_idx in range(n_perms):
                 cmd = _build_single_command(
@@ -138,6 +143,7 @@ def build_command_list(
                     model=model,
                     output_dir=output_dir,
                     stage=stage,
+                    method=method,
                 )
                 commands.append(cmd)
     return commands
@@ -153,6 +159,7 @@ def _build_single_command(
     model: str,
     output_dir: str,
     stage: str,
+    method: str = "structured_reasoning",
 ) -> Dict[str, Any]:
     """Build a single run_benchmark.py invocation as a command list + metadata.
 
@@ -168,7 +175,7 @@ def _build_single_command(
         "--provider", "deepseek",
         "--model", model,
         "--max-cases", str(STAGES[stage]["cases"]),
-        "--method", "structured_reasoning",
+        "--method", method,
         "--rag",
         "--rag-k", "2",
         "--rag-corpus", corpus,
@@ -182,6 +189,9 @@ def _build_single_command(
         cmd.append("--apb-block")
     if ac.get("fewshot") and ac.get("fewshot_file"):
         cmd.extend(["--fewshot-file", ac["fewshot_file"]])
+    if method == "two_stage_reasoning":
+        stage1_cache = Path(output_dir) / f"{stage}_{arm}_phase4_stage1_cache.json"
+        cmd.extend(["--phase4-stage1-cache", str(stage1_cache)])
     return {
         "arm": arm,
         "mode": mode,
@@ -192,8 +202,14 @@ def _build_single_command(
     }
 
 
-def estimate_budget(stage: str) -> Dict[str, int]:
+def estimate_budget(stage: str, method: str = "structured_reasoning") -> Dict[str, int]:
     cfg = STAGES[stage]
+    if method == "two_stage_reasoning":
+        return {
+            "planned_primary_calls": cfg["primary"] + cfg["cases"],
+            "retry_budget": int((cfg["primary"] + cfg["cases"]) * 0.2),
+            "hard_call_cap": int((cfg["primary"] + cfg["cases"]) * 1.2),
+        }
     return {
         "planned_primary_calls": cfg["primary"],
         "retry_budget": cfg["retry_budget"],
@@ -237,6 +253,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--fewshot-file", default="benchmark/fewshot/anti_position_bias_v1.jsonl")
     parser.add_argument("--output-dir", default=".tmp/phase3_ablation")
     parser.add_argument("--n-perms", type=int, default=3)
+    parser.add_argument("--method", default="structured_reasoning",
+                        help="Reasoning method passed to run_benchmark.py (Phase 4: two_stage_reasoning)")
+    parser.add_argument("--arms", default=",".join(ARMS),
+                        help="Comma-separated arms to run (default: all). Phase 4 uses --arms A4")
+    parser.add_argument("--no-fewshot", action="store_true",
+                        help="Disable fewshot injection (Phase 4 constraint: no fewshot)")
     parser.add_argument("--dry-run", action="store_true", help="Emit plan without invoking subprocess")
     parser.add_argument("--emit-commands", action="store_true", help="Print one command per line")
     parser.add_argument("--execute", action="store_true", help="Execute commands via subprocess (no shell)")
@@ -257,6 +279,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"permutation plan written to {args.perms_out}")
         return 0
 
+    selected_arms = [a.strip() for a in args.arms.split(",") if a.strip()] or None
     commands = build_command_list(
         stage=args.stage,
         dataset=args.dataset,
@@ -265,8 +288,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         fewshot_file=args.fewshot_file,
         output_dir=args.output_dir,
         n_perms=args.n_perms,
+        method=args.method,
+        force_no_fewshot=args.no_fewshot,
+        arms=selected_arms,
     )
-    budget = estimate_budget(args.stage)
+    budget = estimate_budget(args.stage, method=args.method)
 
     if args.emit_commands:
         for c in commands:
@@ -325,7 +351,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     print(f"dataset: {args.dataset}")
     print(f"corpus: {args.corpus}")
     print(f"model: {args.model}")
-    print(f"arms: {ARMS}")
+    print(f"arms: {selected_arms or ARMS}")
     print(f"modes: off-3, on-3")
     print(f"perms per case: {args.n_perms}")
     print(f"total commands: {len(commands)}")

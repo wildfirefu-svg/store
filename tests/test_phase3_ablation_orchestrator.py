@@ -112,6 +112,25 @@ def test_off3_mode_has_no_shuffle(mini_dataset: str, tmp_path: Path):
         assert "--shuffle-options" not in cmd_str
 
 
+def test_two_stage_commands_share_stage1_cache_per_arm(mini_dataset: str, tmp_path: Path):
+    cmds = build_command_list(
+        "formal40",
+        mini_dataset,
+        "c.jsonl",
+        "m",
+        "f.jsonl",
+        str(tmp_path / "out"),
+        method="two_stage_reasoning",
+        arms=["A4"],
+    )
+    cache_paths = set()
+    for c in cmds:
+        cmd = c["command"]
+        assert "--phase4-stage1-cache" in cmd
+        cache_paths.add(cmd[cmd.index("--phase4-stage1-cache") + 1])
+    assert len(cache_paths) == 1
+
+
 def test_a4_has_fewshot_file(mini_dataset: str, tmp_path: Path):
     cmds = build_command_list(
         "dev20", mini_dataset, "c.jsonl", "m", "f.jsonl", str(tmp_path / "out")
@@ -153,6 +172,12 @@ def test_estimate_budget_formal40():
     b = estimate_budget("formal40")
     assert b["planned_primary_calls"] == 240
     assert b["hard_call_cap"] == 288
+
+
+def test_estimate_budget_formal40_two_stage():
+    b = estimate_budget("formal40", method="two_stage_reasoning")
+    assert b["planned_primary_calls"] == 280
+    assert b["hard_call_cap"] == 336
 
 
 def test_estimate_budget_link8():

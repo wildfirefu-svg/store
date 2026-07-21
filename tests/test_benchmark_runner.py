@@ -2,6 +2,8 @@ import json
 import subprocess
 import sys
 
+import pytest
+
 from benchmark.runners.run_benchmark import run_offline_benchmark
 
 
@@ -263,6 +265,75 @@ def test_model_benchmark_records_parser_meta(monkeypatch, tmp_path):
     assert detail["rag_k"] == 2
 
 
+def test_model_benchmark_direct_c2_records_scores_and_config(monkeypatch):
+    from benchmark.runners import run_benchmark
+
+    seen = {}
+
+    def fake_call(prompt, provider, model, case=None, temperature=None, **kwargs):
+        seen["prompt"] = prompt
+        return "B"
+
+    monkeypatch.setattr(run_benchmark, "call_model_sync", fake_call)
+    cases = [{
+        "case_id": "c1",
+        "domain": "family",
+        "answer": "B",
+        "person": {"gender": "female", "birth": {"year": 1990, "month": 1, "day": 1, "hour": 0, "minute": 0}},
+        "question": "此命出生家境如何？",
+        "options": ["A. 富裕", "B. 贫穷", "C. 父从商", "D. 父母当官"],
+        "chart_input": {
+            "shishen_stats": {
+                "counts": {"正财": 0, "偏财": 0, "比肩": 2, "劫财": 2, "伤官": 1},
+                "missing": ["正财", "偏财"],
+            },
+            "branch_relations": [],
+            "shensha": [],
+        },
+    }]
+
+    result = run_benchmark.run_model_benchmark(
+        cases,
+        provider="deepseek",
+        model="deepseek-v4-pro",
+        prompt_version="srp_v1",
+        max_cases=1,
+        method="direct_choice",
+        phase4_direct_c2=True,
+    )
+
+    detail = result["case_details"][0]
+    assert "## C2 参考证据" in seen["prompt"]
+    assert detail["phase4_direct_c2"] is True
+    assert detail["phase4_option_scores"]
+    assert detail["phase4_runtime_config"]["provider"] == "deepseek"
+    assert detail["phase4_runtime_config"]["model"] == "deepseek-v4-pro"
+    assert detail["phase4_runtime_config"]["fewshot"] == "off"
+
+
+def test_model_benchmark_rejects_exp_c_and_c2_together():
+    from benchmark.runners import run_benchmark
+
+    cases = [{
+        "case_id": "c1",
+        "question": "事业?",
+        "options": ["A 好", "B 差", "C 平", "D 无"],
+        "answer": "A",
+    }]
+
+    with pytest.raises(ValueError):
+        run_benchmark.run_model_benchmark(
+            cases,
+            provider="deepseek",
+            model="deepseek-v4-pro",
+            prompt_version="srp_v1",
+            max_cases=1,
+            method="two_stage_reasoning",
+            phase4_exp_c=True,
+            phase4_exp_c2=True,
+        )
+
+
 def test_benchmark_cli_prints_exact_accuracy(monkeypatch, tmp_path, capsys):
     from benchmark.runners import run_benchmark
 
@@ -508,7 +579,7 @@ def test_multi_turn_case_details_records_retrieved_answer_leak(monkeypatch):
         return [{"rank": 1, "person_id": "p1", "facts": ["命主财源一般，未见暴富"]}]
 
     monkeypatch.setattr(run_benchmark, "_resolve_rag_trace", fake_trace)
-    monkeypatch.setattr(run_benchmark, "call_model_sync", lambda *a, **k: "答案：A")
+    monkeypatch.setattr(run_benchmark, "call_model_messages_with_history", lambda *a, **k: "答案：A")
 
     result = run_benchmark.run_model_benchmark(
         cases,
