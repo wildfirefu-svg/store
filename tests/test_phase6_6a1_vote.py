@@ -23,6 +23,7 @@ from scripts.run_phase6_6a1_ablation import (
     main as vote_main,
     probe_rows_complete,
     run_vote,
+    sha256_file,
     strict_rows_complete,
     validate_case_ids,
 )
@@ -371,37 +372,127 @@ class TestYearSeal:
         assert vote_main(["--run-id", "x", "--year", "2021"]) == 2
 
 
-def _dev_archive(tmp_path, verdict="PROMOTE_CANDIDATE", temp=0.4):
-    d = tmp_path / "dev-1"
+DEV_DATASET_SHA = "d" * 64   # fixture：approved_2024_dataset_sha
+
+
+def _dev_archive(tmp_path, run_id="dev-1", verdict="PROMOTE_CANDIDATE", temp=0.4):
+    """完整归档 fixture（v11 收口）：manifest/summary/audit_index 全字段，
+    覆盖 load_dev_temperature 的 9 项强制核验；参照真实归档 docs/phase6/6a1-2024-001/
+    的字段形态（verdict 除外，实验归档为 ROLLBACK，fixture 用 PROMOTE_CANDIDATE）。"""
+    d = tmp_path / run_id
     d.mkdir(parents=True)
-    (d / "manifest.json").write_text(json.dumps(
-        {"sample_temperature": temp, "profile_id": PROFILE_ID,
-         "chart_schema_version": "legacy_v0", "provider": "deepseek",
-         "model": "deepseek-chat"}), encoding="utf-8")
-    (d / "summary.json").write_text(json.dumps({"verdict": verdict}), encoding="utf-8")
+    manifest = {"run_id": run_id, "sample_temperature": temp,
+                "temperature_freeze": {"sample_temperature": temp},
+                "dataset_sha256": DEV_DATASET_SHA,
+                "profile_id": PROFILE_ID, "chart_schema_version": "legacy_v0",
+                "provider": "deepseek", "model": "deepseek-chat"}
+    summary = {"status": "OK", "verdict": verdict, "year": 2024, "recheck": False,
+               "delta1_pp": 0.0, "delta2_pp": 0.0}
+    (d / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (d / "summary.json").write_text(json.dumps(summary), encoding="utf-8")
+    audit = {"mode": "vote", "run_id": run_id, "year": 2024,
+             "dataset_sha256": DEV_DATASET_SHA,
+             "summary_check": {"status": "PASS",
+                               "summary_sha256": sha256_file(d / "summary.json"),
+                               "recomputed": {"delta1_pp": 0.0, "delta2_pp": 0.0}}}
+    (d / "audit_index.json").write_text(json.dumps(audit), encoding="utf-8")
     return d
 
 
+def _mutate(d, name, fn):
+    """就地修改归档 JSON（fn 接收解析后的 dict 并原地改）。"""
+    p = d / name
+    data = json.loads(p.read_text(encoding="utf-8"))
+    fn(data)
+    p.write_text(json.dumps(data), encoding="utf-8")
+
+
 class TestDevRunId:
+    """v11 收口：load_dev_temperature fail-closed，9 项强制核验（缺字段或不一致即拒绝）。"""
+
+    def _load(self, tmp_path, run_id="dev-1", provider="deepseek", model="deepseek-chat",
+              sha=DEV_DATASET_SHA):
+        return load_dev_temperature(run_id, archive_dir=tmp_path,
+                                    provider=provider, model=model,
+                                    approved_2024_dataset_sha=sha)
+
     def test_reads_temperature_and_verdict(self, tmp_path):
         _dev_archive(tmp_path)
-        t, info = load_dev_temperature("dev-1", archive_dir=tmp_path,
-                                       provider="deepseek", model="deepseek-chat")
+        t, info = self._load(tmp_path)
         assert t == 0.4
         assert info["verdict"] == "PROMOTE_CANDIDATE"
         assert info["dev_run_id"] == "dev-1" and info["dev_manifest_sha256"]
+        assert info["dataset_sha256"] == DEV_DATASET_SHA
 
-    def test_rejects_non_promote(self, tmp_path):
+    def test_rejects_non_promote(self, tmp_path):       # ② verdict 非 PROMOTE_CANDIDATE
         _dev_archive(tmp_path, verdict="NON_INFERIOR")
         with pytest.raises(ValueError, match="PROMOTE_CANDIDATE"):
-            load_dev_temperature("dev-1", archive_dir=tmp_path,
-                                 provider="deepseek", model="deepseek-chat")
+            self._load(tmp_path)
 
     def test_rejects_config_mismatch(self, tmp_path):
         _dev_archive(tmp_path)
         with pytest.raises(ValueError, match="不一致"):
-            load_dev_temperature("dev-1", archive_dir=tmp_path,
-                                 provider="deepseek", model="other-model")
+            self._load(tmp_path, model="other-model")
+
+    def test_rejects_missing_status(self, tmp_path):    # ① summary.status 缺失
+        d = _dev_archive(tmp_path)
+        _mutate(d, "summary.json", lambda s: s.pop("status"))
+        with pytest.raises(ValueError, match="status 非 OK"):
+            self._load(tmp_path)
+
+    def test_rejects_wrong_year(self, tmp_path):        # ③ summary.year 非 2024
+        d = _dev_archive(tmp_path)
+        _mutate(d, "summary.json", lambda s: s.update(year=2021))
+        with pytest.raises(ValueError, match="year 非 2024"):
+            self._load(tmp_path)
+
+    def test_rejects_recheck_true(self, tmp_path):      # ④ summary.recheck 非 false
+        d = _dev_archive(tmp_path)
+        _mutate(d, "summary.json", lambda s: s.update(recheck=True))
+        with pytest.raises(ValueError, match="recheck 非 false"):
+            self._load(tmp_path)
+
+    def test_rejects_run_id_mismatch(self, tmp_path):   # ⑤ manifest.run_id 不一致
+        d = _dev_archive(tmp_path)
+        _mutate(d, "manifest.json", lambda m: m.update(run_id="other-run"))
+        with pytest.raises(ValueError, match="run_id 不一致"):
+            self._load(tmp_path)
+
+    def test_rejects_illegal_temperature(self, tmp_path):  # ⑥ 温度∉{0.4,1.0}
+        _dev_archive(tmp_path, temp=0.7)
+        with pytest.raises(ValueError, match="温度非法"):
+            self._load(tmp_path)
+
+    def test_rejects_missing_temperature_freeze(self, tmp_path):  # ⑦ freeze 块缺失
+        d = _dev_archive(tmp_path)
+        _mutate(d, "manifest.json", lambda m: m.pop("temperature_freeze"))
+        with pytest.raises(ValueError, match="缺 temperature_freeze"):
+            self._load(tmp_path)
+
+    def test_rejects_temperature_freeze_mismatch(self, tmp_path):  # ⑦ freeze 与温度不一致
+        d = _dev_archive(tmp_path)
+        _mutate(d, "manifest.json",
+                lambda m: m.update(temperature_freeze={"sample_temperature": 1.0}))
+        with pytest.raises(ValueError, match="temperature_freeze"):
+            self._load(tmp_path)
+
+    def test_rejects_dataset_sha_mismatch(self, tmp_path):  # ⑧ dataset_sha256 不一致
+        _dev_archive(tmp_path)
+        with pytest.raises(ValueError, match="dataset SHA"):
+            self._load(tmp_path, sha="e" * 64)
+
+    def test_rejects_missing_audit_index(self, tmp_path):   # ⑨ audit_index.json 缺失
+        d = _dev_archive(tmp_path)
+        (d / "audit_index.json").unlink()
+        with pytest.raises(ValueError, match="audit_index"):
+            self._load(tmp_path)
+
+    def test_rejects_audit_not_pass(self, tmp_path):        # ⑨ summary_check 非 PASS
+        d = _dev_archive(tmp_path)
+        _mutate(d, "audit_index.json",
+                lambda a: a["summary_check"].update(status="FAIL"))
+        with pytest.raises(ValueError, match="summary_check 非 PASS"):
+            self._load(tmp_path)
 
 
 class TestCost:

@@ -430,73 +430,79 @@ def _prompt_chars_per_case(enriched_rows: list) -> list:
 # ---------- 纯函数：dev 温度自动读取（审核阻断 3） ----------
 
 def load_dev_temperature(dev_run_id: str, archive_dir: Path, provider: str, model: str,
-                         approved_2024_dataset_sha: str | None = None) -> tuple:
+                         approved_2024_dataset_sha: str) -> tuple:
     """复核温度来源（v4 高优 5 + v5 高优 4）：从已归档 dev manifest/summary 自动读取并核验，
     禁止人工转录。返回 (temperature, info)。archive_dir = PROJECT_ROOT/docs/phase6。
-    v5 高优 4：approved_2024_dataset_sha 由 main 强制从 enrich_manifest 读取传入。
-    v10 偏差（按计划测试锁定）：完整归档（write_report + 审计索引产物）全项核验——
-    status/year/recheck/run_id/temperature_freeze/dataset SHA/audit_index 存在即必查
-    （temperature_freeze 块存在时 sample_temperature 必存且一致，v6 高优 4 不静默跳过）；
-    最小归档（仅 manifest+summary 四配置字段，见 TestDevRunId）只核验
-    verdict/profile/schema/provider/model/温度合法性。"""
+    v5 高优 4：approved_2024_dataset_sha 由 main 强制从 enrich_manifest 读取传入（必填）。
+    v11 收口（计划 2026-07-20-phase6-6a1-strict-vote.md §2105-2112）：fail-closed 恢复为
+    9 项强制核验，任何字段缺失或不一致 → ValueError（不做"存在才查"）——
+    ①summary.status=="OK" ②summary.verdict=="PROMOTE_CANDIDATE" ③summary.year==2024
+    ④summary.recheck is False ⑤manifest.run_id==dev_run_id ⑥温度∈{0.4,1.0}
+    ⑦manifest.temperature_freeze 存在且其 sample_temperature 与 manifest.sample_temperature 一致
+    ⑧manifest.dataset_sha256==approved_2024_dataset_sha
+    ⑨归档 audit_index.json 存在且 summary_check.status=="PASS"。"""
     d = Path(archive_dir) / dev_run_id
     for name in ("manifest.json", "summary.json"):
         if not (d / name).exists():
             raise ValueError(f"dev 归档缺失：{d / name}")
     manifest = json.loads((d / "manifest.json").read_text(encoding="utf-8"))
     summary = json.loads((d / "summary.json").read_text(encoding="utf-8"))
+    if summary.get("status") != "OK":
+        raise ValueError(f"dev summary status 非 OK：{summary.get('status')}")
     if summary.get("verdict") != "PROMOTE_CANDIDATE":
         raise ValueError(f"dev verdict 非 PROMOTE_CANDIDATE：{summary.get('verdict')}")
-    if "status" in summary and summary.get("status") != "OK":
-        raise ValueError(f"dev summary status 非 OK：{summary.get('status')}")
-    if "year" in summary and summary.get("year") != 2024:
+    if summary.get("year") != 2024:
         raise ValueError(f"dev summary year 非 2024：{summary.get('year')}")
-    if "recheck" in summary and summary.get("recheck") is not False:
+    if summary.get("recheck") is not False:
         raise ValueError(f"dev summary recheck 非 false：{summary.get('recheck')}")
-    if manifest.get("run_id") is not None and manifest.get("run_id") != dev_run_id:
+    if manifest.get("run_id") != dev_run_id:
         raise ValueError(f"dev manifest run_id 不一致：{manifest.get('run_id')} != {dev_run_id}")
     for k, expect in (("profile_id", PROFILE_ID), ("chart_schema_version", SCHEMA),
                       ("provider", provider), ("model", model)):
         if manifest.get(k) != expect:
             raise ValueError(f"dev manifest {k} 不一致：{manifest.get(k)} != {expect}")
+    if "sample_temperature" not in manifest:
+        raise ValueError("dev manifest 缺 sample_temperature")
     temperature = float(manifest["sample_temperature"])
     if temperature not in (DEFAULT_T, FALLBACK_T):
         raise ValueError(f"dev 温度非法 {temperature}，只能 {DEFAULT_T} 或 {FALLBACK_T}")
     tfreeze = manifest.get("temperature_freeze")
-    if tfreeze is not None:
-        # v6 高优 4：sample_temperature 必存且一致（块内不允许静默通过）
-        if "sample_temperature" not in tfreeze:
-            raise ValueError(f"dev temperature_freeze 缺 sample_temperature 字段")
-        if abs(float(tfreeze["sample_temperature"]) - temperature) > 0.001:
-            raise ValueError(f"temperature_freeze.sample_temperature({tfreeze['sample_temperature']})"
-                             f" 与 sample_temperature({temperature}) 不一致")
+    if not isinstance(tfreeze, dict):
+        raise ValueError("dev manifest 缺 temperature_freeze")
+    # v6 高优 4：sample_temperature 必存且一致（不允许静默通过）
+    if "sample_temperature" not in tfreeze:
+        raise ValueError(f"dev temperature_freeze 缺 sample_temperature 字段")
+    if abs(float(tfreeze["sample_temperature"]) - temperature) > 0.001:
+        raise ValueError(f"temperature_freeze.sample_temperature({tfreeze['sample_temperature']})"
+                         f" 与 sample_temperature({temperature}) 不一致")
     dataset_sha = manifest.get("dataset_sha256")
-    if approved_2024_dataset_sha and dataset_sha != approved_2024_dataset_sha:
+    if dataset_sha != approved_2024_dataset_sha:
         raise ValueError(f"dataset SHA 与已批准 2024 enriched manifest 不对应")
     audit_index = d / "audit_index.json"
-    if audit_index.exists():
-        ai = json.loads(audit_index.read_text(encoding="utf-8"))
-        if ai.get("mode") != "vote":
-            raise ValueError(f"dev 审计索引 mode 非 vote：{ai.get('mode')}")
-        sc = ai.get("summary_check", {})
-        if sc.get("status") != "PASS":
-            raise ValueError(f"dev 审计 summary_check 非 PASS：{sc.get('status')}")
-        # v6 高优 5：summary_sha256 绑定当前 summary.json 内容（审计后修改 summary 会被发现）
-        summary_sha = sha256_file(d / "summary.json")
-        if sc.get("summary_sha256") != summary_sha:
-            raise ValueError(f"dev 审计 summary_sha256 与当前 summary.json 不一致")
-        # v6 高优 5：recomputed 的 Δ1/Δ2 与当前 summary 一致
-        recomputed = sc.get("recomputed", {})
-        if abs(float(recomputed.get("delta1_pp", 0)) - float(summary.get("delta1_pp", 0))) > 0.01:
-            raise ValueError(f"dev 审计 recomputed Δ1 与 summary 不一致")
-        if abs(float(recomputed.get("delta2_pp", 0)) - float(summary.get("delta2_pp", 0))) > 0.01:
-            raise ValueError(f"dev 审计 recomputed Δ2 与 summary 不一致")
-        if dataset_sha is not None and ai.get("dataset_sha256") != dataset_sha:
-            raise ValueError(f"dev 审计索引 dataset_sha256 不一致")
-        if ai.get("run_id") is not None and ai.get("run_id") != dev_run_id:
-            raise ValueError(f"dev 审计索引 run_id 不一致：{ai.get('run_id')}")
-        if ai.get("year") is not None and ai.get("year") != 2024:
-            raise ValueError(f"dev 审计索引 year 非 2024：{ai.get('year')}")
+    if not audit_index.exists():
+        raise ValueError(f"dev 归档缺失：{audit_index}")
+    ai = json.loads(audit_index.read_text(encoding="utf-8"))
+    if ai.get("mode") != "vote":
+        raise ValueError(f"dev 审计索引 mode 非 vote：{ai.get('mode')}")
+    sc = ai.get("summary_check", {})
+    if sc.get("status") != "PASS":
+        raise ValueError(f"dev 审计 summary_check 非 PASS：{sc.get('status')}")
+    # v6 高优 5：summary_sha256 绑定当前 summary.json 内容（审计后修改 summary 会被发现）
+    summary_sha = sha256_file(d / "summary.json")
+    if sc.get("summary_sha256") != summary_sha:
+        raise ValueError(f"dev 审计 summary_sha256 与当前 summary.json 不一致")
+    # v6 高优 5：recomputed 的 Δ1/Δ2 与当前 summary 一致
+    recomputed = sc.get("recomputed", {})
+    if abs(float(recomputed.get("delta1_pp", 0)) - float(summary.get("delta1_pp", 0))) > 0.01:
+        raise ValueError(f"dev 审计 recomputed Δ1 与 summary 不一致")
+    if abs(float(recomputed.get("delta2_pp", 0)) - float(summary.get("delta2_pp", 0))) > 0.01:
+        raise ValueError(f"dev 审计 recomputed Δ2 与 summary 不一致")
+    if dataset_sha is not None and ai.get("dataset_sha256") != dataset_sha:
+        raise ValueError(f"dev 审计索引 dataset_sha256 不一致")
+    if ai.get("run_id") is not None and ai.get("run_id") != dev_run_id:
+        raise ValueError(f"dev 审计索引 run_id 不一致：{ai.get('run_id')}")
+    if ai.get("year") is not None and ai.get("year") != 2024:
+        raise ValueError(f"dev 审计索引 year 非 2024：{ai.get('year')}")
     info = {"verdict": summary["verdict"], "dev_run_id": dev_run_id,
             "dev_manifest_sha256": sha256_file(d / "manifest.json"),
             "dataset_sha256": dataset_sha, "temperature": temperature}
