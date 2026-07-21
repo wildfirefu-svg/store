@@ -48,6 +48,115 @@ def _extract_chart_input(fortune_entry: Optional[Dict[str, Any]]) -> Dict[str, A
     return {}
 
 
+_CANONICAL_BAZI_KEYS = (
+    "four_pillars", "day_master", "shishen_stats",
+    "wuxing_stats", "branch_relations", "shensha",
+)
+
+
+def to_canonical_chart_input(fortune_entry: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """mingli fortune 条目 → approved_v1 可渲染 canonical chart_input（Task 5 修订定稿）。
+
+    bazi 形状：透传批准核心六字段（丢弃 wuyun_liuqi 等非批准键）。
+    API 形状：ziwei（已核验真实键映射，供 approved_v1 渲染）+ official_astro
+    （官方模板注入所需字段）。缺失字段不虚构（fail-closed），
+    由可见性矩阵与覆盖率报告如实呈现。
+    """
+    if not isinstance(fortune_entry, dict):
+        return {}
+    bazi = fortune_entry.get("bazi")
+    if isinstance(bazi, dict):
+        return {k: bazi[k] for k in _CANONICAL_BAZI_KEYS if k in bazi}
+    api_data = (((fortune_entry.get("api_response") or {}).get("data") or {}).get("data") or {})
+    if isinstance(api_data, dict) and api_data:
+        canonical: Dict[str, Any] = {}
+        palaces = api_data.get("palaces")
+        if isinstance(palaces, list) and palaces:
+            canonical["ziwei"] = {
+                "basic_info": _canon_ziwei_basic_info(api_data, palaces),
+                "twelve_palaces": [_canon_palace(p) for p in palaces],
+            }
+        canonical["official_astro"] = _canon_official_astro(api_data)
+        return canonical
+    return {}
+
+
+def _canon_ziwei_basic_info(api_data: Dict[str, Any], palaces: list) -> Dict[str, Any]:
+    """定稿映射（真实数据核验）：soul→命主、body→身主、fiveElementsClass→五行局、
+    earthlyBranchOfBodyPalace→身宫；命宫干支取 name=="命宫" 宫的
+    heavenlyStem+earthlyBranch（api 顶层只有 earthlyBranchOfSoulPalace 作回退）。"""
+    ming = next(
+        (p for p in palaces if isinstance(p, dict) and p.get("name") == "命宫"), {}
+    )
+    ming_gz = f"{ming.get('heavenlyStem') or ''}{ming.get('earthlyBranch') or ''}"
+    return {
+        "ming_gong_gan_zhi": ming_gz or str(api_data.get("earthlyBranchOfSoulPalace") or ""),
+        "shen_gong_position": str(api_data.get("earthlyBranchOfBodyPalace") or ""),
+        "wu_xing_ju": str(api_data.get("fiveElementsClass") or ""),
+        "ming_zhu": str(api_data.get("soul") or ""),
+        "shen_zhu": str(api_data.get("body") or ""),
+    }
+
+
+def _canon_star(star: Any) -> Dict[str, str]:
+    """星曜保留 name+brightness（用户裁决确认）。"""
+    s = star if isinstance(star, dict) else {}
+    return {"name": str(s.get("name") or ""), "brightness": str(s.get("brightness") or "")}
+
+
+def _canon_palace(palace: Any) -> Dict[str, Any]:
+    """定稿真实键映射（勘察核验）：name/heavenlyStem/earthlyBranch/majorStars/
+    minorStars+adjectiveStars/decadal.range/isBodyPalace；禁止兼容猜测键名。"""
+    p = palace if isinstance(palace, dict) else {}
+    decadal = p.get("decadal") or {}
+    rng = decadal.get("range") if isinstance(decadal, dict) else None
+    daxian = f"{rng[0]}-{rng[1]}" if isinstance(rng, list) and len(rng) == 2 else ""
+    return {
+        "name": str(p.get("name") or ""),
+        "position": str(p.get("earthlyBranch") or ""),
+        "tian_gan": str(p.get("heavenlyStem") or ""),
+        "main_stars": [_canon_star(s) for s in (p.get("majorStars") or [])],
+        "auxiliary_stars": (
+            [_canon_star(s) for s in (p.get("minorStars") or [])]
+            + [_canon_star(s) for s in (p.get("adjectiveStars") or [])]
+        ),
+        "daxian": daxian,
+        "is_shengong": bool(p.get("isBodyPalace")),
+    }
+
+
+def _canon_official_astro(api_data: Dict[str, Any]) -> Dict[str, Any]:
+    """官方模板注入字段（1:1 官方行为）：palace_stars 仅 major+minor 星名、
+    空格连接、仅收录有星宫位；宫序由 formatter 按官方固定顺序输出。"""
+    palace_stars: Dict[str, str] = {}
+    for p in api_data.get("palaces") or []:
+        if not isinstance(p, dict):
+            continue
+        name = p.get("name")
+        if not name:
+            continue
+        stars = [
+            str(s.get("name") or "")
+            for s in (p.get("majorStars") or [])
+            if isinstance(s, dict)
+        ]
+        stars += [
+            str(s.get("name") or "")
+            for s in (p.get("minorStars") or [])
+            if isinstance(s, dict)
+        ]
+        stars = [s for s in stars if s]
+        if stars:
+            palace_stars[str(name)] = " ".join(stars)
+    return {
+        "chinese_date": str(api_data.get("chineseDate") or ""),
+        "time": str(api_data.get("time") or ""),
+        "five_elements_class": str(api_data.get("fiveElementsClass") or ""),
+        "zodiac": str(api_data.get("zodiac") or ""),
+        "palace_stars": palace_stars,
+    }
+
+
 def _normalise_options(options: Any) -> List[str]:
     normalised: List[str] = []
     if not isinstance(options, list):
@@ -161,9 +270,13 @@ def load_and_normalize(
 
         if include_astro:
             original_case_id = str(entry.get("case_id") or "")
-            chart = _extract_chart_input(fortune_data.get(case_id) or fortune_data.get(original_case_id))
+            chart = to_canonical_chart_input(fortune_data.get(case_id) or fortune_data.get(original_case_id))
             if chart:
                 row["chart_input"] = chart
+
+        birth_info = entry.get("birth_info")
+        if isinstance(birth_info, dict) and birth_info:
+            row["birth_info"] = birth_info
 
         rows.append(row)
 

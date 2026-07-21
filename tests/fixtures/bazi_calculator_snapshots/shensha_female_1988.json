@@ -1,0 +1,78 @@
+{
+  "_meta": {
+    "generator": "tests/fixtures/bazi_calculator_snapshots/regenerate.py",
+    "lunar_backend": "builtin"
+  },
+  "data": [
+    {
+      "meaning": "聪明孤独，有宗教艺术天赋",
+      "name": "华盖",
+      "position": "year_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "地网",
+      "position": "year_zhi"
+    },
+    {
+      "meaning": "走动奔波，利于外出发展",
+      "name": "驿马",
+      "position": "month_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "劫煞",
+      "position": "month_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "吊客",
+      "position": "month_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "金舆",
+      "position": "day_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "劫煞",
+      "position": "day_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "孤辰",
+      "position": "day_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "天喜",
+      "position": "day_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "十恶大败",
+      "position": "day_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "金舆",
+      "position": "hour_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "劫煞",
+      "position": "hour_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "孤辰",
+      "position": "hour_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "天喜",
+      "position": "hour_zhi"
+    }
+  ]
+}

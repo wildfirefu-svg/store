@@ -176,4 +176,7 @@ def test_load_and_normalize_supports_official_questions_payload(tmp_path):
     assert rows[0]["year"] == "2025"
     assert rows[0]["domain"] == "family"
     assert rows[0]["options"] == ["A. a", "B. b", "C. c", "D. d"]
-    assert rows[0]["chart_input"]["chineseDate"] == "x"
+    # Phase 6 Task 5（裁决 1B+2A）：调用点改为 to_canonical_chart_input 后，
+    # API 形状归一化为 ziwei + official_astro；原 chart_input["chineseDate"]
+    # 透传断言失效，改为断言 canonical 中的 chinese_date（执行偏离已登记）。
+    assert rows[0]["chart_input"]["official_astro"]["chinese_date"] == "x"

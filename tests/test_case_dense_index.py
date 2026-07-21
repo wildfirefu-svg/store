@@ -11,21 +11,12 @@ import numpy as np
 import pytest
 
 
-def _ensure_fake_sentence_transformers() -> None:
-    """Inject a lightweight sentence-transformers mock if not present.
-
-    This keeps the unit tests fast and deterministic even when the real
-    ``sentence-transformers`` package is not installed in the environment.
-    """
-    if "sentence_transformers" in sys.modules:
-        return
-
+def _build_fake_sentence_transformers_module() -> types.ModuleType:
     class _FakeSentenceTransformer:
         def __init__(self, model_name: str):
             self.model_name = model_name
 
         def encode(self, sentences, **kwargs):
-            # Match the expected dimensions for the two models used in tests.
             dim = 512 if "bge-small-zh" in self.model_name else 384
             rng = np.random.default_rng(42)
             arr = rng.random((len(sentences), dim)).astype(np.float32)
@@ -34,12 +25,16 @@ def _ensure_fake_sentence_transformers() -> None:
 
     mod = types.ModuleType("sentence_transformers")
     mod.SentenceTransformer = _FakeSentenceTransformer
-    sys.modules["sentence_transformers"] = mod
+    return mod
 
 
 @pytest.fixture(autouse=True)
-def _inject_fake_st():
-    _ensure_fake_sentence_transformers()
+def _inject_fake_st(monkeypatch):
+    monkeypatch.setitem(
+        sys.modules,
+        "sentence_transformers",
+        _build_fake_sentence_transformers_module(),
+    )
     yield
 
 

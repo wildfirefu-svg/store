@@ -1,0 +1,258 @@
+"""Phase 6A0 已批准命盘上下文渲染器（schema 版本化，确定性输出）。
+
+确定性契约：同一 case + 同一 schema_version + 同一 as_of_date → 跨进程逐字节一致。
+denylist：kong_wang / liu_nian（含 four_pillars.<pillar>.kong_wang 占位键）永不读取。
+"""
+from __future__ import annotations
+
+import json
+
+from benchmark.formatters.baziqa_prompt import format_birth_line
+
+CHART_CONTEXT_TEMPLATE_VERSION = "approved_v1"
+SCHEMA_VERSIONS = ("legacy_v0", "approved_v1")
+
+APPROVED_BAZI_FIELDS: tuple[str, ...] = (
+    "four_pillars",
+    "day_master",
+    "nayin_wuxing",
+    "wuxing_stats",
+    "shishen_stats",
+    "branch_relations",
+    "shensha",
+    "da_yun",
+    "tai_yuan",
+    "ming_gong",
+    "shen_gong",
+    "true_solar_info",
+)
+DENYLIST_FIELDS: tuple[str, ...] = ("kong_wang", "liu_nian")
+
+_PILLAR_ORDER = ("year", "month", "day", "hour")
+_PILLAR_LABEL = {"year": "年柱", "month": "月柱", "day": "日柱", "hour": "时柱"}
+_WUXING_ORDER = ("jin", "mu", "shui", "huo", "tu")
+_WUXING_LABEL = {"jin": "金", "mu": "木", "shui": "水", "huo": "火", "tu": "土"}
+
+
+def render_chart_context(
+    case: dict,
+    schema_version: str = CHART_CONTEXT_TEMPLATE_VERSION,
+    as_of_date: str | None = None,
+) -> str:
+    """case 为完整题目记录（含 person 与 chart_input）。
+
+    legacy_v0   → 与 format_birth_line(case) 逐字节一致；
+    approved_v1 → 身份头 4 行（与 format_birth_line 前 4 行逐字节一致）
+                  + 固定模板渲染 chart_input 批准字段；
+                  chart_input.ziwei 存在时追加本命紫微宫位段。
+    as_of_date 当前不影响 approved_v1 输出（无日期相关批准字段），仅入 manifest。
+    """
+    if schema_version == "legacy_v0":
+        return format_birth_line(case)
+    if schema_version != "approved_v1":
+        raise ValueError(f"unknown schema_version: {schema_version!r}")
+    chart = case.get("chart_input") or {}
+    # 按"键存在"渲染：BaziQA enriched 全键（空列表字段也渲染"无"段）；
+    # MingLi 归一化输入仅含部分八字键，缺失段跳过（可见性由 profiles 矩阵按 profile 断言）。
+    sections = [_identity_header(case)]
+    if "four_pillars" in chart:
+        sections.append(_render_four_pillars(chart["four_pillars"]))
+    if "day_master" in chart:
+        sections.append(_render_day_master(chart["day_master"]))
+    if "da_yun" in chart:
+        sections.append(_render_da_yun(chart["da_yun"], chart.get("dayun_summary") or {}))
+    if all(k in chart for k in ("tai_yuan", "ming_gong", "shen_gong")):
+        sections.append(_render_three_palaces(chart))
+    if "true_solar_info" in chart:
+        sections.append(_render_true_solar(chart["true_solar_info"]))
+    if "nayin_wuxing" in chart:
+        sections.append(_render_nayin(chart["nayin_wuxing"]))
+    if "wuxing_stats" in chart:
+        sections.append(_render_wuxing_stats(chart["wuxing_stats"]))
+    if "shishen_stats" in chart:
+        sections.append(_render_shishen_stats(chart["shishen_stats"]))
+    if "branch_relations" in chart:
+        sections.append(_render_branch_relations(chart["branch_relations"]))
+    if "shensha" in chart:
+        sections.append(_render_shensha(chart["shensha"]))
+    if chart.get("ziwei"):
+        sections.append(_render_ziwei(chart["ziwei"]))
+    return "\n\n".join(sections) + "\n"
+
+
+def approved_field_presence(chart_input: dict) -> dict[str, bool]:
+    """返回 APPROVED_BAZI_FIELDS 每项在 chart_input 中是否有可用数据。"""
+    fp = chart_input.get("four_pillars") or {}
+    fp_ok = all(
+        key in fp
+        and all(
+            sub in fp[key]
+            for sub in (
+                "gan", "zhi", "gan_wuxing", "zhi_wuxing", "shi_shen_gan",
+                "shi_shen_zhi_main", "cang_gan", "cang_gan_shi_shen", "nayin",
+            )
+        )
+        for key in _PILLAR_ORDER
+    )
+    nayin = chart_input.get("nayin_wuxing") or {}
+    return {
+        "four_pillars": fp_ok,
+        "day_master": bool(chart_input.get("day_master")),
+        "nayin_wuxing": all(k in nayin for k in _PILLAR_ORDER),
+        "wuxing_stats": bool(chart_input.get("wuxing_stats")),
+        "shishen_stats": bool(chart_input.get("shishen_stats")),
+        "branch_relations": "branch_relations" in chart_input,
+        "shensha": "shensha" in chart_input,
+        "da_yun": bool(chart_input.get("da_yun")),
+        "tai_yuan": bool(chart_input.get("tai_yuan")),
+        "ming_gong": bool(chart_input.get("ming_gong")),
+        "shen_gong": bool(chart_input.get("shen_gong")),
+        "true_solar_info": bool(chart_input.get("true_solar_info")),
+    }
+
+
+def _identity_header(case: dict) -> str:
+    """与 format_birth_line 前 4 行逐字节一致（姓名/性别/出生/地点）。"""
+    return "\n".join(format_birth_line(case).split("\n")[:4])
+
+
+def _render_four_pillars(fp: dict) -> str:
+    lines = ["【四柱】"]
+    for key in _PILLAR_ORDER:
+        p = fp[key]
+        cang = "、".join(
+            f"{gan}({shen})" for gan, shen in zip(p["cang_gan"], p["cang_gan_shi_shen"])
+        )
+        lines.append(
+            f"{_PILLAR_LABEL[key]}：{p['gan']}{p['zhi']}"
+            f"（{p['gan']}·{p['gan_wuxing']}／{p['zhi']}·{p['zhi_wuxing']}）"
+            f" 十神：{p['shi_shen_gan']}／{p['shi_shen_zhi_main']}（主气）"
+            f" 藏干：{cang} 纳音：{p['nayin']}"
+        )
+    return "\n".join(lines)
+
+
+def _render_day_master(dm: dict) -> str:
+    return (
+        "【日主】\n"
+        f"日主：{dm['gan']}（{dm['wuxing']}·{dm['yinyang']}）"
+        f" 十二长生：{dm['shier_changsheng']}"
+    )
+
+
+def _render_da_yun(da_yun: list, summary: dict) -> str:
+    current = summary.get("current_pillar", "")
+    if isinstance(current, dict):
+        # enriched 实际形状：current_pillar 为 dict（{gan, zhi, ...}），非字符串
+        current = f"{current.get('gan', '')}{current.get('zhi', '')}"
+    lines = ["【大运】"]
+    lines.append(
+        f"起运：{summary.get('starting_age', '')}岁（{summary.get('direction', '')}）"
+        f" 当前大运：{current}"
+    )
+    for item in da_yun:
+        mark = "〔当前〕" if item.get("is_current") else ""
+        lines.append(
+            f"{item['index']}. {item['gan']}{item['zhi']}"
+            f"（{item['start_age']}-{item['end_age']}岁）"
+            f" 十神：{item['shi_shen_gan']}／{item['shi_shen_zhi']}{mark}"
+        )
+    return "\n".join(lines)
+
+
+def _render_three_palaces(chart: dict) -> str:
+    ty, mg, sg = chart["tai_yuan"], chart["ming_gong"], chart["shen_gong"]
+    return (
+        "【胎元／命宫／身宫】\n"
+        f"胎元：{ty['gan']}{ty['zhi']}（{ty['nayin']}）"
+        f" 命宫：{mg['gan']}{mg['zhi']}（{mg['nayin']}）"
+        f" 身宫：{sg['gan']}{sg['zhi']}（{sg['nayin']}）"
+    )
+
+
+def _render_true_solar(ts: dict) -> str:
+    matched = ts["location_matched"]
+    matched_text = ("是" if matched else "否") if isinstance(matched, bool) else str(matched)
+    return (
+        "【真太阳时校正】\n"
+        f"原时间：{ts['original_time']} 校正后：{ts['adjusted_time']}"
+        f"（{ts['adjustment_minutes']}分钟，方法：{ts['method']}，地点匹配：{matched_text}）"
+    )
+
+
+def _render_nayin(nayin: dict) -> str:
+    return (
+        "【纳音五行】\n"
+        + "　".join(f"{_PILLAR_LABEL[k]}：{nayin[k]}" for k in _PILLAR_ORDER)
+    )
+
+
+def _render_wuxing_stats(ws: dict) -> str:
+    counts = " ".join(f"{_WUXING_LABEL[k]}{ws[k]}" for k in _WUXING_ORDER)
+    missing = "、".join(str(x) for x in ws["missing"]) if ws["missing"] else "无"
+    return (
+        "【五行统计】\n"
+        f"{counts}；缺：{missing}；最旺：{ws['strongest']}；最弱：{ws['weakest']}"
+    )
+
+
+def _render_shishen_stats(ss: dict) -> str:
+    counts = " ".join(f"{name}{num}" for name, num in ss["counts"].items())
+    missing = "、".join(str(x) for x in ss["missing"]) if ss["missing"] else "无"
+    return f"【十神统计】\n{counts}；缺：{missing}"
+
+
+def _render_branch_relations(relations: list) -> str:
+    lines = ["【地支关系】"]
+    if not relations:
+        lines.append("无")
+    for rel in relations:
+        pillars = rel["pillars"]
+        if not isinstance(pillars, str):
+            # 兼容 list 形状；enriched 实际为 "day-year" 这类字符串，直接渲染
+            pillars = "、".join(str(x) for x in pillars)
+        lines.append(f"{rel['type']}：{pillars}（{rel['detail']}）")
+    return "\n".join(lines)
+
+
+def _render_shensha(shensha: list) -> str:
+    lines = ["【神煞】"]
+    if not shensha:
+        lines.append("无")
+    for item in shensha:
+        lines.append(f"{item['name']}（{item['position']}）：{item['meaning']}")
+    return "\n".join(lines)
+
+
+def _star_names(stars: list) -> str:
+    names = [str(s.get("name", "")) if isinstance(s, dict) else str(s) for s in stars]
+    return "、".join(n for n in names if n) or "无"
+
+
+def _fmt_value(value) -> str:
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False, sort_keys=True)
+    return str(value)
+
+
+def _render_ziwei(ziwei: dict) -> str:
+    info = ziwei["basic_info"]
+    lines = ["【紫微斗数·本命】"]
+    lines.append(
+        f"命宫：{info['ming_gong_gan_zhi']} 身宫：{info['shen_gong_position']}"
+        f" 五行局：{info['wu_xing_ju']} 命主：{info['ming_zhu']} 身主：{info['shen_zhu']}"
+    )
+    for palace in ziwei["twelve_palaces"]:
+        mains = "、".join(
+            f"{s['name']}（{s['brightness']}）" for s in palace["main_stars"]
+        ) or "无"
+        sg = "〔身宫〕" if palace.get("is_shengong") else ""
+        lines.append(
+            f"{palace['name']}（{palace['position']}·{palace['tian_gan']}）{sg}"
+            f" 主星：{mains} 辅星：{_star_names(palace['auxiliary_stars'])}"
+            f" 大限：{_fmt_value(palace['daxian'])}"
+        )
+    si_hua = ziwei.get("si_hua")
+    if si_hua:
+        lines.append("四化：" + json.dumps(si_hua, ensure_ascii=False, sort_keys=True))
+    return "\n".join(lines)

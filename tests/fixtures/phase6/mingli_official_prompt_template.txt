@@ -1,0 +1,82 @@
+MingLi-Bench 官方评测 prompt 模板对照（Task 5 Step 5 核验产出）
+================================================================
+
+来源：MingLi-Bench 仓库 mingli_bench/benchmark.py `_prepare_prompt`（L209–L321）
+      + mingli_bench/models/base.py `SYSTEM_PROMPT`（L18）
+钉死 commit：b7433280fd86d7a7c27debbc47d0303c218f0bfd
+核验日期：2026-07-18
+核验结论：仓库含官方模板，与计划冻结版 mingli_official_cot_v1 存在实质差异
+          （指令结构、答案行格式、选项呈现方式三项判据全部命中）→ 按计划停下汇报。
+
+---- 官方 system prompt（所有模型共用，models/base.py L18）----
+
+你是一位精通中国传统命理学的专家，包括八字命理、紫微斗数等。请根据给定的信息进行分析和回答。
+
+---- 官方 user prompt 结构（CoT + astro 路径，按源码重建）----
+
+以下是一道关于中国传统命理的题目。
+
+命主信息：
+{birth_info.raw}
+结合中国传统命理学（包括但不限于四柱八字、紫微斗数等），请先分析推理过程，然后给出答案。最后用'答案：X'的格式给出你的选择（X为A、B、C或D）。
+
+八字命盘信息：
+八字：{chineseDate}
+时辰：{time}
+五行局：{fiveElementsClass}
+生肖：{zodiac}
+
+紫微命盘信息：
+十二宫位星曜分布：
+{宫位名}：{majorStars+minorStars 星名，空格连接}   ← 仅列有星曜的宫，固定宫序：
+   命宫 兄弟 夫妻 子女 财帛 疾厄 迁移 仆役 官禄 田宅 福德 父母
+
+问题：{question}
+
+选项：
+{letter}. {text}   ← 每行一个，按 letter 排序
+
+（direct 非 CoT 路径的差异仅一句：
+ "结合中国传统命理学（包括但不限于四柱八字、紫微斗数等）进行推算，请直接给出答案，用'答案：X'的格式（X为A、B、C或D）。"）
+
+---- 官方源码关键片段（verbatim，benchmark.py）----
+
+prompt = f"""以下是一道关于中国传统命理的题目。
+
+命主信息：
+{birth_info.get('raw', birth_info)}"""
+if use_cot:
+    prompt += "\n结合中国传统命理学（包括但不限于四柱八字、紫微斗数等），请先分析推理过程，然后给出答案。最后用'答案：X'的格式给出你的选择（X为A、B、C或D）。"
+else:
+    prompt += "\n结合中国传统命理学（包括但不限于四柱八字、紫微斗数等）进行推算，请直接给出答案，用'答案：X'的格式（X为A、B、C或D）。"
+
+# astro 注入（use_astro 且 fortune 数据存在时）：
+prompt += f"""
+
+八字命盘信息：
+八字：{chinese_date}
+时辰：{time_info}
+五行局：{five_elements}
+生肖：{zodiac}
+
+紫微命盘信息：
+十二宫位星曜分布："""
+# 宫位：majorStars+minorStars 星名空格连接，仅列有星曜的宫，固定宫序
+# 选项：f"{letter}. {text}\n"，sorted by letter
+
+---- 与计划冻结版 mingli_official_cot_v1 的实质差异 ----
+
+1. 指令结构：官方为连续段落（"命主信息：/问题：/选项："标签），无 Markdown ## 分节；
+   冻结版用 "## 命盘信息 / ## 问题 / ## 选项" 分节。
+2. 答案行格式：官方 '答案：X'；冻结版 "最终答案：X"。
+3. 选项呈现：官方 "{letter}. {text}"；冻结版原样透传 case["options"] 字符串。
+4. 附加差异：官方 astro 注入"八字命盘信息"块（chineseDate/时辰/五行局/生肖）
+   + 宫位星曜（无亮度/大限/干支）；官方还有独立 system prompt；冻结版无。
+5. 真实数据 chineseDate 即四柱字符串（例："甲寅 戊辰 己亥 壬申"），
+   官方"八字"注入依赖此字段，而非结构化八字六字段。
+
+---- 裁决记录（2026-07-18）----
+
+用户裁决 2A：弃用计划冻结版，benchmark/formatters/mingli_prompt.py 按本文件
+记录的官方模板 1:1 复刻（mingli_official_replica_v1）。唯一适配差异：选项输入
+接受 adapter 归一化字符串 "A. 文本"（解析 letter/text 后按官方语义排序输出）。

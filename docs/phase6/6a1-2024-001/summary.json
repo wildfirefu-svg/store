@@ -1,0 +1,136 @@
+{
+  "run_id": "6a1-2024-001",
+  "year": 2024,
+  "status": "OK",
+  "sample_temperature": 1.0,
+  "recheck": false,
+  "acc": {
+    "vote5": [
+      0.25,
+      0.375,
+      0.35
+    ],
+    "single_t": [
+      0.325,
+      0.35,
+      0.4
+    ],
+    "anchor": [
+      0.425,
+      0.425,
+      0.425
+    ]
+  },
+  "per_repeat_delta1": [
+    -7.5,
+    2.5,
+    -5.0
+  ],
+  "per_repeat_delta2": [
+    -17.5,
+    -5.0,
+    -7.5
+  ],
+  "delta1_pp": -3.33,
+  "delta2_pp": -10.0,
+  "acc_trimmed_mean": {
+    "vote5": 0.325,
+    "single_t": 0.3583,
+    "anchor": 0.425
+  },
+  "by_domain": {
+    "annual_fortune": {
+      "vote5": 0.6667,
+      "single_t": 1.0,
+      "anchor": 1.0,
+      "delta1_pp": -33.33,
+      "delta2_pp": -33.33,
+      "n": 3
+    },
+    "career": {
+      "vote5": 0.3333,
+      "single_t": 0.4167,
+      "anchor": 0.5,
+      "delta1_pp": -8.33,
+      "delta2_pp": -16.67,
+      "n": 12
+    },
+    "family": {
+      "vote5": 0.6667,
+      "single_t": 0.6667,
+      "anchor": 0.5,
+      "delta1_pp": 0.0,
+      "delta2_pp": 16.67,
+      "n": 6
+    },
+    "health": {
+      "vote5": 0.3333,
+      "single_t": 0.5,
+      "anchor": 1.0,
+      "delta1_pp": -16.67,
+      "delta2_pp": -66.67,
+      "n": 6
+    },
+    "relationship": {
+      "vote5": 0.3333,
+      "single_t": 0.2619,
+      "anchor": 0.3571,
+      "delta1_pp": 7.14,
+      "delta2_pp": -2.38,
+      "n": 42
+    },
+    "study": {
+      "vote5": 0.0,
+      "single_t": 0.1667,
+      "anchor": 0.0,
+      "delta1_pp": -16.67,
+      "delta2_pp": 0.0,
+      "n": 6
+    },
+    "unknown": {
+      "vote5": 0.3095,
+      "single_t": 0.3571,
+      "anchor": 0.4286,
+      "delta1_pp": -4.76,
+      "delta2_pp": -11.9,
+      "n": 42
+    },
+    "wealth": {
+      "vote5": 0.0,
+      "single_t": 0.3333,
+      "anchor": 0.0,
+      "delta1_pp": -33.33,
+      "delta2_pp": 0.0,
+      "n": 3
+    }
+  },
+  "unresolved_rate": 0.25,
+  "four_grid_vote5_vs_single_t": {
+    "both": 28,
+    "vote5_only": 11,
+    "single_t_only": 15,
+    "neither": 66
+  },
+  "four_grid_vote5_vs_anchor": {
+    "both": 32,
+    "vote5_only": 7,
+    "anchor_only": 19,
+    "neither": 62
+  },
+  "call_failed": 0,
+  "cost": {
+    "metric": "prompt_chars_proxy",
+    "note": "API 未返回 token usage；prompt 字符数 × 调用数 × repeats 为成本代理",
+    "per_case_chars_trimmed_mean": 251.3,
+    "arm_total_chars_per_run": {
+      "vote5": 153945,
+      "single_t": 30789,
+      "anchor": 30789
+    },
+    "cost_ratio_vote5_vs_single_t": 5.0,
+    "cost_ratio_vote5_vs_anchor": 5.0
+  },
+  "verdict": "ROLLBACK",
+  "pollution_flag": false,
+  "stage_hard_cap": 910
+}

@@ -1,0 +1,61 @@
+{
+  "run_id": "6a1-2024-001",
+  "seed": 20260717,
+  "profile_id": "baziqa_xjz_direct",
+  "chart_schema_version": "legacy_v0",
+  "sample_temperature": 1.0,
+  "as_of_date": "2026-07-17",
+  "temperature_freeze": {
+    "mode": "dev",
+    "rate_r1": 0.2,
+    "action_r1": "probe_r2",
+    "rate_r2": 0.7,
+    "action_r2": "freeze",
+    "sample_temperature": 1.0
+  },
+  "dataset_sha256": "3bbd28b4d424b36a1dde847dff9dbbd59ee226b85acb845a3ee51b14c4b56024",
+  "dev_dataset_sha256": "3bbd28b4d424b36a1dde847dff9dbbd59ee226b85acb845a3ee51b14c4b56024",
+  "case_groups_sha256": "ceca80df6c9f0d65d58f04581f4a4a07c87f0ce8f7a47c5c72289a560a667ba1",
+  "slice_order": [
+    "probe_r1:-1:probe",
+    "probe_r2:-1:probe",
+    "vote5_samples:0:group_a",
+    "anchor_single0:0:group_a",
+    "anchor_single0:0:group_b",
+    "vote5_samples:0:group_b",
+    "vote5_samples:1:group_a",
+    "anchor_single0:1:group_a",
+    "anchor_single0:1:group_b",
+    "vote5_samples:1:group_b",
+    "vote5_samples:2:group_a",
+    "anchor_single0:2:group_a",
+    "anchor_single0:2:group_b",
+    "vote5_samples:2:group_b"
+  ],
+  "budget_reconciliation": {
+    "probe_scheduled": 100,
+    "main_scheduled": 720,
+    "scheduled_total": 820,
+    "attempted_total": 820,
+    "registered_hard_cap": 910
+  },
+  "provider": "deepseek",
+  "model": "deepseek-chat",
+  "code_hash": "70666b558846bab84b2530aa523aec183002bd4d",
+  "workspace_state": {
+    "dirty_files": [],
+    "clean": true,
+    "file_sha256": {
+      "scripts/run_phase6_6a1_ablation.py": "20bb0274de005c78468a80d9922ff7c0c91571d6c97d8dd6e7273b8e1d1a56d7",
+      "scripts/build_phase6_audit_index.py": "02d9a84f9ce050f7d38586cd22362e6b8571e043fc995b7ba57f8009912ae8a4",
+      "benchmark/runners/run_benchmark.py": "9c6d1d13f55405889e433d51c312f64904e78bb58ae4ebecf98b554183f8652b",
+      "benchmark/runners/self_consistency.py": "2b2b9df4d34d01c58f3671cb348154d803fbc8572448e888b2ac727a48569691"
+    }
+  },
+  "reproducibility_note": "请求不携带 seed；复现依赖 detail 行 raw_answer 与调用顺序",
+  "config_py_sha256": "d91a3fa750d7cd6792a68f9ceeb6b44e2e1b802c211f98c5a78046f0ed05688e",
+  "claude_api_py_sha256": "169e407940757d8e6161c4ce70ebb35a5bb05a9b46270757c9b9b17ef5751c78",
+  "code_scope_note": "切片 manifest 的 code_sha256 为实验时 6 文件 scope；config.py/claude_api.py 于评审收口补录（提交 8ca46ac 起纳入 scope）",
+  "audit_index": "audit_index.json",
+  "evidence_dir": "evidence/"
+}

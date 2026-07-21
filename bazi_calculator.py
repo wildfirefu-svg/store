@@ -614,16 +614,16 @@ LIUHAI = {('子','未'),('丑','午'),('寅','巳'),('卯','辰'),('申','亥'),
 
 # 十二长生 table: stem -> [长生,沐浴,冠带,临官,帝旺,衰,病,死,墓,绝,胎,养] branch indices
 CHANGSHENG_TABLE = {
-    '甲': [10,9,8,7,6,5,4,3,2,1,0,11],  # 亥...戌
-    '乙': [4,5,6,7,8,9,10,11,0,1,2,3],   # 午...辰
-    '丙': [6,7,8,9,10,11,0,1,2,3,4,5],   # 寅...丑
-    '丁': [0,1,2,3,4,5,6,7,8,9,10,11],   # 酉...申 (corrected)
-    '戊': [6,7,8,9,10,11,0,1,2,3,4,5],   # 寅...丑 (same as 丙)
-    '己': [0,1,2,3,4,5,6,7,8,9,10,11],   # 酉...申 (same as 丁)
-    '庚': [8,9,10,11,0,1,2,3,4,5,6,7],   # 巳...辰
-    '辛': [2,3,4,5,6,7,8,9,10,11,0,1],   # 子...亥
-    '壬': [11,0,1,2,3,4,5,6,7,8,9,10],   # 申...未
-    '癸': [5,6,7,8,9,10,11,0,1,2,3,4],   # 卯...寅
+    '甲': [11, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],   # 阳顺：长生亥
+    '乙': [6, 5, 4, 3, 2, 1, 0, 11, 10, 9, 8, 7],   # 阴逆：长生午
+    '丙': [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 1],   # 阳顺：长生寅
+    '丁': [9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 11, 10],   # 阴逆：长生酉
+    '戊': [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 1],   # 阳顺：长生寅（火土同宫）
+    '己': [9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 11, 10],   # 阴逆：长生酉
+    '庚': [5, 6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4],   # 阳顺：长生巳
+    '辛': [0, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],   # 阴逆：长生子
+    '壬': [8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6, 7],   # 阳顺：长生申
+    '癸': [3, 2, 1, 0, 11, 10, 9, 8, 7, 6, 5, 4],   # 阴逆：长生卯
 }
 CHANGSHENG_NAMES = ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养']
 
@@ -661,8 +661,8 @@ def detect_branch_relations(four_pillars):
             if (z1, z2) in LIUHAI or (z2, z1) in LIUHAI:
                 relations.append({'type':'六害','pillars':f'{k1}-{k2}','detail':f'{z1}{z2}害'})
 
-    # Check 三合
-    for group in SANHE:
+    # Check 三合（sorted 固定迭代顺序：SANHE 为集合，字符串哈希随机化会导致跨进程顺序漂移）
+    for group in sorted(SANHE):
         matches = []
         for k, z in branches.items():
             if z in group:
@@ -936,12 +936,18 @@ def calculate_shensha(four_pillars, day_master):
     all_zhis = [four_pillars[k]['zhi'] for k in ['year','month','day','hour']]
     all_gans = [four_pillars[k]['gan'] for k in ['year','month','day','hour']]
 
+    day_zhi = four_pillars['day']['zhi']
+    # 三合系参考局：年支/日支所属三合局并集（紫微仅日支）——spec §4.3 B 口径冻结表
+    # 12 地支全覆盖四个三合局，_find_taohua_group 对合法地支永不返回 None（不变式）；
+    # 若该不变式未来被破坏，set 推导的 if g 过滤与下方 sanhe_day_group 的假值判定仍可安全降级
+    sanhe_ref_groups = {g for g in (_find_taohua_group(year_zhi), _find_taohua_group(day_zhi)) if g}
+    sanhe_day_group = _find_taohua_group(day_zhi)
+
     result = {}
     for key in ['year', 'month', 'day', 'hour']:
         p = four_pillars[key]
         gan, zhi = p['gan'], p['zhi']
         ss = []
-        group = _find_taohua_group(zhi)  # shared 三合 group for this zhi
 
         # ── 日干系 (check all pillars) ──
         if zhi in TIANYI_GUIREN.get(day_master, ()): ss.append('天乙贵人')
@@ -957,17 +963,16 @@ def calculate_shensha(four_pillars, day_master):
         if day_master in YANGREN_MAP and zhi == YANGREN_MAP[day_master]: ss.append('羊刃')
         if day_master in _feiren and zhi == _feiren[day_master]: ss.append('飞刃')
 
-        # ── 三合系 (check per-pillar zhi) ──
-        if group:
-            if zhi == TAOHUA_MAP.get(group):          ss.append('桃花')
-            if zhi == YIMA_MAP.get(group):             ss.append('驿马')
-            if zhi == HUAGAI_MAP.get(group):           ss.append('华盖')
-            if zhi == _jiangxing.get(group):           ss.append('将星')
-            if zhi == _jiesha.get(group):              ss.append('劫煞')
-            if zhi == _zaisha.get(group):              ss.append('灾煞')
-            if zhi == _wangshen.get(group):            ss.append('亡神')
-            if zhi == _ziwei_ss.get(group):            ss.append('紫微')
-            if zhi == _sanhelu.get(group):             ss.append('三合禄')
+        # ── 三合系：以年支/日支所属三合局为参考（紫微仅以日支）──
+        if any(zhi == TAOHUA_MAP.get(g) for g in sanhe_ref_groups):   ss.append('桃花')
+        if any(zhi == YIMA_MAP.get(g) for g in sanhe_ref_groups):     ss.append('驿马')
+        if any(zhi == HUAGAI_MAP.get(g) for g in sanhe_ref_groups):   ss.append('华盖')
+        if any(zhi == _jiangxing.get(g) for g in sanhe_ref_groups):   ss.append('将星')
+        if any(zhi == _jiesha.get(g) for g in sanhe_ref_groups):      ss.append('劫煞')
+        if any(zhi == _zaisha.get(g) for g in sanhe_ref_groups):      ss.append('灾煞')
+        if any(zhi == _wangshen.get(g) for g in sanhe_ref_groups):    ss.append('亡神')
+        if sanhe_day_group and zhi == _ziwei_ss.get(sanhe_day_group): ss.append('紫微')
+        if any(zhi == _sanhelu.get(g) for g in sanhe_ref_groups):     ss.append('三合禄')
 
         # ── 孤辰寡宿 (四正局) — keyed by year_zhi group → target zhi ──
         for sg, gz in _guchen.items():
@@ -993,14 +998,15 @@ def calculate_shensha(four_pillars, day_master):
         if zhi == _diaoke.get(year_zhi):               ss.append('吊客')
         if zhi == _baihu.get(year_zhi):                ss.append('白虎')
 
-        # ── 日柱系 ──
-        if gan + zhi in KUIGANG:                       ss.append('魁罡')
-        if gan + zhi in _guluan:                       ss.append('孤鸾煞')
-        if gan + zhi in _yincha:                       ss.append('阴差阳错')
-        if gan + zhi in _shiedabai:                    ss.append('十恶大败')
-        if gan + zhi in _bazhuan:                      ss.append('八专')
-        if gan + zhi in _xuanzhen:                     ss.append('悬针')
-        if gan + zhi in _tianshe:                      ss.append('天赦')
+        # ── 日柱系（7 张表注释均为"日柱为"，仅以日柱论）──
+        if key == 'day':
+            if gan + zhi in KUIGANG:                   ss.append('魁罡')
+            if gan + zhi in _guluan:                   ss.append('孤鸾煞')
+            if gan + zhi in _yincha:                   ss.append('阴差阳错')
+            if gan + zhi in _shiedabai:                ss.append('十恶大败')
+            if gan + zhi in _bazhuan:                  ss.append('八专')
+            if gan + zhi in _xuanzhen:                 ss.append('悬针')
+            if gan + zhi in _tianshe:                  ss.append('天赦')
 
         # ── 全局系 ──
         if zhi == '戌':                                ss.append('天罗')
@@ -2173,13 +2179,14 @@ def compare_charts(chart1, chart2):
     # ---- 1. Five Elements comparison ----
     ws1 = chart1.get('wuxing_stats', {})
     ws2 = chart2.get('wuxing_stats', {})
-    all_elements = ['金', '木', '水', '火', '土']
-    total1 = sum(ws1.get(e, 0) for e in all_elements) or 1
-    total2 = sum(ws2.get(e, 0) for e in all_elements) or 1
+    # wuxing_stats 产出 pinyin 键（calculate_wuxing_stats）——按键名映射对齐
+    pinyin_elements = [('jin', '金'), ('mu', '木'), ('shui', '水'), ('huo', '火'), ('tu', '土')]
+    total1 = sum(ws1.get(k, 0) for k, _ in pinyin_elements) or 1
+    total2 = sum(ws2.get(k, 0) for k, _ in pinyin_elements) or 1
     wuxing_compare = {}
-    for e in all_elements:
-        pct1 = round(ws1.get(e, 0) / total1 * 100, 1)
-        pct2 = round(ws2.get(e, 0) / total2 * 100, 1)
+    for k, e in pinyin_elements:
+        pct1 = round(ws1.get(k, 0) / total1 * 100, 1)
+        pct2 = round(ws2.get(k, 0) / total2 * 100, 1)
         wuxing_compare[e] = {'chart1_pct': pct1, 'chart2_pct': pct2, 'diff': round(pct1 - pct2, 1)}
 
     # ---- 2. Day Master relationship ----

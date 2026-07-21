@@ -1,0 +1,98 @@
+{
+  "_meta": {
+    "generator": "tests/fixtures/bazi_calculator_snapshots/regenerate.py",
+    "lunar_backend": "builtin"
+  },
+  "data": [
+    {
+      "meaning": "遇之主逢凶化吉，贵人提携",
+      "name": "天乙贵人",
+      "position": "year_zhi"
+    },
+    {
+      "meaning": "聪明好学，利于科考文书",
+      "name": "文昌贵人",
+      "position": "year_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "太极贵人",
+      "position": "year_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "学堂",
+      "position": "year_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "将星",
+      "position": "year_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "血刃",
+      "position": "year_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "红艳煞",
+      "position": "month_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "寡宿",
+      "position": "month_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "吊客",
+      "position": "month_zhi"
+    },
+    {
+      "meaning": "遇之主逢凶化吉，贵人提携",
+      "name": "天乙贵人",
+      "position": "day_zhi"
+    },
+    {
+      "meaning": "聪明好学，利于科考文书",
+      "name": "文昌贵人",
+      "position": "day_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "太极贵人",
+      "position": "day_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "学堂",
+      "position": "day_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "将星",
+      "position": "day_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "血刃",
+      "position": "day_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "红艳煞",
+      "position": "hour_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "寡宿",
+      "position": "hour_zhi"
+    },
+    {
+      "meaning": "",
+      "name": "吊客",
+      "position": "hour_zhi"
+    }
+  ]
+}

@@ -70,3 +70,25 @@ def sample_answers(
         if last_err is not None:
             results.append(("", None))
     return results
+
+
+def strict_majority(votes: Sequence[Optional[str]], threshold: int = 3) -> Optional[str]:
+    """严格多数投票（Phase 6 6A1，设计 §5.2.4）。
+
+    与 majority_vote 的区别：majority_vote 取相对多数并按首次出现破平局
+    （2/1/1/1 会选出 2 票选项），不满足严格协议，故新增且**不复用**。
+
+    - 任一选项票数 >= threshold 且唯一 → 该选项；
+    - 否则（含双达阈值、无达阈值、全 None）→ None（unresolved，按错误计入分母）；
+    - None 票（invalid/call_failed）不参与计票但留在 votes 长度内——分母恒为采样次数；
+    - 禁止任何形式的破平局。
+    """
+    if len(votes) == 0:
+        raise ValueError("strict_majority requires at least one vote")
+    counts: dict = {}
+    for vote in votes:
+        if vote is None:
+            continue
+        counts[vote] = counts.get(vote, 0) + 1
+    winners = [label for label, n in counts.items() if n >= threshold]
+    return winners[0] if len(winners) == 1 else None

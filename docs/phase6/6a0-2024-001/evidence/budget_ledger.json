@@ -1,0 +1,67 @@
+{
+  "smoke_-1_ctx_approved_smoke": {
+    "hard_cap": 20,
+    "calls_attempted": 20,
+    "timestamp": "2026-07-19T10:37:08"
+  },
+  "main_0_ctx_approved_group_a": {
+    "hard_cap": 23,
+    "calls_attempted": 20,
+    "timestamp": "2026-07-19T10:37:09"
+  },
+  "main_0_ctx_legacy_group_a": {
+    "hard_cap": 23,
+    "calls_attempted": 20,
+    "timestamp": "2026-07-19T10:37:09"
+  },
+  "main_0_ctx_legacy_group_b": {
+    "hard_cap": 22,
+    "calls_attempted": 20,
+    "timestamp": "2026-07-19T10:37:09"
+  },
+  "main_0_ctx_approved_group_b": {
+    "hard_cap": 22,
+    "calls_attempted": 20,
+    "timestamp": "2026-07-19T10:37:09"
+  },
+  "main_1_ctx_approved_group_a": {
+    "hard_cap": 23,
+    "calls_attempted": 20,
+    "timestamp": "2026-07-19T10:37:09"
+  },
+  "main_1_ctx_legacy_group_a": {
+    "hard_cap": 23,
+    "calls_attempted": 20,
+    "timestamp": "2026-07-19T10:37:09"
+  },
+  "main_1_ctx_legacy_group_b": {
+    "hard_cap": 22,
+    "calls_attempted": 20,
+    "timestamp": "2026-07-19T10:37:09"
+  },
+  "main_1_ctx_approved_group_b": {
+    "hard_cap": 22,
+    "calls_attempted": 20,
+    "timestamp": "2026-07-19T10:37:10"
+  },
+  "main_2_ctx_approved_group_a": {
+    "hard_cap": 23,
+    "calls_attempted": 20,
+    "timestamp": "2026-07-19T10:37:32"
+  },
+  "main_2_ctx_legacy_group_a": {
+    "hard_cap": 23,
+    "calls_attempted": 20,
+    "timestamp": "2026-07-19T10:38:07"
+  },
+  "main_2_ctx_legacy_group_b": {
+    "hard_cap": 22,
+    "calls_attempted": 20,
+    "timestamp": "2026-07-19T10:38:41"
+  },
+  "main_2_ctx_approved_group_b": {
+    "hard_cap": 22,
+    "calls_attempted": 20,
+    "timestamp": "2026-07-19T10:39:16"
+  }
+}
