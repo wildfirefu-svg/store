@@ -12,7 +12,7 @@ from dataclasses import dataclass, replace
 class EvalProfile:
     profile_id: str
     dataset: str             # "baziqa" | "mingli"
-    prompt_style: str        # "official" | "xjz_direct"
+    prompt_style: str        # "official" | "xjz_direct" | "xjz_reasoned"
     interaction_mode: str    # "direct" | "multi_turn"
     chart_schema_version: str
     scoring_profile: str     # "baziqa_macro" | "mingli_trimmed"
@@ -25,6 +25,8 @@ PROFILES: dict[str, EvalProfile] = {
                     "baziqa", "official", "multi_turn", "approved_v1", "baziqa_macro"),
         EvalProfile("baziqa_xjz_direct",
                     "baziqa", "xjz_direct", "direct", "approved_v1", "baziqa_macro"),
+        EvalProfile("baziqa_xjz_reasoned",
+                    "baziqa", "xjz_reasoned", "direct", "legacy_v0", "baziqa_macro"),
         EvalProfile("mingli_official_cot_astro",
                     "mingli", "official", "direct", "approved_v1", "mingli_trimmed"),
         EvalProfile("mingli_xjz_direct",
@@ -57,6 +59,7 @@ def derive_method(profile: EvalProfile) -> str:
 _FORMATTER_MAP = {
     ("baziqa", "official", "multi_turn"): "format_multi_turn",
     ("baziqa", "xjz_direct", "direct"): "format_direct_choice_prompt",
+    ("baziqa", "xjz_reasoned", "direct"): "format_reasoned_choice_prompt",
     ("mingli", "official", "direct"): "format_official_cot_prompt",
     ("mingli", "xjz_direct", "direct"): "format_direct_choice_prompt",
 }
@@ -90,11 +93,52 @@ _APPROVED_ONLY_MARKERS = frozenset({
     "【胎元／命宫／身宫】", "【真太阳时校正】", "【纳音五行】", "【五行统计】",
     "【十神统计】", "【地支关系】",
 })
+_APPROVED_BAZI_MARKERS_NO_ZIWEI = _APPROVED_BAZI_MARKERS - {"【紫微斗数·本命】"}
 
 
 def visibility_requirements(
     profile: EvalProfile, chart_schema_version: str,
+    ziwei_arm: str | None = None,
 ) -> tuple[frozenset[str], frozenset[str]]:
+    if ziwei_arm is not None:
+        # Three-arm reasoned visibility matrix (design §6).
+        # render_reasoned_context() ignores chart_schema_version — all three arms
+        # produce identical marker output regardless of legacy_v0 vs approved_v1.
+        # The marker sets below are therefore version-independent.
+        if ziwei_arm == "none":
+            # format_birth_line(case) only — no section markers at all.
+            return frozenset(), _APPROVED_ONLY_MARKERS | _DENYLIST_MARKERS
+        if ziwei_arm == "only":
+            # identity header + 【紫微斗数·本命】only.
+            return (
+                frozenset({"【紫微斗数·本命】"}),
+                _APPROVED_BAZI_MARKERS | _DENYLIST_MARKERS,
+            )
+        if ziwei_arm == "combined":
+            # format_birth_line + 【紫微斗数·本命】.
+            # format_birth_line uses no section markers, so only ziwei appears.
+            return frozenset({"【紫微斗数·本命】"}), _DENYLIST_MARKERS
+        if ziwei_arm == "ziwei_mini":
+            # b2b: 精简紫微, required 4 个段标
+            # forbidden: 真实裸名次要宫位 + 八字关键词 + _DENYLIST_MARKERS
+            _B2B_FORBIDDEN_PALACES = frozenset({
+                "父母", "福德", "田宅", "官禄", "仆役", "迁移",
+                "疾厄", "财帛", "子女", "夫妻", "兄弟",
+            })
+            return (
+                frozenset({"【紫微斗数·精简】", "【命宫】", "【身宫】", "【主星】"}),
+                _B2B_FORBIDDEN_PALACES | frozenset({"四柱", "日主", "大运", "神煞"})
+                | _DENYLIST_MARKERS,
+            )
+        if ziwei_arm == "sequential":
+            # b2c: 顺序推理, required 八字+紫微+分隔线+指令
+            # forbidden: 继承 combined 臂的 _DENYLIST_MARKERS（不能为空）
+            return (
+                frozenset({"【紫微斗数·本命】", "--- 八字分析结束 ---",
+                           "请先基于八字信息进行初步分析"}),
+                _DENYLIST_MARKERS,
+            )
+        raise NotImplementedError(f"Unknown ziwei_arm: {ziwei_arm!r}")
     if chart_schema_version == "legacy_v0":
         # 旧上下文对照臂：自身 schema 由渲染器逐字节等价保证；此处只做串扰检测。
         return frozenset(), _APPROVED_ONLY_MARKERS | _DENYLIST_MARKERS
@@ -112,9 +156,11 @@ def visibility_requirements(
 
 def assert_visibility(
     rendered_text: str, profile: EvalProfile, chart_schema_version: str,
+    ziwei_arm: str | None = None,
 ) -> list[str]:
     """渲染文本上的 required/forbidden 子串断言，返回违规列表（空表 = 通过）。"""
-    required, forbidden = visibility_requirements(profile, chart_schema_version)
+    required, forbidden = visibility_requirements(
+        profile, chart_schema_version, ziwei_arm)
     violations = [f"required 缺失: {m}" for m in sorted(required) if m not in rendered_text]
     violations += [f"forbidden 命中: {m}" for m in sorted(forbidden) if m in rendered_text]
     return violations
@@ -122,10 +168,11 @@ def assert_visibility(
 
 def visibility_gate(
     rendered_text: str, profile: EvalProfile, chart_schema_version: str,
+    ziwei_arm: str | None = None,
 ) -> str:
     """runner 短路契约（裁决 1B）：返回 "PASS" | "BLOCKED_PRECONDITION"；
     BLOCKED_PRECONDITION 时 runner 禁止任何模型调用（Task 6 接线并以零调用测试断言）。"""
-    if assert_visibility(rendered_text, profile, chart_schema_version):
+    if assert_visibility(rendered_text, profile, chart_schema_version, ziwei_arm):
         return "BLOCKED_PRECONDITION"
     return "PASS"
 
@@ -154,6 +201,15 @@ def prompt_fingerprint(profile: EvalProfile) -> str:
                   inspect.getsource(mingli_prompt.format_official_cot_prompt)]
     elif formatter == "format_direct_choice_prompt":
         parts.append(inspect.getsource(baziqa_prompt.format_direct_choice_prompt))
+    elif formatter == "format_reasoned_choice_prompt":
+        from benchmark.formatters import chart_context as cc
+        parts += [
+            inspect.getsource(cc.render_reasoned_context),
+            inspect.getsource(
+                baziqa_prompt._assemble_reasoned_choice_prompt
+            ),
+            inspect.getsource(cc.extract_reasoned_choice_answer),
+        ]
     else:  # format_multi_turn
         parts.append(inspect.getsource(baziqa_prompt.format_multi_turn_context))
     return hashlib.sha256("\x00".join(parts).encode()).hexdigest()

@@ -6,6 +6,7 @@ denylist：kong_wang / liu_nian（含 four_pillars.<pillar>.kong_wang 占位键�
 from __future__ import annotations
 
 import json
+import re
 
 from benchmark.formatters.baziqa_prompt import format_birth_line
 
@@ -256,3 +257,151 @@ def _render_ziwei(ziwei: dict) -> str:
     if si_hua:
         lines.append("四化：" + json.dumps(si_hua, ensure_ascii=False, sort_keys=True))
     return "\n".join(lines)
+
+
+def _render_ziwei_mini(ziwei: dict) -> str:
+    """Render simplified ziwei context for b2b arm.
+
+    仅保留命宫、身宫、主星，排除 auxiliary_stars、daxian、si_hua 和其他宫位.
+    使用固定段标【紫微斗数·精简】、【命宫】、【身宫】、【主星】.
+    """
+    palaces = ziwei.get("twelve_palaces", [])
+    ming_palace = None
+    shen_palace = None
+    for palace in palaces:
+        if palace.get("name") == "命宫":
+            ming_palace = palace
+        if palace.get("is_shengong") is True:
+            shen_palace = palace
+
+    lines = ["【紫微斗数·精简】"]
+
+    # 命宫
+    if ming_palace:
+        ming_mains = "、".join(
+            f"{s['name']}（{s['brightness']}）" for s in ming_palace.get("main_stars", [])
+        ) or "无"
+        if shen_palace is ming_palace:
+            lines.append(f"【命宫】命身同宫 {ming_palace['position']} 主星：{ming_mains}")
+        else:
+            lines.append(f"【命宫】{ming_palace['position']} 主星：{ming_mains}")
+    else:
+        lines.append("【命宫】未标注")
+
+    # 身宫（命身同宫时已在命宫行标注，不重复输出段标以外的内容但仍输出标记）
+    if shen_palace and shen_palace is not ming_palace:
+        shen_mains = "、".join(
+            f"{s['name']}（{s['brightness']}）" for s in shen_palace.get("main_stars", [])
+        ) or "无"
+        lines.append(f"【身宫】{shen_palace['position']} 主星：{shen_mains}")
+    elif not shen_palace:
+        lines.append("【身宫】未标注")
+    # 命身同宫时身宫标记已包含在命宫行，但为满足 visibility required 仍输出段标
+    elif shen_palace is ming_palace:
+        lines.append("【身宫】命身同宫（见上）")
+
+    # 主星汇总段标（visibility required）
+    all_mains = []
+    if ming_palace:
+        for s in ming_palace.get("main_stars", []):
+            all_mains.append(f"{s['name']}（{s['brightness']}）")
+    lines.append("【主星】" + ("、".join(all_mains) if all_mains else "无"))
+
+    return "\n".join(lines)
+
+
+def _render_sequential(case: dict, ziwei: dict) -> str:
+    """Render sequential (bazi then ziwei) context for b2c arm.
+
+    第一部分: 八字完整排盘
+    分隔线: --- 八字分析结束 ---
+    第二部分: 紫微完整排盘
+    推理指令: 先八字再紫微综合判断
+    """
+    birth = format_birth_line(case)
+    ziwei_text = _render_ziwei(ziwei)
+    instruction = (
+        "请先基于八字信息进行初步分析，"
+        "再基于紫微斗数信息进行补充判断，"
+        "综合两者得出结论。"
+    )
+    return (
+        birth
+        + "\n\n--- 八字分析结束 ---\n\n"
+        + ziwei_text
+        + "\n\n"
+        + instruction
+    )
+
+
+def extract_reasoned_choice_answer(raw: str) -> str | None:
+    """Parse reasoned choice answer from model output.
+
+    Matches line-final '最终答案：X' (colon-tolerant, case-tolerant, period-tolerant).
+    Also handles Markdown variants: **最终答案：X** (bold) and ### 最终答案：X (heading).
+    Returns the LAST match as the canonical answer (design §4.1.2: last 最终答案 wins).
+    Returns None when no match found. No fallback to any generic/extended parser.
+    """
+    if not raw or not isinstance(raw, str):
+        return None
+    matches = re.findall(
+        r"^\s*(?:[#*]+\s*)?最终答案[：:]\s*([A-Da-d])\s*[。.]?\s*[#*]*\s*$",
+        raw.strip(), re.MULTILINE,
+    )
+    if not matches:
+        return None
+    return matches[-1].upper()
+
+
+def render_reasoned_context(
+    case: dict,
+    chart_schema_version: str,
+    ziwei_arm: str,
+) -> str:
+    """Render context for reasoned choice ablation arm.
+
+    Args:
+        case: Benchmark case dict (must contain chart_input.ziwei for ziwei
+            arms).
+        chart_schema_version: Schema version (passed through; not used for
+            output branching, but available for isolation assertions).
+        ziwei_arm:
+            ``"none"`` — format_birth_line(case) only (八字基线, no ziwei).
+            ``"only"`` - identity header + 本命紫微盘 (no 四柱, no 日主).
+            ``"combined"`` - format_birth_line(case) + 本命紫微盘.
+            ``"ziwei_mini"`` - identity header + 精简紫微 (命宫/身宫/主星 only).
+            ``"sequential"`` - 八字 + 分隔 + 紫微 + 顺序推理指令.
+
+    Returns:
+        Rendered context string.
+
+    Raises:
+        ValueError: If *ziwei_arm* is not one of ``"none"``, ``"only"``,
+            ``"combined"``, ``"ziwei_mini"``, ``"sequential"``.
+    """
+    if ziwei_arm == "none":
+        return format_birth_line(case)
+
+    identity = _identity_header(case)
+    ziwei_data = case.get("chart_input", {}).get("ziwei", {})
+
+    if ziwei_arm == "only":
+        ziwei_text = _render_ziwei(ziwei_data)
+        return identity + "\n\n" + ziwei_text
+
+    if ziwei_arm == "combined":
+        birth = format_birth_line(case)
+        ziwei_text = _render_ziwei(ziwei_data)
+        return birth + "\n\n" + ziwei_text
+
+    if ziwei_arm == "ziwei_mini":
+        ziwei_text = _render_ziwei_mini(ziwei_data)
+        return identity + "\n\n" + ziwei_text
+
+    if ziwei_arm == "sequential":
+        return _render_sequential(case, ziwei_data)
+
+    raise ValueError(
+        f"Unknown ziwei_arm: {ziwei_arm!r}. "
+        "Expected one of: none, only, combined, ziwei_mini, sequential."
+    )

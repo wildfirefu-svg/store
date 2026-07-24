@@ -1,0 +1,34 @@
+{
+  "description": "Golden prompt fingerprints for 6B1-D byte-equivalence test (3 case x 3 arm = 9 SHA-256)",
+  "source": {
+    "archive_dir": "docs/phase6/6b1/6b1-2026-07-17-deepseek-deepseek-chat-78481de6",
+    "archive_fingerprint": "78481de6",
+    "audit_index_path": "docs/phase6/6b1/6b1-2026-07-17-deepseek-deepseek-chat-78481de6/audit_index.json",
+    "audit_index_sha256": "81afe841b71905245fea5334d066cb203d014b927a9b74f84fec085ab54f50f0",
+    "field": "context_fingerprints"
+  },
+  "case_ids": [
+    "guangdong_female_19800824_P001-Q1",
+    "guangdong_female_19800824_P001-Q2",
+    "guangdong_female_19800824_P001-Q3"
+  ],
+  "arms": ["b1a_prime", "b1b", "b1c"],
+  "ziwei_arm_map": {
+    "b1a_prime": "none",
+    "b1b": "only",
+    "b1c": "combined"
+  },
+  "fingerprints": {
+    "guangdong_female_19800824_P001-Q1_b1a_prime": "a4f98e7b477f56d18a841a182b1da2b33e3c8cf4f196547c3e9e4ddceb3afcd8",
+    "guangdong_female_19800824_P001-Q2_b1a_prime": "b2d9a50b217cc9da4496c0b0f6c05df521144240c8b27feef97b12d5e46725e1",
+    "guangdong_female_19800824_P001-Q3_b1a_prime": "439091addfb4973bc12c573901e62cf8a5d233dfca445b08cdb983e35013bef0",
+    "guangdong_female_19800824_P001-Q1_b1b": "5ab468b570da02158b23f1e439e714871ddf4bb23bdd0e3c90d4ba839e4b983b",
+    "guangdong_female_19800824_P001-Q2_b1b": "676a60be4fded5b6a8cd3ebdfcebf89d5c78c8548a98914987f5fe9f4a546177",
+    "guangdong_female_19800824_P001-Q3_b1b": "cc410d75346ed893aa3f6168b84d3a25df4566552d85505ff9af68cbc5d087d6",
+    "guangdong_female_19800824_P001-Q1_b1c": "b0ddcdf4da10699e9de5c19948bdaade0b00169293fcc793327bdb4593b6cc5d",
+    "guangdong_female_19800824_P001-Q2_b1c": "aba1c3d5a397933bfc53e6889c73cdb83e18d69e9f5c827809357eb84b63f631",
+    "guangdong_female_19800824_P001-Q3_b1c": "ae0b03ff220213e420ec519d94045fc8fd89af11ff172f4b5d4fcf9bb629b82f"
+  },
+  "total": 9,
+  "regeneration_policy": "FORBIDDEN - never regenerate from current renderer (avoids self-proving). Only copy from 6B1 audit_index.json context_fingerprints."
+}

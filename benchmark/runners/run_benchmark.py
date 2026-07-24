@@ -120,7 +120,7 @@ def resolve_method(profile_name, explicit_method):
 
 RESUME_MANIFEST_FIELDS: tuple = (
     "dataset_sha256", "case_ids_sha256", "profile_id", "chart_schema_version",
-    "arm", "attempt_stage", "repeat_idx", "provider", "model",
+    "arm", "ziwei_arm", "attempt_stage", "repeat_idx", "provider", "model",
     "temperature", "sample_temperature", "n_samples", "aggregate", "method",
     "prompt_template_sha256", "code_sha256", "scheduled_calls", "hard_cap",
     "as_of_date",                              # v6 高优 7：enrichment 锚定日期
@@ -179,6 +179,7 @@ def build_resume_manifest(args, profile) -> dict:
         "profile_id": profile.profile_id,
         "chart_schema_version": profile.chart_schema_version,
         "arm": args.arm or "default",
+        "ziwei_arm": getattr(args, "ziwei_arm", None) or "default",
         "attempt_stage": getattr(args, "attempt_stage", "main"),
         "repeat_idx": args.repeat_idx,
         "provider": args.provider,
@@ -328,12 +329,23 @@ def run_offline_benchmark(cases, predictions):
 
 
 def build_benchmark_prompt(case, method='direct_choice', phase4_exp_a=False,
-                           chart_schema_version=None, profile_formatter=None):
+                           chart_schema_version=None, profile_formatter=None,
+                           ziwei_arm=None):
     if profile_formatter == 'format_official_cot_prompt':
         # 裁决 2A（执行偏离）：官方 CoT 为单参签名，astro 取自
         # case["chart_input"]["official_astro"]，不再经 render_chart_context 两参传入。
         from benchmark.formatters.mingli_prompt import format_official_cot_prompt
         return format_official_cot_prompt(case)
+    if profile_formatter == 'format_reasoned_choice_prompt':
+        from benchmark.formatters.chart_context import render_reasoned_context
+        from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt
+        if ziwei_arm is None:
+            print(json.dumps({"status": "BLOCKED",
+                "reason": "reasoned profile 要求显式 ziwei_arm (none/only/combined)，"
+                          "程序化调用不可静默回退 none"}, ensure_ascii=False))
+            raise SystemExit(2)
+        context_text = render_reasoned_context(case, chart_schema_version, ziwei_arm)
+        return _assemble_reasoned_choice_prompt(case, context_text)
     if method == 'two_stage_reasoning':
         return format_stage1_prompt(case, exp_a=phase4_exp_a)
     if method == 'structured_reasoning':
@@ -668,7 +680,7 @@ def _phase4_runtime_config(provider, model, prompt_version, rag_k, retrieval_mod
     }
 
 
-def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None, n_samples=1, sample_temperature=0.4, aggregate='majority', phase4_evidence_mode='all', phase4_stage1_cache=None, phase4_exp_b=False, phase4_exp_a=False, phase4_exp_c=False, phase4_exp_c2=False, phase4_direct_c2=False, chart_schema_version=None, profile_formatter=None, resume_append=False, completed_keys=None):
+def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None, n_samples=1, sample_temperature=0.4, aggregate='majority', phase4_evidence_mode='all', phase4_stage1_cache=None, phase4_exp_b=False, phase4_exp_a=False, phase4_exp_c=False, phase4_exp_c2=False, phase4_direct_c2=False, chart_schema_version=None, profile_formatter=None, ziwei_arm=None, resume_append=False, completed_keys=None):
     if method == 'multi_turn':
         return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases, temperature=temperature, case_details_jsonl=case_details_jsonl, rag_k=rag_k, config_id=config_id, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k, chart_schema_version=chart_schema_version, resume_append=resume_append)
     if phase4_exp_c and phase4_exp_c2:
@@ -724,7 +736,8 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
         else:
             prompt = build_benchmark_prompt(case, method=method, phase4_exp_a=phase4_exp_a,
                                             chart_schema_version=chart_schema_version,
-                                            profile_formatter=profile_formatter)
+                                            profile_formatter=profile_formatter,
+                                            ziwei_arm=ziwei_arm)
 
         # Two-stage reasoning path
         if method == 'two_stage_reasoning':
@@ -1135,9 +1148,20 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
         safety_results.append(safe_result)
 
         expected = extract_choice(case.get('answer'))
-        meta = extract_choice_with_meta(answer)
-        if predicted is None:
-            predicted = meta['choice']
+
+        if profile_formatter == 'format_reasoned_choice_prompt':
+            from benchmark.formatters.chart_context import extract_reasoned_choice_answer
+            predicted = extract_reasoned_choice_answer(answer)
+            meta = {
+                "choice": predicted,
+                "source": "reasoned_final_answer",
+                "valid": predicted is not None,
+            }
+            predictions[case_id] = predicted
+        else:
+            meta = extract_choice_with_meta(answer)
+            if predicted is None:
+                predicted = meta['choice']
         rag_trace = _resolve_rag_trace(case, k=rag_k)
         option_evidence = {}
         option_evidence_coverage = {}
@@ -1343,18 +1367,29 @@ def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0
 def _phase6_visibility_filter(cases, profile, profile_formatter, args):
     """裁决 1B（计划 Task 6 增补）：per-case 可见性门禁。违规 case 不进入模型运行，
     直接以 terminal_state=unresolved 追加 detail（经 _append_jsonl 富化 attempt_key）；
-    官方臂 gate 文本取官方 prompt，其余取 render_chart_context。"""
+    官方臂 gate 文本取官方 prompt，reasoned 臂取 render_reasoned_context，
+    其余取 render_chart_context。"""
     from benchmark.runners.profiles import assert_visibility
     detail_abs = os.path.abspath(args.case_details_jsonl) if args.case_details_jsonl else None
+    ziwei_arm = getattr(args, "ziwei_arm", None)
     passed = []
     for case in cases:
         if profile_formatter == 'format_official_cot_prompt':
             from benchmark.formatters.mingli_prompt import format_official_cot_prompt
             gate_text = format_official_cot_prompt(case)
+        elif profile_formatter == 'format_reasoned_choice_prompt':
+            from benchmark.formatters.chart_context import render_reasoned_context
+            if ziwei_arm is None:
+                print(json.dumps({"status": "BLOCKED",
+                    "reason": "reasoned profile visibility gate 要求显式 ziwei_arm"},
+                    ensure_ascii=False))
+                raise SystemExit(2)
+            gate_text = render_reasoned_context(case, profile.chart_schema_version, ziwei_arm)
         else:
             from benchmark.formatters.chart_context import render_chart_context
             gate_text = render_chart_context(case, profile.chart_schema_version)
-        violations = assert_visibility(gate_text, profile, profile.chart_schema_version)
+        violations = assert_visibility(gate_text, profile, profile.chart_schema_version,
+                                       ziwei_arm=ziwei_arm)
         if violations:
             print(f"  [gate BLOCKED] {case.get('case_id')}: {len(violations)} violations")
             _append_jsonl(detail_abs, {
@@ -1439,6 +1474,8 @@ def main(argv=None):
     parser.add_argument('--resume', action='store_true', help='续跑：跳过已完成 attempt key')
     parser.add_argument('--scheduled-calls', type=int, default=None)
     parser.add_argument('--hard-cap', type=int, default=None)
+    parser.add_argument('--ziwei-arm', choices=['none', 'only', 'combined', 'ziwei_mini', 'sequential'],
+                        default=None, help='紫微星盘消融臂 (none/only/combined/ziwei_mini/sequential)')
     args = parser.parse_args(argv)
 
     # 防跨测试/跨调用污染（执行偏离）：每次 main 启动先清空全局 ctx，profile 分支再设真值
@@ -1455,6 +1492,39 @@ def main(argv=None):
                              ensure_ascii=False))
             return 4
         args.method = resolve_method(args.profile, args.method)
+        # ---- Phase 6 6B1 reasoned arm → ziwei_arm fail-closed mapping ----
+        if profile.profile_id == "baziqa_xjz_reasoned":
+            _REASONED_ARM_MAP = {
+                "b1a_prime": "none",
+                "b1b": "only",
+                "b1c": "combined",
+                "b2b": "ziwei_mini",
+                "b2c": "sequential",
+            }
+            ziwei_arg = getattr(args, "ziwei_arm", None)
+            if args.arm not in _REASONED_ARM_MAP:
+                print(json.dumps({
+                    "status": "BLOCKED",
+                    "reason": f"baziqa_xjz_reasoned 要求 arm ∈ {list(_REASONED_ARM_MAP.keys())}，"
+                              f"实际 arm={args.arm!r}",
+                }, ensure_ascii=False))
+                raise SystemExit(2)
+            expected_ziwei = _REASONED_ARM_MAP[args.arm]
+            if ziwei_arg is None:
+                print(json.dumps({
+                    "status": "BLOCKED",
+                    "reason": f"baziqa_xjz_reasoned arm={args.arm!r} 必须显式传 --ziwei-arm {expected_ziwei}，"
+                              f"当前缺失（静默回退 none 已被禁止）",
+                }, ensure_ascii=False))
+                raise SystemExit(2)
+            if ziwei_arg != expected_ziwei:
+                print(json.dumps({
+                    "status": "BLOCKED",
+                    "reason": f"arm={args.arm!r} → 要求 --ziwei-arm {expected_ziwei}，"
+                              f"实际 --ziwei-arm={ziwei_arg!r}",
+                }, ensure_ascii=False))
+                raise SystemExit(2)
+        # ---- end fail-closed mapping ----
         profile_formatter = derive_formatter(profile)
         detail_abs = os.path.abspath(args.case_details_jsonl) if args.case_details_jsonl else None
         events_abs = None                                  # detail_abs 为空时保持 None（旧行为）
@@ -1580,6 +1650,7 @@ def main(argv=None):
                 phase4_direct_c2=args.phase4_direct_c2,
                 chart_schema_version=profile.chart_schema_version if profile else None,
                 profile_formatter=profile_formatter,
+                ziwei_arm=args.ziwei_arm,
                 # 执行偏离（Task 6）：计划为 resume_append=args.resume；改为 profile 模式
                 # 恒增量——门禁 BLOCK 行先于模型运行写入 detail，_prepare_jsonl 会将其抹掉。
                 resume_append=bool(profile),
