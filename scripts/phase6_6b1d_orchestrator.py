@@ -1028,12 +1028,14 @@ def main(argv=None):
         print("[dry-run] Exiting without API calls.")
         return 0
 
-    # 3. Validate ledger against schedule
-    ledger.validate_against_schedule(schedule, args.provider, args.model)
-
     # 4. Smoke gate - 5 smoke slices (one per arm)
     print("\n=== SMOKE GATE (5 slices, one per arm) ===")
     smoke_slices = _generate_smoke_schedule(output_dir)
+
+    # 3. Validate ledger against schedule (include smoke slices in validation)
+    combined_schedule = dict(schedule)
+    combined_schedule["slices"] = list(schedule["slices"]) + smoke_slices
+    ledger.validate_against_schedule(combined_schedule, args.provider, args.model)
 
     for smoke_sl in smoke_slices:
         smoke_state = determine_smoke_state(smoke_sl)
