@@ -29,6 +29,18 @@ import time
 from collections import defaultdict
 from pathlib import Path
 
+try:
+    import numpy as np
+    _HAS_NUMPY = True
+except ImportError:  # pragma: no cover
+    _HAS_NUMPY = False
+
+try:
+    import tiktoken
+    _HAS_TIKTOKEN = True
+except ImportError:  # pragma: no cover
+    _HAS_TIKTOKEN = False
+
 # Ensure project root on sys.path for benchmark.* imports
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _PROJECT_ROOT not in sys.path:
@@ -90,6 +102,14 @@ TOTAL_SLICES = 150         # 5 × 5 × 2 × 3
 SMOKE_ARMS_ORDER = ["b1a_prime", "b1b", "b1c", "b2b", "b2c"]
 SMOKE_PARSER_RATE_THRESHOLD = 1.0   # 100% (8/8)
 
+# Bootstrap CI constants (plan §4.12: seed=42, 10k draws, year×question 聚类)
+BOOTSTRAP_SEED = 42
+BOOTSTRAP_DRAWS = 10000
+BOOTSTRAP_CLUSTERS = "year_x_question"
+
+# Descriptive report forbidden words (plan §4.12: 不含"显著"、"确认"等词)
+FORBIDDEN_WORDS = ("显著", "确认", "significance", "significant", "confirm")
+
 # Terminal states (复用 6B1)
 TERMINAL_STATES = {"parsed", "invalid", "unresolved", "call_failed"}
 
@@ -105,6 +125,12 @@ FINGERPRINT_SCOPE = [
 ARCHIVE_ROOT = "docs/phase6/6b1d"
 EXPERIMENT_ID_PREFIX = "6b1d"
 
+# Labels constants (plan §4.14, §5.2)
+LABEL_DIMENSIONS = ("question_complexity", "ziwei_info_richness", "bazi_info_richness")
+LABEL_VALUES = (1, 2, 3)
+LABELS_DEFAULT_PATH = os.path.join(ARCHIVE_ROOT, "labels.jsonl")
+LABEL_MIN_LAYER_SIZE = 5
+
 
 def atomic_write_json(path: str, data: dict) -> None:
     """Atomically write JSON to disk (write temp + rename)."""
@@ -115,7 +141,16 @@ def atomic_write_json(path: str, data: dict) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, path)
+        # Windows: os.replace may fail with PermissionError if another
+        # process (e.g. antivirus) briefly holds the file; retry a few times
+        for attempt in range(5):
+            try:
+                os.replace(tmp, path)
+                return
+            except PermissionError:
+                if attempt == 4:
+                    raise
+                time.sleep(0.05)
     except Exception:
         try:
             os.unlink(tmp)
@@ -134,6 +169,286 @@ def load_jsonl(path: str) -> list:
                 continue
             rows.append(json.loads(line))
     return rows
+
+
+# ---- experiment-level code fingerprint (P0 #1) ----
+
+def _compute_experiment_code_fingerprint(root: str | None = None,
+                                         scope: tuple | list | None = None) -> str:
+    """Hash all experiment-scope source files in FINGERPRINT_SCOPE.
+
+    Includes orchestrator, runner, formatters, prompt builder, profiles.
+    Any change to these files produces a different fingerprint, causing
+    resume to be rejected via run manifest verification.
+
+    root:  repo root containing the scope files (default: parent of this script's dir).
+    scope: iterable of repo-relative paths to hash (default: FINGERPRINT_SCOPE).
+           Tests pass a tmp root + copied scope to avoid rewriting production source.
+
+    Returns the FULL 64-hex-char SHA-256 (plan §4.14: 实验级指纹保存完整 SHA-256).
+    """
+    if root is None:
+        root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    if scope is None:
+        scope = FINGERPRINT_SCOPE
+    h = hashlib.sha256()
+    for rel in scope:
+        h.update(rel.encode())
+        path = os.path.join(root, rel)
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                for chunk in iter(lambda: f.read(1 << 20), b""):
+                    h.update(chunk)
+        else:
+            h.update(b"<missing>")
+        h.update(b"\x00")
+    return h.hexdigest()
+
+
+def _sha256_file(path: str) -> str:
+    """SHA-256 of a file, returned as hex string."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def build_run_manifest(provider: str, model: str,
+                       labels_sha256: str | None = None) -> dict:
+    """Build experiment-level run manifest for resume verification.
+
+    Contains the experiment code fingerprint (FINGERPRINT_SCOPE) which
+    includes the orchestrator itself. On resume, if any scope file has
+    changed, the fingerprint will not match and resume is rejected.
+    """
+    return {
+        "experiment_id": EXPERIMENT_ID_PREFIX,
+        "frozen_date": FROZEN_DATE,
+        "provider": provider,
+        "model": model,
+        "experiment_code_fingerprint": _compute_experiment_code_fingerprint(),
+        "fingerprint_scope": list(FINGERPRINT_SCOPE),
+        "labels_sha256": labels_sha256,
+        "created_at": time.strftime('%Y-%m-%dT%H:%M:%S'),
+    }
+
+
+def verify_run_manifest(output_dir: Path, provider: str, model: str,
+                        labels_sha256: str | None = None) -> tuple:
+    """Verify run manifest on resume. Returns (ok, reason).
+
+    Checks:
+    1. run_manifest.json exists (resume scenario)
+    2. experiment_code_fingerprint matches current code
+    3. provider and model match
+    4. labels_sha256 matches (if labels are provided)
+    """
+    manifest_path = output_dir / "run_manifest.json"
+    if not manifest_path.exists():
+        return True, "no existing run manifest (fresh start)"
+
+    try:
+        with open(str(manifest_path), "r", encoding="utf-8") as f:
+            stored = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        return False, f"run manifest corrupt: {e}"
+
+    current_fp = _compute_experiment_code_fingerprint()
+    stored_fp = stored.get("experiment_code_fingerprint")
+    if stored_fp != current_fp:
+        return False, (f"experiment code fingerprint drift: "
+                       f"stored={stored_fp} current={current_fp}")
+
+    if stored.get("provider") != provider:
+        return False, (f"provider mismatch: stored={stored.get('provider')} "
+                       f"current={provider}")
+
+    if stored.get("model") != model:
+        return False, (f"model mismatch: stored={stored.get('model')} "
+                       f"current={model}")
+
+    if labels_sha256 is not None:
+        stored_labels = stored.get("labels_sha256")
+        if stored_labels != labels_sha256:
+            return False, (f"labels SHA-256 mismatch: "
+                           f"stored={stored_labels} current={labels_sha256}")
+
+    return True, "ok"
+
+
+def write_run_manifest(output_dir: Path, provider: str, model: str,
+                       labels_sha256: str | None = None) -> str:
+    """Write run manifest to output_dir/run_manifest.json."""
+    manifest = build_run_manifest(provider, model, labels_sha256)
+    path = str(output_dir / "run_manifest.json")
+    atomic_write_json(path, manifest)
+    return path
+
+
+# ---- labels preflight (P0 #3a/b/c) ----
+
+def _collect_all_case_ids() -> set:
+    """Collect all 80 unique case IDs from both year datasets."""
+    case_ids = set()
+    for year, path in YEAR_DATASETS.items():
+        if os.path.exists(path):
+            for row in load_jsonl(path):
+                cid = row.get("case_id")
+                if cid:
+                    case_ids.add(cid)
+    return case_ids
+
+
+def _validate_label_block(row: dict, block_field: str, cid) -> bool:
+    """Validate a 3-dimension label block (annotator_1/annotator_2/final).
+
+    Returns True if valid; prints nothing. Caller formats the error reason.
+    """
+    block = row.get(block_field)
+    if not isinstance(block, dict):
+        return False
+    for dim in LABEL_DIMENSIONS:
+        if block.get(dim) not in LABEL_VALUES:
+            return False
+    return True
+
+
+def validate_labels(labels_path: str) -> tuple:
+    """Preflight validation of labels.jsonl (plan §4.14, §5.2).
+
+    Checks:
+    1. File exists and is parseable
+    2. 80 case IDs (complete coverage of both year datasets)
+    3. No duplicate case IDs (uniqueness)
+    4. No extra/missing case IDs
+    5. Full dual-annotator schema per row (fail-closed):
+       - annotator_1_id / annotator_2_id present, non-empty, and distinct
+       - annotator_1 / annotator_2 dicts with all 3 dimensions in {1, 2, 3}
+       - adjudicator present, non-empty, and distinct from both annotator IDs
+         (a genuine third person, plan §5.2: 分歧由第 3 人裁决)
+       - final dict with all 3 dimensions in {1, 2, 3}
+       - when the two annotators agree on a dimension, final MUST equal their
+         common label (only disagreements may be adjudicated)
+
+    Returns (ok, labels_sha256, labels_data, reason).
+    """
+    if not os.path.exists(labels_path):
+        return False, None, None, f"labels file not found: {labels_path}"
+
+    try:
+        labels_data = load_jsonl(labels_path)
+    except (json.JSONDecodeError, OSError) as e:
+        return False, None, None, f"labels file corrupt: {e}"
+
+    if not labels_data:
+        return False, None, None, "labels file is empty"
+
+    # Collect case IDs from labels
+    label_case_ids = []
+    for row in labels_data:
+        cid = row.get("case_id")
+        if cid is None:
+            return False, None, None, "row missing case_id"
+        label_case_ids.append(cid)
+
+    # Uniqueness check
+    if len(label_case_ids) != len(set(label_case_ids)):
+        dupes = [cid for cid in label_case_ids if label_case_ids.count(cid) > 1]
+        return False, None, None, f"duplicate case IDs: {set(dupes)}"
+
+    # Coverage check: all expected case IDs present, no extras
+    expected_ids = _collect_all_case_ids()
+    label_id_set = set(label_case_ids)
+    missing = expected_ids - label_id_set
+    extra = label_id_set - expected_ids
+    if missing:
+        return False, None, None, f"missing {len(missing)} case IDs (e.g. {sorted(missing)[:3]})"
+    if extra:
+        return False, None, None, f"extra {len(extra)} case IDs (e.g. {sorted(extra)[:3]})"
+
+    # Full dual-annotator schema validation (fail-closed, plan §4.14)
+    for row in labels_data:
+        cid = row.get("case_id")
+
+        a1_id = row.get("annotator_1_id")
+        a2_id = row.get("annotator_2_id")
+        if not a1_id or not isinstance(a1_id, str):
+            return False, None, None, f"case {cid}: annotator_1_id missing/empty"
+        if not a2_id or not isinstance(a2_id, str):
+            return False, None, None, f"case {cid}: annotator_2_id missing/empty"
+        if a1_id == a2_id:
+            return False, None, None, (f"case {cid}: annotator_1_id == annotator_2_id "
+                                       f"({a1_id}), must be two independent annotators")
+
+        if not _validate_label_block(row, "annotator_1", cid):
+            return False, None, None, (f"case {cid}: annotator_1 missing a dimension or "
+                                       f"value not in {LABEL_VALUES}")
+        if not _validate_label_block(row, "annotator_2", cid):
+            return False, None, None, (f"case {cid}: annotator_2 missing a dimension or "
+                                       f"value not in {LABEL_VALUES}")
+
+        adjudicator = row.get("adjudicator")
+        if not adjudicator or not isinstance(adjudicator, str):
+            return False, None, None, f"case {cid}: adjudicator missing/empty"
+        if adjudicator == a1_id or adjudicator == a2_id:
+            return False, None, None, (f"case {cid}: adjudicator ({adjudicator}) must be a "
+                                       f"third person distinct from both annotators "
+                                       f"({a1_id}, {a2_id})")
+
+        if not _validate_label_block(row, "final", cid):
+            return False, None, None, (f"case {cid}: final missing a dimension or "
+                                       f"value not in {LABEL_VALUES}")
+
+        # Adjudication protocol (plan §5.2: 分歧由第 3 人裁决):
+        # when the two annotators agree on a dimension, the adjudicated final
+        # MUST equal their common label. Only disagreements may be adjudicated.
+        a1_block = row.get("annotator_1") or {}
+        a2_block = row.get("annotator_2") or {}
+        final_block = row.get("final") or {}
+        for dim in LABEL_DIMENSIONS:
+            a1v = a1_block.get(dim)
+            a2v = a2_block.get(dim)
+            if a1v == a2v and a1v in LABEL_VALUES:
+                if final_block.get(dim) != a1v:
+                    return False, None, None, (f"case {cid}: annotators agree on "
+                                               f"{dim}={a1v} but final="
+                                               f"{final_block.get(dim)} (must match)")
+
+    # Compute SHA-256
+    labels_sha256 = _sha256_file(labels_path)
+    return True, labels_sha256, labels_data, "ok"
+
+
+def compute_label_distribution(labels_data: list) -> dict:
+    """Compute 3-dimensional label distribution (plan §5.2, §5.3).
+
+    Returns {dimension: {value: count}} for each of the 3 dimensions.
+    Also returns layers_to_skip: dimensions+values with < LABEL_MIN_LAYER_SIZE.
+    """
+    dist = {dim: {1: 0, 2: 0, 3: 0} for dim in LABEL_DIMENSIONS}
+    for row in labels_data:
+        final = row.get("final", {})
+        for dim in LABEL_DIMENSIONS:
+            val = final.get(dim)
+            if val in LABEL_VALUES:
+                dist[dim][val] += 1
+
+    return dist
+
+
+def get_skipped_layers(labels_data: list) -> list:
+    """Return list of (dimension, value) pairs with < LABEL_MIN_LAYER_SIZE samples.
+
+    These layers will be skipped in stratified analysis (plan §5.3, 附录 A).
+    """
+    dist = compute_label_distribution(labels_data)
+    skipped = []
+    for dim in LABEL_DIMENSIONS:
+        for val in LABEL_VALUES:
+            if dist[dim][val] < LABEL_MIN_LAYER_SIZE:
+                skipped.append((dim, val))
+    return skipped
 
 
 # ---- BudgetLedger (6B1-D, with allocated_cap_by_slice schema) ----
@@ -638,10 +953,15 @@ def determine_smoke_state(smoke_sl: dict) -> str:
     return "blocked_corrupt"
 
 
-def verify_smoke_completed(smoke_sl: dict, args, ledger: BudgetLedger):
+def verify_smoke_completed(smoke_sl: dict, args, ledger: BudgetLedger,
+                           require_parser_rate: bool = True):
     """completed 状态的完整验证, 直接复用 6B1 完整验证路径.
     验证成功后执行原子 ledger reconciliation.
     Returns (ok, reason).
+
+    require_parser_rate=True (smoke): 要求 8/8 parsed (SMOKE_PARSER_RATE_THRESHOLD).
+    require_parser_rate=False (main): 不要求全部 parsed, 但验证终态数量、expected-set、
+        manifest、events. invalid/unresolved/call_failed 保留在分母中不阻断.
     """
     smoke_detail = Path(smoke_sl["detail_path"])
     smoke_manifest = Path(smoke_sl["manifest_path"])
@@ -680,11 +1000,17 @@ def verify_smoke_completed(smoke_sl: dict, args, ledger: BudgetLedger):
     if completed_keys != expected_keys:
         return False, "completed keys != expected keys"
 
-    # 7. parser rate (8 题 -> 8/8 = 100%)
-    parse_ok = sum(1 for r in rows if r.get("terminal_state") == "parsed")
-    parser_rate = parse_ok / len(rows) if rows else 0
-    if parser_rate < SMOKE_PARSER_RATE_THRESHOLD:
-        return False, f"parser_rate={parser_rate} < {SMOKE_PARSER_RATE_THRESHOLD}"
+    # 7. parser rate (smoke: 8/8 = 100%, main: 不要求全部 parsed)
+    if require_parser_rate:
+        parse_ok = sum(1 for r in rows if r.get("terminal_state") == "parsed")
+        parser_rate = parse_ok / len(rows) if rows else 0
+        if parser_rate < SMOKE_PARSER_RATE_THRESHOLD:
+            return False, f"parser_rate={parser_rate} < {SMOKE_PARSER_RATE_THRESHOLD}"
+    else:
+        non_terminal = sum(
+            1 for r in rows if r.get("terminal_state") not in TERMINAL_STATES)
+        if non_terminal > 0:
+            return False, f"{non_terminal} records without terminal state"
 
     # 8. events 可解析 + 调用数 ∈ [scheduled, hard_cap]
     ev_ok, calls, ev_reason = _validate_events(
@@ -786,9 +1112,24 @@ def generate_schedule(output_dir) -> dict:
     5 arms × 5 groups × 2 years × 3 repeats = 150 slices.
     每 slice 8 题, local cap 10, 全局 hard cap 1320.
     5×5 Latin square 全程交错, 每个 (year, repeat) 内 5 个 position 覆盖全部 5 arm.
+
+    Builds the schedule via _build_schedule (pure, no I/O) then atomically writes
+    schedule.json. main() verifies the run manifest BEFORE calling this on resume.
     """
+    schedule = _build_schedule(output_dir)
     output_dir = Path(output_dir)
-    os.makedirs(str(output_dir), exist_ok=True)
+    schedule_path = output_dir / "schedule.json"
+    atomic_write_json(str(schedule_path), schedule)
+    print(f"[schedule] {len(schedule['slices'])} slices, "
+          f"{schedule['total_scheduled_calls']} calls "
+          f"(hard_cap total={schedule['total_hard_cap']}) -> {schedule_path}")
+    return schedule
+
+
+def _build_schedule(output_dir) -> dict:
+    """Pure schedule construction (no disk writes). Used by main() for resume
+    consistency checks and by dry-run inspection without side effects."""
+    output_dir = Path(output_dir)
 
     slices = []
     # Interleave: cycle positions across all (year, repeat) cells
@@ -867,57 +1208,881 @@ def generate_schedule(output_dir) -> dict:
         "slice_max_cap": SLICE_MAX_CAP,
         "slices": slices,
     }
-
-    schedule_path = output_dir / "schedule.json"
-    atomic_write_json(str(schedule_path), schedule)
-    print(f"[schedule] {len(slices)} slices, {schedule['total_scheduled_calls']} calls "
-          f"(hard_cap total={schedule['total_hard_cap']}) -> {schedule_path}")
     return schedule
 
 
-def _generate_smoke_schedule(output_dir) -> list:
-    """Generate 5 smoke slices (one per arm, 8 cases each from 2024 dataset).
+# ---- resume/fresh detection (P0 #1: verify manifest BEFORE schedule write) ----
 
-    Smoke slices use first 8 cases from 2024 holdout, repeat=0.
+def _has_historical_artifacts(output_dir: Path) -> bool:
+    """True if output_dir shows evidence of a prior run beyond a dry-run schedule.
+
+    budget_ledger.json or any slice_* directory indicate a real (possibly partial)
+    run. schedule.json alone does NOT (it may be a dry-run leftover).
     """
-    output_dir = Path(output_dir)
-    cases_2024 = load_jsonl(YEAR_DATASETS["2024"])
-    smoke_cases = cases_2024[:SLICE_SIZE]
-    smoke_case_ids = [c["case_id"] for c in smoke_cases]
+    if (output_dir / "budget_ledger.json").exists():
+        return True
+    if output_dir.exists():
+        for entry in output_dir.iterdir():
+            if entry.is_dir() and entry.name.startswith("slice_"):
+                return True
+    return False
 
-    smoke_slices = []
-    for arm in SMOKE_ARMS_ORDER:
-        ziwei_arm = ARM_ZIWEI_MAP[arm]
-        slice_id = f"smoke_{arm}"
 
-        slice_dir = output_dir / f"slice_{slice_id}"
-        detail_name = f"details_{slice_id}.jsonl"
-        events_name = f"details_{slice_id}.events.jsonl"
-        manifest_name = f"details_{slice_id}.manifest.json"
+def _load_schedule_json(output_dir: Path):
+    """Load on-disk schedule.json; return None if missing/corrupt."""
+    path = output_dir / "schedule.json"
+    if not path.exists():
+        return None
+    try:
+        with open(str(path), "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
 
-        smoke_slices.append({
-            "slice_id": slice_id,
-            "year": "2024",
-            "repeat": 0,
-            "arm": arm,
-            "ziwei_arm": ziwei_arm,
-            "group": 0,
-            "position": 0,
-            "size": SLICE_SIZE,
-            "scheduled_calls": SLICE_SIZE,
-            "hard_cap": SLICE_MAX_CAP,
-            "case_start": 0,
-            "case_end": SLICE_SIZE,
-            "output_dir": str(slice_dir),
-            "detail_path": str(slice_dir / detail_name),
-            "events_path": str(slice_dir / events_name),
-            "manifest_path": str(slice_dir / manifest_name),
-            "dataset": YEAR_DATASETS["2024"],
-            "case_ids": smoke_case_ids,
-            "chart_schema_version": CHART_SCHEMA,
-        })
 
-    return smoke_slices
+_SCHEDULE_TOP_LEVEL_SEMANTIC_FIELDS = (
+    "experiment", "total_slices", "total_scheduled_calls", "total_hard_cap",
+    "global_hard_cap", "frozen_date", "years", "repeats", "arms",
+    "arm_ziwei_map", "profile", "chart_schema_version", "latin_square",
+    "slice_layout", "groups_per_cell", "slice_size", "slice_max_cap",
+)
+
+_SLICE_PATH_FIELDS = ("output_dir", "detail_path", "events_path", "manifest_path")
+
+
+def _canonicalize(value):
+    """Normalize a value to its JSON-canonical form for comparison.
+
+    JSON round-trip (json.loads(json.dumps(x))) stringifies all dict keys, so a
+    freshly built schedule (int dict keys, e.g. latin_square inner keys) and a
+    schedule loaded from disk (all-string keys after JSON serialization) compare
+    equal. Real semantic tampering (e.g. a changed arm value) survives
+    canonicalization and is still detected.
+    """
+    return json.loads(json.dumps(value, sort_keys=True, ensure_ascii=False))
+
+
+def _strip_path_fields(slice_dict):
+    """Return a copy of slice_dict with derived path fields removed.
+
+    Path fields (output_dir/detail_path/events_path/manifest_path) are
+    recomputed from output_dir and carry no experiment semantics, so they are
+    excluded from consistency comparison. Every other field (including ones
+    added in the future) is compared, so new semantic fields cannot slip
+    through unchecked.
+    """
+    return {k: v for k, v in slice_dict.items() if k not in _SLICE_PATH_FIELDS}
+
+
+def _verify_schedule_consistent(historical, built) -> tuple:
+    """Verify a freshly built schedule matches the on-disk historical schedule.
+
+    Deep-compares all semantic fields (experiment-defining values) while
+    excluding only derived path fields (output_dir/detail_path/events_path/
+    manifest_path), which are recomputed from output_dir and carry no
+    experiment semantics. Values are canonicalized via JSON round-trip so that
+    key-type artifacts from JSON serialization (int keys -> str keys) do not
+    cause false positives, while real semantic tampering (e.g. a changed arm)
+    is still caught.
+
+    Slice comparison is order- and count-preserving (the main loop treats
+    slices[0:5] as smoke and iterates the rest in order, so reordering or
+    duplicate slice_ids must be detected): it verifies len(slices) equals the
+    declared total_slices, slice_id uniqueness, equal list lengths, and a
+    position-wise deep-compare of each slice (minus path fields). Returns
+    (ok, reason).
+    """
+    if historical is None:
+        return False, "run_manifest exists but schedule.json missing/corrupt"
+
+    for field in _SCHEDULE_TOP_LEVEL_SEMANTIC_FIELDS:
+        hv = _canonicalize(historical.get(field))
+        bv = _canonicalize(built.get(field))
+        if hv != bv:
+            return False, (f"top-level {field} mismatch: "
+                           f"historical={hv!r} built={bv!r}")
+
+    h_slices = historical.get("slices", []) or []
+    b_slices = built.get("slices", []) or []
+    total = historical.get("total_slices")
+
+    # Count must equal the declared total_slices (catches a tampered total_slices
+    # that still matches between historical/built but disagrees with the actual
+    # list length, e.g. total_slices=150 with 151 slices).
+    if total is not None and len(h_slices) != total:
+        return False, (f"historical len(slices)={len(h_slices)} != "
+                       f"total_slices={total}")
+    if total is not None and len(b_slices) != total:
+        return False, (f"built len(slices)={len(b_slices)} != "
+                       f"total_slices={total}")
+
+    # Equal list lengths (catches appended duplicate / removed slice).
+    if len(h_slices) != len(b_slices):
+        return False, (f"slice count mismatch: historical={len(h_slices)} "
+                       f"built={len(b_slices)}")
+
+    # slice_id uniqueness within each list (catches duplicate slice_ids that a
+    # dict-based comparison would silently fold together).
+    for label, slices in (("historical", h_slices), ("built", b_slices)):
+        ids = [s.get("slice_id") for s in slices]
+        if len(ids) != len(set(ids)):
+            dupes = [i for i in ids if ids.count(i) > 1]
+            return False, (f"{label} has duplicate slice_ids: {set(dupes)}")
+
+    # Position-wise deep-compare (order-preserving): the main loop treats
+    # slices[0:5] as smoke and iterates the rest in order, so a reordering that
+    # a dict comparison would miss must be caught here.
+    for idx, (h_sl, b_sl) in enumerate(zip(h_slices, b_slices)):
+        h_norm = _canonicalize(_strip_path_fields(h_sl))
+        b_norm = _canonicalize(_strip_path_fields(b_sl))
+        if h_norm != b_norm:
+            sid = h_sl.get("slice_id", f"<pos {idx}>")
+            diff_keys = sorted(set(h_norm.keys()) ^ set(b_norm.keys()))
+            if diff_keys:
+                return False, (f"slice {sid} (pos {idx}) field set mismatch: "
+                               f"symmetric diff={diff_keys}")
+            changed = sorted(k for k in h_norm if h_norm.get(k) != b_norm.get(k))
+            return False, (f"slice {sid} (pos {idx}) field(s) mismatch: "
+                           f"{changed}")
+    return True, "ok"
+
+
+# ---- slice state machine (unified for smoke and main) ----
+
+def _resolve_slice_state(sl: dict) -> str:
+    """统一状态判定: fresh / resume / completed / blocked_corrupt.
+    复用 determine_smoke_state 逻辑.
+    """
+    return determine_smoke_state(sl)
+
+
+def _verify_slice_completed(sl: dict, args, ledger: BudgetLedger,
+                            is_smoke: bool = True) -> bool:
+    """验证 slice 已完成: manifest 一致 + expected-set 完整 + ledger reconciliation.
+    is_smoke=True: 要求 100% parser rate (smoke gate).
+    is_smoke=False: 不要求全部 parsed (main slice, invalid/unresolved/call_failed 保留在分母中).
+    成功返回 True, 失败返回 False (不 exit, 由调用者决定).
+    """
+    ok, reason = verify_smoke_completed(sl, args, ledger,
+                                        require_parser_rate=is_smoke)
+    if not ok:
+        print(json.dumps({"status": "BLOCKED_SLICE_VERIFY",
+            "slice_id": sl["slice_id"], "reason": reason}, ensure_ascii=False))
+        return False
+    return True
+
+
+def _audit_skipped_slices(schedule: dict, from_slice: int, args,
+                          ledger: BudgetLedger) -> bool:
+    """--from-slice 审计: 被跳过的 slice 必须全部 completed 且验证通过.
+    返回 True=通过, False=失败.
+    """
+    if from_slice <= 0:
+        return True
+
+    # Cap at schedule length: --from-slice beyond TOTAL_SLICES audits all
+    # existing slices (avoids IndexError; main loop already ignores idx >= 150).
+    n = len(schedule["slices"])
+    for idx in range(min(from_slice, n)):
+        sl = schedule["slices"][idx]
+        state = _resolve_slice_state(sl)
+        if state != "completed":
+            print(json.dumps({"status": "BLOCKED_FROM_SLICE_AUDIT",
+                "slice_id": sl["slice_id"], "index": idx,
+                "state": state,
+                "reason": f"--from-slice 跳过的 slice 未完成 (state={state})"},
+                ensure_ascii=False))
+            return False
+        if not _verify_slice_completed(sl, args, ledger,
+                                        is_smoke=(idx < 5)):
+            return False
+    return True
+
+
+def _integrity_gate(schedule: dict, ledger: BudgetLedger,
+                    args) -> tuple:
+    """实验完成前 integrity gate:
+    1. 1200 条记录 (150 slices × 8)
+    2. 每臂 240 条 (150/5 × 8)
+    3. 全部 150 slices completed
+    返回 (ok, reason).
+    """
+    # 1. 全部 150 slices completed
+    completed_set = set(ledger._data["slices_completed"])
+    schedule_ids = {sl["slice_id"] for sl in schedule["slices"]}
+    missing = schedule_ids - completed_set
+    if missing:
+        return False, f"未完成 slices: {len(missing)} (如 {sorted(missing)[:3]})"
+
+    # 2. 1200 条记录
+    total_records = 0
+    arm_records = {arm: 0 for arm in ARMS}
+    for sl in schedule["slices"]:
+        if not os.path.exists(sl["detail_path"]):
+            return False, f"slice {sl['slice_id']} detail 文件缺失"
+        rows = load_jsonl(sl["detail_path"])
+        total_records += len(rows)
+        arm_records[sl["arm"]] += len(rows)
+
+    if total_records != TOTAL_SCHEDULED_CALLS:
+        return False, f"总记录数 {total_records} != {TOTAL_SCHEDULED_CALLS}"
+
+    # 3. 每臂 240 条
+    expected_per_arm = (TOTAL_SLICES // len(ARMS)) * SLICE_SIZE
+    for arm, count in arm_records.items():
+        if count != expected_per_arm:
+            return False, f"arm {arm} 记录数 {count} != {expected_per_arm}"
+
+    return True, "ok"
+
+
+# ---- descriptive comparison table (plan §4.12) ----
+
+def _collect_arm_clusters(schedule: dict, ledger: BudgetLedger) -> dict:
+    """Collect per-arm correctness grouped by (year, case_id) cluster.
+
+    Returns {arm: {(year, case_id): [correct_bool, ...]}}.
+    Only completed slices with readable detail files are included.
+    """
+    arm_clusters: dict = {arm: {} for arm in ARMS}
+    for sl in schedule["slices"]:
+        if not ledger.sliced_completed(sl["slice_id"]):
+            continue
+        if not os.path.exists(sl["detail_path"]):
+            continue
+        for row in load_jsonl(sl["detail_path"]):
+            correct = row.get("correct") is True
+            cluster_key = (sl["year"], row.get("case_id"))
+            arm_clusters[sl["arm"]].setdefault(cluster_key, []).append(correct)
+    return arm_clusters
+
+
+def _cluster_accuracy_ci(clusters: dict) -> tuple:
+    """Cluster bootstrap CI for a single arm's accuracy.
+
+    Resampling unit: (year, case_id) cluster. seed=42, 10k draws.
+    Returns (point_estimate, ci_low, ci_high). Without numpy, CI == point.
+    """
+    if not clusters:
+        return 0.0, 0.0, 0.0
+
+    keys = sorted(clusters.keys())
+    sums = [sum(clusters[k]) for k in keys]
+    sizes = [len(clusters[k]) for k in keys]
+    total_correct = sum(sums)
+    total_n = sum(sizes)
+    point = total_correct / total_n if total_n else 0.0
+
+    if not _HAS_NUMPY or len(keys) < 2:
+        return point, point, point
+
+    sums_arr = np.array(sums, dtype=float)
+    sizes_arr = np.array(sizes, dtype=float)
+    n = len(keys)
+    rng = np.random.default_rng(BOOTSTRAP_SEED)
+    idx = rng.integers(0, n, size=(BOOTSTRAP_DRAWS, n))
+    num = sums_arr[idx].sum(axis=1)
+    den = sizes_arr[idx].sum(axis=1)
+    # Guard against zero denominator (only possible if all clusters empty)
+    draws = np.where(den > 0, num / den, 0.0)
+    ci_low = float(np.percentile(draws, 2.5))
+    ci_high = float(np.percentile(draws, 97.5))
+    return float(point), ci_low, ci_high
+
+
+def _pairwise_diff_ci(clusters_a: dict, clusters_b: dict) -> tuple:
+    """Paired cluster bootstrap CI for acc_a - acc_b.
+
+    Same resample indices applied to both arms (paired). seed=42, 10k draws.
+    Returns (point_diff, ci_low, ci_high).
+    """
+    common = sorted(set(clusters_a.keys()) & set(clusters_b.keys()))
+    if not common:
+        return 0.0, 0.0, 0.0
+
+    sums_a = [sum(clusters_a[k]) for k in common]
+    sums_b = [sum(clusters_b[k]) for k in common]
+    sizes = [len(clusters_a[k]) for k in common]
+    total_n = sum(sizes)
+    point = (sum(sums_a) - sum(sums_b)) / total_n if total_n else 0.0
+
+    if not _HAS_NUMPY or len(common) < 2:
+        return point, point, point
+
+    sums_a_arr = np.array(sums_a, dtype=float)
+    sums_b_arr = np.array(sums_b, dtype=float)
+    sizes_arr = np.array(sizes, dtype=float)
+    n = len(common)
+    rng = np.random.default_rng(BOOTSTRAP_SEED)
+    idx = rng.integers(0, n, size=(BOOTSTRAP_DRAWS, n))
+    den = sizes_arr[idx].sum(axis=1)
+    acc_a = np.where(den > 0, sums_a_arr[idx].sum(axis=1) / den, 0.0)
+    acc_b = np.where(den > 0, sums_b_arr[idx].sum(axis=1) / den, 0.0)
+    draws = acc_a - acc_b
+    ci_low = float(np.percentile(draws, 2.5))
+    ci_high = float(np.percentile(draws, 97.5))
+    return float(point), ci_low, ci_high
+
+
+def generate_comparison_table(schedule: dict, ledger: BudgetLedger,
+                              provider: str, model: str) -> dict:
+    """5-arm descriptive comparison table with cluster bootstrap CI.
+
+    纯描述性分析, 不作显著性宣称 (plan §4.12).
+    - 五臂准确率排序
+    - 两两差值表 (10 pairs)
+    - Bootstrap CI: seed=42, 10k draws, year×question 聚类
+    """
+    arm_clusters = _collect_arm_clusters(schedule, ledger)
+
+    arm_stats = {}
+    for arm in ARMS:
+        clusters = arm_clusters[arm]
+        point, ci_low, ci_high = _cluster_accuracy_ci(clusters)
+        arm_stats[arm] = {
+            "accuracy": round(point, 4),
+            "ci_low": round(ci_low, 4),
+            "ci_high": round(ci_high, 4),
+            "n_records": sum(len(v) for v in clusters.values()),
+            "n_clusters": len(clusters),
+        }
+
+    ranking = sorted(ARMS, key=lambda a: arm_stats[a]["accuracy"], reverse=True)
+
+    pairwise_diffs = []
+    for i, arm_a in enumerate(ARMS):
+        for arm_b in ARMS[i + 1:]:
+            diff, d_low, d_high = _pairwise_diff_ci(
+                arm_clusters[arm_a], arm_clusters[arm_b])
+            pairwise_diffs.append({
+                "arm_a": arm_a,
+                "arm_b": arm_b,
+                "diff": round(diff, 4),
+                "ci_low": round(d_low, 4),
+                "ci_high": round(d_high, 4),
+            })
+
+    return {
+        "experiment": EXPERIMENT_ID_PREFIX,
+        "arms": list(ARMS),
+        "arm_stats": arm_stats,
+        "ranking": ranking,
+        "pairwise_diffs": pairwise_diffs,
+        "bootstrap": {
+            "seed": BOOTSTRAP_SEED,
+            "draws": BOOTSTRAP_DRAWS,
+            "clustering": BOOTSTRAP_CLUSTERS,
+            "numpy_available": _HAS_NUMPY,
+        },
+        "token_stats": compute_token_stats(schedule, ledger, provider, model),
+        "tiktoken_available": _HAS_TIKTOKEN,
+        "total_calls_attempted": ledger.total_attempted,
+    }
+
+
+def compute_token_stats(schedule: dict, ledger: BudgetLedger,
+                        provider: str, model: str) -> dict:
+    """Compute per-arm token statistics (plan §4.9).
+
+    Per-arm source selection (NOT global): each arm independently uses provider
+    usage if its completed slices carry usage fields, otherwise falls back to
+    tiktoken estimation, otherwise NOT_AVAILABLE.
+
+    tiktoken fallback renders prompts for ALL 80 unique cases across both year
+    datasets (not a 10-case sample), so avg_input reflects the experiment mean.
+
+    When output tokens are unknown (tiktoken fallback), avg_total is NOT_AVAILABLE
+    (not equal to avg_input).
+
+    Returns {arm: {avg_input, avg_output, avg_total, source, n}} where source
+    is "provider", "tiktoken", or "NOT_AVAILABLE".
+    """
+    NOT_AVAILABLE = "NOT_AVAILABLE"
+    stats = {}
+
+    # Phase 1: collect provider usage per arm from completed slices' detail rows
+    arm_usage = {arm: {"input": [], "output": []} for arm in ARMS}
+    for sl in schedule["slices"]:
+        if not ledger.sliced_completed(sl["slice_id"]):
+            continue
+        if not os.path.exists(sl["detail_path"]):
+            continue
+        for row in load_jsonl(sl["detail_path"]):
+            usage = row.get("usage") or row.get("token_usage")
+            if usage and isinstance(usage, dict):
+                inp = usage.get("prompt_tokens") or usage.get("input_tokens")
+                out = usage.get("completion_tokens") or usage.get("output_tokens")
+                if inp is not None:
+                    arm_usage[sl["arm"]]["input"].append(int(inp))
+                if out is not None:
+                    arm_usage[sl["arm"]]["output"].append(int(out))
+
+    # Phase 2: tiktoken estimation over all 80 unique cases (both years)
+    arm_tiktoken_counts = {arm: [] for arm in ARMS}
+    tiktoken_ready = False
+    enc = None
+    if _HAS_TIKTOKEN:
+        try:
+            import tiktoken as _tk
+            enc = _tk.get_encoding("cl100k_base")
+            tiktoken_ready = True
+        except Exception:
+            tiktoken_ready = False
+
+    if tiktoken_ready:
+        from benchmark.formatters.chart_context import render_reasoned_context
+        from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt
+        # All 80 unique cases across both year datasets
+        all_cases = []
+        for year in YEARS:
+            all_cases.extend(load_jsonl(YEAR_DATASETS[year]))
+        arm_ziwei = {a: ARM_ZIWEI_MAP[a] for a in ARMS}
+        for arm in ARMS:
+            za = arm_ziwei[arm]
+            for case in all_cases:
+                ctx = render_reasoned_context(case, CHART_SCHEMA, za)
+                prompt = _assemble_reasoned_choice_prompt(case, ctx)
+                arm_tiktoken_counts[arm].append(len(enc.encode(prompt)))
+
+    # Phase 3: per-arm source selection
+    for arm in ARMS:
+        inp_list = arm_usage[arm]["input"]
+        out_list = arm_usage[arm]["output"]
+        if inp_list:
+            avg_in = round(sum(inp_list) / len(inp_list), 1)
+            avg_out = round(sum(out_list) / len(out_list), 1) if out_list else None
+            if avg_out is not None:
+                avg_total = round(avg_in + avg_out, 1)
+            else:
+                avg_total = NOT_AVAILABLE
+            stats[arm] = {
+                "avg_input": avg_in,
+                "avg_output": avg_out if avg_out is not None else NOT_AVAILABLE,
+                "avg_total": avg_total,
+                "source": "provider",
+                "n": len(inp_list),
+            }
+        elif tiktoken_ready and arm_tiktoken_counts[arm]:
+            counts = arm_tiktoken_counts[arm]
+            avg_in = round(sum(counts) / len(counts), 1)
+            stats[arm] = {
+                "avg_input": avg_in,
+                "avg_output": NOT_AVAILABLE,
+                "avg_total": NOT_AVAILABLE,
+                "source": "tiktoken",
+                "n": len(counts),
+            }
+        else:
+            stats[arm] = {
+                "avg_input": NOT_AVAILABLE,
+                "avg_output": NOT_AVAILABLE,
+                "avg_total": NOT_AVAILABLE,
+                "source": NOT_AVAILABLE,
+                "n": 0,
+            }
+    return stats
+
+
+def generate_report(schedule: dict, table: dict, output_dir: Path,
+                    ledger: BudgetLedger) -> str:
+    """Generate descriptive Markdown comparison report (plan §4.12).
+
+    全描述性, 不含"显著"、"确认"等词. 写入 output_dir/report.md.
+    """
+    arm_label = {
+        "b1a_prime": "b1a_prime (none)",
+        "b1b": "b1b (only)",
+        "b1c": "b1c (combined)",
+        "b2b": "b2b (ziwei_mini)",
+        "b2c": "b2c (sequential)",
+    }
+
+    lines = []
+    lines.append("# Phase 6 6B1-D Comparison Report")
+    lines.append("")
+    lines.append(f"**Generated**: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    lines.append(f"**Experiment**: {table['experiment']}")
+    lines.append("")
+    lines.append("> 全描述性分析, 仅报告观察到的差异与区间, 不作统计推断. "
+                 "Bootstrap CI 基于 year×question 聚类"
+                 f" (seed={table['bootstrap']['seed']}, "
+                 f"{table['bootstrap']['draws']} draws).")
+    lines.append("")
+
+    lines.append("## Five-Arm Accuracy (sorted)")
+    lines.append("")
+    lines.append("| Rank | Arm | Accuracy | 95% CI | Records | Clusters |")
+    lines.append("|------|-----|----------|--------|---------|----------|")
+    for rank, arm in enumerate(table["ranking"], 1):
+        s = table["arm_stats"][arm]
+        lines.append(
+            f"| {rank} | {arm_label.get(arm, arm)} | {s['accuracy']:.2%} | "
+            f"[{s['ci_low']:.2%}, {s['ci_high']:.2%}] | "
+            f"{s['n_records']} | {s['n_clusters']} |"
+        )
+    lines.append("")
+
+    lines.append("## Pairwise Differences (arm_a − arm_b)")
+    lines.append("")
+    lines.append("| Arm A | Arm B | Diff | 95% CI |")
+    lines.append("|-------|-------|------|--------|")
+    for d in table["pairwise_diffs"]:
+        lines.append(
+            f"| {arm_label.get(d['arm_a'], d['arm_a'])} | "
+            f"{arm_label.get(d['arm_b'], d['arm_b'])} | "
+            f"{d['diff']:+.2%} | [{d['ci_low']:+.2%}, {d['ci_high']:+.2%}] |"
+        )
+    lines.append("")
+
+    lines.append("## Token Statistics (descriptive, plan §4.9)")
+    lines.append("")
+    token_stats = table.get("token_stats", {})
+    tiktoken_avail = table.get("tiktoken_available", False)
+    lines.append(f"- tiktoken available: {tiktoken_avail}")
+    if token_stats:
+        lines.append("")
+        lines.append("| Arm | Avg Input | Avg Output | Avg Total | Source | N |")
+        lines.append("|-----|-----------|------------|-----------|--------|---|")
+        for arm in ARMS:
+            ts = token_stats.get(arm, {})
+            lines.append(
+                f"| {arm_label.get(arm, arm)} | "
+                f"{ts.get('avg_input', 'N/A')} | "
+                f"{ts.get('avg_output', 'N/A')} | "
+                f"{ts.get('avg_total', 'N/A')} | "
+                f"{ts.get('source', 'N/A')} | "
+                f"{ts.get('n', 0)} |"
+            )
+    lines.append("")
+
+    lines.append("## Integrity")
+    lines.append("")
+    lines.append(f"- Total slices: {schedule['total_slices']}")
+    lines.append(f"- Slices completed: {len(ledger._data['slices_completed'])}")
+    lines.append(f"- Total calls attempted: {ledger.total_attempted} "
+                 f"/ {ledger.hard_cap}")
+    lines.append(f"- numpy available for bootstrap: {table['bootstrap']['numpy_available']}")
+    lines.append("")
+
+    lines.append("## Schedule")
+    lines.append("")
+    lines.append(f"- Arms: {', '.join(table['arms'])}")
+    lines.append(f"- Years: {', '.join(YEARS)}")
+    lines.append(f"- Repeats: {len(REPEATS)}")
+    lines.append(f"- Total scheduled calls: {schedule['total_scheduled_calls']}")
+    lines.append("")
+
+    report = "\n".join(lines)
+
+    # Fail-closed: plan §4.12 requires purely descriptive wording. Reject any
+    # report that contains a forbidden substring (catches e.g. "显著性").
+    found = [w for w in FORBIDDEN_WORDS if w in report]
+    if found:
+        print(json.dumps({"status": "BLOCKED_REPORT_FORBIDDEN_WORD",
+            "words": found,
+            "reason": "报告含禁用词, 违反纯描述性要求"}, ensure_ascii=False))
+        raise SystemExit(2)
+
+    report_path = output_dir / "report.md"
+    with open(str(report_path), "w", encoding="utf-8") as f:
+        f.write(report)
+    print(f"\n[report] -> {report_path}")
+    return str(report_path)
+
+
+# ---- formal archive generation (P0 #3d/e) ----
+
+def _crash_audit_prefix(sl: dict) -> str:
+    """Crash audit file prefix for per-slice crash_retry.* artifacts."""
+    return os.path.join(sl["output_dir"], "crash_retry")
+
+
+def _compute_dataset_hashes() -> dict:
+    """SHA-256 of each enriched dataset."""
+    hashes = {}
+    for year, path in YEAR_DATASETS.items():
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                hashes[year] = hashlib.sha256(f.read()).hexdigest()
+    return hashes
+
+
+def _compute_context_fingerprint(schedule: dict, provider: str, model: str) -> dict:
+    """SHA-256 of rendered context for 3 cases × 5 arms = 15 fingerprints."""
+    from benchmark.formatters.chart_context import render_reasoned_context
+    from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt
+
+    arms_seen = {}
+    case_ids_used = []
+    first_sl = schedule["slices"][0]
+    cases = load_jsonl(first_sl["dataset"])
+    selected_cases = cases[:3]
+    for case in selected_cases:
+        case_ids_used.append(case.get("case_id", "unknown"))
+    fingerprints = {}
+    for sl in schedule["slices"]:
+        arm = sl["arm"]
+        if arm in arms_seen:
+            continue
+        arms_seen[arm] = True
+        for i, case in enumerate(selected_cases):
+            ctx = render_reasoned_context(case, CHART_SCHEMA, sl["ziwei_arm"])
+            prompt = _assemble_reasoned_choice_prompt(case, ctx)
+            key = f"{case.get('case_id', f'case{i}')}_{arm}"
+            fingerprints[key] = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+    return {
+        "case_ids": case_ids_used,
+        "arms": list(arms_seen.keys()),
+        "fingerprints": fingerprints,
+        "total": len(fingerprints),
+    }
+
+
+def _copy_slice_artifacts(sl: dict, dest_dir: Path) -> dict:
+    """Copy per-slice evidence (details/manifest/events/crash_retry.*) to archive.
+    Returns file hashes for audit_index."""
+    import shutil
+    hashes = {}
+    src_map = {
+        "details.jsonl": sl["detail_path"],
+        "details.manifest.json": sl["manifest_path"],
+        "details.events.jsonl": sl["events_path"],
+    }
+    for name, src in src_map.items():
+        if os.path.exists(src):
+            dst = dest_dir / name
+            shutil.copy2(src, str(dst))
+            with open(dst, "rb") as f:
+                hashes[name] = hashlib.sha256(f.read()).hexdigest()
+    prefix = _crash_audit_prefix(sl)
+    for suffix in (".returncode", ".stdout.log", ".stderr.log",
+                   ".retry.returncode", ".retry.stdout.log", ".retry.stderr.log"):
+        src = f"{prefix}{suffix}"
+        if os.path.exists(src):
+            dst_name = f"crash_retry{suffix}"
+            dst = dest_dir / dst_name
+            shutil.copy2(src, str(dst))
+            with open(dst, "rb") as f:
+                hashes[dst_name] = hashlib.sha256(f.read()).hexdigest()
+    return hashes
+
+
+def _merge_artifacts(schedule: dict, archive_dir: Path,
+                     provider: str, model: str) -> dict:
+    """Merge all 150 slice details + events into merged_details/events.jsonl.
+    Per-slice validation: manifest, row count, attempt keys, call count.
+    Does NOT enforce parser rate (that's smoke-only)."""
+    if not provider or not model:
+        raise ValueError("provider and model are mandatory for _merge_artifacts")
+
+    merged_details = archive_dir / "merged_details.jsonl"
+    merged_events = archive_dir / "merged_events.jsonl"
+    detail_count = 0
+    event_count = 0
+    expected_details = schedule["total_scheduled_calls"]
+
+    missing = []
+    for sl in schedule["slices"]:
+        if not os.path.exists(sl["detail_path"]):
+            missing.append(f"{sl['slice_id']}/details.jsonl")
+        if not os.path.exists(sl["events_path"]):
+            missing.append(f"{sl['slice_id']}/details.events.jsonl")
+        if not os.path.exists(sl["manifest_path"]):
+            missing.append(f"{sl['slice_id']}/details.manifest.json")
+    if missing:
+        print(json.dumps({"status": "ARCHIVE_INTEGRITY_FAILED",
+            "reason": f"{len(missing)} 个必需文件缺失，禁止合并",
+            "missing_sample": missing[:5]}, ensure_ascii=False))
+        raise SystemExit(2)
+
+    per_slice_report = []
+    for sl in schedule["slices"]:
+        ok, diff = verify_slice_manifest(sl, provider, model)
+        if not ok:
+            print(json.dumps({"status": "ARCHIVE_MANIFEST_DRIFT",
+                "slice_id": sl["slice_id"], "diff": diff}, ensure_ascii=False))
+            raise SystemExit(2)
+        rows = load_jsonl(sl["detail_path"])
+        if len(rows) != sl["size"]:
+            print(json.dumps({"status": "ARCHIVE_INTEGRITY_FAILED",
+                "slice_id": sl["slice_id"],
+                "reason": f"detail rows {len(rows)} != scheduled {sl['size']}"},
+                ensure_ascii=False))
+            raise SystemExit(2)
+        detail_keys = [tuple(r.get("attempt_key", [])) for r in rows]
+        dataset_id = os.path.splitext(os.path.basename(sl["dataset"]))[0]
+        expected_keys = set()
+        for case_id in sl["case_ids"]:
+            expected_keys.add(build_expected_key(
+                dataset_id, REASONED_PROFILE, sl["arm"],
+                case_id, sl["repeat"], provider, model))
+        if len(set(detail_keys)) != len(detail_keys):
+            print(json.dumps({"status": "ARCHIVE_INTEGRITY_FAILED",
+                "slice_id": sl["slice_id"], "reason": "duplicate attempt keys"},
+                ensure_ascii=False))
+            raise SystemExit(2)
+        extra = set(detail_keys) - expected_keys
+        if extra:
+            print(json.dumps({"status": "ARCHIVE_INTEGRITY_FAILED",
+                "slice_id": sl["slice_id"], "reason": "extra attempt keys",
+                "extra_sample": list(extra)[:3]}, ensure_ascii=False))
+            raise SystemExit(2)
+        ev_rows = load_jsonl(sl["events_path"])
+        call_count = sum(1 for r in ev_rows if r.get("kind") == "call_attempt")
+        if call_count < sl["size"] or call_count > sl["hard_cap"]:
+            print(json.dumps({"status": "ARCHIVE_INTEGRITY_FAILED",
+                "slice_id": sl["slice_id"],
+                "reason": f"call_attempt {call_count} not in [{sl['size']}, {sl['hard_cap']}]"},
+                ensure_ascii=False))
+            raise SystemExit(2)
+        per_slice_report.append({"slice_id": sl["slice_id"],
+                                  "detail_rows": len(rows),
+                                  "call_attempts": call_count})
+
+    with open(merged_details, "w", encoding="utf-8") as df, \
+         open(merged_events, "w", encoding="utf-8") as ef:
+        for sl in schedule["slices"]:
+            for src in (sl["detail_path"], sl["events_path"]):
+                with open(src, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        if src == sl["detail_path"]:
+                            df.write(line + "\n")
+                            detail_count += 1
+                        else:
+                            ef.write(line + "\n")
+                            event_count += 1
+
+    if detail_count != expected_details:
+        print(json.dumps({"status": "ARCHIVE_INTEGRITY_FAILED",
+            "reason": f"merged detail rows {detail_count} != expected {expected_details}"},
+            ensure_ascii=False))
+        raise SystemExit(2)
+
+    return {"detail_rows": detail_count, "event_rows": event_count,
+            "expected_detail_rows": expected_details,
+            "per_slice": per_slice_report}
+
+
+def generate_archive(schedule: dict, ledger: BudgetLedger,
+                     output_dir: Path, provider: str, model: str,
+                     labels_sha256: str | None = None,
+                     labels_data: list | None = None,
+                     archive_root: Path | None = None) -> str:
+    """Generate v9 §12 formal archive for 6B1-D.
+
+    - Five smoke archive directories (smoke_<arm>/)
+    - All non-smoke slices in slices/<id>/
+    - audit_index.json with artifact hashes, labels, distribution
+    - Atomic publish via temp dir
+    - Independent run ID: 6b1d-<date>-<provider>-<model>-<code_hash>
+    """
+    import shutil
+    import tempfile
+
+    if archive_root is None:
+        archive_root = Path(ARCHIVE_ROOT)
+    archive_root = Path(archive_root)
+
+    code_hash = _compute_experiment_code_fingerprint()
+    run_id = f"{EXPERIMENT_ID_PREFIX}-{FROZEN_DATE}-{provider}-{model}-{code_hash}"
+    archive_dir = archive_root / run_id
+
+    if archive_dir.exists():
+        print(json.dumps({"status": "ARCHIVE_ALREADY_EXISTS",
+            "archive_dir": str(archive_dir),
+            "reason": "归档目录已存在，拒绝覆盖"}, ensure_ascii=False))
+        raise SystemExit(2)
+
+    parent = archive_root
+    parent.mkdir(parents=True, exist_ok=True)
+    tmp_dir = Path(tempfile.mkdtemp(prefix=f".{run_id}_", dir=str(parent)))
+    try:
+        # Five smoke directories
+        smoke_hashes = {}
+        for sl in schedule["slices"][:5]:
+            smoke_dir = tmp_dir / f"smoke_{sl['arm']}"
+            smoke_dir.mkdir(exist_ok=True)
+            smoke_hashes[sl["arm"]] = _copy_slice_artifacts(sl, smoke_dir)
+
+        # Non-smoke slices
+        slices_dir = tmp_dir / "slices"
+        slices_dir.mkdir(exist_ok=True)
+        slice_hashes = {}
+        for sl in schedule["slices"][5:]:
+            sl_dir = slices_dir / sl["slice_id"]
+            sl_dir.mkdir(exist_ok=True)
+            slice_hashes[sl["slice_id"]] = _copy_slice_artifacts(sl, sl_dir)
+
+        # Merged artifacts
+        merge_counts = _merge_artifacts(schedule, tmp_dir, provider, model)
+
+        # Label distribution
+        label_dist = compute_label_distribution(labels_data) if labels_data else {}
+        skipped = get_skipped_layers(labels_data) if labels_data else []
+
+        # audit_index.json
+        audit_index = {
+            "run_id": run_id,
+            "experiment_id": EXPERIMENT_ID_PREFIX,
+            "frozen_date": FROZEN_DATE,
+            "provider": provider,
+            "model": model,
+            "code_fingerprint": code_hash,
+            "fingerprint_scope": list(FINGERPRINT_SCOPE),
+            "labels_sha256": labels_sha256,
+            "label_distribution": label_dist,
+            "skipped_layers": skipped,
+            "dataset_hashes": _compute_dataset_hashes(),
+            "context_fingerprints": _compute_context_fingerprint(schedule, provider, model),
+            "schedule_total_slices": schedule["total_slices"],
+            "schedule_total_scheduled_calls": schedule["total_scheduled_calls"],
+            "schedule_total_hard_cap": schedule["total_hard_cap"],
+            "latin_square": {str(k): v for k, v in LATIN_SQUARE.items()},
+            "slice_layout": SLICE_LAYOUT,
+            "budget_total_calls": ledger.total_attempted,
+            "budget_hard_cap": ledger.hard_cap,
+            "merge_counts": merge_counts,
+            "smoke_artifact_hashes": smoke_hashes,
+            "slice_artifact_hashes": slice_hashes,
+            "generated_at": time.strftime('%Y-%m-%dT%H:%M:%S'),
+        }
+        atomic_write_json(str(tmp_dir / "audit_index.json"), audit_index)
+
+        # Copy schedule + budget ledger
+        shutil.copy2(str(output_dir / "schedule.json"), str(tmp_dir / "schedule.json"))
+        shutil.copy2(str(output_dir / "run_manifest.json"),
+                     str(tmp_dir / "run_manifest.json"))
+        ledger_src = output_dir / "budget_ledger.json"
+        if not ledger_src.exists():
+            print(json.dumps({"status": "ARCHIVE_INTEGRITY_FAILED",
+                "reason": "budget_ledger.json 缺失"}, ensure_ascii=False))
+            raise SystemExit(2)
+        budget_dir = tmp_dir / "budget"
+        budget_dir.mkdir(exist_ok=True)
+        shutil.copy2(str(ledger_src), str(budget_dir / f"{run_id}.json"))
+
+        # Copy labels.jsonl
+        labels_src = output_dir / "labels.jsonl"
+        if labels_src.exists():
+            shutil.copy2(str(labels_src), str(tmp_dir / "labels.jsonl"))
+
+        generate_report(schedule, generate_comparison_table(
+            schedule, ledger, provider, model), tmp_dir, ledger)
+
+        try:
+            os.rename(str(tmp_dir), str(archive_dir))
+        except (FileExistsError, PermissionError, OSError) as e:
+            print(json.dumps({"status": "ARCHIVE_RACE_DETECTED",
+                "archive_dir": str(archive_dir), "error": str(e)},
+                ensure_ascii=False))
+            raise SystemExit(2)
+    except BaseException:
+        shutil.rmtree(str(tmp_dir), ignore_errors=True)
+        raise
+    return str(archive_dir)
 
 
 def _write_case_ids_file(sl: dict) -> str:
@@ -981,11 +2146,77 @@ def _run_slice(sl: dict, args, ledger: BudgetLedger,
     return result.returncode
 
 
+def _process_slice(sl: dict, idx: int, total: int, args,
+                   ledger: BudgetLedger, is_smoke: bool = True) -> int:
+    """统一处理单个 slice (smoke 或 main).
+    is_smoke=True: smoke gate, 要求 100% parser rate.
+    is_smoke=False: main slice, 不要求全部 parsed.
+    返回: 0=跳过(已完成), 1=成功执行, 2=失败, 3=budget exhausted.
+    """
+    state = _resolve_slice_state(sl)
+    print(f"[slice] {idx}/{total} {sl['slice_id']}: state={state}")
+
+    if state == "blocked_corrupt":
+        print(json.dumps({"status": "BLOCKED_SLICE_CORRUPT",
+            "slice_id": sl["slice_id"],
+            "reason": "产物损坏，fail-closed"}, ensure_ascii=False))
+        return 2
+
+    if state == "completed":
+        if not _verify_slice_completed(sl, args, ledger, is_smoke=is_smoke):
+            return 2
+        print(f"[slice] {sl['slice_id']}: PASS (completed, verified)")
+        return 0
+
+    # Budget pre-check
+    if not ledger.budget_ok_for_slice(sl["slice_id"], sl["hard_cap"]):
+        print(json.dumps({"status": "BUDGET_EXHAUSTED",
+            "slice_id": sl["slice_id"],
+            "total_attempted": ledger.total_attempted,
+            "reason": "全局预算耗尽"}, ensure_ascii=False))
+        return 3
+
+    # fresh or resume: allocate cap
+    allocated_cap = ledger._data["allocated_cap_by_slice"].get(sl["slice_id"])
+    if allocated_cap is None:
+        effective_cap = compute_effective_cap(sl["slice_id"], ledger, 0)
+    else:
+        already = reconcile_partial_events(sl, ledger, allocated_cap)
+        effective_cap = compute_effective_cap(sl["slice_id"], ledger, already)
+
+    sl["hard_cap"] = effective_cap
+
+    rc = _run_slice(sl, args, ledger, resume=(state == "resume"))
+
+    if rc == 2:
+        print(json.dumps({"status": "BLOCKED_RUNNER_CONFIG",
+            "slice_id": sl["slice_id"], "returncode": 2,
+            "reason": "确定性错误"}, ensure_ascii=False))
+        return 2
+    if rc == 3:
+        print(json.dumps({"status": "BLOCKED_INCOMPLETE",
+            "slice_id": sl["slice_id"], "returncode": 3,
+            "reason": "hard cap 耗尽"}, ensure_ascii=False))
+        return 3
+    if rc != 0:
+        print(json.dumps({"status": "BLOCKED_SLICE_CRASH",
+            "slice_id": sl["slice_id"], "returncode": rc,
+            "reason": "子进程崩溃"}, ensure_ascii=False))
+        return 2
+
+    # Verify slice completed successfully
+    if not _verify_slice_completed(sl, args, ledger, is_smoke=is_smoke):
+        return 2
+    print(f"[slice] {sl['slice_id']}: PASS")
+    return 1
+
+
 def main(argv=None):
     """Main entry point for 6B1-D orchestrator.
 
     5 arms × 5 groups × 2 years × 3 repeats = 150 slices.
-    5 smoke slices (one per arm) + 150 main slices.
+    正式 schedule 的前 5 个 slice (position=0, 2024, repeat=0, G0-G4) 即五臂 smoke.
+    主循环处理 slices[5:].
     Dynamic effective_cap, BudgetLedger.allocated_cap_by_slice 权威.
     """
     parser = argparse.ArgumentParser(description="Phase 6 6B1-D orchestrator")
@@ -995,29 +2226,28 @@ def main(argv=None):
                         help="产物输出根目录")
     parser.add_argument("--dry-run", action="store_true", help="仅生成 schedule，不调 API")
     parser.add_argument("--from-slice", type=int, default=0,
-                        help="从指定位置开始（smoke 之后的位置索引）")
+                        help="从指定 slice 索引开始（0-149，跳过需审计已完成）")
+    parser.add_argument("--labels-file", default=None,
+                        help="labels.jsonl 路径（默认 docs/phase6/6b1d/labels.jsonl）")
+    parser.add_argument("--archive-root", default=None,
+                        help="归档根目录（默认 docs/phase6/6b1d）")
     args = parser.parse_args(argv)
 
     output_dir = Path(args.output_dir)
     os.makedirs(str(output_dir), exist_ok=True)
 
-    # 1. Generate schedule (150 slices)
-    schedule = generate_schedule(output_dir)
-
-    if schedule["total_scheduled_calls"] != TOTAL_SCHEDULED_CALLS:
-        print(f"ERROR: expected {TOTAL_SCHEDULED_CALLS} scheduled calls, "
-              f"got {schedule['total_scheduled_calls']}")
-        raise SystemExit(1)
-
-    if schedule["total_slices"] != TOTAL_SLICES:
-        print(f"ERROR: expected {TOTAL_SLICES} slices, got {schedule['total_slices']}")
-        raise SystemExit(1)
-
-    ledger_path = str(output_dir / "budget_ledger.json")
-    ledger = BudgetLedger(ledger_path)
-
-    # 2. Dry-run: print schedule summary and exit
+    # 1. Dry-run: generate (write) schedule, print summary, exit.
+    #    Dry-run does not make model calls or touch the run manifest, so the
+    #    resume/fresh protection below does not apply to it.
     if args.dry_run:
+        schedule = generate_schedule(output_dir)
+        if schedule["total_scheduled_calls"] != TOTAL_SCHEDULED_CALLS:
+            print(f"ERROR: expected {TOTAL_SCHEDULED_CALLS} scheduled calls, "
+                  f"got {schedule['total_scheduled_calls']}")
+            raise SystemExit(1)
+        if schedule["total_slices"] != TOTAL_SLICES:
+            print(f"ERROR: expected {TOTAL_SLICES} slices, got {schedule['total_slices']}")
+            raise SystemExit(1)
         print(f"\n[dry-run] schedule OK: {schedule['total_slices']} slices, "
               f"{schedule['total_scheduled_calls']} calls "
               f"(hard_cap total={schedule['total_hard_cap']})")
@@ -1025,132 +2255,161 @@ def main(argv=None):
         print(f"[dry-run] years: {YEARS}")
         print(f"[dry-run] repeats: {REPEATS}")
         print(f"[dry-run] global hard cap: {GLOBAL_LEDGER_CAP}")
+        print(f"[dry-run] smoke = schedule[0:5] (position=0, 2024, R0, G0-G4)")
         print("[dry-run] Exiting without API calls.")
         return 0
 
-    # 4. Smoke gate - 5 smoke slices (one per arm)
-    print("\n=== SMOKE GATE (5 slices, one per arm) ===")
-    smoke_slices = _generate_smoke_schedule(output_dir)
+    # 2. Labels preflight (before any model calls / schedule write)
+    labels_path = args.labels_file or LABELS_DEFAULT_PATH
+    ok, labels_sha256, labels_data, reason = validate_labels(labels_path)
+    if not ok:
+        print(json.dumps({"status": "BLOCKED_LABELS_PREFLIGHT",
+            "labels_path": labels_path, "reason": reason},
+            ensure_ascii=False))
+        return 2
 
-    # 3. Validate ledger against schedule (include smoke slices in validation)
-    combined_schedule = dict(schedule)
-    combined_schedule["slices"] = list(schedule["slices"]) + smoke_slices
-    ledger.validate_against_schedule(combined_schedule, args.provider, args.model)
+    dist = compute_label_distribution(labels_data)
+    skipped = get_skipped_layers(labels_data)
+    print(f"[labels] {len(labels_data)} cases validated, SHA-256={labels_sha256[:12]}...")
+    for dim in LABEL_DIMENSIONS:
+        print(f"[labels] {dim}: {dist[dim]}")
+    if skipped:
+        print(f"[labels] layers with <{LABEL_MIN_LAYER_SIZE} samples (will skip): {skipped}")
 
-    for smoke_sl in smoke_slices:
-        smoke_state = determine_smoke_state(smoke_sl)
-        print(f"[smoke] {smoke_sl['slice_id']}: state={smoke_state}")
+    # 3. Resume/fresh detection BEFORE writing schedule (P0 #1).
+    #    历史产物存在但 run_manifest 缺失 -> fail-closed (无法验证旧结果来源).
+    #    run_manifest 存在 -> 先校验指纹/配置漂移, 再读取历史 schedule.
+    run_manifest_path = output_dir / "run_manifest.json"
+    has_manifest = run_manifest_path.exists()
+    has_artifacts = _has_historical_artifacts(output_dir)
 
-        if smoke_state == "blocked_corrupt":
-            print(json.dumps({"status": "BLOCKED_SMOKE_CORRUPT",
-                "slice_id": smoke_sl["slice_id"],
-                "reason": "smoke 产物损坏，fail-closed"}, ensure_ascii=False))
-            return 2
+    if has_artifacts and not has_manifest:
+        print(json.dumps({"status": "BLOCKED_ARTIFACTS_WITHOUT_MANIFEST",
+            "output_dir": str(output_dir),
+            "reason": "output_dir 含历史产物但 run_manifest.json 缺失，无法验证来源 (fail-closed)"},
+            ensure_ascii=False))
+        return 2
 
-        if smoke_state == "completed":
-            # 完整验证 + ledger reconciliation
-            ok, reason = verify_smoke_completed(smoke_sl, args, ledger)
-            if not ok:
-                print(json.dumps({"status": "BLOCKED_SMOKE_VERIFY",
-                    "slice_id": smoke_sl["slice_id"],
-                    "reason": reason}, ensure_ascii=False))
-                return 2
-            print(f"[smoke] {smoke_sl['slice_id']}: PASS (completed, verified)")
-            continue
-
-        # fresh or resume: allocate cap, run slice
-        # resume 路径: 先 reconcile, 再 compute_effective_cap
-        allocated_cap = ledger._data["allocated_cap_by_slice"].get(smoke_sl["slice_id"])
-        if allocated_cap is None:
-            # fresh: 分配 cap
-            effective_cap = compute_effective_cap(smoke_sl["slice_id"], ledger, 0)
-        else:
-            # resume: 先 reconcile_partial_events, 再 compute_effective_cap
-            already = reconcile_partial_events(smoke_sl, ledger, allocated_cap)
-            effective_cap = compute_effective_cap(smoke_sl["slice_id"], ledger, already)
-
-        smoke_sl["hard_cap"] = effective_cap
-
-        rc = _run_slice(smoke_sl, args, ledger,
-                        resume=(smoke_state == "resume"))
-
-        if rc == 2:
-            print(json.dumps({"status": "BLOCKED_SMOKE_RUNNER_CONFIG",
-                "slice_id": smoke_sl["slice_id"],
-                "returncode": 2, "reason": "确定性错误，停止"}, ensure_ascii=False))
-            return 2
-        if rc == 3:
-            print(json.dumps({"status": "BLOCKED_INCOMPLETE",
-                "slice_id": smoke_sl["slice_id"],
-                "returncode": 3, "reason": "hard cap 耗尽，停止"}, ensure_ascii=False))
-            return 2
-        if rc != 0:
-            print(json.dumps({"status": "BLOCKED_SMOKE_CRASH",
-                "slice_id": smoke_sl["slice_id"],
-                "returncode": rc, "reason": "子进程崩溃，停止"}, ensure_ascii=False))
-            return 2
-
-        # Verify smoke completed successfully
-        ok, reason = verify_smoke_completed(smoke_sl, args, ledger)
+    historical_schedule = None
+    if has_manifest:
+        ok, reason = verify_run_manifest(output_dir, args.provider, args.model,
+                                         labels_sha256)
         if not ok:
-            print(json.dumps({"status": "BLOCKED_SMOKE_VERIFY",
-                "slice_id": smoke_sl["slice_id"],
-                "reason": reason}, ensure_ascii=False))
+            print(json.dumps({"status": "BLOCKED_RUN_MANIFEST_DRIFT",
+                "reason": reason,
+                "hint": "实验代码或配置已变更，历史产物与当前不兼容"}, ensure_ascii=False))
             return 2
-        print(f"[smoke] {smoke_sl['slice_id']}: PASS")
+        # Read historical schedule (never overwritten on the resume path).
+        historical_schedule = _load_schedule_json(output_dir)
+
+    # 4. Obtain the schedule. Resume compares an in-memory candidate against the
+    #    historical schedule BEFORE any write, so a drift rejection leaves the
+    #    on-disk schedule.json byte-identical. Fresh runs build+persist a new
+    #    schedule and commit the run manifest.
+    if has_manifest:
+        candidate = _build_schedule(output_dir)
+        ok, reason = _verify_schedule_consistent(historical_schedule, candidate)
+        if not ok:
+            print(json.dumps({"status": "BLOCKED_SCHEDULE_DRIFT",
+                "reason": reason,
+                "hint": "历史 schedule 与当前代码生成的不一致"}, ensure_ascii=False))
+            return 2
+        # Consistent: reuse the historical on-disk schedule (no overwrite).
+        schedule = historical_schedule
+    else:
+        schedule = generate_schedule(output_dir)
+        write_run_manifest(output_dir, args.provider, args.model, labels_sha256)
+
+    if schedule["total_scheduled_calls"] != TOTAL_SCHEDULED_CALLS:
+        print(f"ERROR: expected {TOTAL_SCHEDULED_CALLS} scheduled calls, "
+              f"got {schedule['total_scheduled_calls']}")
+        raise SystemExit(1)
+    if schedule["total_slices"] != TOTAL_SLICES:
+        print(f"ERROR: expected {TOTAL_SLICES} slices, got {schedule['total_slices']}")
+        raise SystemExit(1)
+
+    ledger_path = str(output_dir / "budget_ledger.json")
+    ledger = BudgetLedger(ledger_path)
+
+    # 6. Validate ledger against schedule
+    ledger.validate_against_schedule(schedule, args.provider, args.model)
+
+    # 4. Smoke gate - schedule[0:5] 即五臂 smoke
+    print("\n=== SMOKE GATE (schedule[0:5], one arm per slice) ===")
+    smoke_slices = schedule["slices"][:5]
+
+    for idx, sl in enumerate(smoke_slices):
+        result = _process_slice(sl, idx, TOTAL_SLICES, args, ledger,
+                                is_smoke=True)
+        if result == 2:
+            return 2
+        if result == 3:
+            # smoke budget exhausted -> fatal
+            return 2
+        # result 0 (completed) or 1 (ran successfully) -> continue
 
     print("[smoke] All 5 smoke slices passed.")
 
-    # 5. Main loop - 150 slices
-    print(f"\n=== MAIN LOOP ({schedule['total_slices']} slices) ===")
-    smoke_ids = {s["slice_id"] for s in smoke_slices}
+    # 5. --from-slice audit: 被跳过的 slice 必须全部 completed
+    if args.from_slice > 5:
+        print(f"\n=== FROM-SLICE AUDIT (slices 5..{args.from_slice-1}) ===")
+        if not _audit_skipped_slices(schedule, args.from_slice, args, ledger):
+            return 2
 
-    for idx, sl in enumerate(schedule["slices"]):
-        if sl["slice_id"] in smoke_ids:
-            continue  # 跳过 smoke ID（如有重名）
+    # 6. Main loop - slices[5:]
+    print(f"\n=== MAIN LOOP (slices 5..{TOTAL_SLICES-1}) ===")
+    for idx in range(5, TOTAL_SLICES):
         if idx < args.from_slice:
             continue
 
-        # Budget pre-check
-        if not ledger.budget_ok_for_slice(sl["slice_id"], sl["hard_cap"]):
-            print(json.dumps({"status": "BUDGET_EXHAUSTED",
-                "slice_id": sl["slice_id"],
+        sl = schedule["slices"][idx]
+        result = _process_slice(sl, idx, TOTAL_SLICES, args, ledger,
+                                is_smoke=False)
+
+        if result == 2:
+            return 2
+        if result == 3:
+            # main slice budget exhausted -> fatal (不能继续)
+            print(json.dumps({"status": "BLOCKED_BUDGET_EXHAUSTED",
                 "total_attempted": ledger.total_attempted,
-                "reason": "全局预算耗尽，停止"}, ensure_ascii=False))
+                "reason": "预算耗尽，实验不完整"}, ensure_ascii=False))
             return 2
+        # result 0 (completed) or 1 (ran successfully) -> continue
 
-        print(f"[main] {idx}/{schedule['total_slices']} {sl['slice_id']} "
-              f"(budget: {ledger.total_attempted}/{ledger.hard_cap})")
+    # 7. Integrity gate - 阻止不完整实验返回 0
+    print("\n=== INTEGRITY GATE ===")
+    ok, reason = _integrity_gate(schedule, ledger, args)
+    if not ok:
+        print(json.dumps({"status": "BLOCKED_INTEGRITY",
+            "reason": reason,
+            "total_attempted": ledger.total_attempted}, ensure_ascii=False))
+        return 2
 
-        # Allocate effective_cap
-        allocated_cap = ledger._data["allocated_cap_by_slice"].get(sl["slice_id"])
-        if allocated_cap is None:
-            effective_cap = compute_effective_cap(sl["slice_id"], ledger, 0)
-        else:
-            already = reconcile_partial_events(sl, ledger, allocated_cap)
-            effective_cap = compute_effective_cap(sl["slice_id"], ledger, already)
+    # 8. Descriptive comparison table + report (plan §4.12)
+    print("\n=== COMPARISON TABLE ===")
+    table = generate_comparison_table(schedule, ledger, args.provider, args.model)
+    table_path = output_dir / "comparison_table.json"
+    atomic_write_json(str(table_path), table)
+    print(f"[comparison] -> {table_path}")
+    generate_report(schedule, table, output_dir, ledger)
 
-        sl["hard_cap"] = effective_cap
+    # 9. Copy labels.jsonl to output_dir for archive
+    import shutil
+    labels_dest = output_dir / "labels.jsonl"
+    if labels_path != str(labels_dest):
+        shutil.copy2(labels_path, str(labels_dest))
 
-        rc = _run_slice(sl, args, ledger)
+    # 10. Formal archive (P0 #3d/e)
+    print("\n=== ARCHIVE ===")
+    archive_root = Path(args.archive_root) if args.archive_root else None
+    archive_path = generate_archive(
+        schedule, ledger, output_dir, args.provider, args.model,
+        labels_sha256=labels_sha256, labels_data=labels_data,
+        archive_root=archive_root)
+    print(f"[archive] -> {archive_path}")
 
-        if rc == 2:
-            print(json.dumps({"status": "BLOCKED_RUNNER_CONFIG",
-                "slice_id": sl["slice_id"], "returncode": 2,
-                "reason": "确定性错误，停止"}, ensure_ascii=False))
-            return 2
-        if rc == 3:
-            print(json.dumps({"status": "BLOCKED_INCOMPLETE",
-                "slice_id": sl["slice_id"], "returncode": 3,
-                "reason": "hard cap 耗尽，继续下个 slice"}))
-            continue
-        if rc != 0:
-            print(json.dumps({"status": "BLOCKED_SLICE_CRASH",
-                "slice_id": sl["slice_id"], "returncode": rc,
-                "reason": "子进程崩溃，停止"}, ensure_ascii=False))
-            return 2
-
-    print(f"\n=== COMPLETE: {ledger.total_attempted}/{ledger.hard_cap} calls ===")
+    print(f"\n=== COMPLETE: {ledger.total_attempted}/{ledger.hard_cap} calls, "
+          f"{len(ledger._data['slices_completed'])} slices ===")
     return 0
 
 

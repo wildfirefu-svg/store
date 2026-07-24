@@ -97,6 +97,32 @@ def format_multi_turn_context(case, chart_context_text=None):
     ])
 
 
+def _assemble_reasoned_choice_prompt(case: dict, context_text: str) -> str:
+    """Assemble the full reasoned-choice prompt (design §4.1.2).
+
+    Appends reasoning instructions requiring the model to produce a structured
+    analysis before giving the final answer line.  The *context_text* is the
+    output of ``render_reasoned_context()``.
+    """
+    instruction = (
+        "## 输出要求\n"
+        "请先进行推理分析，然后给出最终答案。最后一行必须严格为：\n"
+        "最终答案：X\n"
+        "其中 X 为 A、B、C 或 D 之一。"
+    )
+    return "\n\n".join([
+        "你是一位严谨的八字命理评测助手。",
+        "请根据命主信息，通过推理分析后回答四选一题。",
+        "## 命主信息",
+        context_text,
+        "## 问题",
+        case.get("question", ""),
+        "## 选项",
+        format_options(case.get("options", [])),
+        instruction,
+    ])
+
+
 def format_multi_turn_question(case):
     return "\n\n".join([
         "请回答以下四选一问题，只输出选项字母 A/B/C/D。",

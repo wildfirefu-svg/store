@@ -1,12 +1,15 @@
-"""Phase 6 6B1-D: fake runner integration tests.
+"""Phase 6 6B1-D: integration tests for main() orchestration.
 
-通过 mock subprocess.run 模拟 runner 行为, 验证 main() 的完整流程:
-  - smoke fresh 成功 (5 smoke slices 全部 fresh -> completed)
-  - smoke completed skip (已有产物, 验证通过, 跳过)
-  - smoke crash (runner 返回非零, main exit 2)
-  - main loop slice 成功 (1 个主 slice)
-  - budget exhausted (预算耗尽, main exit 2)
-  - resume 场景 (partial events -> resume -> completed)
+验证 main() 的核心流程:
+  - smoke = schedule[0:5] (不是额外 5 个 slice)
+  - --from-slice 审计 (跳过的 slice 必须 completed)
+  - integrity gate (不完整实验 exit 2)
+  - resume 传 --resume 标志
+  - completed slice 验证后跳过
+  - dry-run 不创建 ledger
+
+注意: 这些测试 mock subprocess.run 来模拟 runner 行为, 但验证的是
+orchestrator 的状态机逻辑, 不是 runner 本身.
 """
 
 from __future__ import annotations
@@ -26,28 +29,29 @@ import scripts.phase6_6b1d_orchestrator as orch
 from scripts.phase6_6b1d_orchestrator import (
     BudgetLedger,
     generate_schedule,
-    _generate_smoke_schedule,
     build_expected_key,
-    determine_smoke_state,
-    verify_smoke_completed,
-    reconcile_partial_events,
     compute_effective_cap,
+    determine_smoke_state,
     REASONED_PROFILE,
     SLICE_SIZE,
     SLICE_MAX_CAP,
     GLOBAL_LEDGER_CAP,
-    SMOKE_ARMS_ORDER,
+    TOTAL_SLICES,
+    TOTAL_SCHEDULED_CALLS,
+    ARMS,
+    _integrity_gate,
+    _audit_skipped_slices,
+    _process_slice,
 )
 
 
 # ---- helpers ----
 
-def _write_valid_detail(sl, provider="deepseek", model="deepseek-chat", n=None):
-    """Write n valid detail rows with correct attempt keys and parsed terminal_state."""
+def _write_valid_detail(sl, provider="deepseek", model="deepseek-chat"):
+    """Write valid detail rows with correct attempt keys and parsed terminal_state."""
     dataset_id = os.path.splitext(os.path.basename(sl["dataset"]))[0]
-    count = n or len(sl["case_ids"])
     rows = []
-    for cid in sl["case_ids"][:count]:
+    for cid in sl["case_ids"]:
         key = build_expected_key(
             dataset_id, REASONED_PROFILE, sl["arm"],
             cid, sl["repeat"], provider, model)
@@ -70,7 +74,7 @@ def _write_valid_events(sl, n=None):
 
 
 def _write_valid_manifest(sl):
-    """Write a manifest file (content doesn't matter, verify_slice_manifest is mocked)."""
+    """Write a manifest file."""
     os.makedirs(os.path.dirname(sl["manifest_path"]), exist_ok=True)
     manifest = {
         "hard_cap": sl["hard_cap"],
@@ -82,383 +86,402 @@ def _write_valid_manifest(sl):
         json.dump(manifest, f, ensure_ascii=False)
 
 
-def _make_fake_runner_success(sl_factory):
-    """Create a fake subprocess.run that writes valid artifacts and returns rc=0."""
-    def fake_run(cmd, **kwargs):
-        sl = sl_factory(cmd)
-        _write_valid_detail(sl)
-        _write_valid_events(sl)
-        _write_valid_manifest(sl)
+def _complete_slice(sl):
+    """Write all valid artifacts to make a slice look completed."""
+    _write_valid_detail(sl)
+    _write_valid_events(sl)
+    _write_valid_manifest(sl)
 
-        class R:
-            returncode = 0
-        return R()
-    return fake_run
+
+def _write_resume_manifest(output_dir):
+    """Write a run_manifest.json with the real labels SHA-256 so main() accepts
+    a pre-populated output_dir as a valid resume (P0 #1: artifacts without a
+    manifest are now fail-closed)."""
+    ok, labels_sha, _, _ = orch.validate_labels(orch.LABELS_DEFAULT_PATH)
+    assert ok, "default labels must validate for resume manifest setup"
+    orch.write_run_manifest(output_dir, "deepseek", "deepseek-chat",
+                            labels_sha256=labels_sha)
 
 
 def _extract_slice_id_from_cmd(cmd):
-    """Extract slice_id from runner cmd by matching --case-details-jsonl path."""
+    """Extract slice_id from runner cmd."""
     for i, arg in enumerate(cmd):
         if arg == "--case-details-jsonl" and i + 1 < len(cmd):
             detail_path = cmd[i + 1]
-            # path like .../slice_{slice_id}/details_{slice_id}.jsonl
             basename = os.path.basename(detail_path)
-            # details_{slice_id}.jsonl -> {slice_id}
             if basename.startswith("details_") and basename.endswith(".jsonl"):
                 return basename[len("details_"):-len(".jsonl")]
     return None
 
 
-# ---- TDD 7a: smoke fresh success ----
+def _check_resume_flag(cmd):
+    """Check if --resume flag is present in cmd."""
+    return "--resume" in cmd
 
-class TestSmokeFreshSuccess:
-    """Test main() smoke gate with all 5 smoke slices fresh."""
 
-    def test_smoke_fresh_all_pass(self, tmp_path, monkeypatch):
-        """5 smoke slices fresh -> all produce valid artifacts -> verify passes."""
+# ---- TDD 7: smoke = schedule[0:5] ----
+
+class TestSmokeIsScheduleFirst5:
+    """Smoke 必须是 schedule[0:5], 不是额外 5 个 slice."""
+
+    def test_smoke_slices_are_schedule_first5(self, tmp_path, monkeypatch):
+        """main() 使用 schedule[0:5] 作为 smoke, 总 budget = 1200 (不是 1240)."""
         output_dir = tmp_path / "output"
+        schedule = generate_schedule(output_dir)
+        smoke_slices = schedule["slices"][:5]
 
-        # Generate smoke schedule to get slice dicts
-        smoke_slices = _generate_smoke_schedule(output_dir)
-        smoke_by_id = {s["slice_id"]: s for s in smoke_slices}
-
-        # Mock subprocess.run: write valid artifacts for each smoke slice
-        def fake_run(cmd, **kwargs):
-            slice_id = _extract_slice_id_from_cmd(cmd)
-            sl = smoke_by_id.get(slice_id)
-            if sl is None:
-                # main loop slice - also write valid artifacts
-                # find from schedule
-                schedule = generate_schedule(output_dir)
-                for s in schedule["slices"]:
-                    if s["slice_id"] == slice_id:
-                        sl = s
-                        break
-            if sl is None:
-                raise ValueError(f"unknown slice_id: {slice_id}")
-            _write_valid_detail(sl)
-            _write_valid_events(sl)
-            _write_valid_manifest(sl)
-
-            class R:
-                returncode = 0
-            return R()
-
-        monkeypatch.setattr(orch.subprocess, "run", fake_run)
-        # Mock verify_slice_manifest to always pass (isolate from real manifest)
-        monkeypatch.setattr(orch, "verify_slice_manifest",
-                            lambda sl, p, m: (True, {}))
-
-        # Run main with --from-slice to skip main loop (only smoke)
-        # Use a large from-slice to skip all 150 main slices
-        rc = orch.main([
-            "--output-dir", str(output_dir),
-            "--from-slice", "999",  # skip main loop
-        ])
-        assert rc == 0
-
-        # Verify ledger has 5 completed smoke slices
-        ledger = BudgetLedger(str(output_dir / "budget_ledger.json"))
-        assert len(ledger._data["slices_completed"]) == 5
-        # Each smoke slice should have 8 calls recorded
-        for s in smoke_slices:
-            assert ledger._data["calls_attempted_by_slice"][s["slice_id"]] == 8
-
-
-# ---- TDD 7a: smoke completed skip ----
-
-class TestSmokeCompletedSkip:
-    """Test main() smoke gate with pre-existing completed smoke slices."""
-
-    def test_smoke_completed_all_skip(self, tmp_path, monkeypatch):
-        """5 smoke slices already completed -> verify passes -> skip to main loop."""
-        output_dir = tmp_path / "output"
-
-        smoke_slices = _generate_smoke_schedule(output_dir)
-        smoke_by_id = {s["slice_id"]: s for s in smoke_slices}
-
-        # Pre-write valid completed artifacts for all 5 smoke slices
+        # Mock: 完成所有 smoke slice, 然后 --from-slice 999 应该被审计拦截
         for sl in smoke_slices:
-            _write_valid_detail(sl)
-            _write_valid_events(sl)
-            _write_valid_manifest(sl)
+            _complete_slice(sl)
 
-        # Mock verify_slice_manifest to pass
+        # Pre-populate ledger with completed smoke
+        ledger_path = str(output_dir / "budget_ledger.json")
+        ledger = BudgetLedger(ledger_path)
+        for sl in smoke_slices:
+            compute_effective_cap(sl["slice_id"], ledger, 0)
+            ledger.record_slice_completed(sl["slice_id"], 8)
+        ledger._save()
+        _write_resume_manifest(output_dir)
+
         monkeypatch.setattr(orch, "verify_slice_manifest",
                             lambda sl, p, m: (True, {}))
 
-        # Mock subprocess.run for main loop (should not be called for smoke)
-        main_called = {"count": 0}
-
-        def fake_run(cmd, **kwargs):
-            slice_id = _extract_slice_id_from_cmd(cmd)
-            if not slice_id.startswith("smoke_"):
-                main_called["count"] += 1
-            class R:
-                returncode = 0
-            return R()
-
-        monkeypatch.setattr(orch.subprocess, "run", fake_run)
-
-        rc = orch.main([
-            "--output-dir", str(output_dir),
-            "--from-slice", "999",  # skip main loop
-        ])
-        assert rc == 0
-
-        # Verify smoke slices were NOT re-run (subprocess not called for smoke)
-        # main_called should be 0 since we skip main loop
-        assert main_called["count"] == 0
-
-        # Verify ledger has 5 completed smoke slices
-        ledger = BudgetLedger(str(output_dir / "budget_ledger.json"))
-        assert len(ledger._data["slices_completed"]) == 5
-
-
-# ---- TDD 7a: smoke crash ----
-
-class TestSmokeCrash:
-    """Test main() smoke gate with runner crash."""
-
-    def test_smoke_crash_exits_2(self, tmp_path, monkeypatch):
-        """Runner returns non-zero for first smoke -> main exit 2."""
-        output_dir = tmp_path / "output"
-
-        smoke_slices = _generate_smoke_schedule(output_dir)
-
-        def fake_run(cmd, **kwargs):
-            class R:
-                returncode = 2  # config error
-            return R()
-
-        monkeypatch.setattr(orch.subprocess, "run", fake_run)
-        monkeypatch.setattr(orch, "verify_slice_manifest",
-                            lambda sl, p, m: (True, {}))
-
+        # --from-slice 999 -> 审计 slices 5..998 -> 应 fail (未完成)
         rc = orch.main([
             "--output-dir", str(output_dir),
             "--from-slice", "999",
+        ])
+        # 审计应 fail: slices 5..149 未完成
+        assert rc == 2
+
+    def test_smoke_uses_5_different_groups_not_same_8_cases(self, tmp_path):
+        """Smoke slices 覆盖 G0-G4 (40 题), 不是 5 个 slice 都用前 8 题."""
+        output_dir = tmp_path / "output"
+        schedule = generate_schedule(output_dir)
+        smoke_slices = schedule["slices"][:5]
+
+        # 每个 smoke slice 的 case_ids 应该不同 (覆盖 40 题)
+        all_case_ids = set()
+        for sl in smoke_slices:
+            all_case_ids.update(sl["case_ids"])
+        assert len(all_case_ids) == 40, \
+            f"smoke 应覆盖 40 题, 实际 {len(all_case_ids)}"
+
+        # 5 个 smoke slice 覆盖 5 个 arm
+        smoke_arms = {sl["arm"] for sl in smoke_slices}
+        assert smoke_arms == set(ARMS)
+
+
+# ---- TDD 7: --from-slice audit ----
+
+class TestFromSliceAudit:
+    """--from-slice 审计: 跳过的 slice 必须 completed."""
+
+    def test_from_slice_with_incomplete_skipped_exits_2(self, tmp_path, monkeypatch):
+        """--from-slice 10 但 slice 5 未完成 -> exit 2."""
+        output_dir = tmp_path / "output"
+        schedule = generate_schedule(output_dir)
+        smoke_slices = schedule["slices"][:5]
+
+        # 完成所有 smoke
+        for sl in smoke_slices:
+            _complete_slice(sl)
+        ledger_path = str(output_dir / "budget_ledger.json")
+        ledger = BudgetLedger(ledger_path)
+        for sl in smoke_slices:
+            compute_effective_cap(sl["slice_id"], ledger, 0)
+            ledger.record_slice_completed(sl["slice_id"], 8)
+        ledger._save()
+        _write_resume_manifest(output_dir)
+
+        monkeypatch.setattr(orch, "verify_slice_manifest",
+                            lambda sl, p, m: (True, {}))
+
+        # --from-slice 10 但 slices 5-9 未完成 -> 审计失败
+        rc = orch.main([
+            "--output-dir", str(output_dir),
+            "--from-slice", "10",
         ])
         assert rc == 2
 
-
-# ---- TDD 7b: main loop slice success ----
-
-class TestMainLoopSliceSuccess:
-    """Test main() main loop with one slice."""
-
-    def test_main_loop_one_slice_success(self, tmp_path, monkeypatch):
-        """1 main slice runs successfully -> ledger records completion."""
+    def test_from_slice_with_completed_skipped_passes(self, tmp_path, monkeypatch):
+        """--from-slice 10 且 slices 0-9 全部 completed -> 审计通过, 继续."""
         output_dir = tmp_path / "output"
+        schedule = generate_schedule(output_dir)
+        first_10 = schedule["slices"][:10]
 
-        # Pre-complete all 5 smoke slices
-        smoke_slices = _generate_smoke_schedule(output_dir)
-        smoke_by_id = {s["slice_id"]: s for s in smoke_slices}
-        for sl in smoke_slices:
-            _write_valid_detail(sl)
-            _write_valid_events(sl)
-            _write_valid_manifest(sl)
+        # 完成前 10 个 slice
+        for sl in first_10:
+            _complete_slice(sl)
+        ledger_path = str(output_dir / "budget_ledger.json")
+        ledger = BudgetLedger(ledger_path)
+        for sl in first_10:
+            compute_effective_cap(sl["slice_id"], ledger, 0)
+            ledger.record_slice_completed(sl["slice_id"], 8)
+        ledger._save()
+        _write_resume_manifest(output_dir)
 
         monkeypatch.setattr(orch, "verify_slice_manifest",
                             lambda sl, p, m: (True, {}))
 
-        # Generate schedule to get main slice dicts
-        schedule = generate_schedule(output_dir)
-        main_slices = [s for s in schedule["slices"]
-                       if s["slice_id"] not in smoke_by_id]
-        main_by_id = {s["slice_id"]: s for s in main_slices}
-
-        # Mock subprocess.run: smoke skip (already completed), main slice write artifacts
+        # Mock subprocess for remaining slices
         def fake_run(cmd, **kwargs):
             slice_id = _extract_slice_id_from_cmd(cmd)
-            sl = main_by_id.get(slice_id)
-            if sl:
-                _write_valid_detail(sl)
-                _write_valid_events(sl)
-                _write_valid_manifest(sl)
+            for s in schedule["slices"]:
+                if s["slice_id"] == slice_id:
+                    _complete_slice(s)
+                    break
             class R:
                 returncode = 0
             return R()
 
         monkeypatch.setattr(orch.subprocess, "run", fake_run)
 
-        # Run with --from-slice 0 to run first main slice
+        # --from-slice 10 -> 审计 slices 0-9 (已 completed) -> 通过
+        # 但 remaining 140 slices 需要运行 -> 预算不够 (120 calls used, 1080 left, 140*8=1120)
+        # 实际: 10*8=80 used, 1320-80=1240 left, 140*8=1120 < 1240, 够
+        # 但 fake_run 会运行全部, 然后进入 integrity gate
         rc = orch.main([
             "--output-dir", str(output_dir),
-            "--from-slice", "0",
+            "--from-slice", "10",
+            "--archive-root", str(tmp_path / "archive"),
         ])
-        # Should run first slice then continue; but we can't easily limit to 1 slice
-        # Since we mock, all slices will "succeed" quickly
+        # 应该通过审计, 运行剩余, 然后 integrity gate
+        # 但 integrity gate 需要 1200 records, 我们 mock 了全部
         assert rc == 0
+        # main() 完成后必须生成 comparison_table.json 和 report.md
+        assert (output_dir / "comparison_table.json").exists()
+        assert (output_dir / "report.md").exists()
 
-        # Verify ledger has smoke + main slices completed
-        ledger = BudgetLedger(str(output_dir / "budget_ledger.json"))
-        assert len(ledger._data["slices_completed"]) >= 6  # 5 smoke + at least 1 main
-
-
-# ---- TDD 7b: budget exhausted ----
-
-class TestBudgetExhausted:
-    """Test main() budget exhaustion."""
-
-    def test_budget_exhausted_exits_2(self, tmp_path, monkeypatch):
-        """Budget exhausted -> main exit 2 with BUDGET_EXHAUSTED."""
+    def test_from_slice_beyond_total_with_all_completed_no_crash(self, tmp_path, monkeypatch):
+        """--from-slice 999 且全部 150 slices completed -> 审计通过, 不 IndexError, 返回 0."""
         output_dir = tmp_path / "output"
-
-        # Pre-complete all 5 smoke slices
-        smoke_slices = _generate_smoke_schedule(output_dir)
-        for sl in smoke_slices:
-            _write_valid_detail(sl)
-            _write_valid_events(sl)
-            _write_valid_manifest(sl)
-
-        monkeypatch.setattr(orch, "verify_slice_manifest",
-                            lambda sl, p, m: (True, {}))
-
-        # Generate schedule to get real slice IDs
         schedule = generate_schedule(output_dir)
-        real_slice_id = schedule["slices"][0]["slice_id"]
 
-        # Create a ledger that's already near budget limit
+        # 完成全部 150 slices
+        for sl in schedule["slices"]:
+            _complete_slice(sl)
         ledger_path = str(output_dir / "budget_ledger.json")
         ledger = BudgetLedger(ledger_path)
-        # Set total to near 1320 - leaving no room for even 1 slice
-        ledger._data["total_calls_attempted"] = GLOBAL_LEDGER_CAP - 1
-        ledger._data["calls_attempted_by_slice"][real_slice_id] = GLOBAL_LEDGER_CAP - 1
+        for sl in schedule["slices"]:
+            compute_effective_cap(sl["slice_id"], ledger, 0)
+            ledger.record_slice_completed(sl["slice_id"], 8)
         ledger._save()
+        _write_resume_manifest(output_dir)
 
-        # Mock subprocess.run (should not be called for main loop)
-        def fake_run(cmd, **kwargs):
-            class R:
-                returncode = 0
-            return R()
-
-        monkeypatch.setattr(orch.subprocess, "run", fake_run)
-
-        rc = orch.main([
-            "--output-dir", str(output_dir),
-            "--from-slice", "0",
-        ])
-        # Budget exhausted -> exit 2
-        assert rc == 2
-
-
-# ---- TDD 7c: resume scenario ----
-
-class TestResumeScenario:
-    """Test main() resume scenario with partial events."""
-
-    def test_smoke_resume_completes(self, tmp_path, monkeypatch):
-        """Smoke slice with partial events -> resume -> completed."""
-        output_dir = tmp_path / "output"
-
-        smoke_slices = _generate_smoke_schedule(output_dir)
-        smoke_by_id = {s["slice_id"]: s for s in smoke_slices}
-
-        # First smoke: manifest-only (resume state)
-        first_smoke = smoke_slices[0]
-        _write_valid_manifest(first_smoke)
-        # Allocate cap for first smoke (simulate prior allocation)
-        ledger_path = str(output_dir / "budget_ledger.json")
-        ledger = BudgetLedger(ledger_path)
-        compute_effective_cap(first_smoke["slice_id"], ledger, 0)
-        ledger._save()
-
-        # Other smoke slices: fresh
         monkeypatch.setattr(orch, "verify_slice_manifest",
                             lambda sl, p, m: (True, {}))
 
-        def fake_run(cmd, **kwargs):
-            slice_id = _extract_slice_id_from_cmd(cmd)
-            sl = smoke_by_id.get(slice_id)
-            if sl is None:
-                schedule = generate_schedule(output_dir)
-                for s in schedule["slices"]:
-                    if s["slice_id"] == slice_id:
-                        sl = s
-                        break
-            if sl:
-                _write_valid_detail(sl)
-                _write_valid_events(sl)
-                _write_valid_manifest(sl)
-            class R:
-                returncode = 0
-            return R()
-
-        monkeypatch.setattr(orch.subprocess, "run", fake_run)
-
+        # --from-slice 999 (beyond 150) + all completed -> 审计全 150, 无 IndexError
         rc = orch.main([
             "--output-dir", str(output_dir),
             "--from-slice", "999",
+            "--archive-root", str(tmp_path / "archive"),
         ])
         assert rc == 0
 
-        # Verify all 5 smoke completed
-        ledger2 = BudgetLedger(ledger_path)
-        assert len(ledger2._data["slices_completed"]) == 5
 
-    def test_smoke_resume_with_partial_events(self, tmp_path, monkeypatch):
-        """Smoke slice with 3 partial call_attempt events -> resume -> completed."""
+# ---- TDD 7: integrity gate ----
+
+class TestIntegrityGate:
+    """Integrity gate: 不完整实验不能返回 0."""
+
+    def test_integrity_gate_missing_slices_exits_2(self, tmp_path, monkeypatch):
+        """只有 5 smoke completed, 145 main 未完成 -> integrity gate exit 2."""
         output_dir = tmp_path / "output"
+        schedule = generate_schedule(output_dir)
+        smoke_slices = schedule["slices"][:5]
 
-        smoke_slices = _generate_smoke_schedule(output_dir)
-        smoke_by_id = {s["slice_id"]: s for s in smoke_slices}
-
-        # First smoke: partial events (3 of 8)
-        first_smoke = smoke_slices[0]
-        _write_valid_manifest(first_smoke)
-        _write_valid_events(first_smoke, n=3)
-
-        # Allocate cap and record partial calls
+        for sl in smoke_slices:
+            _complete_slice(sl)
         ledger_path = str(output_dir / "budget_ledger.json")
         ledger = BudgetLedger(ledger_path)
-        compute_effective_cap(first_smoke["slice_id"], ledger, 0)
-        ledger._data["calls_attempted_by_slice"][first_smoke["slice_id"]] = 3
-        ledger._data["total_calls_attempted"] = 3
+        for sl in smoke_slices:
+            compute_effective_cap(sl["slice_id"], ledger, 0)
+            ledger.record_slice_completed(sl["slice_id"], 8)
         ledger._save()
 
         monkeypatch.setattr(orch, "verify_slice_manifest",
                             lambda sl, p, m: (True, {}))
 
+        # 直接测试 _integrity_gate
+        ok, reason = _integrity_gate(schedule, ledger, type("Args", (), {
+            "provider": "deepseek", "model": "deepseek-chat"})())
+        assert ok is False
+        assert "未完成" in reason or "missing" in reason.lower()
+
+    def test_integrity_gate_complete_passes(self, tmp_path, monkeypatch):
+        """全部 150 slices completed -> integrity gate 通过."""
+        output_dir = tmp_path / "output"
+        schedule = generate_schedule(output_dir)
+        ledger_path = str(output_dir / "budget_ledger.json")
+        ledger = BudgetLedger(ledger_path)
+
+        for sl in schedule["slices"]:
+            _complete_slice(sl)
+            compute_effective_cap(sl["slice_id"], ledger, 0)
+            ledger.record_slice_completed(sl["slice_id"], 8)
+        ledger._save()
+
+        monkeypatch.setattr(orch, "verify_slice_manifest",
+                            lambda sl, p, m: (True, {}))
+
+        ok, reason = _integrity_gate(schedule, ledger, type("Args", (), {
+            "provider": "deepseek", "model": "deepseek-chat"})())
+        assert ok is True
+
+    def test_integrity_gate_wrong_record_count_exits_2(self, tmp_path, monkeypatch):
+        """records 数量不等于 1200 -> integrity gate fail."""
+        output_dir = tmp_path / "output"
+        schedule = generate_schedule(output_dir)
+        ledger_path = str(output_dir / "budget_ledger.json")
+        ledger = BudgetLedger(ledger_path)
+
+        for sl in schedule["slices"]:
+            # 只写 7 条 (不是 8)
+            _write_valid_manifest(sl)
+            _write_valid_events(sl, n=7)
+            dataset_id = os.path.splitext(os.path.basename(sl["dataset"]))[0]
+            rows = []
+            for cid in sl["case_ids"][:7]:
+                key = build_expected_key(
+                    dataset_id, REASONED_PROFILE, sl["arm"],
+                    cid, sl["repeat"], "deepseek", "deepseek-chat")
+                rows.append({"case_id": cid, "attempt_key": list(key),
+                             "terminal_state": "parsed", "answer": "A"})
+            os.makedirs(os.path.dirname(sl["detail_path"]), exist_ok=True)
+            with open(sl["detail_path"], "w", encoding="utf-8") as f:
+                for r in rows:
+                    f.write(json.dumps(r, ensure_ascii=False) + "\n")
+            compute_effective_cap(sl["slice_id"], ledger, 0)
+            ledger.record_slice_completed(sl["slice_id"], 7)
+        ledger._save()
+
+        monkeypatch.setattr(orch, "verify_slice_manifest",
+                            lambda sl, p, m: (True, {}))
+
+        ok, reason = _integrity_gate(schedule, ledger, type("Args", (), {
+            "provider": "deepseek", "model": "deepseek-chat"})())
+        assert ok is False
+        assert "1200" in reason or "记录" in reason
+
+
+# ---- TDD 7: resume passes --resume flag ----
+
+class TestResumePassesFlag:
+    """Resume 状态必须传 --resume 给 runner."""
+
+    def test_resume_state_passes_resume_flag(self, tmp_path, monkeypatch):
+        """slice 在 resume 状态时, runner cmd 必须包含 --resume."""
+        output_dir = tmp_path / "output"
+        schedule = generate_schedule(output_dir)
+        sl = schedule["slices"][0]
+
+        # Create manifest-only state (resume)
+        _write_valid_manifest(sl)
+        ledger_path = str(output_dir / "budget_ledger.json")
+        ledger = BudgetLedger(ledger_path)
+        compute_effective_cap(sl["slice_id"], ledger, 0)
+        ledger._save()
+
+        monkeypatch.setattr(orch, "verify_slice_manifest",
+                            lambda sl, p, m: (True, {}))
+
+        resume_flags_seen = []
+
         def fake_run(cmd, **kwargs):
-            slice_id = _extract_slice_id_from_cmd(cmd)
-            sl = smoke_by_id.get(slice_id)
-            if sl is None:
-                schedule = generate_schedule(output_dir)
-                for s in schedule["slices"]:
-                    if s["slice_id"] == slice_id:
-                        sl = s
-                        break
-            if sl:
-                _write_valid_detail(sl)
-                _write_valid_events(sl)
-                _write_valid_manifest(sl)
+            if _check_resume_flag(cmd):
+                resume_flags_seen.append(True)
+            _complete_slice(sl)
             class R:
                 returncode = 0
             return R()
 
         monkeypatch.setattr(orch.subprocess, "run", fake_run)
 
-        rc = orch.main([
-            "--output-dir", str(output_dir),
-            "--from-slice", "999",
-        ])
-        assert rc == 0
+        args = type("Args", (), {
+            "provider": "deepseek", "model": "deepseek-chat"})()
+        result = _process_slice(sl, 0, TOTAL_SLICES, args, ledger)
+        assert result == 1  # success
+        assert len(resume_flags_seen) > 0, "resume 状态必须传 --resume"
 
-        # Verify all 5 smoke completed
-        ledger2 = BudgetLedger(ledger_path)
-        assert len(ledger2._data["slices_completed"]) == 5
-        # First smoke should have 8 calls (reconciled from events after resume)
-        assert ledger2._data["calls_attempted_by_slice"][first_smoke["slice_id"]] == 8
+    def test_fresh_state_no_resume_flag(self, tmp_path, monkeypatch):
+        """slice 在 fresh 状态时, runner cmd 不应包含 --resume."""
+        output_dir = tmp_path / "output"
+        schedule = generate_schedule(output_dir)
+        sl = schedule["slices"][0]
+
+        # fresh: no artifacts
+        ledger_path = str(output_dir / "budget_ledger.json")
+        ledger = BudgetLedger(ledger_path)
+
+        monkeypatch.setattr(orch, "verify_slice_manifest",
+                            lambda sl, p, m: (True, {}))
+
+        resume_flags_seen = []
+
+        def fake_run(cmd, **kwargs):
+            if _check_resume_flag(cmd):
+                resume_flags_seen.append(True)
+            _complete_slice(sl)
+            class R:
+                returncode = 0
+            return R()
+
+        monkeypatch.setattr(orch.subprocess, "run", fake_run)
+
+        args = type("Args", (), {
+            "provider": "deepseek", "model": "deepseek-chat"})()
+        result = _process_slice(sl, 0, TOTAL_SLICES, args, ledger)
+        assert result == 1  # success
+        assert len(resume_flags_seen) == 0, "fresh 状态不应传 --resume"
 
 
-# ---- TDD 7: dry-run integration ----
+# ---- TDD 7: completed slice skip ----
 
-class TestDryRunIntegration:
-    """Test main() dry-run mode."""
+class TestCompletedSliceSkip:
+    """Completed slice 验证后跳过, 不调用 runner."""
 
-    def test_dry_run_generates_schedule(self, tmp_path):
-        """dry-run generates schedule.json and exits 0."""
+    def test_completed_slice_skips_runner(self, tmp_path, monkeypatch):
+        """completed slice 不调用 subprocess.run."""
+        output_dir = tmp_path / "output"
+        schedule = generate_schedule(output_dir)
+        sl = schedule["slices"][0]
+
+        _complete_slice(sl)
+        ledger_path = str(output_dir / "budget_ledger.json")
+        ledger = BudgetLedger(ledger_path)
+        compute_effective_cap(sl["slice_id"], ledger, 0)
+        ledger.record_slice_completed(sl["slice_id"], 8)
+        ledger._save()
+
+        monkeypatch.setattr(orch, "verify_slice_manifest",
+                            lambda sl, p, m: (True, {}))
+
+        runner_called = {"count": 0}
+
+        def fake_run(cmd, **kwargs):
+            runner_called["count"] += 1
+            class R:
+                returncode = 0
+            return R()
+
+        monkeypatch.setattr(orch.subprocess, "run", fake_run)
+
+        args = type("Args", (), {
+            "provider": "deepseek", "model": "deepseek-chat"})()
+        result = _process_slice(sl, 0, TOTAL_SLICES, args, ledger)
+        assert result == 0  # skipped
+        assert runner_called["count"] == 0, "completed slice 不应调用 runner"
+
+
+# ---- TDD 7: dry-run ----
+
+class TestDryRun:
+    """Dry-run 模式."""
+
+    def test_dry_run_no_ledger(self, tmp_path):
+        """dry-run 不创建 budget_ledger.json."""
         output_dir = tmp_path / "output"
         rc = orch.main([
             "--output-dir", str(output_dir),
@@ -466,17 +489,168 @@ class TestDryRunIntegration:
         ])
         assert rc == 0
         assert (output_dir / "schedule.json").exists()
-        # No budget_ledger.json should be created in dry-run
         assert not (output_dir / "budget_ledger.json").exists()
 
-    def test_dry_run_schedule_has_150_slices(self, tmp_path):
-        """dry-run schedule must have 150 slices."""
+    def test_dry_run_150_slices(self, tmp_path):
+        """dry-run schedule 150 slices, 1200 calls."""
         output_dir = tmp_path / "output"
-        orch.main([
-            "--output-dir", str(output_dir),
-            "--dry-run",
-        ])
+        orch.main(["--output-dir", str(output_dir), "--dry-run"])
         with open(output_dir / "schedule.json", "r", encoding="utf-8") as f:
             schedule = json.load(f)
         assert schedule["total_slices"] == 150
         assert schedule["total_scheduled_calls"] == 1200
+
+
+# ---- P0 #1: resume/fresh detection before schedule write ----
+
+class TestResumeProtection:
+    """P0 #1: manifest must be verified BEFORE schedule write; artifacts without
+    manifest are fail-closed; schedule drift on resume is fail-closed."""
+
+    def test_dry_run_schedule_alone_is_not_an_artifact(self, tmp_path):
+        """schedule.json from a dry-run does NOT count as a historical artifact."""
+        output_dir = tmp_path / "output"
+        orch.main(["--output-dir", str(output_dir), "--dry-run"])
+        assert (output_dir / "schedule.json").exists()
+        assert not orch._has_historical_artifacts(output_dir)
+
+    def test_budget_ledger_counts_as_artifact(self, tmp_path):
+        """budget_ledger.json presence counts as a historical artifact."""
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        ledger = BudgetLedger(str(output_dir / "budget_ledger.json"))
+        ledger._save()
+        assert orch._has_historical_artifacts(output_dir)
+
+    def test_slice_dir_counts_as_artifact(self, tmp_path):
+        """A slice_* directory counts as a historical artifact."""
+        output_dir = tmp_path / "output"
+        (output_dir / "slice_2024_b1a_prime_R0_P0_G0").mkdir(parents=True)
+        assert orch._has_historical_artifacts(output_dir)
+
+    def test_artifacts_without_manifest_fail_closed(self, tmp_path, monkeypatch):
+        """Historical artifacts (budget_ledger) but no run_manifest.json -> exit 2."""
+        output_dir = tmp_path / "output"
+        generate_schedule(output_dir)
+        ledger = BudgetLedger(str(output_dir / "budget_ledger.json"))
+        ledger._save()
+        assert not (output_dir / "run_manifest.json").exists()
+
+        rc = orch.main(["--output-dir", str(output_dir)])
+        assert rc == 2
+
+    def test_schedule_drift_on_resume_fail_closed(self, tmp_path, monkeypatch):
+        """Resume with a manifest but tampered on-disk schedule.json -> exit 2.
+
+        main() builds an in-memory candidate and compares against the historical
+        schedule BEFORE any write, so the on-disk schedule.json is left untouched.
+        """
+        output_dir = tmp_path / "output"
+        generate_schedule(output_dir)
+        _write_resume_manifest(output_dir)
+
+        # Tamper with on-disk schedule.json
+        sched_path = output_dir / "schedule.json"
+        with open(str(sched_path), "r", encoding="utf-8") as f:
+            data = json.load(f)
+        data["total_slices"] = 999
+        with open(str(sched_path), "w", encoding="utf-8") as f:
+            json.dump(data, f)
+
+        # Snapshot the (tampered) bytes so we can prove they are untouched
+        with open(str(sched_path), "rb") as f:
+            before = f.read()
+
+        rc = orch.main(["--output-dir", str(output_dir)])
+        assert rc == 2
+
+        # The historical schedule.json must be byte-identical after the block
+        with open(str(sched_path), "rb") as f:
+            after = f.read()
+        assert after == before, "schedule.json was overwritten despite drift block"
+
+    def test_drift_block_leaves_schedule_byte_identical(self, tmp_path, monkeypatch):
+        """A real code drift (manifest fingerprint mismatch) must NOT overwrite
+        schedule.json. main() must exit 2 with the historical file untouched.
+
+        This simulates the scenario where the experiment code changed between
+        runs: the run manifest fingerprint no longer matches, so resume is
+        rejected. The historical schedule.json must survive untouched as
+        evidence of what was actually run.
+        """
+        output_dir = tmp_path / "output"
+        generate_schedule(output_dir)
+        _write_resume_manifest(output_dir)
+
+        sched_path = output_dir / "schedule.json"
+        with open(str(sched_path), "rb") as f:
+            before = f.read()
+
+        # Simulate code drift: tamper the manifest's fingerprint so it no longer
+        # matches the current code.
+        manifest_path = output_dir / "run_manifest.json"
+        with open(str(manifest_path), "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+        manifest["experiment_code_fingerprint"] = "deadbeef" * 8
+        with open(str(manifest_path), "w", encoding="utf-8") as f:
+            json.dump(manifest, f)
+
+        rc = orch.main(["--output-dir", str(output_dir)])
+        assert rc == 2
+
+        with open(str(sched_path), "rb") as f:
+            after = f.read()
+        assert after == before, "schedule.json overwritten on manifest drift block"
+
+    def test_resume_consistent_does_not_rewrite_schedule(self, tmp_path, monkeypatch):
+        """A consistent resume reuses the historical schedule.json without
+        rewriting it (byte-identical)."""
+        output_dir = tmp_path / "output"
+        generate_schedule(output_dir)
+        _write_resume_manifest(output_dir)
+
+        sched_path = output_dir / "schedule.json"
+        with open(str(sched_path), "rb") as f:
+            before = f.read()
+
+        # main() on a consistent resume proceeds to smoke gate; mock the slice
+        # processing so we can observe the schedule-write behavior without a
+        # full run. Integrity gate will fail (no slices completed) -> exit 2,
+        # but schedule.json must not have been rewritten.
+        monkeypatch.setattr(orch, "verify_slice_manifest",
+                            lambda sl, p, m: (True, {}))
+        monkeypatch.setattr(orch, "_process_slice",
+                            lambda sl, idx, total, args, ledger, is_smoke=True: 0)
+
+        rc = orch.main([
+            "--output-dir", str(output_dir),
+            "--archive-root", str(tmp_path / "archive"),
+        ])
+        # integrity gate fails -> rc 2, but schedule preserved
+        assert rc == 2
+        with open(str(sched_path), "rb") as f:
+            after = f.read()
+        assert after == before, "consistent resume must not rewrite schedule.json"
+
+    def test_fresh_start_writes_run_manifest(self, tmp_path, monkeypatch):
+        """A truly fresh output_dir (no artifacts) proceeds past the artifact
+        check and writes run_manifest.json after schedule generation."""
+        output_dir = tmp_path / "output"
+        generate_schedule(output_dir)  # schedule.json only, not an artifact
+        assert not orch._has_historical_artifacts(output_dir)
+
+        # main() will write run_manifest on fresh start. It then proceeds to
+        # smoke gate; mock _process_slice to skip all slices as completed.
+        monkeypatch.setattr(orch, "verify_slice_manifest",
+                            lambda sl, p, m: (True, {}))
+        monkeypatch.setattr(orch, "_process_slice",
+                            lambda sl, idx, total, args, ledger, is_smoke=True: 0)
+
+        # Stop after smoke gate by making integrity gate fail fast (no slices
+        # actually completed in ledger) -> exit 2, but run_manifest must exist.
+        rc = orch.main([
+            "--output-dir", str(output_dir),
+            "--archive-root", str(tmp_path / "archive"),
+        ])
+        # integrity gate fails (0 slices completed) -> rc 2, but manifest written
+        assert (output_dir / "run_manifest.json").exists()

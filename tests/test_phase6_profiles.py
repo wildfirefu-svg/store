@@ -27,10 +27,11 @@ def load_case() -> dict:
     return json.loads(FIXTURE.read_text(encoding="utf-8"))
 
 
-def test_four_named_configs_five_dims():
+def test_five_named_configs_five_dims():
     expected = {
         "baziqa_official_multi_turn": ("baziqa", "official", "multi_turn", "approved_v1", "baziqa_macro"),
         "baziqa_xjz_direct": ("baziqa", "xjz_direct", "direct", "approved_v1", "baziqa_macro"),
+        "baziqa_xjz_reasoned": ("baziqa", "xjz_reasoned", "direct", "legacy_v0", "baziqa_macro"),
         "mingli_official_cot_astro": ("mingli", "official", "direct", "approved_v1", "mingli_trimmed"),
         "mingli_xjz_direct": ("mingli", "xjz_direct", "direct", "approved_v1", "mingli_trimmed"),
     }
@@ -60,9 +61,10 @@ def test_derive_method_mapping():
         assert derive_method(resolve_profile(pid)) == "direct_choice"
 
 
-def test_derive_formatter_all_four():
+def test_derive_formatter_all_five():
     assert derive_formatter(resolve_profile("baziqa_official_multi_turn")) == "format_multi_turn"
     assert derive_formatter(resolve_profile("baziqa_xjz_direct")) == "format_direct_choice_prompt"
+    assert derive_formatter(resolve_profile("baziqa_xjz_reasoned")) == "format_reasoned_choice_prompt"
     assert derive_formatter(resolve_profile("mingli_official_cot_astro")) == "format_official_cot_prompt"
     assert derive_formatter(resolve_profile("mingli_xjz_direct")) == "format_direct_choice_prompt"
 

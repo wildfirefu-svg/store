@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -133,3 +134,106 @@ def _is_not_arm_map_error(exc):
     # 如果 exit 2 但不是 arm 映射错误（如 dataset 缺失等），返回 True
     # arm 映射错误的 reason 包含 "arm" 或 "ziwei-arm"
     return True  # 默认放行非 arm 映射的 exit 2
+
+
+# ---- P0 测试质量: fake model + 真实 run_benchmark.main() 单 slice 端到端 ----
+
+class TestRunnerE2EManifest:
+    """真实 run_benchmark.main() 单 slice 端到端测试 (非 mock subprocess).
+
+    用 RunnerEnv 注入 fake model (claude_api.call_model_messages_sync),
+    直接调用 runner main() 跑 baziqa_xjz_reasoned / b1a_prime / ziwei=none 一个 slice (8 cases).
+    验证 runner 真实创建的: 20-字段 resume manifest、parser 终态、events、resume 续跑产物.
+    """
+
+    @staticmethod
+    def _extra_argv():
+        return [
+            "--chart-schema-version", "legacy_v0",
+            "--arm", "b1a_prime",
+            "--ziwei-arm", "none",
+            "--repeat-idx", "0",
+            "--method", "direct_choice",
+            "--n-samples", "1",
+            "--temperature", "0",
+            "--as-of-date", "2026-07-22",
+        ]
+
+    def test_runner_creates_20_field_manifest_and_parsed_details(self, tmp_path, monkeypatch):
+        """真实 runner: 8 cases -> 8 parsed rows + 8 call_attempt events + 20-field manifest."""
+        from tests.phase6_helpers import RunnerEnv
+        from benchmark.runners.run_benchmark import RESUME_MANIFEST_FIELDS
+
+        env = RunnerEnv(tmp_path, monkeypatch, n_cases=8)
+        env.model_returns("最终答案：A")
+
+        rc = env.run(
+            profile="baziqa_xjz_reasoned",
+            model="deepseek-chat",
+            scheduled_calls=8,
+            hard_cap=10,
+            extra_argv=self._extra_argv(),
+        )
+        assert rc == 0, f"runner main failed: rc={rc}"
+
+        # 1. details: 8 rows, all terminal_state=parsed, each with attempt_key
+        rows = env.read_detail()
+        assert len(rows) == 8, f"expected 8 detail rows, got {len(rows)}"
+        assert all(r["terminal_state"] == "parsed" for r in rows), \
+            f"not all parsed: {[r.get('terminal_state') for r in rows]}"
+        assert all(r.get("attempt_key") for r in rows), "missing attempt_key"
+
+        # 2. events: 8 call_attempt
+        calls = env.read_events(kind="call_attempt")
+        assert len(calls) == 8, f"expected 8 call_attempt events, got {len(calls)}"
+
+        # 3. manifest: 全部 20 个 RESUME_MANIFEST_FIELDS
+        manifest_path = tmp_path / "detail.manifest.json"
+        assert manifest_path.exists(), "manifest not created"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        assert len(RESUME_MANIFEST_FIELDS) == 20, \
+            f"RESUME_MANIFEST_FIELDS count drifted: {len(RESUME_MANIFEST_FIELDS)}"
+        for field in RESUME_MANIFEST_FIELDS:
+            assert field in manifest, f"manifest missing field: {field}"
+        assert manifest["profile_id"] == "baziqa_xjz_reasoned"
+        assert manifest["arm"] == "b1a_prime"
+        assert manifest["ziwei_arm"] == "none"
+        assert manifest["method"] == "direct_choice"
+        assert manifest["as_of_date"] == "2026-07-22"
+        assert manifest["scheduled_calls"] == 8
+        assert manifest["hard_cap"] == 10
+
+    def test_resume_skips_completed_no_new_calls(self, tmp_path, monkeypatch):
+        """--resume 续跑: 全部已完成 -> 0 新 call_attempt, details 行数不变."""
+        from tests.phase6_helpers import RunnerEnv
+
+        env = RunnerEnv(tmp_path, monkeypatch, n_cases=8)
+        env.model_returns("最终答案：A")
+        assert env.run(
+            profile="baziqa_xjz_reasoned",
+            model="deepseek-chat",
+            scheduled_calls=8,
+            hard_cap=10,
+            extra_argv=self._extra_argv(),
+        ) == 0
+
+        first_calls = len(env.read_events(kind="call_attempt"))
+        first_rows = len(env.read_detail())
+        assert first_calls == 8
+        assert first_rows == 8
+
+        # resume: 全部已完成, 不应产生新调用
+        env.model_returns("最终答案：A")
+        rc = env.run(
+            profile="baziqa_xjz_reasoned",
+            model="deepseek-chat",
+            scheduled_calls=8,
+            hard_cap=10,
+            resume=True,
+            extra_argv=self._extra_argv(),
+        )
+        assert rc == 0
+
+        # 无新 call_attempt events, details 行数不变
+        assert len(env.read_events(kind="call_attempt")) == first_calls
+        assert len(env.read_detail()) == first_rows
