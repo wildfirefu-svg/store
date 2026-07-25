@@ -76,7 +76,11 @@ def load_completed_keys(detail_path) -> set:
 
 
 def load_retry_counts(events_path) -> dict:
-    """只数 kind=="model_call_failed" 事件，按 attempt_key 取 retry_idx 最大值。"""
+    """只数网络/provider 失败事件（retry_idx 非 None），按 attempt_key 取 retry_idx 最大值。
+
+    截断事件 (record_truncation 写入 retry_idx=None, error_type 以 truncated_response 开头)
+    不计入网络重试预算，由 load_truncation_counts 单独恢复。
+    """
     counts: dict = {}
     if not events_path or not os.path.exists(events_path):
         return counts
@@ -87,8 +91,32 @@ def load_retry_counts(events_path) -> dict:
             row = json.loads(line)
             if row.get("kind") != "model_call_failed":
                 continue
+            if row.get("retry_idx") is None:
+                continue   # 截断事件，走独立预算
             key = tuple(row["attempt_key"])
             counts[key] = max(counts.get(key, 0), int(row["retry_idx"]))
+    return counts
+
+
+def load_truncation_counts(events_path) -> dict:
+    """数 finish_reason != 'stop' 截断事件（retry_idx is None），按 attempt_key 计数。
+
+    与 load_retry_counts 互不干扰：网络失败 retry_idx 非 None，截断 retry_idx 为 None。
+    """
+    counts: dict = {}
+    if not events_path or not os.path.exists(events_path):
+        return counts
+    with open(events_path, "r", encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            if row.get("kind") != "model_call_failed":
+                continue
+            if row.get("retry_idx") is not None:
+                continue   # 网络失败事件，走 load_retry_counts
+            key = tuple(row["attempt_key"])
+            counts[key] = counts.get(key, 0) + 1
     return counts
 
 
@@ -235,6 +263,8 @@ class Phase6Context:
         # 事件即账本：成功/失败调用都有 call_attempt 事件，resume 时全量恢复计数
         self.calls_attempted = load_call_attempt_count(events_path) if resume else 0
         self.retry_counts = load_retry_counts(events_path) if resume else {}
+        self.truncation_counts = load_truncation_counts(events_path) if resume else {}
+        self._call_meta_cache: dict = {}   # run 内即时缓存，不跨 resume 恢复（meta 非预算）
 
     def attempt_key_for(self, case, sample_idx=0):
         return build_attempt_key(
@@ -264,6 +294,41 @@ class Phase6Context:
         })
         return retry_idx
 
+    def record_truncation(self, key, meta):
+        """记录一次 finish_reason != 'stop' 的截断，独立于网络重试预算（每键上限 1 次）。"""
+        idx = self.truncation_counts.get(key, 0) + 1
+        self.truncation_counts[key] = idx
+        _append_jsonl(self.events_path, {
+            "kind": "model_call_failed",
+            "attempt_key": list(key), "retry_idx": None,
+            "error_type": f"truncated_response: finish_reason={meta.get('finish_reason')}",
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        })
+        return idx
+
+    def record_call_meta(self, key, meta, truncated=False):
+        """把单次调用的诊断 meta 记入 events，用于事后审计。"""
+        row = {
+            "kind": "call_meta",
+            "attempt_key": list(key),
+            "truncated": truncated,
+            "finish_reason": meta.get("finish_reason"),
+            "http_status": meta.get("http_status"),
+            "latency_ms": meta.get("latency_ms"),
+            "usage": meta.get("usage"),
+            "response_id": meta.get("response_id"),
+            "provider": meta.get("provider"),
+            "model": meta.get("model"),
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        }
+        _append_jsonl(self.events_path, row)
+        key_tuple = tuple(key)
+        self._call_meta_cache[key_tuple] = row
+
+    def get_last_call_meta(self, case, sample_idx=0):
+        key = self.attempt_key_for(case, sample_idx=sample_idx)
+        return self._call_meta_cache.get(tuple(key))
+
     def enrich_row(self, row):
         key = self.attempt_key_for({"case_id": row.get("case_id"),
                                     "_permutation_id": row.get("permutation_id")},
@@ -279,6 +344,13 @@ class Phase6Context:
         else:
             row["terminal_state"] = "parsed"
         row["raw_response_path"] = self.detail_path
+        # 注入调用诊断元数据
+        meta = self._call_meta_cache.get(tuple(key))
+        if meta:
+            row["finish_reason"] = meta.get("finish_reason")
+            row["latency_ms"] = meta.get("latency_ms")
+            row["response_id"] = meta.get("response_id")
+            row["usage"] = meta.get("usage")
         return row
 
 
@@ -296,14 +368,15 @@ def _mingli_data_ready() -> bool:
 
 
 def _attempt_with_ledger(case, call_once, sample_idx=0):
-    """Phase 6 模型调用重试账本。执行偏离（Task 6 崩溃传播链修正）：
+    """Phase 6 模型调用重试账本。
 
-    - ctx 为 None（非 profile 运行）：直接调用，由调用方保留旧包装行为（零行为变化）；
-    - ctx 激活：call_once 不再把异常包成 model_call_failed——
-      RuntimeError 且无 model_call_failed 标记（如崩溃模拟）→ 直接冒泡，不占重试；
-      RuntimeError 有标记 / 其他 Exception（真实网络/provider 异常）→ 记重试账本并重试；
-    - before_call 先记账后调用（Policy A）：每次 attempt（含重试、含崩溃当次）都有
-      call_attempt 事件，test_resume_first_crash_artifacts_guard 锁定此语义。
+    两套独立预算：
+      - 网络异常 / provider 异常：每键最多 3 次重试（4 次尝试），原策略不变。
+      - finish_reason != 'stop' 截断：每键最多 1 次重试（截断 2 次后耗尽），窄重试。
+    两种预算互不消耗；总调用受 hard_cap 限制。
+    - ctx 为 None（非 profile 运行）：直接调用。
+    - 崩溃类 RuntimeError（无 model_call_failed / truncated_response 前缀）-> 直接冒泡，不算重试。
+    - before_call 先记账后调用（Policy A）。
     """
     ctx = _PHASE6_CTX
     if ctx is None:
@@ -312,16 +385,38 @@ def _attempt_with_ledger(case, call_once, sample_idx=0):
     while True:
         if ctx.retry_counts.get(key, 0) >= 3:
             raise RuntimeError(f"model_call_failed: retry budget exhausted ({key[6]})")
+        if ctx.truncation_counts.get(key, 0) >= 2:
+            raise RuntimeError(f"model_call_failed: truncated_response budget exhausted ({key[6]})")
         ctx.before_call(key)
         try:
-            return call_once()
+            result = call_once()
         except RuntimeError as exc:
-            if not str(exc).startswith("model_call_failed"):
-                raise   # 崩溃类 RuntimeError（如进程崩溃模拟）直接冒泡，不算重试
+            if not str(exc).startswith("model_call_failed") and \
+               not str(exc).startswith("truncated_response"):
+                raise   # 崩溃类 RuntimeError 直接冒泡，不算重试
             ctx.record_failure(key, exc)
+            continue
         except Exception as exc:
-            # 真实网络/provider 异常（未经 RuntimeError 包装）→ 计入重试账本
+            # 真实网络/provider 异常 → 计入重试账本
             ctx.record_failure(key, exc)
+            continue
+        # 调用成功：检查 finish_reason，非正常终止值才算截断（独立预算）
+        # 正常终止值：OpenAI 系 stop；Anthropic 系 end_turn / stop_sequence / max_tokens(视为上限)。
+        # 注：max_tokens 在 Anthropic 也表示触顶，但语义偏"已达上限"而非异常截断，
+        # 与 DeepSeek 的 length（推理/token 耗尽）不同；本次实验用 DeepSeek，length 仍判截断。
+        meta = result[1] if isinstance(result, (tuple, list)) and len(result) >= 2 else {}
+        finish = meta.get("finish_reason") if isinstance(meta, dict) else None
+        _NORMAL_FINISH_REASONS = {"stop", "end_turn", "stop_sequence"}
+        if finish and finish not in _NORMAL_FINISH_REASONS:
+            ctx.record_truncation(key, meta)
+            ctx.record_call_meta(key, meta, truncated=True)
+            continue
+        # 正常完成：记录 meta 并返回文本
+        if isinstance(meta, dict):
+            ctx.record_call_meta(key, meta, truncated=False)
+        if isinstance(result, (tuple, list)):
+            return result[0]
+        return result
 
 
 def run_offline_benchmark(cases, predictions):
@@ -538,9 +633,9 @@ _BENCH_CASE_INDEX = None
 def _call_once_messages(messages, provider, model, case=None, temperature=None, timeout=300,
                         rag_k=2, retrieval_mode='legacy', option_evidence_k=2,
                         suppress_rag=False, suppress_apb=False):
-    """单次模型调用（不包装异常）。系统 prompt 解析与网络调用都在内，异常原样抛出。"""
-    from claude_api import call_model_messages_sync
-    response = call_model_messages_sync(
+    """单次模型调用（不包装异常）。返回 (text, meta_dict)，异常原样抛出。"""
+    from claude_api import call_model_messages_sync_with_meta
+    text, meta = call_model_messages_sync_with_meta(
         messages,
         provider=provider,
         model=model,
@@ -548,7 +643,7 @@ def _call_once_messages(messages, provider, model, case=None, temperature=None, 
         temperature=temperature,
         timeout=timeout,
     )
-    return str(response).strip()
+    return str(text).strip(), meta
 
 
 def _call_with_optional_ledger(messages, provider, model, case, temperature, timeout,
@@ -563,7 +658,8 @@ def _call_with_optional_ledger(messages, provider, model, case, temperature, tim
         suppress_rag=suppress_rag, suppress_apb=suppress_apb)
     if _PHASE6_CTX is None:
         try:
-            return call_once()
+            text, _ = call_once()
+            return text
         except Exception as e:
             raise RuntimeError(f"model_call_failed: {type(e).__name__}: {str(e)[:120]}") from e
     return _attempt_with_ledger(case, call_once, sample_idx=sample_idx)

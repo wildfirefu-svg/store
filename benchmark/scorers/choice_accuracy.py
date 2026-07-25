@@ -32,7 +32,7 @@ def _legacy_extract_choice(text):
 
 
 def _extract_final_answer_choice(s):
-    matches = re.findall(r'最终答案\s*[:：]\s*([A-Da-d])', s)
+    matches = re.findall(r'最终答案\s*[:：]?\s*([A-Da-d])', s)
     if not matches:
         return None
     return matches[-1].upper()

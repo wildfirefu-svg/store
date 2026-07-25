@@ -10,6 +10,7 @@ Auto-detects API provider from key prefix or env var:
 import json
 import os
 import sys
+import time
 import urllib.request
 import urllib.error
 import logging
@@ -122,22 +123,40 @@ def get_ai_config():
     }
 
 
+class TruncatedResponseError(RuntimeError):
+    """Model call succeeded (HTTP 200) but the response was truncated.
+
+    Indicates finish_reason != 'stop' (e.g. 'length', 'content_filter', 'tool_calls'
+    when only text was expected).  Raised as a RuntimeError with a 'truncated_response'
+    prefix so retry ledgers can distinguish it from network errors.
+    """
+    pass
+
+
 def call_model_messages_sync(messages, provider=None, model=None, system_prompt=None, timeout=180, temperature=None):
-    """同步调用模型补全接口，支持 multi-turn messages。"""
+    """同步调用模型补全接口，支持 multi-turn messages。返回纯文本。"""
+    text, _ = call_model_messages_sync_with_meta(
+        messages, provider=provider, model=model, system_prompt=system_prompt,
+        timeout=timeout, temperature=temperature)
+    return text
+
+
+def call_model_messages_sync_with_meta(messages, provider=None, model=None, system_prompt=None, timeout=180, temperature=None):
+    """同步调用模型补全接口，返回 (text, meta_dict)。
+
+    meta 包含 finish_reason / usage / response_id / latency_ms / provider / model / http_status。
+    仅当 finish_reason 明确不是正常终止时，text 仍取 message content（可能被截断），
+    由调用方决定是否触发重试。
+    """
     detected_provider, detected_url, default_model = _detect_provider(ANTHROPIC_API_KEY or "")
     provider = provider or detected_provider
     model = model or default_model
     sys_text = system_prompt if system_prompt is not None else ""
 
-    # Select the appropriate API key and base URL for the provider
-    provider_config = {
-        "anthropic": (ANTHROPIC_API_KEY, ANTHROPIC_BASE_URL),
-        "deepseek": (DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL),
-        "kimi": (KIMI_API_KEY, KIMI_BASE_URL),
-        "glm": (GLM_API_KEY, GLM_BASE_URL),
-        "qwen": (QWEN_API_KEY, QWEN_BASE_URL),
-    }
-    key, url = provider_config.get(provider, (ANTHROPIC_API_KEY, detected_url))
+    # 统一使用 ANTHROPIC_API_KEY（_load_api_key 加载的当前激活 key，非 Anthropic 专属）。
+    # url 取 _detect_provider 返回的 detected_url（基于 key 前缀匹配 provider 对应的 base_url）。
+    key = ANTHROPIC_API_KEY
+    url = detected_url
     if not key:
         raise RuntimeError(f"AI key not configured for provider: {provider}")
 
@@ -183,25 +202,48 @@ def call_model_messages_sync(messages, provider=None, model=None, system_prompt=
         if not endpoint.endswith("/chat/completions"):
             endpoint = endpoint.rstrip("/") + "/chat/completions"
 
+    meta = {
+        "provider": provider,
+        "model": model,
+        "http_status": None,
+        "latency_ms": None,
+        "finish_reason": None,
+        "usage": None,
+        "response_id": None,
+    }
+
     req = urllib.request.Request(
         endpoint,
         data=json.dumps(payload).encode("utf-8"),
         headers=headers,
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        body = resp.read().decode("utf-8", errors="replace")
+    t0 = time.monotonic()
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+            meta["http_status"] = getattr(resp, "status", None) or getattr(resp, "getcode", lambda: None)()
+    finally:
+        meta["latency_ms"] = int((time.monotonic() - t0) * 1000)
 
     data = json.loads(body)
     if provider == "anthropic":
+        meta["finish_reason"] = data.get("stop_reason")
+        meta["usage"] = data.get("usage")
+        meta["response_id"] = data.get("id")
+        text = ""
         for block in data.get("content", []) or []:
             if block.get("type") == "text":
-                return block.get("text", "")
-        return ""
+                text += block.get("text", "")
+        return text, meta
     choices = data.get("choices", []) or []
+    meta["finish_reason"] = choices[0].get("finish_reason") if choices else None
+    meta["usage"] = data.get("usage")
+    meta["response_id"] = data.get("id")
     if not choices:
-        return ""
-    return choices[0].get("message", {}).get("content", "") or ""
+        return "", meta
+    text = choices[0].get("message", {}).get("content", "") or ""
+    return text, meta
 
 
 _log_ai_config()

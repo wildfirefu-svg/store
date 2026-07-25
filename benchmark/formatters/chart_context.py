@@ -339,18 +339,30 @@ def extract_reasoned_choice_answer(raw: str) -> str | None:
 
     Matches line-final '最终答案：X' (colon-tolerant, case-tolerant, period-tolerant).
     Also handles Markdown variants: **最终答案：X** (bold) and ### 最终答案：X (heading).
+
+    Reasoning models (e.g. deepseek-v4-pro) sometimes put the answer letter on a
+    separate line after '最终答案' with no colon (e.g. '### 最终答案\\nB'); this is
+    handled by the two-line fallback pattern.
+
     Returns the LAST match as the canonical answer (design §4.1.2: last 最终答案 wins).
     Returns None when no match found. No fallback to any generic/extended parser.
     """
     if not raw or not isinstance(raw, str):
         return None
+    text = raw.strip()
     matches = re.findall(
         r"^\s*(?:[#*]+\s*)?最终答案[：:]\s*([A-Da-d])\s*[。.]?\s*[#*]*\s*$",
-        raw.strip(), re.MULTILINE,
+        text, re.MULTILINE,
     )
-    if not matches:
-        return None
-    return matches[-1].upper()
+    if matches:
+        return matches[-1].upper()
+    matches = re.findall(
+        r"^\s*(?:[#*]+\s*)?最终答案\s*[#*]*\s*\n+\s*\*{0,2}([A-Da-d])\*{0,2}\s*[。.]?\s*$",
+        text, re.MULTILINE,
+    )
+    if matches:
+        return matches[-1].upper()
+    return None
 
 
 def render_reasoned_context(

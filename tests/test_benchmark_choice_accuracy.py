@@ -45,6 +45,19 @@ def test_extract_choice_prefers_final_answer_line():
     assert meta == {"choice": "D", "source": "final_answer", "valid": True}
 
 
+def test_extract_choice_handles_final_answer_without_colon():
+    """deepseek-v4-pro (reasoning model) sometimes outputs the answer letter on a
+    new line after '最终答案' with no colon, e.g. '### 最终答案\\nB'. The parser must
+    still extract the choice instead of falling through to legacy/invalid.
+
+    Regression: this caused parser_rate=0.875 < 1.0 in the Phase 6B1-D smoke gate.
+    """
+    assert extract_choice("### 推理分析\n...\n### 最终答案\nB") == "B"
+    meta = extract_choice_with_meta("### 最终答案\nB")
+    assert meta == {"choice": "B", "source": "final_answer", "valid": True}
+    assert extract_choice("最终答案\nD") == "D"
+
+
 def test_extract_choice_uses_confidence_table_when_final_line_missing():
     text = "\n".join([
         "A: 30",

@@ -2106,6 +2106,7 @@ def _build_runner_cmd(sl: dict, args, resume: bool = False) -> list:
         "--repeat-idx", str(sl["repeat"]),
         "--case-details-jsonl", sl["detail_path"],
         "--case-ids-file", _write_case_ids_file(sl),
+        "--dataset", sl["dataset"],
         "--provider", args.provider,
         "--model", args.model,
         "--method", "direct_choice",
@@ -2221,7 +2222,8 @@ def main(argv=None):
     """
     parser = argparse.ArgumentParser(description="Phase 6 6B1-D orchestrator")
     parser.add_argument("--provider", default="deepseek", help="模型 provider")
-    parser.add_argument("--model", default="deepseek-chat", help="模型名")
+    parser.add_argument("--model", default="deepseek-v4-pro",
+                        help="模型名 (DeepSeek API 现仅接受 deepseek-v4-pro / deepseek-v4-flash)")
     parser.add_argument("--output-dir", default="benchmark/outputs/phase6_6b1d",
                         help="产物输出根目录")
     parser.add_argument("--dry-run", action="store_true", help="仅生成 schedule，不调 API")

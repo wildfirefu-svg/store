@@ -2228,3 +2228,49 @@ class TestTokenStatsP1Fixes:
             assert stats[arm]["avg_input"] == 150
             assert stats[arm]["avg_output"] == "NOT_AVAILABLE"
             assert stats[arm]["avg_total"] == "NOT_AVAILABLE"
+
+
+# ---- TDD: runner subprocess command (P0: --dataset missing blocked launch) ----
+
+class TestBuildRunnerCmd:
+    """P0: _build_runner_cmd must pass --dataset (runner requires it).
+
+    The runner's argparse marks --dataset required=True, so omitting it makes the
+    subprocess exit 2 before any model call. The slice already carries a
+    ``dataset`` field (YEAR_DATASETS[year]); the command builder must forward it.
+    """
+
+    @staticmethod
+    def _args():
+        import argparse
+        return argparse.Namespace(provider="deepseek", model="deepseek-chat")
+
+    def test_dataset_flag_present(self, tmp_path):
+        """--dataset is in the command list (runner requires it)."""
+        schedule = generate_schedule(tmp_path)
+        sl = schedule["slices"][0]
+        cmd = orch._build_runner_cmd(sl, self._args())
+        assert "--dataset" in cmd, f"--dataset missing from runner cmd: {cmd}"
+
+    def test_dataset_value_matches_year(self, tmp_path):
+        """--dataset value equals YEAR_DATASETS[sl['year']]."""
+        schedule = generate_schedule(tmp_path)
+        for sl in schedule["slices"][:3]:
+            cmd = orch._build_runner_cmd(sl, self._args())
+            idx = cmd.index("--dataset")
+            assert cmd[idx + 1] == orch.YEAR_DATASETS[sl["year"]], \
+                f"slice {sl['slice_id']}: dataset={cmd[idx+1]} != {orch.YEAR_DATASETS[sl['year']]}"
+
+    def test_dataset_differs_across_years(self, tmp_path):
+        """2024 slices use the 2024 dataset, 2025 slices use the 2025 dataset."""
+        schedule = generate_schedule(tmp_path)
+        d2024 = orch.YEAR_DATASETS["2024"]
+        d2025 = orch.YEAR_DATASETS["2025"]
+        seen = {}
+        for sl in schedule["slices"]:
+            cmd = orch._build_runner_cmd(sl, self._args())
+            idx = cmd.index("--dataset")
+            seen[sl["year"]] = cmd[idx + 1]
+        assert seen["2024"] == d2024
+        assert seen["2025"] == d2025
+        assert seen["2024"] != seen["2025"]

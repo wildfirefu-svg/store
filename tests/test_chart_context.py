@@ -18,6 +18,7 @@ from benchmark.formatters.chart_context import (
     approved_field_presence,
     render_chart_context,
     render_reasoned_context,
+    extract_reasoned_choice_answer,
 )
 
 FIXTURE_DIR = PROJECT_ROOT / "tests" / "fixtures" / "phase6"
@@ -377,3 +378,41 @@ def test_b2b_ziwei_mini_shengong_same_as_ming(i: int):
             palace["is_shengong"] = False
     rendered = render_reasoned_context(case, "legacy_v0", "ziwei_mini")
     assert "命身同宫" in rendered
+
+
+# ---- extract_reasoned_choice_answer: parser robustness ----
+
+class TestExtractReasonedChoiceAnswer:
+    """Parser must handle the answer formats deepseek-v4-pro actually produces.
+
+    The reasoning model sometimes puts the answer letter on a separate line after
+    '最终答案' with no colon (e.g. '### 最终答案\\nB'), which the original regex
+    (requiring a colon + same-line) missed, causing parser_invalid in the smoke gate.
+    """
+
+    def test_same_line_full_width_colon(self):
+        assert extract_reasoned_choice_answer("推理...\n最终答案：B") == "B"
+
+    def test_same_line_half_width_colon(self):
+        assert extract_reasoned_choice_answer("最终答案: C") == "C"
+
+    def test_markdown_heading_same_line(self):
+        assert extract_reasoned_choice_answer("### 最终答案：D") == "D"
+
+    def test_markdown_heading_letter_on_next_line(self):
+        """deepseek-v4-pro: '### 最终答案\\nB' (no colon, letter on next line)."""
+        assert extract_reasoned_choice_answer("### 推理分析\n...\n### 最终答案\nB") == "B"
+
+    def test_trailing_spaces_before_newline(self):
+        """'### 最终答案  \\nC' (trailing spaces, letter on next line)."""
+        assert extract_reasoned_choice_answer("### 最终答案  \nC") == "C"
+
+    def test_last_match_wins(self):
+        """When multiple 最终答案 lines exist, the last one wins (design §4.1.2)."""
+        text = "最终答案：A\n更多推理...\n最终答案：B"
+        assert extract_reasoned_choice_answer(text) == "B"
+
+    def test_no_match_returns_none(self):
+        assert extract_reasoned_choice_answer("无法判断") is None
+        assert extract_reasoned_choice_answer("") is None
+        assert extract_reasoned_choice_answer(None) is None

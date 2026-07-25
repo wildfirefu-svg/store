@@ -122,6 +122,17 @@ class RunnerEnv:
         self._script = [("fail", RuntimeError("model_call_failed: boom"))] * times \
             + [("ok", "A")] * 1000
 
+    def model_truncates(self, times: int, text: str = "根据命主出生信息") -> None:
+        """前 times 次返回 finish_reason='length' 的截断响应，之后正常返回 'A'。"""
+        self._script = [("trunc", text)] * times + [("ok", "A")] * 1000
+
+    def model_truncates_then_crash(self, truncations: int) -> None:
+        """先 N 次截断响应，再抛非重试异常模拟进程崩溃（截断预算守恒测试用）。"""
+        self._script = (
+            [("trunc", "截断")] * truncations
+            + [("crash", RuntimeError("unexpected crash"))]
+        )
+
     def model_fails_then_crash(self, failures: int) -> None:
         """先 N 次可重试网络失败，再抛非重试异常模拟进程崩溃。"""
         self._script = (
@@ -137,20 +148,29 @@ class RunnerEnv:
         """按序返回不同响应（emit_samples 逐样本差异化用）；耗尽后恒返回 "A"。"""
         self._script = [("ok", t) for t in texts] + [("ok", "A")] * 1000
 
-    def _fake_call(self, messages, **kw):
+    def _fake_call_with_meta(self, messages, **kw):
         self.received.append(messages)
         self.received_kw.append(kw)
         action, payload = self._script.pop(0)
         if action in ("fail", "crash"):
             raise payload
-        return payload
+        meta = {
+            "finish_reason": "length" if action == "trunc" else "stop",
+            "http_status": 200,
+            "latency_ms": 302000 if action == "trunc" else 123,
+            "usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+            "response_id": f"fake-{len(self.received)}",
+            "provider": kw.get("provider"),
+            "model": kw.get("model"),
+        }
+        return payload, meta
 
     # ---- 运行 ----
     def run(self, resume: bool = False, model: str = "deepseek-chat",
             scheduled_calls: int | None = None, hard_cap: int | None = None,
             profile: str | None = None, extra_argv: list[str] | None = None) -> int:
         import run_benchmark_proxy  # tests 内薄封装：转发到 benchmark.runners.run_benchmark.main(argv)
-        self.monkeypatch.setattr("claude_api.call_model_messages_sync", self._fake_call)
+        self.monkeypatch.setattr("claude_api.call_model_messages_sync_with_meta", self._fake_call_with_meta)
         argv = ["--dataset", str(self.dataset), "--model-runner", "--provider", "deepseek",
                 "--model", model, "--case-details-jsonl", str(self.detail),
                 "--output-dir", str(self.tmp)]

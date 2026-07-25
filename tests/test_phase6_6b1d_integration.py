@@ -47,7 +47,7 @@ from scripts.phase6_6b1d_orchestrator import (
 
 # ---- helpers ----
 
-def _write_valid_detail(sl, provider="deepseek", model="deepseek-chat"):
+def _write_valid_detail(sl, provider="deepseek", model="deepseek-v4-pro"):
     """Write valid detail rows with correct attempt keys and parsed terminal_state."""
     dataset_id = os.path.splitext(os.path.basename(sl["dataset"]))[0]
     rows = []
@@ -99,7 +99,7 @@ def _write_resume_manifest(output_dir):
     manifest are now fail-closed)."""
     ok, labels_sha, _, _ = orch.validate_labels(orch.LABELS_DEFAULT_PATH)
     assert ok, "default labels must validate for resume manifest setup"
-    orch.write_run_manifest(output_dir, "deepseek", "deepseek-chat",
+    orch.write_run_manifest(output_dir, "deepseek", "deepseek-v4-pro",
                             labels_sha256=labels_sha)
 
 
@@ -400,7 +400,7 @@ class TestResumePassesFlag:
         monkeypatch.setattr(orch.subprocess, "run", fake_run)
 
         args = type("Args", (), {
-            "provider": "deepseek", "model": "deepseek-chat"})()
+            "provider": "deepseek", "model": "deepseek-v4-pro"})()
         result = _process_slice(sl, 0, TOTAL_SLICES, args, ledger)
         assert result == 1  # success
         assert len(resume_flags_seen) > 0, "resume 状态必须传 --resume"
@@ -431,7 +431,7 @@ class TestResumePassesFlag:
         monkeypatch.setattr(orch.subprocess, "run", fake_run)
 
         args = type("Args", (), {
-            "provider": "deepseek", "model": "deepseek-chat"})()
+            "provider": "deepseek", "model": "deepseek-v4-pro"})()
         result = _process_slice(sl, 0, TOTAL_SLICES, args, ledger)
         assert result == 1  # success
         assert len(resume_flags_seen) == 0, "fresh 状态不应传 --resume"
@@ -469,7 +469,7 @@ class TestCompletedSliceSkip:
         monkeypatch.setattr(orch.subprocess, "run", fake_run)
 
         args = type("Args", (), {
-            "provider": "deepseek", "model": "deepseek-chat"})()
+            "provider": "deepseek", "model": "deepseek-v4-pro"})()
         result = _process_slice(sl, 0, TOTAL_SLICES, args, ledger)
         assert result == 0  # skipped
         assert runner_called["count"] == 0, "completed slice 不应调用 runner"
