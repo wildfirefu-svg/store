@@ -1,6 +1,7 @@
 .anthropic_key
 .deepseek_key
 .bazi_api_key
+.env
 __pycache__/
 .pytest_cache/
 *.pyc
