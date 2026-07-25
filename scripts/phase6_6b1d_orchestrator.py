@@ -46,6 +46,163 @@ _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
+
+# ---- P0: output-dir exclusive lock (concurrent orchestrator guard) ----
+
+def _probe_pid(pid: int) -> str:
+    """跨平台探测 PID 状态，返回 "alive" / "dead" / "unknown"。
+
+    探测不确定时返回 "unknown"，调用方必须 fail-closed（按存活处理），不得按死亡接管。
+
+    Windows: os.kill(pid, 0) 对活进程会 segfault（已知问题），改用
+    ctypes.windll.kernel32.OpenProcess 探测（死 PID 返回 NULL handle）。
+    Unix: os.kill(pid, 0) 稳定，进程不存在 -> ProcessLookupError，
+    存在但无权限 -> PermissionError，存在且有权限 -> 无异常。
+    """
+    if pid <= 0:
+        return "dead"
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            kernel32 = ctypes.windll.kernel32
+            # PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+            handle = kernel32.OpenProcess(0x1000, False, pid)
+            if handle:
+                kernel32.CloseHandle(handle)
+                return "alive"
+            # OpenProcess 返回 NULL：可能是 PID 不存在，也可能是权限不足。
+            # 区分：GetLastError() == 5 (ACCESS_DENIED) 说明进程存在但无权限。
+            err = kernel32.GetLastError()
+            if err == 5:  # ERROR_ACCESS_DENIED
+                return "alive"
+            return "dead"
+        except Exception:
+            return "unknown"   # ctypes 异常 -> 探测失败，fail-closed
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return "dead"
+    except PermissionError:
+        return "alive"
+    except OSError:
+        return "unknown"      # 其它 OSError -> 探测失败，fail-closed
+    return "alive"
+
+
+class OutputDirLock:
+    """以 output-dir 为粒度的原子独占锁。
+
+    防止两个 orchestrator 进程并发写同一目录（r2 事故根因：并发导致每 case 双调用、
+    detail 重复、verify 竞态、ledger 超 hard_cap 仍标记 completed）。
+
+    锁文件格式：``<pid>\\n<owner_token>``。owner_token 为 uuid4 不可复用随机串，
+    release 时必须验证 token 匹配才删除锁文件，防止旧锁对象/atexit 回调误删新持有者的锁。
+
+    acquire 流程：
+    1. os.open(O_CREAT | O_EXCL) 原子创建。成功 -> 写 pid+token，返回锁对象。
+    2. FileExistsError -> 读持有者 PID。_probe_pid 返回 "alive"/"unknown" -> fail-closed (None)。
+       返回 "dead" -> 接管：删除旧锁后重新原子创建（新 token）。
+    3. 任何删除/创建竞态 -> fail-closed (None)。
+
+    release 流程：
+    1. 读锁文件，解析 token。
+    2. token 匹配当前锁对象 -> 删除锁文件。
+    3. token 不匹配（锁已被接管）-> 不删除（保护新持有者）。
+    4. 锁文件不存在/读失败 -> 无操作（幂等）。
+    """
+
+    LOCK_FILENAME = ".orchestrator.lock"
+
+    def __init__(self, lock_path: str, owner_token: str):
+        self._lock_path = lock_path
+        self._owner_token = owner_token
+        self._released = False
+
+    @property
+    def lock_path(self) -> str:
+        return self._lock_path
+
+    @property
+    def owner_token(self) -> str:
+        return self._owner_token
+
+    @staticmethod
+    def _read_lock_file(lock_path: str) -> tuple[int, str] | None:
+        """读锁文件，返回 (pid, token)；损坏/不存在返回 None。"""
+        try:
+            with open(lock_path, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+        except OSError:
+            return None
+        parts = content.split("\n", 1)
+        if len(parts) != 2:
+            return None
+        try:
+            pid = int(parts[0].strip() or "0")
+        except ValueError:
+            return None
+        token = parts[1].strip()
+        if not token:
+            return None
+        return pid, token
+
+    @classmethod
+    def acquire(cls, output_dir: str) -> "OutputDirLock | None":
+        """尝试获取 output-dir 独占锁。成功返回锁对象，失败（被持有）返回 None。"""
+        os.makedirs(output_dir, exist_ok=True)
+        lock_path = os.path.join(output_dir, cls.LOCK_FILENAME)
+        pid = os.getpid()
+        import uuid
+        token = uuid.uuid4().hex
+        try:
+            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            # 锁已存在：判断持有者是否存活
+            parsed = cls._read_lock_file(lock_path)
+            if parsed is None:
+                # 锁文件损坏/读失败 -> fail-closed，不接管
+                return None
+            holder_pid, _holder_token = parsed
+            state = _probe_pid(holder_pid)
+            if state != "dead":
+                # alive 或 unknown -> fail-closed
+                return None
+            # stale lock：持有者已死，接管
+            try:
+                os.remove(lock_path)
+            except OSError:
+                return None  # 删除失败（权限/竞态）-> fail-closed
+            try:
+                fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            except FileExistsError:
+                return None  # 删除后被其他进程抢走
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(f"{pid}\n{token}")
+        lock = cls(lock_path, token)
+        import atexit
+        atexit.register(lock.release)
+        return lock
+
+    def release(self) -> None:
+        """释放锁：验证 owner_token 匹配后删除锁文件。
+
+        若锁已被接管（token 不匹配），不删除以保护新持有者。幂等。
+        """
+        if self._released:
+            return
+        self._released = True
+        parsed = self._read_lock_file(self._lock_path)
+        if parsed is None:
+            return  # 锁文件不存在/损坏，无操作
+        _pid, token = parsed
+        if token != self._owner_token:
+            return  # 锁已被接管，不删除新持有者的锁
+        try:
+            os.remove(self._lock_path)
+        except OSError:
+            pass
+
+
 # ---- constants ----
 
 REASONED_PROFILE = "baziqa_xjz_reasoned"
@@ -2238,6 +2395,19 @@ def main(argv=None):
     output_dir = Path(args.output_dir)
     os.makedirs(str(output_dir), exist_ok=True)
 
+    # 0. P0: output-dir 独占锁。在任何产物读写（含 dry-run 的 schedule.json）之前
+    #    原子获取；第二个 orchestrator 必须 fail-closed，防止并发写入导致每 case
+    #    双调用、detail 重复、verify 竞态、ledger 超 hard_cap（r2 事故根因）。
+    #    锁释放依赖 atexit（覆盖 return / SystemExit / 未捕获异常）+ stale 检测
+    #    （兜底 SIGKILL/崩溃残留）。main 的所有 return 路径都会触发 atexit。
+    _main_lock = OutputDirLock.acquire(str(output_dir))
+    if _main_lock is None:
+        print(json.dumps({"status": "BLOCKED_OUTPUT_DIR_LOCKED",
+            "output_dir": str(output_dir),
+            "reason": "output-dir 已被其他 orchestrator 持有锁，拒绝并发写入 (fail-closed)"},
+            ensure_ascii=False))
+        return 2
+
     # 1. Dry-run: generate (write) schedule, print summary, exit.
     #    Dry-run does not make model calls or touch the run manifest, so the
     #    resume/fresh protection below does not apply to it.
@@ -2416,4 +2586,4 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

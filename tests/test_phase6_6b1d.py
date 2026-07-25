@@ -2274,3 +2274,239 @@ class TestBuildRunnerCmd:
         assert seen["2024"] == d2024
         assert seen["2025"] == d2025
         assert seen["2024"] != seen["2025"]
+
+
+# ---- P0: output-dir exclusive lock (concurrent orchestrator guard) ----
+
+class TestOutputDirLock:
+    """P0: orchestrator 必须以 output-dir 为粒度原子独占，防止两个进程并发写入。
+
+    事故背景：r2 实验中两个 orchestrator 并发写同一目录，导致每个 case 被调用两次、
+    detail 重复、verify 竞态、ledger 超上限（12 > hard_cap 10）仍标记 completed。
+    """
+
+    def test_first_acquire_succeeds(self, tmp_path):
+        """首次获取锁成功。"""
+        lock = orch.OutputDirLock.acquire(str(tmp_path))
+        assert lock is not None
+        assert (tmp_path / ".orchestrator.lock").exists()
+        lock.release()
+
+    def test_second_acquire_fails_when_held(self, tmp_path):
+        """锁被持有时，第二次获取必须失败（fail-closed）。"""
+        first = orch.OutputDirLock.acquire(str(tmp_path))
+        assert first is not None
+        second = orch.OutputDirLock.acquire(str(tmp_path))
+        assert second is None, "第二个 orchestrator 必须被拒绝，不能并发写同一目录"
+        first.release()
+
+    def test_release_allows_reacquire(self, tmp_path):
+        """释放后可重新获取。"""
+        lock = orch.OutputDirLock.acquire(str(tmp_path))
+        lock.release()
+        again = orch.OutputDirLock.acquire(str(tmp_path))
+        assert again is not None
+        again.release()
+
+    def test_stale_lock_from_dead_pid_is_taken_over(self, tmp_path):
+        """残留锁（PID 已死）被接管，不永久阻塞。"""
+        lock_path = tmp_path / ".orchestrator.lock"
+        # 写入一个几乎肯定不存在的 PID + 任意 token（旧格式 pid\ntoken）
+        with open(str(lock_path), "w", encoding="utf-8") as f:
+            f.write("999999\ndead-token-aaaa")
+        lock = orch.OutputDirLock.acquire(str(tmp_path))
+        assert lock is not None, "死 PID 的残留锁应被接管"
+        lock.release()
+
+    def test_live_pid_lock_not_taken_over(self, tmp_path):
+        """活 PID 的锁不被接管（真正的并发保护）。"""
+        import os as _os
+        lock_path = tmp_path / ".orchestrator.lock"
+        with open(str(lock_path), "w", encoding="utf-8") as f:
+            f.write(f"{_os.getpid()}\nlive-token-bbbb")
+        lock = orch.OutputDirLock.acquire(str(tmp_path))
+        assert lock is None, "活 PID 持有的锁不可被接管"
+        _os.remove(str(lock_path))
+
+    def test_lock_file_contains_pid_and_token(self, tmp_path):
+        """锁文件记录当前 PID 和不可复用 owner_token。"""
+        import os as _os
+        lock = orch.OutputDirLock.acquire(str(tmp_path))
+        with open(str(tmp_path / ".orchestrator.lock"), "r", encoding="utf-8") as f:
+            content = f.read().strip()
+        parts = content.split("\n", 1)
+        assert len(parts) == 2, f"锁文件格式应为 pid\\ntoken，实际: {content!r}"
+        assert parts[0] == str(_os.getpid()), "第一行应为当前 PID"
+        assert parts[1] == lock.owner_token, "第二行应与锁对象 owner_token 一致"
+        assert len(parts[1]) >= 8, "owner_token 应为足够长的不可复用随机串"
+        lock.release()
+
+    def test_corrupt_lock_file_fail_closed(self, tmp_path):
+        """锁文件损坏（非数字 PID / 缺 token）-> fail-closed，不接管。"""
+        lock_path = tmp_path / ".orchestrator.lock"
+        # 非数字 PID
+        with open(str(lock_path), "w", encoding="utf-8") as f:
+            f.write("not-a-pid\nsome-token")
+        assert orch.OutputDirLock.acquire(str(tmp_path)) is None, "损坏锁文件应 fail-closed"
+        # 缺 token（只有一行）
+        with open(str(lock_path), "w", encoding="utf-8") as f:
+            f.write("12345")
+        assert orch.OutputDirLock.acquire(str(tmp_path)) is None, "缺 token 的锁文件应 fail-closed"
+        # 空文件
+        with open(str(lock_path), "w", encoding="utf-8") as f:
+            f.write("")
+        assert orch.OutputDirLock.acquire(str(tmp_path)) is None, "空锁文件应 fail-closed"
+        import os as _os
+        _os.remove(str(lock_path))
+
+    def test_old_holder_cannot_release_new_lock(self, tmp_path):
+        """P0: 旧锁对象的 release() 不得删除新持有者的锁文件。
+
+        场景：进程 A acquire（token_A），A 进程崩溃未 release。进程 B acquire 接管
+        （token_B）。此时 A 的 atexit 回调若触发，或 A 的锁对象残留被显式 release，
+        不应删除 B 的锁文件，否则第三个进程可并发进入。
+        """
+        import os as _os
+        # A acquire
+        lock_a = orch.OutputDirLock.acquire(str(tmp_path))
+        assert lock_a is not None
+        token_a = lock_a.owner_token
+        # 模拟 A 崩溃：手动删除锁文件（等价于 A 持有期间锁被外部清理），
+        # 然后 B acquire（新锁文件、新 token）
+        lock_path = tmp_path / ".orchestrator.lock"
+        _os.remove(str(lock_path))
+        lock_b = orch.OutputDirLock.acquire(str(tmp_path))
+        assert lock_b is not None
+        token_b = lock_b.owner_token
+        assert token_b != token_a, "接管应生成新 token"
+        # 此时锁文件属于 B
+        assert lock_path.exists()
+        # A 的旧锁对象 release：不应删除 B 的锁
+        lock_a.release()
+        assert lock_path.exists(), "旧持有者 release 不得删除新持有者的锁文件"
+        # 锁文件内容仍为 B 的 token
+        with open(str(lock_path), "r", encoding="utf-8") as f:
+            content = f.read().strip()
+        assert content.endswith(token_b), "锁文件应仍属于新持有者 B"
+        # B 正常 release
+        lock_b.release()
+        assert not lock_path.exists()
+
+    def test_release_is_idempotent(self, tmp_path):
+        """release() 幂等，多次调用不报错。"""
+        lock = orch.OutputDirLock.acquire(str(tmp_path))
+        lock.release()
+        lock.release()  # 第二次不应抛异常
+        assert not (tmp_path / ".orchestrator.lock").exists()
+
+
+class TestConcurrentOrchestratorMain:
+    """P0: 第二个 orchestrator 进程必须 fail-closed，零 API 调用、零事件写入。
+
+    端到端验证：在 output-dir 已被持锁的情况下，main() 必须立即返回非 0，
+    且不产生任何 schedule/run_manifest/events/details 写入。
+    """
+
+    def test_second_main_returns_nonzero_and_writes_nothing(self, tmp_path, monkeypatch):
+        """持锁状态下 main() 返回非 0，不写任何产物，不调 runner。"""
+        import scripts.phase6_6b1d_orchestrator as orch_mod
+
+        # 先占住锁
+        held = orch_mod.OutputDirLock.acquire(str(tmp_path))
+        assert held is not None
+
+        # 记录 runner 是否被调用（绝不应该）
+        runner_calls = []
+        def _fake_run_slice(sl, args, ledger, resume=False):
+            runner_calls.append(sl["slice_id"])
+            return 0
+        monkeypatch.setattr(orch_mod, "_run_slice", _fake_run_slice)
+
+        # main 应在获取锁失败后立即返回非 0，不进入 labels/schedule/runner
+        rc = orch_mod.main([
+            "--provider", "deepseek",
+            "--model", "deepseek-v4-pro",
+            "--output-dir", str(tmp_path),
+        ])
+
+        assert rc != 0, "持锁状态下 main 必须返回非 0"
+        assert runner_calls == [], f"第二个 orchestrator 不应调用 runner，实际调用: {runner_calls}"
+        # 不应写任何实验产物
+        assert not (tmp_path / "schedule.json").exists()
+        assert not (tmp_path / "run_manifest.json").exists()
+        assert not (tmp_path / "budget_ledger.json").exists()
+
+        held.release()
+
+    def test_cli_exit_code_nonzero_when_locked(self, tmp_path):
+        """P0: 真实子进程入口必须把 main() 返回码传给进程退出码。
+
+        事故复现：main() 返回 2，但 ``if __name__ == "__main__": main()`` 丢弃返回值，
+        导致 subprocess.returncode == 0。必须用 ``raise SystemExit(main())``。
+        """
+        import os as _os
+        import subprocess as _sp
+        import sys as _sys
+
+        # 先占住锁
+        held = orch.OutputDirLock.acquire(str(tmp_path))
+        assert held is not None
+
+        # 启动真实 orchestrator 子进程（dry-run 也获取锁，且不调 API）
+        proc = _sp.run(
+            [_sys.executable, "scripts/phase6_6b1d_orchestrator.py",
+             "--output-dir", str(tmp_path), "--dry-run"],
+            capture_output=True, text=True, cwd=_os.getcwd(),
+            env={**_os.environ, "OPENBLAS_NUM_THREADS": "1"},
+        )
+
+        # 退出码必须非 0（main 返回 2）
+        assert proc.returncode != 0, \
+            f"锁冲突时子进程必须非 0 退出，实际 returncode={proc.returncode}\n" \
+            f"stdout={proc.stdout!r}\nstderr={proc.stderr!r}"
+        assert "BLOCKED_OUTPUT_DIR_LOCKED" in proc.stdout, \
+            f"stdout 应含 BLOCKED_OUTPUT_DIR_LOCKED，实际: {proc.stdout!r}"
+
+        held.release()
+
+    def test_real_two_process_only_one_acquires(self, tmp_path):
+        """P0: 真实两个 OS 进程并发 acquire，恰好一个成功。
+
+        验证锁在真实跨进程场景下的原子性，而非同进程内调用。
+        """
+        import os as _os
+        import subprocess as _sp
+        import sys as _sys
+        import threading as _threading
+
+        # helper 脚本：尝试 acquire，把结果写入唯一结果文件
+        helper = (
+            "import sys, os; "
+            f"sys.path.insert(0, {_os.getcwd()!r}); "
+            "import scripts.phase6_6b1d_orchestrator as o; "
+            f"lk = o.OutputDirLock.acquire({str(tmp_path)!r}); "
+            f"open(os.path.join({str(tmp_path)!r}, 'result_' + str(os.getpid()) + '.txt'),'w').write('1' if lk else '0'); "
+            "import time; time.sleep(0.5) if lk else None; "
+            "lk.release() if lk else None"
+        )
+
+        results = []
+        def _run_one():
+            p = _sp.run([_sys.executable, "-c", helper],
+                        capture_output=True, text=True, cwd=_os.getcwd(),
+                        env={**_os.environ, "OPENBLAS_NUM_THREADS": "1"})
+            results.append(p)
+
+        # 两个线程同时启动两个子进程，制造并发竞争
+        t1 = _threading.Thread(target=_run_one)
+        t2 = _threading.Thread(target=_run_one)
+        t1.start(); t2.start()
+        t1.join(); t2.join()
+
+        # 收集所有 result_*.txt
+        result_files = list(tmp_path.glob("result_*.txt"))
+        assert len(result_files) == 2, f"应有两个结果文件，实际 {len(result_files)}"
+        values = [f.read_text().strip() for f in result_files]
+        got_lock_count = sum(1 for v in values if v == "1")
+        assert got_lock_count == 1, \
+            f"恰好一个进程应获取锁，实际 {got_lock_count} 个成功，结果: {values}"
