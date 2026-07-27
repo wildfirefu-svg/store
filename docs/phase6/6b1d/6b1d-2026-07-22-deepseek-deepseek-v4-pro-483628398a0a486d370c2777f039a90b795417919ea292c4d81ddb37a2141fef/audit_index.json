@@ -1630,17 +1630,17 @@
   "generated_at": "2026-07-27T01:31:29",
   "post_analysis_artifact_hashes": {
     "report.md": {
-      "sha256": "3e9c8dc8e13001532758aab3d0d3aeb01ce117bebc687c16d9bf6909d6bef79c",
-      "bytes": 14176
+      "sha256": "f8cef43535c83f8940232915bdfa5777af0b31d66cb48b52035f53c163c02f57",
+      "bytes": 15376
     },
     "comparison_table.json": {
       "sha256": "bc21614b14d454e6bcc57c51e813bc69027796b8aac370b0f7aadf3801ccb1f5",
       "bytes": 3347
     },
     "analysis_supplement.json": {
-      "sha256": "e1cd712f810b48e96a6accbc6db07b0591463095790c1ebddb29354ab3e87986",
-      "bytes": 63293
+      "sha256": "fc4c57f244982bd102d0b61bfc314f7b0ca650d7ba6d400516834dedd0cf8dfb",
+      "bytes": 62617
     }
   },
-  "post_analysis_generated_at": "2026-07-27T12:50:00"
+  "post_analysis_generated_at": "2026-07-27T14:53:12"
 }

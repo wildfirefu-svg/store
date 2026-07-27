@@ -686,145 +686,282 @@
   "consistency": {
     "total_cases": 80,
     "by_split": {
-      "5_0": 12,
-      "4_1": 27,
-      "3_2": 22,
-      "other": 19
+      "5_0": 9,
+      "4_1": 20,
+      "3_2": 10,
+      "other": 5,
+      "unresolved": 36
     },
-    "arm_mode_tie_cases": 36,
     "pairwise_agreement": {
       "b1a_prime": {
         "b1a_prime": {
-          "agree": 80,
-          "n": 80,
+          "agree": 66,
+          "n": 66,
           "rate": 1.0
         },
         "b1b": {
-          "agree": 31,
-          "n": 80,
-          "rate": 0.3875
+          "agree": 26,
+          "n": 61,
+          "rate": 0.4262
         },
         "b1c": {
-          "agree": 43,
-          "n": 80,
-          "rate": 0.5375
+          "agree": 38,
+          "n": 58,
+          "rate": 0.6552
         },
         "b2b": {
-          "agree": 37,
-          "n": 80,
-          "rate": 0.4625
+          "agree": 30,
+          "n": 60,
+          "rate": 0.5
         },
         "b2c": {
-          "agree": 50,
-          "n": 80,
-          "rate": 0.625
+          "agree": 43,
+          "n": 60,
+          "rate": 0.7167
         }
       },
       "b1b": {
         "b1a_prime": {
-          "agree": 31,
-          "n": 80,
-          "rate": 0.3875
+          "agree": 26,
+          "n": 61,
+          "rate": 0.4262
         },
         "b1b": {
-          "agree": 80,
-          "n": 80,
+          "agree": 75,
+          "n": 75,
           "rate": 1.0
         },
         "b1c": {
-          "agree": 45,
-          "n": 80,
-          "rate": 0.5625
+          "agree": 40,
+          "n": 65,
+          "rate": 0.6154
         },
         "b2b": {
-          "agree": 31,
-          "n": 80,
-          "rate": 0.3875
+          "agree": 27,
+          "n": 69,
+          "rate": 0.3913
         },
         "b2c": {
-          "agree": 42,
-          "n": 80,
-          "rate": 0.525
+          "agree": 38,
+          "n": 67,
+          "rate": 0.5672
         }
       },
       "b1c": {
         "b1a_prime": {
-          "agree": 43,
-          "n": 80,
-          "rate": 0.5375
+          "agree": 38,
+          "n": 58,
+          "rate": 0.6552
         },
         "b1b": {
-          "agree": 45,
-          "n": 80,
-          "rate": 0.5625
+          "agree": 40,
+          "n": 65,
+          "rate": 0.6154
         },
         "b1c": {
-          "agree": 80,
-          "n": 80,
+          "agree": 70,
+          "n": 70,
           "rate": 1.0
         },
         "b2b": {
-          "agree": 46,
-          "n": 80,
-          "rate": 0.575
+          "agree": 41,
+          "n": 65,
+          "rate": 0.6308
         },
         "b2c": {
-          "agree": 52,
-          "n": 80,
-          "rate": 0.65
+          "agree": 48,
+          "n": 63,
+          "rate": 0.7619
         }
       },
       "b2b": {
         "b1a_prime": {
-          "agree": 37,
-          "n": 80,
-          "rate": 0.4625
+          "agree": 30,
+          "n": 60,
+          "rate": 0.5
         },
         "b1b": {
-          "agree": 31,
-          "n": 80,
-          "rate": 0.3875
+          "agree": 27,
+          "n": 69,
+          "rate": 0.3913
         },
         "b1c": {
-          "agree": 46,
-          "n": 80,
-          "rate": 0.575
+          "agree": 41,
+          "n": 65,
+          "rate": 0.6308
         },
         "b2b": {
-          "agree": 80,
-          "n": 80,
+          "agree": 74,
+          "n": 74,
           "rate": 1.0
         },
         "b2c": {
-          "agree": 41,
-          "n": 80,
-          "rate": 0.5125
+          "agree": 35,
+          "n": 66,
+          "rate": 0.5303
         }
       },
       "b2c": {
         "b1a_prime": {
-          "agree": 50,
-          "n": 80,
-          "rate": 0.625
+          "agree": 43,
+          "n": 60,
+          "rate": 0.7167
         },
         "b1b": {
-          "agree": 42,
-          "n": 80,
-          "rate": 0.525
+          "agree": 38,
+          "n": 67,
+          "rate": 0.5672
         },
         "b1c": {
-          "agree": 52,
-          "n": 80,
-          "rate": 0.65
+          "agree": 48,
+          "n": 63,
+          "rate": 0.7619
         },
         "b2b": {
-          "agree": 41,
-          "n": 80,
-          "rate": 0.5125
+          "agree": 35,
+          "n": 66,
+          "rate": 0.5303
         },
         "b2c": {
-          "agree": 80,
-          "n": 80,
+          "agree": 71,
+          "n": 71,
+          "rate": 1.0
+        }
+      }
+    },
+    "pairwise_by_repeat": {
+      "b1a_prime": {
+        "b1a_prime": {
+          "agree": 240,
+          "n": 240,
+          "rate": 1.0
+        },
+        "b1b": {
+          "agree": 94,
+          "n": 240,
+          "rate": 0.3917
+        },
+        "b1c": {
+          "agree": 126,
+          "n": 239,
+          "rate": 0.5272
+        },
+        "b2b": {
+          "agree": 100,
+          "n": 239,
+          "rate": 0.4184
+        },
+        "b2c": {
+          "agree": 135,
+          "n": 240,
+          "rate": 0.5625
+        }
+      },
+      "b1b": {
+        "b1a_prime": {
+          "agree": 94,
+          "n": 240,
+          "rate": 0.3917
+        },
+        "b1b": {
+          "agree": 240,
+          "n": 240,
+          "rate": 1.0
+        },
+        "b1c": {
+          "agree": 127,
+          "n": 239,
+          "rate": 0.5314
+        },
+        "b2b": {
+          "agree": 90,
+          "n": 239,
+          "rate": 0.3766
+        },
+        "b2c": {
+          "agree": 121,
+          "n": 240,
+          "rate": 0.5042
+        }
+      },
+      "b1c": {
+        "b1a_prime": {
+          "agree": 126,
+          "n": 239,
+          "rate": 0.5272
+        },
+        "b1b": {
+          "agree": 127,
+          "n": 239,
+          "rate": 0.5314
+        },
+        "b1c": {
+          "agree": 239,
+          "n": 239,
+          "rate": 1.0
+        },
+        "b2b": {
+          "agree": 122,
+          "n": 238,
+          "rate": 0.5126
+        },
+        "b2c": {
+          "agree": 142,
+          "n": 239,
+          "rate": 0.5941
+        }
+      },
+      "b2b": {
+        "b1a_prime": {
+          "agree": 100,
+          "n": 239,
+          "rate": 0.4184
+        },
+        "b1b": {
+          "agree": 90,
+          "n": 239,
+          "rate": 0.3766
+        },
+        "b1c": {
+          "agree": 122,
+          "n": 238,
+          "rate": 0.5126
+        },
+        "b2b": {
+          "agree": 239,
+          "n": 239,
+          "rate": 1.0
+        },
+        "b2c": {
+          "agree": 116,
+          "n": 239,
+          "rate": 0.4854
+        }
+      },
+      "b2c": {
+        "b1a_prime": {
+          "agree": 135,
+          "n": 240,
+          "rate": 0.5625
+        },
+        "b1b": {
+          "agree": 121,
+          "n": 240,
+          "rate": 0.5042
+        },
+        "b1c": {
+          "agree": 142,
+          "n": 239,
+          "rate": 0.5941
+        },
+        "b2b": {
+          "agree": 116,
+          "n": 239,
+          "rate": 0.4854
+        },
+        "b2c": {
+          "agree": 240,
+          "n": 240,
           "rate": 1.0
         }
       }
@@ -871,23 +1008,15 @@
       {
         "case_id": "guangdong_female_19800824_P001-Q3",
         "arm_modes": {
-          "b1a_prime": "A",
+          "b1a_prime": null,
           "b1c": "B",
           "b2b": "C",
           "b2c": "B",
           "b1b": "B"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B",
-          "C"
-        ],
-        "vote_distribution": {
-          "B": 3,
-          "A": 1,
-          "C": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "guangdong_female_19800824_P001-Q4",
@@ -914,18 +1043,12 @@
           "b1a_prime": "B",
           "b1c": "A",
           "b2b": "B",
-          "b2c": "A",
-          "b1b": "A"
+          "b2c": null,
+          "b1b": null
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B"
-        ],
-        "vote_distribution": {
-          "A": 3,
-          "B": 2
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "chaozhou_male_19720108_P002-Q6",
@@ -987,17 +1110,11 @@
           "b2b": "A",
           "b2c": "B",
           "b1a_prime": "A",
-          "b1c": "A"
+          "b1c": null
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B"
-        ],
-        "vote_distribution": {
-          "A": 3,
-          "B": 2
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "chaozhou_male_19720108_P002-Q10",
@@ -1005,18 +1122,12 @@
           "b1b": "C",
           "b2b": "C",
           "b2c": "C",
-          "b1a_prime": "A",
+          "b1a_prime": null,
           "b1c": "C"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "C"
-        ],
-        "vote_distribution": {
-          "C": 4,
-          "A": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "male_19611230_P003-Q11",
@@ -1025,21 +1136,11 @@
           "b2b": "C",
           "b2c": "D",
           "b1a_prime": "B",
-          "b1c": "A"
+          "b1c": null
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B",
-          "C",
-          "D"
-        ],
-        "vote_distribution": {
-          "B": 2,
-          "C": 1,
-          "D": 1,
-          "A": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "male_19611230_P003-Q12",
@@ -1105,78 +1206,52 @@
         "arm_modes": {
           "b1b": "C",
           "b2b": "C",
-          "b2c": "A",
+          "b2c": null,
           "b1a_prime": "B",
           "b1c": "C"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B",
-          "C"
-        ],
-        "vote_distribution": {
-          "C": 3,
-          "A": 1,
-          "B": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "female_19831028_P004-Q16",
         "arm_modes": {
           "b1b": "B",
           "b2b": "B",
-          "b2c": "B",
+          "b2c": null,
           "b1a_prime": "C",
           "b1c": "B"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "B",
-          "C"
-        ],
-        "vote_distribution": {
-          "B": 4,
-          "C": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "female_19831028_P004-Q17",
         "arm_modes": {
           "b1c": "A",
-          "b2c": "A",
+          "b2c": null,
           "b1a_prime": "A",
           "b1b": "B",
           "b2b": "D"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B",
-          "D"
-        ],
-        "vote_distribution": {
-          "A": 3,
-          "B": 1,
-          "D": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "female_19831028_P004-Q18",
         "arm_modes": {
           "b1c": "A",
           "b2c": "A",
-          "b1a_prime": "A",
+          "b1a_prime": null,
           "b1b": "A",
           "b2b": "A"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A"
-        ],
-        "vote_distribution": {
-          "A": 5
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "female_19831028_P004-Q19",
@@ -1219,23 +1294,15 @@
       {
         "case_id": "male_19710412_P005-Q21",
         "arm_modes": {
-          "b1c": "A",
+          "b1c": null,
           "b2c": "C",
           "b1a_prime": "B",
           "b1b": "C",
           "b2b": "C"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B",
-          "C"
-        ],
-        "vote_distribution": {
-          "C": 3,
-          "A": 1,
-          "B": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "male_19710412_P005-Q22",
@@ -1243,39 +1310,25 @@
           "b1c": "B",
           "b2c": "B",
           "b1a_prime": "B",
-          "b1b": "B",
+          "b1b": null,
           "b2b": "A"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B"
-        ],
-        "vote_distribution": {
-          "B": 4,
-          "A": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "male_19710412_P005-Q23",
         "arm_modes": {
           "b1c": "C",
           "b2c": "B",
-          "b1a_prime": "B",
+          "b1a_prime": null,
           "b1b": "C",
           "b2b": "A"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B",
-          "C"
-        ],
-        "vote_distribution": {
-          "C": 2,
-          "B": 2,
-          "A": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "male_19710412_P005-Q24",
@@ -1299,59 +1352,41 @@
       {
         "case_id": "male_19710412_P005-Q25",
         "arm_modes": {
-          "b2b": "B",
+          "b2b": null,
           "b1a_prime": "B",
           "b1b": "A",
           "b1c": "A",
           "b2c": "B"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B"
-        ],
-        "vote_distribution": {
-          "B": 3,
-          "A": 2
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "female_19830326_P006-Q26",
         "arm_modes": {
           "b2b": "B",
-          "b1a_prime": "B",
+          "b1a_prime": null,
           "b1b": "C",
           "b1c": "C",
           "b2c": "C"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "B",
-          "C"
-        ],
-        "vote_distribution": {
-          "C": 3,
-          "B": 2
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "female_19830326_P006-Q27",
         "arm_modes": {
           "b2b": "A",
-          "b1a_prime": "A",
+          "b1a_prime": null,
           "b1b": "C",
           "b1c": "C",
           "b2c": "C"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "C"
-        ],
-        "vote_distribution": {
-          "C": 3,
-          "A": 2
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "female_19830326_P006-Q28",
@@ -1378,20 +1413,12 @@
           "b2b": "B",
           "b1a_prime": "B",
           "b1b": "C",
-          "b1c": "A",
+          "b1c": null,
           "b2c": "B"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B",
-          "C"
-        ],
-        "vote_distribution": {
-          "B": 3,
-          "C": 1,
-          "A": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "female_19830326_P006-Q30",
@@ -1469,58 +1496,40 @@
         "case_id": "female_19800921_P007-Q34",
         "arm_modes": {
           "b2c": "D",
-          "b1b": "B",
+          "b1b": null,
           "b1c": "D",
           "b2b": "D",
           "b1a_prime": "D"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "B",
-          "D"
-        ],
-        "vote_distribution": {
-          "D": 4,
-          "B": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "female_19800921_P007-Q35",
         "arm_modes": {
           "b2c": "C",
           "b1b": "A",
-          "b1c": "A",
+          "b1c": null,
           "b2b": "C",
           "b1a_prime": "A"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "C"
-        ],
-        "vote_distribution": {
-          "A": 3,
-          "C": 2
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "male_20070131_P008-Q36",
         "arm_modes": {
-          "b2c": "A",
+          "b2c": null,
           "b1b": "B",
-          "b1c": "A",
-          "b2b": "A",
+          "b1c": null,
+          "b2b": null,
           "b1a_prime": "B"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B"
-        ],
-        "vote_distribution": {
-          "A": 3,
-          "B": 2
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "male_20070131_P008-Q37",
@@ -1529,17 +1538,11 @@
           "b1b": "B",
           "b1c": "B",
           "b2b": "B",
-          "b1a_prime": "A"
+          "b1a_prime": null
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B"
-        ],
-        "vote_distribution": {
-          "B": 4,
-          "A": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "male_20070131_P008-Q38",
@@ -1563,21 +1566,15 @@
       {
         "case_id": "male_20070131_P008-Q39",
         "arm_modes": {
-          "b2c": "A",
+          "b2c": null,
           "b1b": "C",
           "b1c": "C",
           "b2b": "C",
           "b1a_prime": "C"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "C"
-        ],
-        "vote_distribution": {
-          "C": 4,
-          "A": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "male_20070131_P008-Q40",
@@ -1586,17 +1583,11 @@
           "b1b": "B",
           "b1c": "C",
           "b2b": "C",
-          "b1a_prime": "B"
+          "b1a_prime": null
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "B",
-          "C"
-        ],
-        "vote_distribution": {
-          "C": 3,
-          "B": 2
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "guangdong_female_19511114_P001-Q1",
@@ -1658,21 +1649,15 @@
       {
         "case_id": "guangdong_female_19511114_P001-Q4",
         "arm_modes": {
-          "b1a_prime": "B",
-          "b1c": "A",
+          "b1a_prime": null,
+          "b1c": null,
           "b2b": "A",
-          "b2c": "B",
+          "b2c": null,
           "b1b": "B"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B"
-        ],
-        "vote_distribution": {
-          "B": 3,
-          "A": 2
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "guangdong_female_19511114_P001-Q5",
@@ -1719,17 +1704,11 @@
           "b1c": "D",
           "b2b": "D",
           "b2c": "D",
-          "b1b": "B"
+          "b1b": null
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "B",
-          "D"
-        ],
-        "vote_distribution": {
-          "D": 4,
-          "B": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "hongkong_female_19870705_P002-Q8",
@@ -1773,22 +1752,14 @@
         "case_id": "hongkong_female_19870705_P002-Q10",
         "arm_modes": {
           "b1b": "A",
-          "b2b": "A",
+          "b2b": null,
           "b2c": "B",
           "b1a_prime": "C",
           "b1c": "B"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B",
-          "C"
-        ],
-        "vote_distribution": {
-          "A": 2,
-          "B": 2,
-          "C": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "miyazaki_male_19830421_P003-Q11",
@@ -1847,58 +1818,40 @@
         "case_id": "miyazaki_male_19830421_P003-Q14",
         "arm_modes": {
           "b1b": "A",
-          "b2b": "A",
+          "b2b": null,
           "b2c": "B",
           "b1a_prime": "B",
           "b1c": "B"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "B"
-        ],
-        "vote_distribution": {
-          "B": 3,
-          "A": 2
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "miyazaki_male_19830421_P003-Q15",
         "arm_modes": {
           "b1b": "A",
-          "b2b": "A",
+          "b2b": null,
           "b2c": "A",
           "b1a_prime": "A",
           "b1c": "A"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A"
-        ],
-        "vote_distribution": {
-          "A": 5
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "singapore_male_19930408_P004-Q16",
         "arm_modes": {
           "b1b": "C",
           "b2b": "A",
-          "b2c": "A",
-          "b1a_prime": "A",
+          "b2c": null,
+          "b1a_prime": null,
           "b1c": "D"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "C",
-          "D"
-        ],
-        "vote_distribution": {
-          "A": 3,
-          "C": 1,
-          "D": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "singapore_male_19930408_P004-Q17",
@@ -1922,23 +1875,15 @@
       {
         "case_id": "singapore_male_19930408_P004-Q18",
         "arm_modes": {
-          "b1c": "A",
+          "b1c": null,
           "b2c": "C",
-          "b1a_prime": "A",
+          "b1a_prime": null,
           "b1b": "C",
           "b2b": "D"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "C",
-          "D"
-        ],
-        "vote_distribution": {
-          "A": 2,
-          "C": 2,
-          "D": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "singapore_male_19930408_P004-Q19",
@@ -1964,21 +1909,15 @@
       {
         "case_id": "singapore_male_19930408_P004-Q20",
         "arm_modes": {
-          "b1c": "B",
+          "b1c": null,
           "b2c": "C",
           "b1a_prime": "C",
           "b1b": "B",
           "b2b": "C"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "B",
-          "C"
-        ],
-        "vote_distribution": {
-          "C": 3,
-          "B": 2
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "malaysia_male_19880110_P005-Q21",
@@ -2095,23 +2034,15 @@
       {
         "case_id": "malaysia_male_19730824_P006-Q27",
         "arm_modes": {
-          "b2b": "B",
+          "b2b": null,
           "b1a_prime": "C",
           "b1b": "B",
           "b1c": "D",
           "b2c": "B"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "B",
-          "C",
-          "D"
-        ],
-        "vote_distribution": {
-          "B": 3,
-          "C": 1,
-          "D": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "malaysia_male_19730824_P006-Q28",
@@ -2157,43 +2088,27 @@
         "case_id": "malaysia_male_19730824_P006-Q30",
         "arm_modes": {
           "b2b": "D",
-          "b1a_prime": "B",
+          "b1a_prime": null,
           "b1b": "C",
           "b1c": "D",
-          "b2c": "B"
+          "b2c": null
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "B",
-          "C",
-          "D"
-        ],
-        "vote_distribution": {
-          "D": 2,
-          "B": 2,
-          "C": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "taiwan_female_19880215_P007-Q31",
         "arm_modes": {
           "b2b": "D",
           "b1a_prime": "C",
-          "b1b": "B",
+          "b1b": null,
           "b1c": "D",
           "b2c": "D"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "B",
-          "C",
-          "D"
-        ],
-        "vote_distribution": {
-          "D": 3,
-          "C": 1,
-          "B": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "taiwan_female_19880215_P007-Q32",
@@ -2242,15 +2157,11 @@
           "b1b": "A",
           "b1c": "A",
           "b2b": "A",
-          "b1a_prime": "A"
+          "b1a_prime": null
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A"
-        ],
-        "vote_distribution": {
-          "A": 5
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "taiwan_female_19880215_P007-Q35",
@@ -2295,38 +2206,24 @@
           "b1b": "C",
           "b1c": "C",
           "b2b": "D",
-          "b1a_prime": "B"
+          "b1a_prime": null
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "B",
-          "C",
-          "D"
-        ],
-        "vote_distribution": {
-          "C": 3,
-          "D": 1,
-          "B": 1
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "beijing_male_19700722_P008-Q38",
         "arm_modes": {
           "b2c": "C",
           "b1b": "A",
-          "b1c": "A",
+          "b1c": null,
           "b2b": "A",
           "b1a_prime": "C"
         },
         "has_mode_tie": true,
-        "distinct_answers": [
-          "A",
-          "C"
-        ],
-        "vote_distribution": {
-          "A": 3,
-          "C": 2
-        }
+        "distinct_answers": null,
+        "vote_distribution": null
       },
       {
         "case_id": "beijing_male_19700722_P008-Q39",

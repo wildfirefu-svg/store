@@ -1458,7 +1458,7 @@ class TestReportAnalysisConsistency:
         assert r["by_split"]["5_0"] == 1
         assert r["by_split"]["4_1"] == 0
         assert r["by_split"]["3_2"] == 0
-        assert r["arm_mode_tie_cases"] == 0
+        assert r["by_split"]["unresolved"] == 0
 
     def test_split_4_1(self):
         from scripts.phase6_6b1d_report_analysis import compute_consistency
@@ -1496,8 +1496,8 @@ class TestReportAnalysisConsistency:
         assert r["by_split"]["3_2"] == 0
         assert r["by_split"]["other"] == 1
 
-    def test_arm_mode_tie_detected(self):
-        """一臂三次 repeat 出现 A/B/C 各一次 -> 平局, 标注."""
+    def test_arm_mode_tie_excluded_from_split(self):
+        """一臂三次 repeat 出现 A/B/C 各一次 -> 平局, 该 case 计入 unresolved, 不进入 5_0/4_1/3_2/other."""
         from scripts.phase6_6b1d_report_analysis import compute_consistency
         recs = []
         recs += self._mk("Q1", "b1a_prime", ["A", "A", "A"])
@@ -1507,9 +1507,72 @@ class TestReportAnalysisConsistency:
         # b2c 三次各不同 -> 平局
         recs += self._mk("Q1", "b2c", ["A", "B", "C"])
         r = compute_consistency(recs)
-        assert r["arm_mode_tie_cases"] == 1
-        # 该 case 的 per_case_detail 应标注 has_mode_tie
-        assert r["per_case_detail"][0]["has_mode_tie"] is True
+        assert r["by_split"]["unresolved"] == 1
+        assert r["by_split"]["5_0"] == 0
+        assert r["by_split"]["4_1"] == 0
+        assert r["by_split"]["3_2"] == 0
+        assert r["by_split"]["other"] == 0
+        # 该 case 的 per_case_detail 应标注 has_mode_tie, 且 arm_modes 中平局臂为 None
+        detail = r["per_case_detail"][0]
+        assert detail["has_mode_tie"] is True
+        assert detail["arm_modes"]["b2c"] is None
+
+    def test_tie_arm_excluded_from_pairwise(self):
+        """平局臂不进入两两一致率, 分母 n 减小."""
+        from scripts.phase6_6b1d_report_analysis import compute_consistency
+        # Q1: 全 resolved, 五臂全 A -> b1a_prime-b1b agree, n=1
+        # Q2: b2c 平局 -> b2c 不进入任何含 b2c 的对, 但 b1a_prime-b1b 仍统计 (n=2)
+        recs = []
+        for arm in ["b1a_prime", "b1b", "b1c", "b2b", "b2c"]:
+            recs += self._mk("Q1", arm, ["A", "A", "A"])
+        recs += self._mk("Q2", "b1a_prime", ["A", "A", "A"])
+        recs += self._mk("Q2", "b1b", ["A", "A", "A"])
+        recs += self._mk("Q2", "b1c", ["A", "A", "A"])
+        recs += self._mk("Q2", "b2b", ["A", "A", "A"])
+        recs += self._mk("Q2", "b2c", ["A", "B", "C"])  # 平局
+        r = compute_consistency(recs)
+        pw = r["pairwise_agreement"]
+        # b1a_prime-b1b: 两 case 都 resolved -> n=2, agree=2, rate=1.0
+        assert pw["b1a_prime"]["b1b"]["n"] == 2
+        assert pw["b1a_prime"]["b1b"]["rate"] == 1.0
+        # b1a_prime-b2c: Q2 的 b2c 平局 -> n=1 (仅 Q1), agree=1, rate=1.0
+        assert pw["b1a_prime"]["b2c"]["n"] == 1
+        assert pw["b1a_prime"]["b2c"]["agree"] == 1
+        # b2c-b2c 对角: 仅 Q1 resolved -> n=1
+        assert pw["b2c"]["b2c"]["n"] == 1
+        assert pw["b2c"]["b2c"]["rate"] == 1.0
+
+    def test_pairwise_reports_denominator(self):
+        """两两一致率必须报告实际分母 n, 不能默认 80."""
+        from scripts.phase6_6b1d_report_analysis import compute_consistency
+        recs = []
+        # 1 个 resolved case + 1 个 unresolved case
+        for arm in ["b1a_prime", "b1b", "b1c", "b2b", "b2c"]:
+            recs += self._mk("Q1", arm, ["A", "A", "A"])
+        recs += self._mk("Q2", "b1a_prime", ["A", "B", "C"])
+        recs += self._mk("Q2", "b1b", ["A", "A", "A"])
+        recs += self._mk("Q2", "b1c", ["A", "A", "A"])
+        recs += self._mk("Q2", "b2b", ["A", "A", "A"])
+        recs += self._mk("Q2", "b2c", ["A", "A", "A"])
+        r = compute_consistency(recs)
+        pw = r["pairwise_agreement"]
+        # b1b-b1c: 两 case 都 resolved -> n=2
+        assert pw["b1b"]["b1c"]["n"] == 2
+        # b1a_prime-b1b: Q2 的 b1a_prime 平局 -> n=1
+        assert pw["b1a_prime"]["b1b"]["n"] == 1
+
+    def test_pairwise_by_repeat_exists(self):
+        """敏感性表: 同一 repeat 对齐的一致率必须存在且对所有臂对有 n>0."""
+        from scripts.phase6_6b1d_report_analysis import compute_consistency
+        recs = []
+        for arm in ["b1a_prime", "b1b", "b1c", "b2b", "b2c"]:
+            recs += self._mk("Q1", arm, ["A", "A", "A"])
+        r = compute_consistency(recs)
+        assert "pairwise_by_repeat" in r
+        pwbr = r["pairwise_by_repeat"]
+        for a in ["b1a_prime", "b1b", "b1c", "b2b", "b2c"]:
+            for b in ["b1a_prime", "b1b", "b1c", "b2b", "b2c"]:
+                assert pwbr[a][b]["n"] > 0, f"{a}-{b} n 应 >0"
 
     def test_pairwise_agreement_matrix_diagonal_is_one(self):
         """对角线 (i,i) 一致率应为 1.0."""

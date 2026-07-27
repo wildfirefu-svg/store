@@ -187,7 +187,8 @@ def compute_layered(records, labels):
 def _arm_mode(ans_list):
     """取一臂跨 repeat 的众数答案. 返回 (mode, is_tie).
 
-    平局时 is_tie=True, mode 取字典序最小者 (确定性, 非任意), 调用方需标注.
+    平局时 is_tie=True, mode=None (unresolved). 调用方必须排除 None 臂,
+    不得让人为答案进入分类或两两一致率统计.
     """
     if not ans_list:
         return None, False
@@ -196,21 +197,27 @@ def _arm_mode(ans_list):
         counts[a] += 1
     max_count = max(counts.values())
     winners = sorted(k for k, v in counts.items() if v == max_count)
-    return winners[0], len(winners) > 1
+    if len(winners) > 1:
+        return None, True
+    return winners[0], False
 
 
 def compute_consistency(records):
     """5. 五臂逐题答案一致性矩阵.
 
     对每个 case_id, 收集 5 臂的 predicted_answer (跨 repeat), 每臂取众数.
-    按 5 臂众数的答案分布分类:
-      - 5_0: 五臂全一致 (1 种答案)
-      - 4_1: 4:1 分布 (2 种答案, 一方 4 票)
-      - 3_2: 3:2 分布 (2 种答案, 3 票 vs 2 票)
-      - other: >=3 种答案
+    平局臂 (如 A/B/C 各一次) 标记为 unresolved (None), 不进入分类和两两统计.
 
-    同时计算 5x5 两两一致率矩阵: 对每对臂 (i,j), 统计两臂众数相同的 case 占比.
-    平局 case (至少一臂众数有平局) 单独计数, 因众数选择带任意性.
+    分类 (仅统计五臂全部 resolved 的题):
+      - 5_0: 五臂全一致 (1 种答案)
+      - 4_1: 4:1 分布
+      - 3_2: 3:2 分布
+      - other: >=3 种答案
+      - unresolved: 至少一臂平局, 不分类
+
+    两两一致率: 对每对臂 (i,j), 仅统计两臂均 resolved 的 case, 报告实际分母 n.
+    敏感性表: 同一 repeat 对齐 (不取众数, 直接比第 r 次 repeat 的答案) 的一致率,
+              作为不受平局影响的辅助口径.
     """
     by_case = defaultdict(dict)
     for r in records:
@@ -218,8 +225,7 @@ def compute_consistency(records):
             continue
         by_case[r["case_id"]].setdefault(r["arm"], []).append(r["predicted_answer"])
 
-    by_split = {"5_0": 0, "4_1": 0, "3_2": 0, "other": 0}
-    arm_mode_tie_cases = 0
+    by_split = {"5_0": 0, "4_1": 0, "3_2": 0, "other": 0, "unresolved": 0}
     per_case_detail = []
     arm_modes_per_case = {}
 
@@ -233,16 +239,24 @@ def compute_consistency(records):
             arm_modes[arm] = mode
             if is_tie:
                 has_tie = True
+
         if has_tie:
-            arm_mode_tie_cases += 1
+            by_split["unresolved"] += 1
+            per_case_detail.append({
+                "case_id": case_id,
+                "arm_modes": arm_modes,
+                "has_mode_tie": True,
+                "distinct_answers": None,
+                "vote_distribution": None,
+            })
+            arm_modes_per_case[case_id] = arm_modes
+            continue
 
         vote_counts = defaultdict(int)
         for m in arm_modes.values():
             if m is not None:
                 vote_counts[m] += 1
         distinct = len(vote_counts)
-        if distinct == 0:
-            continue
         if distinct == 1:
             by_split["5_0"] += 1
         elif distinct == 2:
@@ -259,7 +273,7 @@ def compute_consistency(records):
         per_case_detail.append({
             "case_id": case_id,
             "arm_modes": arm_modes,
-            "has_mode_tie": has_tie,
+            "has_mode_tie": False,
             "distinct_answers": sorted(vote_counts.keys()),
             "vote_distribution": dict(sorted(vote_counts.items(), key=lambda x: -x[1])),
         })
@@ -287,11 +301,37 @@ def compute_consistency(records):
                 "rate": round(agree / n, 4) if n else 0.0,
             }
 
+    pairwise_by_repeat = {}
+    by_case_repeat = defaultdict(dict)
+    for r in records:
+        if not r["parser_valid"]:
+            continue
+        by_case_repeat[r["case_id"]].setdefault(r["repeat"], {})[r["arm"]] = r["predicted_answer"]
+    for a in ARMS:
+        pairwise_by_repeat[a] = {}
+        for b in ARMS:
+            agree = 0
+            n = 0
+            for case_id, rep_map in by_case_repeat.items():
+                for rep, arm_ans in rep_map.items():
+                    ma = arm_ans.get(a)
+                    mb = arm_ans.get(b)
+                    if ma is None or mb is None:
+                        continue
+                    n += 1
+                    if ma == mb:
+                        agree += 1
+            pairwise_by_repeat[a][b] = {
+                "agree": agree,
+                "n": n,
+                "rate": round(agree / n, 4) if n else 0.0,
+            }
+
     return {
         "total_cases": total,
         "by_split": by_split,
-        "arm_mode_tie_cases": arm_mode_tie_cases,
         "pairwise_agreement": pairwise,
+        "pairwise_by_repeat": pairwise_by_repeat,
         "per_case_detail": per_case_detail,
     }
 
