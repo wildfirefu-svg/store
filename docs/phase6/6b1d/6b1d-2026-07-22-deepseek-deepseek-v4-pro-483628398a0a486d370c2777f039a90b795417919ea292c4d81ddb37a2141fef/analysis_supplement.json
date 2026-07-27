@@ -685,10 +685,150 @@
   },
   "consistency": {
     "total_cases": 80,
-    "all_5_arms_agree": 11,
-    "four_arms_agree": 48,
-    "lower_agreement": 21,
-    "agreement_rate": 0.1375,
+    "by_split": {
+      "5_0": 12,
+      "4_1": 27,
+      "3_2": 22,
+      "other": 19
+    },
+    "arm_mode_tie_cases": 36,
+    "pairwise_agreement": {
+      "b1a_prime": {
+        "b1a_prime": {
+          "agree": 80,
+          "n": 80,
+          "rate": 1.0
+        },
+        "b1b": {
+          "agree": 31,
+          "n": 80,
+          "rate": 0.3875
+        },
+        "b1c": {
+          "agree": 43,
+          "n": 80,
+          "rate": 0.5375
+        },
+        "b2b": {
+          "agree": 37,
+          "n": 80,
+          "rate": 0.4625
+        },
+        "b2c": {
+          "agree": 50,
+          "n": 80,
+          "rate": 0.625
+        }
+      },
+      "b1b": {
+        "b1a_prime": {
+          "agree": 31,
+          "n": 80,
+          "rate": 0.3875
+        },
+        "b1b": {
+          "agree": 80,
+          "n": 80,
+          "rate": 1.0
+        },
+        "b1c": {
+          "agree": 45,
+          "n": 80,
+          "rate": 0.5625
+        },
+        "b2b": {
+          "agree": 31,
+          "n": 80,
+          "rate": 0.3875
+        },
+        "b2c": {
+          "agree": 42,
+          "n": 80,
+          "rate": 0.525
+        }
+      },
+      "b1c": {
+        "b1a_prime": {
+          "agree": 43,
+          "n": 80,
+          "rate": 0.5375
+        },
+        "b1b": {
+          "agree": 45,
+          "n": 80,
+          "rate": 0.5625
+        },
+        "b1c": {
+          "agree": 80,
+          "n": 80,
+          "rate": 1.0
+        },
+        "b2b": {
+          "agree": 46,
+          "n": 80,
+          "rate": 0.575
+        },
+        "b2c": {
+          "agree": 52,
+          "n": 80,
+          "rate": 0.65
+        }
+      },
+      "b2b": {
+        "b1a_prime": {
+          "agree": 37,
+          "n": 80,
+          "rate": 0.4625
+        },
+        "b1b": {
+          "agree": 31,
+          "n": 80,
+          "rate": 0.3875
+        },
+        "b1c": {
+          "agree": 46,
+          "n": 80,
+          "rate": 0.575
+        },
+        "b2b": {
+          "agree": 80,
+          "n": 80,
+          "rate": 1.0
+        },
+        "b2c": {
+          "agree": 41,
+          "n": 80,
+          "rate": 0.5125
+        }
+      },
+      "b2c": {
+        "b1a_prime": {
+          "agree": 50,
+          "n": 80,
+          "rate": 0.625
+        },
+        "b1b": {
+          "agree": 42,
+          "n": 80,
+          "rate": 0.525
+        },
+        "b1c": {
+          "agree": 52,
+          "n": 80,
+          "rate": 0.65
+        },
+        "b2b": {
+          "agree": 41,
+          "n": 80,
+          "rate": 0.5125
+        },
+        "b2c": {
+          "agree": 80,
+          "n": 80,
+          "rate": 1.0
+        }
+      }
+    },
     "per_case_detail": [
       {
         "case_id": "guangdong_female_19800824_P001-Q1",
@@ -699,10 +839,15 @@
           "b2c": "C",
           "b1b": "C"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 3,
+          "C": 2
+        }
       },
       {
         "case_id": "guangdong_female_19800824_P001-Q2",
@@ -713,24 +858,36 @@
           "b2c": "C",
           "b1b": "C"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 4,
+          "B": 1
+        }
       },
       {
         "case_id": "guangdong_female_19800824_P001-Q3",
         "arm_modes": {
-          "b1a_prime": "B",
+          "b1a_prime": "A",
           "b1c": "B",
           "b2b": "C",
           "b2c": "B",
           "b1b": "B"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
+          "A",
           "B",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 3,
+          "A": 1,
+          "C": 1
+        }
       },
       {
         "case_id": "guangdong_female_19800824_P001-Q4",
@@ -741,10 +898,15 @@
           "b2c": "D",
           "b1b": "D"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "C",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "D": 4,
+          "C": 1
+        }
       },
       {
         "case_id": "guangdong_female_19800824_P001-Q5",
@@ -752,14 +914,18 @@
           "b1a_prime": "B",
           "b1c": "A",
           "b2b": "B",
-          "b2c": "B",
-          "b1b": "C"
+          "b2c": "A",
+          "b1b": "A"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "A",
-          "B",
-          "C"
-        ]
+          "B"
+        ],
+        "vote_distribution": {
+          "A": 3,
+          "B": 2
+        }
       },
       {
         "case_id": "chaozhou_male_19720108_P002-Q6",
@@ -770,10 +936,15 @@
           "b2c": "D",
           "b1b": "C"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "C",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "D": 3,
+          "C": 2
+        }
       },
       {
         "case_id": "chaozhou_male_19720108_P002-Q7",
@@ -784,9 +955,13 @@
           "b2c": "C",
           "b1b": "C"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 5
+        }
       },
       {
         "case_id": "chaozhou_male_19720108_P002-Q8",
@@ -797,9 +972,13 @@
           "b2c": "B",
           "b1b": "B"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 5
+        }
       },
       {
         "case_id": "chaozhou_male_19720108_P002-Q9",
@@ -808,13 +987,17 @@
           "b2b": "A",
           "b2c": "B",
           "b1a_prime": "A",
-          "b1c": "D"
+          "b1c": "A"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "A",
-          "B",
-          "D"
-        ]
+          "B"
+        ],
+        "vote_distribution": {
+          "A": 3,
+          "B": 2
+        }
       },
       {
         "case_id": "chaozhou_male_19720108_P002-Q10",
@@ -825,10 +1008,15 @@
           "b1a_prime": "A",
           "b1c": "C"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "A",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 4,
+          "A": 1
+        }
       },
       {
         "case_id": "male_19611230_P003-Q11",
@@ -837,13 +1025,21 @@
           "b2b": "C",
           "b2c": "D",
           "b1a_prime": "B",
-          "b1c": "B"
+          "b1c": "A"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
+          "A",
           "B",
           "C",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 2,
+          "C": 1,
+          "D": 1,
+          "A": 1
+        }
       },
       {
         "case_id": "male_19611230_P003-Q12",
@@ -854,10 +1050,15 @@
           "b1a_prime": "A",
           "b1c": "A"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "B"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 4,
+          "B": 1
+        }
       },
       {
         "case_id": "male_19611230_P003-Q13",
@@ -868,10 +1069,15 @@
           "b1a_prime": "A",
           "b1c": "B"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "B"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 4,
+          "A": 1
+        }
       },
       {
         "case_id": "male_19611230_P003-Q14",
@@ -882,25 +1088,38 @@
           "b1a_prime": "C",
           "b1c": "A"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "C",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 2,
+          "C": 2,
+          "D": 1
+        }
       },
       {
         "case_id": "male_19611230_P003-Q15",
         "arm_modes": {
           "b1b": "C",
           "b2b": "C",
-          "b2c": "C",
+          "b2c": "A",
           "b1a_prime": "B",
           "b1c": "C"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
+          "A",
           "B",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 3,
+          "A": 1,
+          "B": 1
+        }
       },
       {
         "case_id": "female_19831028_P004-Q16",
@@ -911,39 +1130,53 @@
           "b1a_prime": "C",
           "b1c": "B"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "B",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 4,
+          "C": 1
+        }
       },
       {
         "case_id": "female_19831028_P004-Q17",
         "arm_modes": {
           "b1c": "A",
-          "b2c": "B",
+          "b2c": "A",
           "b1a_prime": "A",
           "b1b": "B",
           "b2b": "D"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "A",
           "B",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 3,
+          "B": 1,
+          "D": 1
+        }
       },
       {
         "case_id": "female_19831028_P004-Q18",
         "arm_modes": {
           "b1c": "A",
           "b2c": "A",
-          "b1a_prime": "B",
+          "b1a_prime": "A",
           "b1b": "A",
           "b2b": "A"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
-          "A",
-          "B"
-        ]
+          "A"
+        ],
+        "vote_distribution": {
+          "A": 5
+        }
       },
       {
         "case_id": "female_19831028_P004-Q19",
@@ -954,10 +1187,15 @@
           "b1b": "A",
           "b2b": "C"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 3,
+          "A": 2
+        }
       },
       {
         "case_id": "female_19831028_P004-Q20",
@@ -968,24 +1206,36 @@
           "b1b": "A",
           "b2b": "A"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 3,
+          "C": 2
+        }
       },
       {
         "case_id": "male_19710412_P005-Q21",
         "arm_modes": {
-          "b1c": "B",
+          "b1c": "A",
           "b2c": "C",
           "b1a_prime": "B",
           "b1b": "C",
           "b2b": "C"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
+          "A",
           "B",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 3,
+          "A": 1,
+          "B": 1
+        }
       },
       {
         "case_id": "male_19710412_P005-Q22",
@@ -993,14 +1243,18 @@
           "b1c": "B",
           "b2c": "B",
           "b1a_prime": "B",
-          "b1b": "C",
+          "b1b": "B",
           "b2b": "A"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "A",
-          "B",
-          "C"
-        ]
+          "B"
+        ],
+        "vote_distribution": {
+          "B": 4,
+          "A": 1
+        }
       },
       {
         "case_id": "male_19710412_P005-Q23",
@@ -1011,11 +1265,17 @@
           "b1b": "C",
           "b2b": "A"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "A",
           "B",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 2,
+          "B": 2,
+          "A": 1
+        }
       },
       {
         "case_id": "male_19710412_P005-Q24",
@@ -1026,25 +1286,34 @@
           "b1b": "A",
           "b2b": "D"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 4,
+          "D": 1
+        }
       },
       {
         "case_id": "male_19710412_P005-Q25",
         "arm_modes": {
-          "b2b": "D",
+          "b2b": "B",
           "b1a_prime": "B",
           "b1b": "A",
           "b1c": "A",
           "b2c": "B"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "A",
-          "B",
-          "D"
-        ]
+          "B"
+        ],
+        "vote_distribution": {
+          "B": 3,
+          "A": 2
+        }
       },
       {
         "case_id": "female_19830326_P006-Q26",
@@ -1055,25 +1324,34 @@
           "b1c": "C",
           "b2c": "C"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "B",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 3,
+          "B": 2
+        }
       },
       {
         "case_id": "female_19830326_P006-Q27",
         "arm_modes": {
           "b2b": "A",
-          "b1a_prime": "D",
+          "b1a_prime": "A",
           "b1b": "C",
           "b1c": "C",
           "b2c": "C"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "A",
-          "C",
-          "D"
-        ]
+          "C"
+        ],
+        "vote_distribution": {
+          "C": 3,
+          "A": 2
+        }
       },
       {
         "case_id": "female_19830326_P006-Q28",
@@ -1084,10 +1362,15 @@
           "b1c": "A",
           "b2c": "A"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 3,
+          "A": 2
+        }
       },
       {
         "case_id": "female_19830326_P006-Q29",
@@ -1095,13 +1378,20 @@
           "b2b": "B",
           "b1a_prime": "B",
           "b1b": "C",
-          "b1c": "B",
+          "b1c": "A",
           "b2c": "B"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
+          "A",
           "B",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 3,
+          "C": 1,
+          "A": 1
+        }
       },
       {
         "case_id": "female_19830326_P006-Q30",
@@ -1112,9 +1402,13 @@
           "b1c": "B",
           "b2c": "B"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 5
+        }
       },
       {
         "case_id": "female_19800921_P007-Q31",
@@ -1125,9 +1419,13 @@
           "b1c": "C",
           "b2c": "C"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 5
+        }
       },
       {
         "case_id": "female_19800921_P007-Q32",
@@ -1138,10 +1436,15 @@
           "b1c": "C",
           "b2c": "C"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "C",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 4,
+          "D": 1
+        }
       },
       {
         "case_id": "female_19800921_P007-Q33",
@@ -1152,24 +1455,34 @@
           "b2b": "A",
           "b1a_prime": "D"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 4,
+          "D": 1
+        }
       },
       {
         "case_id": "female_19800921_P007-Q34",
         "arm_modes": {
           "b2c": "D",
-          "b1b": "C",
+          "b1b": "B",
           "b1c": "D",
           "b2b": "D",
           "b1a_prime": "D"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
-          "C",
+          "B",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "D": 4,
+          "B": 1
+        }
       },
       {
         "case_id": "female_19800921_P007-Q35",
@@ -1180,24 +1493,34 @@
           "b2b": "C",
           "b1a_prime": "A"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "A",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 3,
+          "C": 2
+        }
       },
       {
         "case_id": "male_20070131_P008-Q36",
         "arm_modes": {
-          "b2c": "D",
+          "b2c": "A",
           "b1b": "B",
-          "b1c": "B",
-          "b2b": "D",
+          "b1c": "A",
+          "b2b": "A",
           "b1a_prime": "B"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
-          "B",
-          "D"
-        ]
+          "A",
+          "B"
+        ],
+        "vote_distribution": {
+          "A": 3,
+          "B": 2
+        }
       },
       {
         "case_id": "male_20070131_P008-Q37",
@@ -1206,11 +1529,17 @@
           "b1b": "B",
           "b1c": "B",
           "b2b": "B",
-          "b1a_prime": "B"
+          "b1a_prime": "A"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
+          "A",
           "B"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 4,
+          "A": 1
+        }
       },
       {
         "case_id": "male_20070131_P008-Q38",
@@ -1221,24 +1550,34 @@
           "b2b": "D",
           "b1a_prime": "D"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "D": 4,
+          "A": 1
+        }
       },
       {
         "case_id": "male_20070131_P008-Q39",
         "arm_modes": {
-          "b2c": "B",
+          "b2c": "A",
           "b1b": "C",
           "b1c": "C",
           "b2b": "C",
           "b1a_prime": "C"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
-          "B",
+          "A",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 4,
+          "A": 1
+        }
       },
       {
         "case_id": "male_20070131_P008-Q40",
@@ -1249,10 +1588,15 @@
           "b2b": "C",
           "b1a_prime": "B"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "B",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 3,
+          "B": 2
+        }
       },
       {
         "case_id": "guangdong_female_19511114_P001-Q1",
@@ -1263,10 +1607,15 @@
           "b2c": "C",
           "b1b": "C"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "C",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 4,
+          "D": 1
+        }
       },
       {
         "case_id": "guangdong_female_19511114_P001-Q2",
@@ -1277,10 +1626,15 @@
           "b2c": "D",
           "b1b": "B"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "D": 4,
+          "B": 1
+        }
       },
       {
         "case_id": "guangdong_female_19511114_P001-Q3",
@@ -1291,26 +1645,34 @@
           "b2c": "D",
           "b1b": "B"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 4,
+          "D": 1
+        }
       },
       {
         "case_id": "guangdong_female_19511114_P001-Q4",
         "arm_modes": {
-          "b1a_prime": "D",
-          "b1c": "C",
+          "b1a_prime": "B",
+          "b1c": "A",
           "b2b": "A",
           "b2c": "B",
           "b1b": "B"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "A",
-          "B",
-          "C",
-          "D"
-        ]
+          "B"
+        ],
+        "vote_distribution": {
+          "B": 3,
+          "A": 2
+        }
       },
       {
         "case_id": "guangdong_female_19511114_P001-Q5",
@@ -1321,10 +1683,15 @@
           "b2c": "B",
           "b1b": "C"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 4,
+          "C": 1
+        }
       },
       {
         "case_id": "hongkong_female_19870705_P002-Q6",
@@ -1335,10 +1702,15 @@
           "b2c": "B",
           "b1b": "D"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "D": 3,
+          "B": 2
+        }
       },
       {
         "case_id": "hongkong_female_19870705_P002-Q7",
@@ -1347,12 +1719,17 @@
           "b1c": "D",
           "b2b": "D",
           "b2c": "D",
-          "b1b": "C"
+          "b1b": "B"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
-          "C",
+          "B",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "D": 4,
+          "B": 1
+        }
       },
       {
         "case_id": "hongkong_female_19870705_P002-Q8",
@@ -1363,11 +1740,17 @@
           "b2c": "D",
           "b1b": "C"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "C",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 2,
+          "D": 2,
+          "C": 1
+        }
       },
       {
         "case_id": "hongkong_female_19870705_P002-Q9",
@@ -1378,24 +1761,34 @@
           "b1a_prime": "B",
           "b1c": "B"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 5
+        }
       },
       {
         "case_id": "hongkong_female_19870705_P002-Q10",
         "arm_modes": {
           "b1b": "A",
-          "b2b": "B",
+          "b2b": "A",
           "b2c": "B",
           "b1a_prime": "C",
           "b1c": "B"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "A",
           "B",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 2,
+          "B": 2,
+          "C": 1
+        }
       },
       {
         "case_id": "miyazaki_male_19830421_P003-Q11",
@@ -1406,9 +1799,13 @@
           "b1a_prime": "D",
           "b1c": "D"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "D": 5
+        }
       },
       {
         "case_id": "miyazaki_male_19830421_P003-Q12",
@@ -1419,10 +1816,15 @@
           "b1a_prime": "A",
           "b1c": "A"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "B"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 4,
+          "B": 1
+        }
       },
       {
         "case_id": "miyazaki_male_19830421_P003-Q13",
@@ -1433,52 +1835,70 @@
           "b1a_prime": "B",
           "b1c": "B"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 5
+        }
       },
       {
         "case_id": "miyazaki_male_19830421_P003-Q14",
         "arm_modes": {
           "b1b": "A",
-          "b2b": "B",
+          "b2b": "A",
           "b2c": "B",
           "b1a_prime": "B",
           "b1c": "B"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "A",
           "B"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 3,
+          "A": 2
+        }
       },
       {
         "case_id": "miyazaki_male_19830421_P003-Q15",
         "arm_modes": {
           "b1b": "A",
-          "b2b": "C",
+          "b2b": "A",
           "b2c": "A",
           "b1a_prime": "A",
           "b1c": "A"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
-          "A",
-          "C"
-        ]
+          "A"
+        ],
+        "vote_distribution": {
+          "A": 5
+        }
       },
       {
         "case_id": "singapore_male_19930408_P004-Q16",
         "arm_modes": {
           "b1b": "C",
           "b2b": "A",
-          "b2c": "D",
-          "b1a_prime": "D",
+          "b2c": "A",
+          "b1a_prime": "A",
           "b1c": "D"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "A",
           "C",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 3,
+          "C": 1,
+          "D": 1
+        }
       },
       {
         "case_id": "singapore_male_19930408_P004-Q17",
@@ -1489,25 +1909,36 @@
           "b1b": "D",
           "b2b": "B"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "D": 3,
+          "B": 2
+        }
       },
       {
         "case_id": "singapore_male_19930408_P004-Q18",
         "arm_modes": {
-          "b1c": "B",
+          "b1c": "A",
           "b2c": "C",
-          "b1a_prime": "C",
+          "b1a_prime": "A",
           "b1b": "C",
           "b2b": "D"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
-          "B",
+          "A",
           "C",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 2,
+          "C": 2,
+          "D": 1
+        }
       },
       {
         "case_id": "singapore_male_19930408_P004-Q19",
@@ -1518,26 +1949,36 @@
           "b1b": "B",
           "b2b": "A"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "B",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "D": 3,
+          "B": 1,
+          "A": 1
+        }
       },
       {
         "case_id": "singapore_male_19930408_P004-Q20",
         "arm_modes": {
-          "b1c": "D",
+          "b1c": "B",
           "b2c": "C",
           "b1a_prime": "C",
           "b1b": "B",
           "b2b": "C"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "B",
-          "C",
-          "D"
-        ]
+          "C"
+        ],
+        "vote_distribution": {
+          "C": 3,
+          "B": 2
+        }
       },
       {
         "case_id": "malaysia_male_19880110_P005-Q21",
@@ -1548,10 +1989,15 @@
           "b1b": "D",
           "b2b": "B"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "D": 4,
+          "B": 1
+        }
       },
       {
         "case_id": "malaysia_male_19880110_P005-Q22",
@@ -1562,10 +2008,15 @@
           "b1b": "A",
           "b2b": "B"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "B"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 3,
+          "B": 2
+        }
       },
       {
         "case_id": "malaysia_male_19880110_P005-Q23",
@@ -1576,10 +2027,15 @@
           "b1b": "B",
           "b2b": "A"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "B"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 4,
+          "B": 1
+        }
       },
       {
         "case_id": "malaysia_male_19880110_P005-Q24",
@@ -1590,9 +2046,13 @@
           "b1b": "B",
           "b2b": "B"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 5
+        }
       },
       {
         "case_id": "malaysia_male_19880110_P005-Q25",
@@ -1603,10 +2063,15 @@
           "b1c": "B",
           "b2c": "D"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 3,
+          "D": 2
+        }
       },
       {
         "case_id": "malaysia_male_19730824_P006-Q26",
@@ -1617,10 +2082,15 @@
           "b1c": "A",
           "b2c": "C"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 3,
+          "A": 2
+        }
       },
       {
         "case_id": "malaysia_male_19730824_P006-Q27",
@@ -1631,11 +2101,17 @@
           "b1c": "D",
           "b2c": "B"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "B",
           "C",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 3,
+          "C": 1,
+          "D": 1
+        }
       },
       {
         "case_id": "malaysia_male_19730824_P006-Q28",
@@ -1646,11 +2122,17 @@
           "b1c": "D",
           "b2c": "B"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B",
           "C",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 2,
+          "D": 2,
+          "C": 1
+        }
       },
       {
         "case_id": "malaysia_male_19730824_P006-Q29",
@@ -1661,10 +2143,15 @@
           "b1c": "C",
           "b2c": "C"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 4,
+          "B": 1
+        }
       },
       {
         "case_id": "malaysia_male_19730824_P006-Q30",
@@ -1673,27 +2160,40 @@
           "b1a_prime": "B",
           "b1b": "C",
           "b1c": "D",
-          "b2c": "C"
+          "b2c": "B"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "B",
           "C",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "D": 2,
+          "B": 2,
+          "C": 1
+        }
       },
       {
         "case_id": "taiwan_female_19880215_P007-Q31",
         "arm_modes": {
           "b2b": "D",
           "b1a_prime": "C",
-          "b1b": "D",
+          "b1b": "B",
           "b1c": "D",
           "b2c": "D"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
+          "B",
           "C",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "D": 3,
+          "C": 1,
+          "B": 1
+        }
       },
       {
         "case_id": "taiwan_female_19880215_P007-Q32",
@@ -1704,11 +2204,17 @@
           "b1c": "B",
           "b2c": "B"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "B",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "B": 3,
+          "D": 1,
+          "A": 1
+        }
       },
       {
         "case_id": "taiwan_female_19880215_P007-Q33",
@@ -1719,10 +2225,15 @@
           "b2b": "D",
           "b1a_prime": "D"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "B",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "D": 4,
+          "B": 1
+        }
       },
       {
         "case_id": "taiwan_female_19880215_P007-Q34",
@@ -1733,9 +2244,13 @@
           "b2b": "A",
           "b1a_prime": "A"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "A"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 5
+        }
       },
       {
         "case_id": "taiwan_female_19880215_P007-Q35",
@@ -1746,10 +2261,15 @@
           "b2b": "A",
           "b1a_prime": "D"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "D": 4,
+          "A": 1
+        }
       },
       {
         "case_id": "beijing_male_19700722_P008-Q36",
@@ -1760,9 +2280,13 @@
           "b2b": "C",
           "b1a_prime": "C"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 5
+        }
       },
       {
         "case_id": "beijing_male_19700722_P008-Q37",
@@ -1771,27 +2295,38 @@
           "b1b": "C",
           "b1c": "C",
           "b2b": "D",
-          "b1a_prime": "C"
+          "b1a_prime": "B"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
+          "B",
           "C",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "C": 3,
+          "D": 1,
+          "B": 1
+        }
       },
       {
         "case_id": "beijing_male_19700722_P008-Q38",
         "arm_modes": {
           "b2c": "C",
           "b1b": "A",
-          "b1c": "B",
+          "b1c": "A",
           "b2b": "A",
           "b1a_prime": "C"
         },
+        "has_mode_tie": true,
         "distinct_answers": [
           "A",
-          "B",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 3,
+          "C": 2
+        }
       },
       {
         "case_id": "beijing_male_19700722_P008-Q39",
@@ -1802,10 +2337,15 @@
           "b2b": "D",
           "b1a_prime": "A"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "D"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 4,
+          "D": 1
+        }
       },
       {
         "case_id": "beijing_male_19700722_P008-Q40",
@@ -1816,10 +2356,15 @@
           "b2b": "A",
           "b1a_prime": "A"
         },
+        "has_mode_tie": false,
         "distinct_answers": [
           "A",
           "C"
-        ]
+        ],
+        "vote_distribution": {
+          "A": 4,
+          "C": 1
+        }
       }
     ]
   },
@@ -1827,6 +2372,7 @@
     {
       "case_id": "beijing_male_19700722_P008-Q36",
       "year": "2025",
+      "repeat": 0,
       "correct": true,
       "predicted": "C",
       "expected": "C",
@@ -1834,26 +2380,19 @@
       "raw_answer_len": 244
     },
     {
-      "case_id": "beijing_male_19700722_P008-Q36",
+      "case_id": "beijing_male_19700722_P008-Q40",
       "year": "2025",
+      "repeat": 0,
       "correct": true,
-      "predicted": "C",
-      "expected": "C",
-      "raw_answer_excerpt": "根据紫微斗数命盘分析，命宫紫微（平）坐子，紫微为帝星主贵气与学识，但落平位力量受限，暗示先天学业运势中等，不易取得极高学历。身宫破军（得）在寅，破军主变动与开创，得地则后天后劲强，但易有波折中断之象。结合1970年北京的时代背景，该年代高等教育资源稀缺，命主可能因环境或自身选择未能完成高等教育，学历中断于较高阶段。综合判断，高中或专科肄业较为符合命盘特征。\n\n最终答案：C",
-      "raw_answer_len": 187
-    },
-    {
-      "case_id": "beijing_male_19700722_P008-Q36",
-      "year": "2025",
-      "correct": false,
-      "predicted": "D",
-      "expected": "C",
-      "raw_answer_excerpt": "根据命主出生信息排定八字：庚戌年、癸未月、癸卯日、庚申时。日主癸水，月柱癸水比肩帮扶，年时双透庚金正印，坐申金印星强根，形成“杀印相生”格局。印星极旺且为用神，主学业优异、学历高深。结合时代背景（1970年出生，80年代末至90年代高等教育逐步正常化），如此强盛的印星必然在学历上有突出表现。紫微斗数命宫紫微（平）虽非庙旺，但身宫破军（得）位于寅宫，破军在寅为得地，有开创突破之象，亦暗示高等求知过程...",
-      "raw_answer_len": 228
+      "predicted": "A",
+      "expected": "A",
+      "raw_answer_excerpt": "根据命主紫微斗数命盘，命宫在子，主星紫微（平）；身宫在寅，主星破军（得）。  \n紫微为帝星，坐命宫则天生具有领导气质与自尊心，注重原则，待人接物能展现出得体大方的风范，易近贵人，赢得他人尊敬。子宫紫微虽为平势，能量稍有不足，但本质仍存。同时，身宫破军得地，代表后天行动力强、敢闯敢拼、重情重义，这种组合使外在评价既稳重又有魄力，朋友长官晚辈多会因他的义气与原则而欣赏喜爱，符合A项描述。而独处、放荡不...",
+      "raw_answer_len": 232
     },
     {
       "case_id": "beijing_male_19700722_P008-Q37",
       "year": "2025",
+      "repeat": 0,
       "correct": false,
       "predicted": "D",
       "expected": "A",
@@ -1861,19 +2400,31 @@
       "raw_answer_len": 226
     },
     {
-      "case_id": "beijing_male_19700722_P008-Q37",
+      "case_id": "beijing_male_19700722_P008-Q38",
       "year": "2025",
+      "repeat": 0,
+      "correct": false,
+      "predicted": "C",
+      "expected": "D",
+      "raw_answer_excerpt": "根据命主八字分析，1970年庚戌年出生男性，阳年男顺排大运。日柱癸卯，生于未月，时柱庚申，印旺身弱，喜财官。原局卯未半合，待亥字填实引发三合木局，食伤动而生财。27岁起进入丙戌大运，与年柱伏吟，虽有变动之象，但丙戌运仍在北方。37岁起进入丁亥大运，亥为驿马，且亥卯未三合木局，引动日支，天干丁癸冲，为离乡之象。尤其37岁（2007年）丁亥流年，岁运并临，天克地合日柱，是人生重大转折点，极有可能搬迁至...",
+      "raw_answer_len": 309
+    },
+    {
+      "case_id": "beijing_male_19700722_P008-Q39",
+      "year": "2025",
+      "repeat": 0,
       "correct": false,
       "predicted": "D",
-      "expected": "A",
-      "raw_answer_excerpt": "根据命盘信息，命宫在子，主星紫微平位，紫微虽为帝星但力道不足，代表早年环境可能并非显赫，需靠自身努力。身宫在寅，主星破军得地，破军属水，为破耗变动之星，得地则力量强旺，主后天发展多变动、开创与突破，不喜守成，适合经商、创业或需要不断突破的工作。命宫与身宫结合来看，命主出社会后可能倾向于选择带有开创性和变动性的道路，而非稳定的体制内或按部就班的职业。选项A和B较稳定，与破军特质不符；C选项虽涉及企业...",
-      "raw_answer_len": 270
+      "expected": "C",
+      "raw_answer_excerpt": "### 推理分析\n\n根据提供的紫微斗数命盘精简信息可知：\n- **命宫在子**：主星**紫微（平）**。紫微为帝星，属阴土，主脾胃，一般代表体质先天基础不差，但无辅弼会照时为“孤君”，平位力量中等，身体底子尚可，无严重先天暗疾。\n- **身宫在寅**：主星**破军（得）**。身宫主后天运势与身体变化，破军属阴水，为耗星、先锋星，主动荡、破坏、伤残、手术。破军“得”地虽有一定助力，但其破耗本质不变，...",
+      "raw_answer_len": 485
     }
   ],
   "qualitative_b2c": [
     {
       "case_id": "beijing_male_19700722_P008-Q36",
       "year": "2025",
+      "repeat": 0,
       "correct": true,
       "predicted": "C",
       "expected": "C",
@@ -1881,17 +2432,19 @@
       "raw_answer_len": 514
     },
     {
-      "case_id": "beijing_male_19700722_P008-Q36",
+      "case_id": "beijing_male_19700722_P008-Q40",
       "year": "2025",
+      "repeat": 0,
       "correct": true,
-      "predicted": "C",
-      "expected": "C",
-      "raw_answer_excerpt": "### 八字分析\n命主八字为：**庚戌 癸未 癸卯 己未**，日主癸水生于未月，失令，但年干庚金正印生身，月干癸水比肩帮扶，日坐卯木食神泄秀。局中七杀（未、己）重重，杀旺身弱，幸有卯木食神制杀、庚金印星化杀，构成 **“食神制杀”与“杀印相生”** 的组合。  \n学历主要看印星，年干庚金为用，但坐戌土燥火脆金，印星根基受损，力量不足。食神制杀则主技艺、实用才能，早年大运走甲申、乙酉，金运地支助印，...",
-      "raw_answer_len": 600
+      "predicted": "A",
+      "expected": "A",
+      "raw_answer_excerpt": "结合八字与紫微斗数综合推断：\n- **八字层面**：癸水日主生于未月，官杀重重但有庚金正印化杀、卯木食神制杀，构成“杀印相生、食神制杀”的格局。这类人原则性强、重义气，对外处事得体，刚柔并济，亲上近贵，易得长辈、长官、朋友及晚辈的扶持与喜爱。\n- **紫微层面**：命宫紫微坐守，自带威仪与领导气质；官禄宫廉贞天府，处事稳重有章法；财帛宫武曲天相，理财有道、行为端正；迁移宫贪狼旺相，外缘极佳，虽带天...",
+      "raw_answer_len": 306
     },
     {
       "case_id": "beijing_male_19700722_P008-Q37",
       "year": "2025",
+      "repeat": 0,
       "correct": false,
       "predicted": "C",
       "expected": "A",
@@ -1899,22 +2452,24 @@
       "raw_answer_len": 718
     },
     {
-      "case_id": "beijing_male_19700722_P008-Q37",
+      "case_id": "beijing_male_19700722_P008-Q38",
       "year": "2025",
+      "repeat": 0,
       "correct": false,
       "predicted": "C",
-      "expected": "A",
-      "raw_answer_excerpt": "### 推理分析\n\n#### 一、八字命局初步分析\n1.  **日主强弱与格局**\n    *   日主癸水，生于未月（季夏），土旺水囚，火土燥气逼人。天干透出己土七杀，地支卯未半合木局，但全局土势浩大（未、未、戌），日主癸水在地支无强根，仅年支戌中有辛金余气，月干癸水比肩帮扶，属于**身弱**格局。\n    *   命局官杀（土）极旺，食神（卯木）制杀，但土重木折，食神制杀之力不足。年柱庚戌为正...",
-      "raw_answer_len": 1640
+      "expected": "D",
+      "raw_answer_excerpt": "根据命主八字与紫微斗数盘的综合分析，搬迁去厦门的重大变动应发生在37—41岁之间。\n\n**八字层面**：  \n- 日主癸水生于未月，官杀重而身弱，需印比相助。早年大运甲申、乙酉（5-24岁）金旺生水，尚可安稳。  \n- 25-34岁进入丙戌大运，财官混杂，压力渐增，但仍在原籍。35岁后进入丁亥大运（35-44岁），亥水助身，同时与原局月日支构成“亥卯未”三合食神木局，食神生财，且亥水为动星，主远行...",
+      "raw_answer_len": 563
     },
     {
-      "case_id": "beijing_male_19700722_P008-Q37",
+      "case_id": "beijing_male_19700722_P008-Q39",
       "year": "2025",
+      "repeat": 0,
       "correct": false,
-      "predicted": "C",
-      "expected": "A",
-      "raw_answer_excerpt": "### 八字分析\n- **日主强弱**：癸水生于未月，失令；地支未土重重，时干己土七杀透出，官杀极旺。日主仅得年干庚金正印及月干癸水比肩生扶，但地支无根，身弱无疑。\n- **格局特点**：官杀混杂（年支戌土正官，月时未土七杀），日支卯木食神制杀，年干庚金正印化杀，构成 **“食神制杀”** 与 **“杀印相生”** 双格局。食神主才华技艺，印主学历文职，显示命主有靠专业能力及贵人提携化解压力、获取...",
-      "raw_answer_len": 730
+      "predicted": "B",
+      "expected": "C",
+      "raw_answer_excerpt": "### 八字分析\n- **日主癸水**，生于未月，土旺水囚。四柱中土势强旺（年支戌土、月时支双未土），日主身弱。\n- **官杀混杂**，时柱己未七杀贴身克身，压力极大。日支卯木食神可制杀，但卯未半合木局被牵制，制杀无力，易精神受压，思绪繁杂。\n- **五行失衡**，水土交战，肾水弱而脾胃土强，易有消化、泌尿系统隐患，亦主精力不济、失眠多梦。\n\n### 紫微斗数分析\n- **疾厄宫**在未，主星天同...",
+      "raw_answer_len": 480
     }
   ],
   "parse_failures": {

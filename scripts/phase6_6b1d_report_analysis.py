@@ -184,78 +184,159 @@ def compute_layered(records, labels):
     return out
 
 
+def _arm_mode(ans_list):
+    """取一臂跨 repeat 的众数答案. 返回 (mode, is_tie).
+
+    平局时 is_tie=True, mode 取字典序最小者 (确定性, 非任意), 调用方需标注.
+    """
+    if not ans_list:
+        return None, False
+    counts = defaultdict(int)
+    for a in ans_list:
+        counts[a] += 1
+    max_count = max(counts.values())
+    winners = sorted(k for k, v in counts.items() if v == max_count)
+    return winners[0], len(winners) > 1
+
+
 def compute_consistency(records):
     """5. 五臂逐题答案一致性矩阵.
 
-    对每个 case_id, 收集 5 臂的 predicted_answer (跨 repeat 取多数或全部),
-    统计: 全一致 / 4 臂一致 / 更低一致性 的 case 数.
+    对每个 case_id, 收集 5 臂的 predicted_answer (跨 repeat), 每臂取众数.
+    按 5 臂众数的答案分布分类:
+      - 5_0: 五臂全一致 (1 种答案)
+      - 4_1: 4:1 分布 (2 种答案, 一方 4 票)
+      - 3_2: 3:2 分布 (2 种答案, 3 票 vs 2 票)
+      - other: >=3 种答案
+
+    同时计算 5x5 两两一致率矩阵: 对每对臂 (i,j), 统计两臂众数相同的 case 占比.
+    平局 case (至少一臂众数有平局) 单独计数, 因众数选择带任意性.
     """
     by_case = defaultdict(dict)
     for r in records:
         if not r["parser_valid"]:
             continue
         by_case[r["case_id"]].setdefault(r["arm"], []).append(r["predicted_answer"])
-    full_agree = 0
-    four_agree = 0
-    lower = 0
-    total = 0
-    per_case = []
+
+    by_split = {"5_0": 0, "4_1": 0, "3_2": 0, "other": 0}
+    arm_mode_tie_cases = 0
+    per_case_detail = []
+    arm_modes_per_case = {}
+
     for case_id, arm_ans in by_case.items():
         if len(arm_ans) < 5:
             continue
-        total += 1
-        # 取每臂的众数 predicted_answer
         arm_modes = {}
+        has_tie = False
         for arm, ans_list in arm_ans.items():
-            if ans_list:
-                # majority
-                counts = defaultdict(int)
-                for a in ans_list:
-                    counts[a] += 1
-                arm_modes[arm] = max(counts, key=counts.get)
-        distinct = set(arm_modes.values())
-        if len(distinct) == 1:
-            full_agree += 1
-        elif len(distinct) == 2:
-            four_agree += 1
+            mode, is_tie = _arm_mode(ans_list)
+            arm_modes[arm] = mode
+            if is_tie:
+                has_tie = True
+        if has_tie:
+            arm_mode_tie_cases += 1
+
+        vote_counts = defaultdict(int)
+        for m in arm_modes.values():
+            if m is not None:
+                vote_counts[m] += 1
+        distinct = len(vote_counts)
+        if distinct == 0:
+            continue
+        if distinct == 1:
+            by_split["5_0"] += 1
+        elif distinct == 2:
+            sorted_votes = sorted(vote_counts.values(), reverse=True)
+            if sorted_votes[0] == 4 and sorted_votes[1] == 1:
+                by_split["4_1"] += 1
+            elif sorted_votes[0] == 3 and sorted_votes[1] == 2:
+                by_split["3_2"] += 1
+            else:
+                by_split["other"] += 1
         else:
-            lower += 1
-        per_case.append({"case_id": case_id, "arm_modes": arm_modes,
-                         "distinct_answers": sorted(distinct)})
+            by_split["other"] += 1
+
+        per_case_detail.append({
+            "case_id": case_id,
+            "arm_modes": arm_modes,
+            "has_mode_tie": has_tie,
+            "distinct_answers": sorted(vote_counts.keys()),
+            "vote_distribution": dict(sorted(vote_counts.items(), key=lambda x: -x[1])),
+        })
+        arm_modes_per_case[case_id] = arm_modes
+
+    total = sum(by_split.values())
+
+    pairwise = {}
+    for a in ARMS:
+        pairwise[a] = {}
+        for b in ARMS:
+            agree = 0
+            n = 0
+            for case_id, modes in arm_modes_per_case.items():
+                ma = modes.get(a)
+                mb = modes.get(b)
+                if ma is None or mb is None:
+                    continue
+                n += 1
+                if ma == mb:
+                    agree += 1
+            pairwise[a][b] = {
+                "agree": agree,
+                "n": n,
+                "rate": round(agree / n, 4) if n else 0.0,
+            }
+
     return {
         "total_cases": total,
-        "all_5_arms_agree": full_agree,
-        "four_arms_agree": four_agree,
-        "lower_agreement": lower,
-        "agreement_rate": round(full_agree / total, 4) if total else 0.0,
-        "per_case_detail": per_case,
+        "by_split": by_split,
+        "arm_mode_tie_cases": arm_mode_tie_cases,
+        "pairwise_agreement": pairwise,
+        "per_case_detail": per_case_detail,
     }
 
 
 def compute_qualitative(records, arm, k=5):
-    """6. b2b/b2c 定性案例 (各 k 例, 正确/错误混合)."""
+    """6. b2b/b2c 定性案例 (k 个不同 case, 正确/错误混合).
+
+    按 case_id 去重: 每个 case 只取一条代表性记录 (repeat=0, 即首次).
+    分别从"该 case 答对"和"该 case 答错"的 case 集合中各取前 k/2 (按 case_id 排序),
+    不足时用另一类补足, 保证 k 个不同 case.
+    """
     arm_recs = [r for r in records if r["arm"] == arm and r["parser_valid"]]
-    correct = [r for r in arm_recs if r["correct"]]
-    wrong = [r for r in arm_recs if not r["correct"]]
-    # 取前 k/2 正确 + k/2 错误 (按 case_id 排序保证可复现)
-    correct.sort(key=lambda r: r["case_id"])
-    wrong.sort(key=lambda r: r["case_id"])
+    by_case = defaultdict(list)
+    for r in arm_recs:
+        by_case[r["case_id"]].append(r)
+    # 每个 case 取 repeat 最小的一条作为代表
+    case_reps = {}
+    for cid, recs in by_case.items():
+        recs.sort(key=lambda r: r["repeat"])
+        case_reps[cid] = recs[0]
+
+    correct_cases = sorted(cid for cid, r in case_reps.items() if r["correct"])
+    wrong_cases = sorted(cid for cid, r in case_reps.items() if not r["correct"])
+
     half = k // 2
-    picked = correct[:half] + wrong[:k - half]
-    # 如果某一类不足, 用另一类补
-    if len(picked) < k:
-        pool = (correct[half:] + wrong[k - half:])
-        pool.sort(key=lambda r: r["case_id"])
-        picked.extend(pool[:k - len(picked)])
+    picked_cids = correct_cases[:half] + wrong_cases[:k - half]
+    if len(picked_cids) < k:
+        pool = correct_cases[half:] + wrong_cases[k - half:]
+        for cid in pool:
+            if cid not in picked_cids:
+                picked_cids.append(cid)
+            if len(picked_cids) >= k:
+                break
+    picked_cids = picked_cids[:k]
+
     return [{
-        "case_id": r["case_id"],
-        "year": r["year"],
-        "correct": r["correct"],
-        "predicted": r["predicted_answer"],
-        "expected": r["expected_answer"],
-        "raw_answer_excerpt": r["raw_answer"][:200] + ("..." if len(r["raw_answer"]) > 200 else ""),
-        "raw_answer_len": r["raw_answer_len"],
-    } for r in picked[:k]]
+        "case_id": cid,
+        "year": case_reps[cid]["year"],
+        "repeat": case_reps[cid]["repeat"],
+        "correct": case_reps[cid]["correct"],
+        "predicted": case_reps[cid]["predicted_answer"],
+        "expected": case_reps[cid]["expected_answer"],
+        "raw_answer_excerpt": case_reps[cid]["raw_answer"][:200] + ("..." if len(case_reps[cid]["raw_answer"]) > 200 else ""),
+        "raw_answer_len": case_reps[cid]["raw_answer_len"],
+    } for cid in picked_cids]
 
 
 def compute_parse_failures(records):

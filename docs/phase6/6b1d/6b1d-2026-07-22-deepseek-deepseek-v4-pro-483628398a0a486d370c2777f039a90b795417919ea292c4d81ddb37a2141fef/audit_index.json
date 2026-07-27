@@ -1627,5 +1627,20 @@
       "details.events.jsonl": "8e3a9e01ea39fbb4cb17adbb3dab53739b41d0168b2940e2155d93540328eb1d"
     }
   },
-  "generated_at": "2026-07-27T01:31:29"
+  "generated_at": "2026-07-27T01:31:29",
+  "post_analysis_artifact_hashes": {
+    "report.md": {
+      "sha256": "3e9c8dc8e13001532758aab3d0d3aeb01ce117bebc687c16d9bf6909d6bef79c",
+      "bytes": 14176
+    },
+    "comparison_table.json": {
+      "sha256": "bc21614b14d454e6bcc57c51e813bc69027796b8aac370b0f7aadf3801ccb1f5",
+      "bytes": 3347
+    },
+    "analysis_supplement.json": {
+      "sha256": "e1cd712f810b48e96a6accbc6db07b0591463095790c1ebddb29354ab3e87986",
+      "bytes": 63293
+    }
+  },
+  "post_analysis_generated_at": "2026-07-27T12:50:00"
 }

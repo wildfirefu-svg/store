@@ -1431,6 +1431,179 @@ class TestArchiveIntegrityGate:
         assert ei.value.code == 2
 
 
+class TestReportAnalysisConsistency:
+    """compute_consistency: 4:1/3:2 分类、平局标注、5x5 两两一致率矩阵."""
+
+    def _mk(self, case_id, arm, answers, parser_valid=True):
+        """构造 records: 同一臂的多次 repeat answers."""
+        out = []
+        for i, a in enumerate(answers):
+            out.append({
+                "case_id": case_id, "arm": arm, "year": "2024", "repeat": i,
+                "correct": False, "call_success": True, "parser_valid": parser_valid,
+                "terminal_state": "parsed", "parser_source": "", "parser_failure_reason": "",
+                "predicted_answer": a, "expected_answer": "A",
+                "raw_answer": "", "raw_answer_len": 0,
+                "completion_tokens": 0, "prompt_tokens": 0,
+                "finish_reason": "stop", "response_id": "",
+            })
+        return out
+
+    def test_split_5_0_full_agreement(self):
+        from scripts.phase6_6b1d_report_analysis import compute_consistency
+        recs = []
+        for arm in ["b1a_prime", "b1b", "b1c", "b2b", "b2c"]:
+            recs += self._mk("Q1", arm, ["A", "A", "A"])
+        r = compute_consistency(recs)
+        assert r["by_split"]["5_0"] == 1
+        assert r["by_split"]["4_1"] == 0
+        assert r["by_split"]["3_2"] == 0
+        assert r["arm_mode_tie_cases"] == 0
+
+    def test_split_4_1(self):
+        from scripts.phase6_6b1d_report_analysis import compute_consistency
+        recs = []
+        # 4 臂答 A, 1 臂答 B -> 4:1
+        for arm in ["b1a_prime", "b1b", "b1c", "b2b"]:
+            recs += self._mk("Q1", arm, ["A", "A", "A"])
+        recs += self._mk("Q1", "b2c", ["B", "B", "B"])
+        r = compute_consistency(recs)
+        assert r["by_split"]["5_0"] == 0
+        assert r["by_split"]["4_1"] == 1
+        assert r["by_split"]["3_2"] == 0
+
+    def test_split_3_2(self):
+        from scripts.phase6_6b1d_report_analysis import compute_consistency
+        recs = []
+        # 3 臂答 A, 2 臂答 B -> 3:2 (不是 4:1)
+        for arm in ["b1a_prime", "b1b", "b1c"]:
+            recs += self._mk("Q1", arm, ["A", "A", "A"])
+        for arm in ["b2b", "b2c"]:
+            recs += self._mk("Q1", arm, ["B", "B", "B"])
+        r = compute_consistency(recs)
+        assert r["by_split"]["4_1"] == 0
+        assert r["by_split"]["3_2"] == 1
+
+    def test_three_distinct_answers_is_other(self):
+        from scripts.phase6_6b1d_report_analysis import compute_consistency
+        recs = []
+        recs += self._mk("Q1", "b1a_prime", ["A", "A", "A"])
+        recs += self._mk("Q1", "b1b", ["A", "A", "A"])
+        recs += self._mk("Q1", "b1c", ["B", "B", "B"])
+        recs += self._mk("Q1", "b2b", ["C", "C", "C"])
+        recs += self._mk("Q1", "b2c", ["C", "C", "C"])
+        r = compute_consistency(recs)
+        assert r["by_split"]["3_2"] == 0
+        assert r["by_split"]["other"] == 1
+
+    def test_arm_mode_tie_detected(self):
+        """一臂三次 repeat 出现 A/B/C 各一次 -> 平局, 标注."""
+        from scripts.phase6_6b1d_report_analysis import compute_consistency
+        recs = []
+        recs += self._mk("Q1", "b1a_prime", ["A", "A", "A"])
+        recs += self._mk("Q1", "b1b", ["A", "A", "A"])
+        recs += self._mk("Q1", "b1c", ["A", "A", "A"])
+        recs += self._mk("Q1", "b2b", ["A", "A", "A"])
+        # b2c 三次各不同 -> 平局
+        recs += self._mk("Q1", "b2c", ["A", "B", "C"])
+        r = compute_consistency(recs)
+        assert r["arm_mode_tie_cases"] == 1
+        # 该 case 的 per_case_detail 应标注 has_mode_tie
+        assert r["per_case_detail"][0]["has_mode_tie"] is True
+
+    def test_pairwise_agreement_matrix_diagonal_is_one(self):
+        """对角线 (i,i) 一致率应为 1.0."""
+        from scripts.phase6_6b1d_report_analysis import compute_consistency
+        recs = []
+        for arm in ["b1a_prime", "b1b", "b1c", "b2b", "b2c"]:
+            recs += self._mk("Q1", arm, ["A", "A", "A"])
+        r = compute_consistency(recs)
+        for arm in ["b1a_prime", "b1b", "b1c", "b2b", "b2c"]:
+            assert r["pairwise_agreement"][arm][arm]["rate"] == 1.0
+
+    def test_pairwise_agreement_off_diagonal(self):
+        """两臂答案不同时, 该对一致率为 0; 相同时为 1."""
+        from scripts.phase6_6b1d_report_analysis import compute_consistency
+        recs = []
+        recs += self._mk("Q1", "b1a_prime", ["A", "A", "A"])
+        recs += self._mk("Q1", "b1b", ["A", "A", "A"])
+        recs += self._mk("Q1", "b1c", ["B", "B", "B"])
+        recs += self._mk("Q1", "b2b", ["B", "B", "B"])
+        recs += self._mk("Q1", "b2c", ["A", "A", "A"])
+        r = compute_consistency(recs)
+        pw = r["pairwise_agreement"]
+        assert pw["b1a_prime"]["b1b"]["rate"] == 1.0   # 都 A
+        assert pw["b1a_prime"]["b1c"]["rate"] == 0.0   # A vs B
+        assert pw["b1c"]["b2b"]["rate"] == 1.0          # 都 B
+        assert pw["b1a_prime"]["b2c"]["rate"] == 1.0    # 都 A
+
+    def test_parser_invalid_excluded(self):
+        """parser_valid=False 的记录不计入."""
+        from scripts.phase6_6b1d_report_analysis import compute_consistency
+        recs = []
+        for arm in ["b1a_prime", "b1b", "b1c", "b2b", "b2c"]:
+            recs += self._mk("Q1", arm, ["A", "A", "A"])
+        # 加入一条 invalid
+        recs += self._mk("Q1", "b2c", ["Z"], parser_valid=False)
+        r = compute_consistency(recs)
+        assert r["total_cases"] == 1
+
+
+class TestReportAnalysisQualitative:
+    """compute_qualitative: 按 case_id 去重, 选 k 个不同 case."""
+
+    def _mk(self, case_id, arm, correct, repeat=0):
+        return {
+            "case_id": case_id, "arm": arm, "year": "2024", "repeat": repeat,
+            "correct": correct, "call_success": True, "parser_valid": True,
+            "terminal_state": "parsed", "parser_source": "", "parser_failure_reason": "",
+            "predicted_answer": "A" if correct else "B", "expected_answer": "A",
+            "raw_answer": "x" * 50, "raw_answer_len": 50,
+            "completion_tokens": 0, "prompt_tokens": 0,
+            "finish_reason": "stop", "response_id": "",
+        }
+
+    def test_returns_k_distinct_case_ids(self):
+        """5 条结果应来自 5 个不同 case_id."""
+        from scripts.phase6_6b1d_report_analysis import compute_qualitative
+        recs = []
+        # 10 个 case, 每个有 3 次 repeat
+        for i in range(10):
+            cid = f"Q{i}"
+            for rep in range(3):
+                recs.append(self._mk(cid, "b2b", correct=(i % 2 == 0), repeat=rep))
+        out = compute_qualitative(recs, "b2b", k=5)
+        assert len(out) == 5
+        cids = [r["case_id"] for r in out]
+        assert len(set(cids)) == 5, f"应 5 个不同 case, 实际 {cids}"
+
+    def test_mixed_correct_and_wrong(self):
+        """k=5 时应包含正确和错误两类 (若两类都有足够 case)."""
+        from scripts.phase6_6b1d_report_analysis import compute_qualitative
+        recs = []
+        for i in range(10):
+            cid = f"Q{i}"
+            for rep in range(3):
+                recs.append(self._mk(cid, "b2b", correct=(i < 5), repeat=rep))
+        out = compute_qualitative(recs, "b2b", k=5)
+        corrects = [r for r in out if r["correct"]]
+        wrongs = [r for r in out if not r["correct"]]
+        assert len(corrects) == 2  # k//2
+        assert len(wrongs) == 3    # k - k//2
+
+    def test_uses_repeat_zero_as_representative(self):
+        """每 case 取 repeat=0 作为代表."""
+        from scripts.phase6_6b1d_report_analysis import compute_qualitative
+        recs = []
+        cid = "Q0"
+        for rep in range(3):
+            recs.append(self._mk(cid, "b2b", correct=True, repeat=rep))
+        out = compute_qualitative(recs, "b2b", k=5)
+        assert len(out) == 1
+        assert out[0]["repeat"] == 0
+
+
+
 # ---- P0: archive manifest drift rejection ----
 
 class TestArchiveManifestDrift:
