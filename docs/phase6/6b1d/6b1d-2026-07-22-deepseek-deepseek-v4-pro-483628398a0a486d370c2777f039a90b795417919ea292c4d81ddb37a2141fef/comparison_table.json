@@ -1,0 +1,171 @@
+{
+  "experiment": "6b1d",
+  "arms": [
+    "b1a_prime",
+    "b1b",
+    "b1c",
+    "b2b",
+    "b2c"
+  ],
+  "arm_stats": {
+    "b1a_prime": {
+      "accuracy": 0.3333,
+      "ci_low": 0.2542,
+      "ci_high": 0.4167,
+      "n_records": 240,
+      "n_clusters": 80
+    },
+    "b1b": {
+      "accuracy": 0.3333,
+      "ci_low": 0.25,
+      "ci_high": 0.425,
+      "n_records": 240,
+      "n_clusters": 80
+    },
+    "b1c": {
+      "accuracy": 0.3458,
+      "ci_low": 0.2708,
+      "ci_high": 0.425,
+      "n_records": 240,
+      "n_clusters": 80
+    },
+    "b2b": {
+      "accuracy": 0.3667,
+      "ci_low": 0.2875,
+      "ci_high": 0.4542,
+      "n_records": 240,
+      "n_clusters": 80
+    },
+    "b2c": {
+      "accuracy": 0.325,
+      "ci_low": 0.2458,
+      "ci_high": 0.4083,
+      "n_records": 240,
+      "n_clusters": 80
+    }
+  },
+  "ranking": [
+    "b2b",
+    "b1c",
+    "b1a_prime",
+    "b1b",
+    "b2c"
+  ],
+  "pairwise_diffs": [
+    {
+      "arm_a": "b1a_prime",
+      "arm_b": "b1b",
+      "diff": 0.0,
+      "ci_low": -0.1042,
+      "ci_high": 0.1
+    },
+    {
+      "arm_a": "b1a_prime",
+      "arm_b": "b1c",
+      "diff": -0.0125,
+      "ci_low": -0.0917,
+      "ci_high": 0.0667
+    },
+    {
+      "arm_a": "b1a_prime",
+      "arm_b": "b2b",
+      "diff": -0.0333,
+      "ci_low": -0.1333,
+      "ci_high": 0.0667
+    },
+    {
+      "arm_a": "b1a_prime",
+      "arm_b": "b2c",
+      "diff": 0.0083,
+      "ci_low": -0.0625,
+      "ci_high": 0.0792
+    },
+    {
+      "arm_a": "b1b",
+      "arm_b": "b1c",
+      "diff": -0.0125,
+      "ci_low": -0.0917,
+      "ci_high": 0.0625
+    },
+    {
+      "arm_a": "b1b",
+      "arm_b": "b2b",
+      "diff": -0.0333,
+      "ci_low": -0.1292,
+      "ci_high": 0.0667
+    },
+    {
+      "arm_a": "b1b",
+      "arm_b": "b2c",
+      "diff": 0.0083,
+      "ci_low": -0.0792,
+      "ci_high": 0.0958
+    },
+    {
+      "arm_a": "b1c",
+      "arm_b": "b2b",
+      "diff": -0.0208,
+      "ci_low": -0.1,
+      "ci_high": 0.0542
+    },
+    {
+      "arm_a": "b1c",
+      "arm_b": "b2c",
+      "diff": 0.0208,
+      "ci_low": -0.0417,
+      "ci_high": 0.0833
+    },
+    {
+      "arm_a": "b2b",
+      "arm_b": "b2c",
+      "diff": 0.0417,
+      "ci_low": -0.0417,
+      "ci_high": 0.1292
+    }
+  ],
+  "bootstrap": {
+    "seed": 42,
+    "draws": 10000,
+    "clustering": "year_x_question",
+    "numpy_available": true
+  },
+  "token_stats": {
+    "b1a_prime": {
+      "avg_input": 233.1,
+      "avg_output": 2850.5,
+      "avg_total": 3083.6,
+      "source": "provider",
+      "n": 240
+    },
+    "b1b": {
+      "avg_input": 708.7,
+      "avg_output": 2997.1,
+      "avg_total": 3705.8,
+      "source": "provider",
+      "n": 240
+    },
+    "b1c": {
+      "avg_input": 744.6,
+      "avg_output": 3057.5,
+      "avg_total": 3802.1,
+      "source": "provider",
+      "n": 240
+    },
+    "b2b": {
+      "avg_input": 244.3,
+      "avg_output": 2784.9,
+      "avg_total": 3029.2,
+      "source": "provider",
+      "n": 240
+    },
+    "b2c": {
+      "avg_input": 775.6,
+      "avg_output": 3011.5,
+      "avg_total": 3787.1,
+      "source": "provider",
+      "n": 240
+    }
+  },
+  "tiktoken_available": false,
+  "total_calls_attempted": 1204
+}

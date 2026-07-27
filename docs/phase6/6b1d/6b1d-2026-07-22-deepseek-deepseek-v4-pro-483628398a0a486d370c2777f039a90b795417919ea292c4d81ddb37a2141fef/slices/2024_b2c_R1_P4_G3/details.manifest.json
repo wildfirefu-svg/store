@@ -1,0 +1,22 @@
+{
+  "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+  "case_ids_sha256": "5db9649be09227851fa53ec698276c912f68782b895d5ce6a347643d79428b37",
+  "profile_id": "baziqa_xjz_reasoned",
+  "chart_schema_version": "legacy_v0",
+  "arm": "b2c",
+  "ziwei_arm": "sequential",
+  "attempt_stage": "main",
+  "repeat_idx": 1,
+  "provider": "deepseek",
+  "model": "deepseek-v4-pro",
+  "temperature": 0.0,
+  "sample_temperature": 0.4,
+  "n_samples": 1,
+  "aggregate": "majority",
+  "method": "direct_choice",
+  "prompt_template_sha256": "a280a0857fc4f5e4013ca596ad2335aa2aa03231a37392845a066f1183bec9d3",
+  "code_sha256": "ce8cbf13cb37830138e91633b962edf6979e7f38f7cff65efe8b829d834fe382",
+  "scheduled_calls": 8,
+  "hard_cap": 10,
+  "as_of_date": "2026-07-22"
+}

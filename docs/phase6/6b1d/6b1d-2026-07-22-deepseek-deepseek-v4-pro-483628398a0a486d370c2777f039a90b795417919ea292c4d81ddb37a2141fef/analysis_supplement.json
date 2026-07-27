@@ -1,0 +1,2010 @@
+{
+  "experiment": "6b1d-r3",
+  "n_records": 1200,
+  "arm_stats": {
+    "b1a_prime": {
+      "n": 240,
+      "accuracy": 0.3333,
+      "correct": 80,
+      "parser_valid": 240,
+      "parser_rate": 1.0,
+      "call_success": 240,
+      "call_success_rate": 1.0,
+      "raw_answer_len_mean": 415.2,
+      "raw_answer_len_median": 344,
+      "raw_answer_len_min": 125,
+      "raw_answer_len_max": 1056,
+      "completion_tokens_mean": 2850.5,
+      "completion_tokens_median": 2341
+    },
+    "b1b": {
+      "n": 240,
+      "accuracy": 0.3333,
+      "correct": 80,
+      "parser_valid": 240,
+      "parser_rate": 1.0,
+      "call_success": 240,
+      "call_success_rate": 1.0,
+      "raw_answer_len_mean": 332.8,
+      "raw_answer_len_median": 275,
+      "raw_answer_len_min": 135,
+      "raw_answer_len_max": 1282,
+      "completion_tokens_mean": 2997.1,
+      "completion_tokens_median": 2314
+    },
+    "b1c": {
+      "n": 240,
+      "accuracy": 0.3458,
+      "correct": 83,
+      "parser_valid": 239,
+      "parser_rate": 0.9958,
+      "call_success": 240,
+      "call_success_rate": 1.0,
+      "raw_answer_len_mean": 459.8,
+      "raw_answer_len_median": 401,
+      "raw_answer_len_min": 113,
+      "raw_answer_len_max": 1140,
+      "completion_tokens_mean": 3057.5,
+      "completion_tokens_median": 2671
+    },
+    "b2b": {
+      "n": 240,
+      "accuracy": 0.3667,
+      "correct": 88,
+      "parser_valid": 239,
+      "parser_rate": 0.9958,
+      "call_success": 240,
+      "call_success_rate": 1.0,
+      "raw_answer_len_mean": 296.9,
+      "raw_answer_len_median": 253,
+      "raw_answer_len_min": 110,
+      "raw_answer_len_max": 1569,
+      "completion_tokens_mean": 2784.9,
+      "completion_tokens_median": 1972
+    },
+    "b2c": {
+      "n": 240,
+      "accuracy": 0.325,
+      "correct": 78,
+      "parser_valid": 240,
+      "parser_rate": 1.0,
+      "call_success": 240,
+      "call_success_rate": 1.0,
+      "raw_answer_len_mean": 610.6,
+      "raw_answer_len_median": 599,
+      "raw_answer_len_min": 161,
+      "raw_answer_len_max": 1640,
+      "completion_tokens_mean": 3011.5,
+      "completion_tokens_median": 2426
+    }
+  },
+  "year_repeat_matrix": {
+    "cells": {
+      "2024": {
+        "0": {
+          "b1a_prime": {
+            "accuracy": 0.35,
+            "correct": 14,
+            "n": 40
+          },
+          "b1b": {
+            "accuracy": 0.35,
+            "correct": 14,
+            "n": 40
+          },
+          "b1c": {
+            "accuracy": 0.45,
+            "correct": 18,
+            "n": 40
+          },
+          "b2b": {
+            "accuracy": 0.475,
+            "correct": 19,
+            "n": 40
+          },
+          "b2c": {
+            "accuracy": 0.375,
+            "correct": 15,
+            "n": 40
+          }
+        },
+        "1": {
+          "b1a_prime": {
+            "accuracy": 0.425,
+            "correct": 17,
+            "n": 40
+          },
+          "b1b": {
+            "accuracy": 0.375,
+            "correct": 15,
+            "n": 40
+          },
+          "b1c": {
+            "accuracy": 0.375,
+            "correct": 15,
+            "n": 40
+          },
+          "b2b": {
+            "accuracy": 0.5,
+            "correct": 20,
+            "n": 40
+          },
+          "b2c": {
+            "accuracy": 0.375,
+            "correct": 15,
+            "n": 40
+          }
+        },
+        "2": {
+          "b1a_prime": {
+            "accuracy": 0.4,
+            "correct": 16,
+            "n": 40
+          },
+          "b1b": {
+            "accuracy": 0.35,
+            "correct": 14,
+            "n": 40
+          },
+          "b1c": {
+            "accuracy": 0.3,
+            "correct": 12,
+            "n": 40
+          },
+          "b2b": {
+            "accuracy": 0.425,
+            "correct": 17,
+            "n": 40
+          },
+          "b2c": {
+            "accuracy": 0.325,
+            "correct": 13,
+            "n": 40
+          }
+        }
+      },
+      "2025": {
+        "0": {
+          "b1a_prime": {
+            "accuracy": 0.275,
+            "correct": 11,
+            "n": 40
+          },
+          "b1b": {
+            "accuracy": 0.3,
+            "correct": 12,
+            "n": 40
+          },
+          "b1c": {
+            "accuracy": 0.35,
+            "correct": 14,
+            "n": 40
+          },
+          "b2b": {
+            "accuracy": 0.325,
+            "correct": 13,
+            "n": 40
+          },
+          "b2c": {
+            "accuracy": 0.3,
+            "correct": 12,
+            "n": 40
+          }
+        },
+        "1": {
+          "b1a_prime": {
+            "accuracy": 0.25,
+            "correct": 10,
+            "n": 40
+          },
+          "b1b": {
+            "accuracy": 0.25,
+            "correct": 10,
+            "n": 40
+          },
+          "b1c": {
+            "accuracy": 0.325,
+            "correct": 13,
+            "n": 40
+          },
+          "b2b": {
+            "accuracy": 0.275,
+            "correct": 11,
+            "n": 40
+          },
+          "b2c": {
+            "accuracy": 0.275,
+            "correct": 11,
+            "n": 40
+          }
+        },
+        "2": {
+          "b1a_prime": {
+            "accuracy": 0.3,
+            "correct": 12,
+            "n": 40
+          },
+          "b1b": {
+            "accuracy": 0.375,
+            "correct": 15,
+            "n": 40
+          },
+          "b1c": {
+            "accuracy": 0.275,
+            "correct": 11,
+            "n": 40
+          },
+          "b2b": {
+            "accuracy": 0.2,
+            "correct": 8,
+            "n": 40
+          },
+          "b2c": {
+            "accuracy": 0.3,
+            "correct": 12,
+            "n": 40
+          }
+        }
+      }
+    },
+    "year_summary": {
+      "2024": {
+        "b1a_prime": {
+          "accuracy": 0.3917,
+          "correct": 47,
+          "n": 120
+        },
+        "b1b": {
+          "accuracy": 0.3583,
+          "correct": 43,
+          "n": 120
+        },
+        "b1c": {
+          "accuracy": 0.375,
+          "correct": 45,
+          "n": 120
+        },
+        "b2b": {
+          "accuracy": 0.4667,
+          "correct": 56,
+          "n": 120
+        },
+        "b2c": {
+          "accuracy": 0.3583,
+          "correct": 43,
+          "n": 120
+        }
+      },
+      "2025": {
+        "b1a_prime": {
+          "accuracy": 0.275,
+          "correct": 33,
+          "n": 120
+        },
+        "b1b": {
+          "accuracy": 0.3083,
+          "correct": 37,
+          "n": 120
+        },
+        "b1c": {
+          "accuracy": 0.3167,
+          "correct": 38,
+          "n": 120
+        },
+        "b2b": {
+          "accuracy": 0.2667,
+          "correct": 32,
+          "n": 120
+        },
+        "b2c": {
+          "accuracy": 0.2917,
+          "correct": 35,
+          "n": 120
+        }
+      }
+    },
+    "repeat_summary": {
+      "0": {
+        "b1a_prime": {
+          "accuracy": 0.3125,
+          "correct": 25,
+          "n": 80
+        },
+        "b1b": {
+          "accuracy": 0.325,
+          "correct": 26,
+          "n": 80
+        },
+        "b1c": {
+          "accuracy": 0.4,
+          "correct": 32,
+          "n": 80
+        },
+        "b2b": {
+          "accuracy": 0.4,
+          "correct": 32,
+          "n": 80
+        },
+        "b2c": {
+          "accuracy": 0.3375,
+          "correct": 27,
+          "n": 80
+        }
+      },
+      "1": {
+        "b1a_prime": {
+          "accuracy": 0.3375,
+          "correct": 27,
+          "n": 80
+        },
+        "b1b": {
+          "accuracy": 0.3125,
+          "correct": 25,
+          "n": 80
+        },
+        "b1c": {
+          "accuracy": 0.35,
+          "correct": 28,
+          "n": 80
+        },
+        "b2b": {
+          "accuracy": 0.3875,
+          "correct": 31,
+          "n": 80
+        },
+        "b2c": {
+          "accuracy": 0.325,
+          "correct": 26,
+          "n": 80
+        }
+      },
+      "2": {
+        "b1a_prime": {
+          "accuracy": 0.35,
+          "correct": 28,
+          "n": 80
+        },
+        "b1b": {
+          "accuracy": 0.3625,
+          "correct": 29,
+          "n": 80
+        },
+        "b1c": {
+          "accuracy": 0.2875,
+          "correct": 23,
+          "n": 80
+        },
+        "b2b": {
+          "accuracy": 0.3125,
+          "correct": 25,
+          "n": 80
+        },
+        "b2c": {
+          "accuracy": 0.3125,
+          "correct": 25,
+          "n": 80
+        }
+      }
+    }
+  },
+  "layered": {
+    "question_complexity": {
+      "1": {
+        "b1a_prime": {
+          "accuracy": 0.3922,
+          "correct": 60,
+          "n": 153,
+          "skipped": false
+        },
+        "b1b": {
+          "accuracy": 0.2876,
+          "correct": 44,
+          "n": 153,
+          "skipped": false
+        },
+        "b1c": {
+          "accuracy": 0.3072,
+          "correct": 47,
+          "n": 153,
+          "skipped": false
+        },
+        "b2b": {
+          "accuracy": 0.3333,
+          "correct": 51,
+          "n": 153,
+          "skipped": false
+        },
+        "b2c": {
+          "accuracy": 0.3464,
+          "correct": 53,
+          "n": 153,
+          "skipped": false
+        }
+      },
+      "2": {
+        "b1a_prime": {
+          "accuracy": 0.25,
+          "correct": 9,
+          "n": 36,
+          "skipped": false
+        },
+        "b1b": {
+          "accuracy": 0.4167,
+          "correct": 15,
+          "n": 36,
+          "skipped": false
+        },
+        "b1c": {
+          "accuracy": 0.4167,
+          "correct": 15,
+          "n": 36,
+          "skipped": false
+        },
+        "b2b": {
+          "accuracy": 0.2778,
+          "correct": 10,
+          "n": 36,
+          "skipped": false
+        },
+        "b2c": {
+          "accuracy": 0.25,
+          "correct": 9,
+          "n": 36,
+          "skipped": false
+        }
+      },
+      "3": {
+        "b1a_prime": {
+          "accuracy": 0.2157,
+          "correct": 11,
+          "n": 51,
+          "skipped": false
+        },
+        "b1b": {
+          "accuracy": 0.4118,
+          "correct": 21,
+          "n": 51,
+          "skipped": false
+        },
+        "b1c": {
+          "accuracy": 0.4118,
+          "correct": 21,
+          "n": 51,
+          "skipped": false
+        },
+        "b2b": {
+          "accuracy": 0.5294,
+          "correct": 27,
+          "n": 51,
+          "skipped": false
+        },
+        "b2c": {
+          "accuracy": 0.3137,
+          "correct": 16,
+          "n": 51,
+          "skipped": false
+        }
+      }
+    },
+    "ziwei_info_richness": {
+      "1": {
+        "b1a_prime": {
+          "accuracy": 0.4833,
+          "correct": 29,
+          "n": 60,
+          "skipped": false
+        },
+        "b1b": {
+          "accuracy": 0.3167,
+          "correct": 19,
+          "n": 60,
+          "skipped": false
+        },
+        "b1c": {
+          "accuracy": 0.3833,
+          "correct": 23,
+          "n": 60,
+          "skipped": false
+        },
+        "b2b": {
+          "accuracy": 0.4,
+          "correct": 24,
+          "n": 60,
+          "skipped": false
+        },
+        "b2c": {
+          "accuracy": 0.3333,
+          "correct": 20,
+          "n": 60,
+          "skipped": false
+        }
+      },
+      "2": {
+        "b1a_prime": {
+          "accuracy": 0.3037,
+          "correct": 41,
+          "n": 135,
+          "skipped": false
+        },
+        "b1b": {
+          "accuracy": 0.363,
+          "correct": 49,
+          "n": 135,
+          "skipped": false
+        },
+        "b1c": {
+          "accuracy": 0.3481,
+          "correct": 47,
+          "n": 135,
+          "skipped": false
+        },
+        "b2b": {
+          "accuracy": 0.3407,
+          "correct": 46,
+          "n": 135,
+          "skipped": false
+        },
+        "b2c": {
+          "accuracy": 0.3259,
+          "correct": 44,
+          "n": 135,
+          "skipped": false
+        }
+      },
+      "3": {
+        "b1a_prime": {
+          "accuracy": 0.2222,
+          "correct": 10,
+          "n": 45,
+          "skipped": false
+        },
+        "b1b": {
+          "accuracy": 0.2667,
+          "correct": 12,
+          "n": 45,
+          "skipped": false
+        },
+        "b1c": {
+          "accuracy": 0.2889,
+          "correct": 13,
+          "n": 45,
+          "skipped": false
+        },
+        "b2b": {
+          "accuracy": 0.4,
+          "correct": 18,
+          "n": 45,
+          "skipped": false
+        },
+        "b2c": {
+          "accuracy": 0.3111,
+          "correct": 14,
+          "n": 45,
+          "skipped": false
+        }
+      }
+    },
+    "bazi_info_richness": {
+      "1": {
+        "b1a_prime": {
+          "accuracy": 0.3048,
+          "correct": 64,
+          "n": 210,
+          "skipped": false
+        },
+        "b1b": {
+          "accuracy": 0.3476,
+          "correct": 73,
+          "n": 210,
+          "skipped": false
+        },
+        "b1c": {
+          "accuracy": 0.3238,
+          "correct": 68,
+          "n": 210,
+          "skipped": false
+        },
+        "b2b": {
+          "accuracy": 0.3524,
+          "correct": 74,
+          "n": 210,
+          "skipped": false
+        },
+        "b2c": {
+          "accuracy": 0.319,
+          "correct": 67,
+          "n": 210,
+          "skipped": false
+        }
+      },
+      "2": {
+        "b1a_prime": {
+          "accuracy": 0.4667,
+          "correct": 7,
+          "n": 15,
+          "skipped": false
+        },
+        "b1b": {
+          "accuracy": 0.2667,
+          "correct": 4,
+          "n": 15,
+          "skipped": false
+        },
+        "b1c": {
+          "accuracy": 0.2667,
+          "correct": 4,
+          "n": 15,
+          "skipped": false
+        },
+        "b2b": {
+          "accuracy": 0.2667,
+          "correct": 4,
+          "n": 15,
+          "skipped": false
+        },
+        "b2c": {
+          "accuracy": 0.2667,
+          "correct": 4,
+          "n": 15,
+          "skipped": false
+        }
+      },
+      "3": {
+        "b1a_prime": {
+          "accuracy": 0.6,
+          "correct": 9,
+          "n": 15,
+          "skipped": false
+        },
+        "b1b": {
+          "accuracy": 0.2,
+          "correct": 3,
+          "n": 15,
+          "skipped": false
+        },
+        "b1c": {
+          "accuracy": 0.7333,
+          "correct": 11,
+          "n": 15,
+          "skipped": false
+        },
+        "b2b": {
+          "accuracy": 0.6667,
+          "correct": 10,
+          "n": 15,
+          "skipped": false
+        },
+        "b2c": {
+          "accuracy": 0.4667,
+          "correct": 7,
+          "n": 15,
+          "skipped": false
+        }
+      }
+    }
+  },
+  "consistency": {
+    "total_cases": 80,
+    "all_5_arms_agree": 11,
+    "four_arms_agree": 48,
+    "lower_agreement": 21,
+    "agreement_rate": 0.1375,
+    "per_case_detail": [
+      {
+        "case_id": "guangdong_female_19800824_P001-Q1",
+        "arm_modes": {
+          "b1a_prime": "B",
+          "b1c": "B",
+          "b2b": "B",
+          "b2c": "C",
+          "b1b": "C"
+        },
+        "distinct_answers": [
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "guangdong_female_19800824_P001-Q2",
+        "arm_modes": {
+          "b1a_prime": "B",
+          "b1c": "C",
+          "b2b": "C",
+          "b2c": "C",
+          "b1b": "C"
+        },
+        "distinct_answers": [
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "guangdong_female_19800824_P001-Q3",
+        "arm_modes": {
+          "b1a_prime": "B",
+          "b1c": "B",
+          "b2b": "C",
+          "b2c": "B",
+          "b1b": "B"
+        },
+        "distinct_answers": [
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "guangdong_female_19800824_P001-Q4",
+        "arm_modes": {
+          "b1a_prime": "D",
+          "b1c": "D",
+          "b2b": "C",
+          "b2c": "D",
+          "b1b": "D"
+        },
+        "distinct_answers": [
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "guangdong_female_19800824_P001-Q5",
+        "arm_modes": {
+          "b1a_prime": "B",
+          "b1c": "A",
+          "b2b": "B",
+          "b2c": "B",
+          "b1b": "C"
+        },
+        "distinct_answers": [
+          "A",
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "chaozhou_male_19720108_P002-Q6",
+        "arm_modes": {
+          "b1a_prime": "D",
+          "b1c": "C",
+          "b2b": "D",
+          "b2c": "D",
+          "b1b": "C"
+        },
+        "distinct_answers": [
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "chaozhou_male_19720108_P002-Q7",
+        "arm_modes": {
+          "b1a_prime": "C",
+          "b1c": "C",
+          "b2b": "C",
+          "b2c": "C",
+          "b1b": "C"
+        },
+        "distinct_answers": [
+          "C"
+        ]
+      },
+      {
+        "case_id": "chaozhou_male_19720108_P002-Q8",
+        "arm_modes": {
+          "b1a_prime": "B",
+          "b1c": "B",
+          "b2b": "B",
+          "b2c": "B",
+          "b1b": "B"
+        },
+        "distinct_answers": [
+          "B"
+        ]
+      },
+      {
+        "case_id": "chaozhou_male_19720108_P002-Q9",
+        "arm_modes": {
+          "b1b": "B",
+          "b2b": "A",
+          "b2c": "B",
+          "b1a_prime": "A",
+          "b1c": "D"
+        },
+        "distinct_answers": [
+          "A",
+          "B",
+          "D"
+        ]
+      },
+      {
+        "case_id": "chaozhou_male_19720108_P002-Q10",
+        "arm_modes": {
+          "b1b": "C",
+          "b2b": "C",
+          "b2c": "C",
+          "b1a_prime": "A",
+          "b1c": "C"
+        },
+        "distinct_answers": [
+          "A",
+          "C"
+        ]
+      },
+      {
+        "case_id": "male_19611230_P003-Q11",
+        "arm_modes": {
+          "b1b": "B",
+          "b2b": "C",
+          "b2c": "D",
+          "b1a_prime": "B",
+          "b1c": "B"
+        },
+        "distinct_answers": [
+          "B",
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "male_19611230_P003-Q12",
+        "arm_modes": {
+          "b1b": "A",
+          "b2b": "B",
+          "b2c": "A",
+          "b1a_prime": "A",
+          "b1c": "A"
+        },
+        "distinct_answers": [
+          "A",
+          "B"
+        ]
+      },
+      {
+        "case_id": "male_19611230_P003-Q13",
+        "arm_modes": {
+          "b1b": "B",
+          "b2b": "B",
+          "b2c": "B",
+          "b1a_prime": "A",
+          "b1c": "B"
+        },
+        "distinct_answers": [
+          "A",
+          "B"
+        ]
+      },
+      {
+        "case_id": "male_19611230_P003-Q14",
+        "arm_modes": {
+          "b1b": "D",
+          "b2b": "A",
+          "b2c": "C",
+          "b1a_prime": "C",
+          "b1c": "A"
+        },
+        "distinct_answers": [
+          "A",
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "male_19611230_P003-Q15",
+        "arm_modes": {
+          "b1b": "C",
+          "b2b": "C",
+          "b2c": "C",
+          "b1a_prime": "B",
+          "b1c": "C"
+        },
+        "distinct_answers": [
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "female_19831028_P004-Q16",
+        "arm_modes": {
+          "b1b": "B",
+          "b2b": "B",
+          "b2c": "B",
+          "b1a_prime": "C",
+          "b1c": "B"
+        },
+        "distinct_answers": [
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "female_19831028_P004-Q17",
+        "arm_modes": {
+          "b1c": "A",
+          "b2c": "B",
+          "b1a_prime": "A",
+          "b1b": "B",
+          "b2b": "D"
+        },
+        "distinct_answers": [
+          "A",
+          "B",
+          "D"
+        ]
+      },
+      {
+        "case_id": "female_19831028_P004-Q18",
+        "arm_modes": {
+          "b1c": "A",
+          "b2c": "A",
+          "b1a_prime": "B",
+          "b1b": "A",
+          "b2b": "A"
+        },
+        "distinct_answers": [
+          "A",
+          "B"
+        ]
+      },
+      {
+        "case_id": "female_19831028_P004-Q19",
+        "arm_modes": {
+          "b1c": "C",
+          "b2c": "A",
+          "b1a_prime": "C",
+          "b1b": "A",
+          "b2b": "C"
+        },
+        "distinct_answers": [
+          "A",
+          "C"
+        ]
+      },
+      {
+        "case_id": "female_19831028_P004-Q20",
+        "arm_modes": {
+          "b1c": "A",
+          "b2c": "C",
+          "b1a_prime": "C",
+          "b1b": "A",
+          "b2b": "A"
+        },
+        "distinct_answers": [
+          "A",
+          "C"
+        ]
+      },
+      {
+        "case_id": "male_19710412_P005-Q21",
+        "arm_modes": {
+          "b1c": "B",
+          "b2c": "C",
+          "b1a_prime": "B",
+          "b1b": "C",
+          "b2b": "C"
+        },
+        "distinct_answers": [
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "male_19710412_P005-Q22",
+        "arm_modes": {
+          "b1c": "B",
+          "b2c": "B",
+          "b1a_prime": "B",
+          "b1b": "C",
+          "b2b": "A"
+        },
+        "distinct_answers": [
+          "A",
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "male_19710412_P005-Q23",
+        "arm_modes": {
+          "b1c": "C",
+          "b2c": "B",
+          "b1a_prime": "B",
+          "b1b": "C",
+          "b2b": "A"
+        },
+        "distinct_answers": [
+          "A",
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "male_19710412_P005-Q24",
+        "arm_modes": {
+          "b1c": "A",
+          "b2c": "A",
+          "b1a_prime": "A",
+          "b1b": "A",
+          "b2b": "D"
+        },
+        "distinct_answers": [
+          "A",
+          "D"
+        ]
+      },
+      {
+        "case_id": "male_19710412_P005-Q25",
+        "arm_modes": {
+          "b2b": "D",
+          "b1a_prime": "B",
+          "b1b": "A",
+          "b1c": "A",
+          "b2c": "B"
+        },
+        "distinct_answers": [
+          "A",
+          "B",
+          "D"
+        ]
+      },
+      {
+        "case_id": "female_19830326_P006-Q26",
+        "arm_modes": {
+          "b2b": "B",
+          "b1a_prime": "B",
+          "b1b": "C",
+          "b1c": "C",
+          "b2c": "C"
+        },
+        "distinct_answers": [
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "female_19830326_P006-Q27",
+        "arm_modes": {
+          "b2b": "A",
+          "b1a_prime": "D",
+          "b1b": "C",
+          "b1c": "C",
+          "b2c": "C"
+        },
+        "distinct_answers": [
+          "A",
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "female_19830326_P006-Q28",
+        "arm_modes": {
+          "b2b": "C",
+          "b1a_prime": "C",
+          "b1b": "C",
+          "b1c": "A",
+          "b2c": "A"
+        },
+        "distinct_answers": [
+          "A",
+          "C"
+        ]
+      },
+      {
+        "case_id": "female_19830326_P006-Q29",
+        "arm_modes": {
+          "b2b": "B",
+          "b1a_prime": "B",
+          "b1b": "C",
+          "b1c": "B",
+          "b2c": "B"
+        },
+        "distinct_answers": [
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "female_19830326_P006-Q30",
+        "arm_modes": {
+          "b2b": "B",
+          "b1a_prime": "B",
+          "b1b": "B",
+          "b1c": "B",
+          "b2c": "B"
+        },
+        "distinct_answers": [
+          "B"
+        ]
+      },
+      {
+        "case_id": "female_19800921_P007-Q31",
+        "arm_modes": {
+          "b2b": "C",
+          "b1a_prime": "C",
+          "b1b": "C",
+          "b1c": "C",
+          "b2c": "C"
+        },
+        "distinct_answers": [
+          "C"
+        ]
+      },
+      {
+        "case_id": "female_19800921_P007-Q32",
+        "arm_modes": {
+          "b2b": "C",
+          "b1a_prime": "C",
+          "b1b": "D",
+          "b1c": "C",
+          "b2c": "C"
+        },
+        "distinct_answers": [
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "female_19800921_P007-Q33",
+        "arm_modes": {
+          "b2c": "A",
+          "b1b": "A",
+          "b1c": "A",
+          "b2b": "A",
+          "b1a_prime": "D"
+        },
+        "distinct_answers": [
+          "A",
+          "D"
+        ]
+      },
+      {
+        "case_id": "female_19800921_P007-Q34",
+        "arm_modes": {
+          "b2c": "D",
+          "b1b": "C",
+          "b1c": "D",
+          "b2b": "D",
+          "b1a_prime": "D"
+        },
+        "distinct_answers": [
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "female_19800921_P007-Q35",
+        "arm_modes": {
+          "b2c": "C",
+          "b1b": "A",
+          "b1c": "A",
+          "b2b": "C",
+          "b1a_prime": "A"
+        },
+        "distinct_answers": [
+          "A",
+          "C"
+        ]
+      },
+      {
+        "case_id": "male_20070131_P008-Q36",
+        "arm_modes": {
+          "b2c": "D",
+          "b1b": "B",
+          "b1c": "B",
+          "b2b": "D",
+          "b1a_prime": "B"
+        },
+        "distinct_answers": [
+          "B",
+          "D"
+        ]
+      },
+      {
+        "case_id": "male_20070131_P008-Q37",
+        "arm_modes": {
+          "b2c": "B",
+          "b1b": "B",
+          "b1c": "B",
+          "b2b": "B",
+          "b1a_prime": "B"
+        },
+        "distinct_answers": [
+          "B"
+        ]
+      },
+      {
+        "case_id": "male_20070131_P008-Q38",
+        "arm_modes": {
+          "b2c": "D",
+          "b1b": "A",
+          "b1c": "D",
+          "b2b": "D",
+          "b1a_prime": "D"
+        },
+        "distinct_answers": [
+          "A",
+          "D"
+        ]
+      },
+      {
+        "case_id": "male_20070131_P008-Q39",
+        "arm_modes": {
+          "b2c": "B",
+          "b1b": "C",
+          "b1c": "C",
+          "b2b": "C",
+          "b1a_prime": "C"
+        },
+        "distinct_answers": [
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "male_20070131_P008-Q40",
+        "arm_modes": {
+          "b2c": "C",
+          "b1b": "B",
+          "b1c": "C",
+          "b2b": "C",
+          "b1a_prime": "B"
+        },
+        "distinct_answers": [
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "guangdong_female_19511114_P001-Q1",
+        "arm_modes": {
+          "b1a_prime": "C",
+          "b1c": "C",
+          "b2b": "D",
+          "b2c": "C",
+          "b1b": "C"
+        },
+        "distinct_answers": [
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "guangdong_female_19511114_P001-Q2",
+        "arm_modes": {
+          "b1a_prime": "D",
+          "b1c": "D",
+          "b2b": "D",
+          "b2c": "D",
+          "b1b": "B"
+        },
+        "distinct_answers": [
+          "B",
+          "D"
+        ]
+      },
+      {
+        "case_id": "guangdong_female_19511114_P001-Q3",
+        "arm_modes": {
+          "b1a_prime": "B",
+          "b1c": "B",
+          "b2b": "B",
+          "b2c": "D",
+          "b1b": "B"
+        },
+        "distinct_answers": [
+          "B",
+          "D"
+        ]
+      },
+      {
+        "case_id": "guangdong_female_19511114_P001-Q4",
+        "arm_modes": {
+          "b1a_prime": "D",
+          "b1c": "C",
+          "b2b": "A",
+          "b2c": "B",
+          "b1b": "B"
+        },
+        "distinct_answers": [
+          "A",
+          "B",
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "guangdong_female_19511114_P001-Q5",
+        "arm_modes": {
+          "b1a_prime": "B",
+          "b1c": "B",
+          "b2b": "B",
+          "b2c": "B",
+          "b1b": "C"
+        },
+        "distinct_answers": [
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "hongkong_female_19870705_P002-Q6",
+        "arm_modes": {
+          "b1a_prime": "B",
+          "b1c": "D",
+          "b2b": "D",
+          "b2c": "B",
+          "b1b": "D"
+        },
+        "distinct_answers": [
+          "B",
+          "D"
+        ]
+      },
+      {
+        "case_id": "hongkong_female_19870705_P002-Q7",
+        "arm_modes": {
+          "b1a_prime": "D",
+          "b1c": "D",
+          "b2b": "D",
+          "b2c": "D",
+          "b1b": "C"
+        },
+        "distinct_answers": [
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "hongkong_female_19870705_P002-Q8",
+        "arm_modes": {
+          "b1a_prime": "A",
+          "b1c": "D",
+          "b2b": "A",
+          "b2c": "D",
+          "b1b": "C"
+        },
+        "distinct_answers": [
+          "A",
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "hongkong_female_19870705_P002-Q9",
+        "arm_modes": {
+          "b1b": "B",
+          "b2b": "B",
+          "b2c": "B",
+          "b1a_prime": "B",
+          "b1c": "B"
+        },
+        "distinct_answers": [
+          "B"
+        ]
+      },
+      {
+        "case_id": "hongkong_female_19870705_P002-Q10",
+        "arm_modes": {
+          "b1b": "A",
+          "b2b": "B",
+          "b2c": "B",
+          "b1a_prime": "C",
+          "b1c": "B"
+        },
+        "distinct_answers": [
+          "A",
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "miyazaki_male_19830421_P003-Q11",
+        "arm_modes": {
+          "b1b": "D",
+          "b2b": "D",
+          "b2c": "D",
+          "b1a_prime": "D",
+          "b1c": "D"
+        },
+        "distinct_answers": [
+          "D"
+        ]
+      },
+      {
+        "case_id": "miyazaki_male_19830421_P003-Q12",
+        "arm_modes": {
+          "b1b": "A",
+          "b2b": "B",
+          "b2c": "A",
+          "b1a_prime": "A",
+          "b1c": "A"
+        },
+        "distinct_answers": [
+          "A",
+          "B"
+        ]
+      },
+      {
+        "case_id": "miyazaki_male_19830421_P003-Q13",
+        "arm_modes": {
+          "b1b": "B",
+          "b2b": "B",
+          "b2c": "B",
+          "b1a_prime": "B",
+          "b1c": "B"
+        },
+        "distinct_answers": [
+          "B"
+        ]
+      },
+      {
+        "case_id": "miyazaki_male_19830421_P003-Q14",
+        "arm_modes": {
+          "b1b": "A",
+          "b2b": "B",
+          "b2c": "B",
+          "b1a_prime": "B",
+          "b1c": "B"
+        },
+        "distinct_answers": [
+          "A",
+          "B"
+        ]
+      },
+      {
+        "case_id": "miyazaki_male_19830421_P003-Q15",
+        "arm_modes": {
+          "b1b": "A",
+          "b2b": "C",
+          "b2c": "A",
+          "b1a_prime": "A",
+          "b1c": "A"
+        },
+        "distinct_answers": [
+          "A",
+          "C"
+        ]
+      },
+      {
+        "case_id": "singapore_male_19930408_P004-Q16",
+        "arm_modes": {
+          "b1b": "C",
+          "b2b": "A",
+          "b2c": "D",
+          "b1a_prime": "D",
+          "b1c": "D"
+        },
+        "distinct_answers": [
+          "A",
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "singapore_male_19930408_P004-Q17",
+        "arm_modes": {
+          "b1c": "B",
+          "b2c": "D",
+          "b1a_prime": "D",
+          "b1b": "D",
+          "b2b": "B"
+        },
+        "distinct_answers": [
+          "B",
+          "D"
+        ]
+      },
+      {
+        "case_id": "singapore_male_19930408_P004-Q18",
+        "arm_modes": {
+          "b1c": "B",
+          "b2c": "C",
+          "b1a_prime": "C",
+          "b1b": "C",
+          "b2b": "D"
+        },
+        "distinct_answers": [
+          "B",
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "singapore_male_19930408_P004-Q19",
+        "arm_modes": {
+          "b1c": "D",
+          "b2c": "D",
+          "b1a_prime": "D",
+          "b1b": "B",
+          "b2b": "A"
+        },
+        "distinct_answers": [
+          "A",
+          "B",
+          "D"
+        ]
+      },
+      {
+        "case_id": "singapore_male_19930408_P004-Q20",
+        "arm_modes": {
+          "b1c": "D",
+          "b2c": "C",
+          "b1a_prime": "C",
+          "b1b": "B",
+          "b2b": "C"
+        },
+        "distinct_answers": [
+          "B",
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "malaysia_male_19880110_P005-Q21",
+        "arm_modes": {
+          "b1c": "D",
+          "b2c": "D",
+          "b1a_prime": "D",
+          "b1b": "D",
+          "b2b": "B"
+        },
+        "distinct_answers": [
+          "B",
+          "D"
+        ]
+      },
+      {
+        "case_id": "malaysia_male_19880110_P005-Q22",
+        "arm_modes": {
+          "b1c": "B",
+          "b2c": "A",
+          "b1a_prime": "A",
+          "b1b": "A",
+          "b2b": "B"
+        },
+        "distinct_answers": [
+          "A",
+          "B"
+        ]
+      },
+      {
+        "case_id": "malaysia_male_19880110_P005-Q23",
+        "arm_modes": {
+          "b1c": "A",
+          "b2c": "A",
+          "b1a_prime": "A",
+          "b1b": "B",
+          "b2b": "A"
+        },
+        "distinct_answers": [
+          "A",
+          "B"
+        ]
+      },
+      {
+        "case_id": "malaysia_male_19880110_P005-Q24",
+        "arm_modes": {
+          "b1c": "B",
+          "b2c": "B",
+          "b1a_prime": "B",
+          "b1b": "B",
+          "b2b": "B"
+        },
+        "distinct_answers": [
+          "B"
+        ]
+      },
+      {
+        "case_id": "malaysia_male_19880110_P005-Q25",
+        "arm_modes": {
+          "b2b": "B",
+          "b1a_prime": "D",
+          "b1b": "B",
+          "b1c": "B",
+          "b2c": "D"
+        },
+        "distinct_answers": [
+          "B",
+          "D"
+        ]
+      },
+      {
+        "case_id": "malaysia_male_19730824_P006-Q26",
+        "arm_modes": {
+          "b2b": "C",
+          "b1a_prime": "A",
+          "b1b": "C",
+          "b1c": "A",
+          "b2c": "C"
+        },
+        "distinct_answers": [
+          "A",
+          "C"
+        ]
+      },
+      {
+        "case_id": "malaysia_male_19730824_P006-Q27",
+        "arm_modes": {
+          "b2b": "B",
+          "b1a_prime": "C",
+          "b1b": "B",
+          "b1c": "D",
+          "b2c": "B"
+        },
+        "distinct_answers": [
+          "B",
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "malaysia_male_19730824_P006-Q28",
+        "arm_modes": {
+          "b2b": "B",
+          "b1a_prime": "C",
+          "b1b": "D",
+          "b1c": "D",
+          "b2c": "B"
+        },
+        "distinct_answers": [
+          "B",
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "malaysia_male_19730824_P006-Q29",
+        "arm_modes": {
+          "b2b": "C",
+          "b1a_prime": "C",
+          "b1b": "B",
+          "b1c": "C",
+          "b2c": "C"
+        },
+        "distinct_answers": [
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "malaysia_male_19730824_P006-Q30",
+        "arm_modes": {
+          "b2b": "D",
+          "b1a_prime": "B",
+          "b1b": "C",
+          "b1c": "D",
+          "b2c": "C"
+        },
+        "distinct_answers": [
+          "B",
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "taiwan_female_19880215_P007-Q31",
+        "arm_modes": {
+          "b2b": "D",
+          "b1a_prime": "C",
+          "b1b": "D",
+          "b1c": "D",
+          "b2c": "D"
+        },
+        "distinct_answers": [
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "taiwan_female_19880215_P007-Q32",
+        "arm_modes": {
+          "b2b": "D",
+          "b1a_prime": "B",
+          "b1b": "A",
+          "b1c": "B",
+          "b2c": "B"
+        },
+        "distinct_answers": [
+          "A",
+          "B",
+          "D"
+        ]
+      },
+      {
+        "case_id": "taiwan_female_19880215_P007-Q33",
+        "arm_modes": {
+          "b2c": "D",
+          "b1b": "B",
+          "b1c": "D",
+          "b2b": "D",
+          "b1a_prime": "D"
+        },
+        "distinct_answers": [
+          "B",
+          "D"
+        ]
+      },
+      {
+        "case_id": "taiwan_female_19880215_P007-Q34",
+        "arm_modes": {
+          "b2c": "A",
+          "b1b": "A",
+          "b1c": "A",
+          "b2b": "A",
+          "b1a_prime": "A"
+        },
+        "distinct_answers": [
+          "A"
+        ]
+      },
+      {
+        "case_id": "taiwan_female_19880215_P007-Q35",
+        "arm_modes": {
+          "b2c": "D",
+          "b1b": "D",
+          "b1c": "D",
+          "b2b": "A",
+          "b1a_prime": "D"
+        },
+        "distinct_answers": [
+          "A",
+          "D"
+        ]
+      },
+      {
+        "case_id": "beijing_male_19700722_P008-Q36",
+        "arm_modes": {
+          "b2c": "C",
+          "b1b": "C",
+          "b1c": "C",
+          "b2b": "C",
+          "b1a_prime": "C"
+        },
+        "distinct_answers": [
+          "C"
+        ]
+      },
+      {
+        "case_id": "beijing_male_19700722_P008-Q37",
+        "arm_modes": {
+          "b2c": "C",
+          "b1b": "C",
+          "b1c": "C",
+          "b2b": "D",
+          "b1a_prime": "C"
+        },
+        "distinct_answers": [
+          "C",
+          "D"
+        ]
+      },
+      {
+        "case_id": "beijing_male_19700722_P008-Q38",
+        "arm_modes": {
+          "b2c": "C",
+          "b1b": "A",
+          "b1c": "B",
+          "b2b": "A",
+          "b1a_prime": "C"
+        },
+        "distinct_answers": [
+          "A",
+          "B",
+          "C"
+        ]
+      },
+      {
+        "case_id": "beijing_male_19700722_P008-Q39",
+        "arm_modes": {
+          "b2c": "A",
+          "b1b": "A",
+          "b1c": "A",
+          "b2b": "D",
+          "b1a_prime": "A"
+        },
+        "distinct_answers": [
+          "A",
+          "D"
+        ]
+      },
+      {
+        "case_id": "beijing_male_19700722_P008-Q40",
+        "arm_modes": {
+          "b2c": "A",
+          "b1b": "C",
+          "b1c": "A",
+          "b2b": "A",
+          "b1a_prime": "A"
+        },
+        "distinct_answers": [
+          "A",
+          "C"
+        ]
+      }
+    ]
+  },
+  "qualitative_b2b": [
+    {
+      "case_id": "beijing_male_19700722_P008-Q36",
+      "year": "2025",
+      "correct": true,
+      "predicted": "C",
+      "expected": "C",
+      "raw_answer_excerpt": "根据命主紫微斗数精简盘信息，命宫在子，主星为紫微（平），身宫在寅，主星为破军（得）。紫微为帝星，主贵气与学识，但落平位则力量普通，表明命主具有一定学习能力，但并非顶尖资质。身宫破军得地，破军性动、叛逆，常代表变动与不稳定，可能影响学业持续性。结合命主1970年出生时代背景，高等教育尚未普及，多数人学历在中等阶段，且紫微平位无强力吉星辅助，难达博士高度；破军身宫又暗示学业易有波折，可能未能顺利完成全...",
+      "raw_answer_len": 244
+    },
+    {
+      "case_id": "beijing_male_19700722_P008-Q36",
+      "year": "2025",
+      "correct": true,
+      "predicted": "C",
+      "expected": "C",
+      "raw_answer_excerpt": "根据紫微斗数命盘分析，命宫紫微（平）坐子，紫微为帝星主贵气与学识，但落平位力量受限，暗示先天学业运势中等，不易取得极高学历。身宫破军（得）在寅，破军主变动与开创，得地则后天后劲强，但易有波折中断之象。结合1970年北京的时代背景，该年代高等教育资源稀缺，命主可能因环境或自身选择未能完成高等教育，学历中断于较高阶段。综合判断，高中或专科肄业较为符合命盘特征。\n\n最终答案：C",
+      "raw_answer_len": 187
+    },
+    {
+      "case_id": "beijing_male_19700722_P008-Q36",
+      "year": "2025",
+      "correct": false,
+      "predicted": "D",
+      "expected": "C",
+      "raw_answer_excerpt": "根据命主出生信息排定八字：庚戌年、癸未月、癸卯日、庚申时。日主癸水，月柱癸水比肩帮扶，年时双透庚金正印，坐申金印星强根，形成“杀印相生”格局。印星极旺且为用神，主学业优异、学历高深。结合时代背景（1970年出生，80年代末至90年代高等教育逐步正常化），如此强盛的印星必然在学历上有突出表现。紫微斗数命宫紫微（平）虽非庙旺，但身宫破军（得）位于寅宫，破军在寅为得地，有开创突破之象，亦暗示高等求知过程...",
+      "raw_answer_len": 228
+    },
+    {
+      "case_id": "beijing_male_19700722_P008-Q37",
+      "year": "2025",
+      "correct": false,
+      "predicted": "D",
+      "expected": "A",
+      "raw_answer_excerpt": "根据命主信息，命宫在子，主星紫微（平），身宫在寅，主星破军（得）。紫微为帝星，主贵气与领导力，但落于平位，暗示先天家庭或早期环境普通，领导潜能尚未充分发挥。身宫破军（得），破军为破耗与开创之星，得地则代表强烈的变革、开拓与实干能力，往往先破后立、白手起家。命主出社会后，因身宫主导后天发展，破军的特性会使其不甘于安稳固定的工作，倾向从变动与挑战中寻找机遇，从小规模开始打拼，通过破旧立新的方式逐步壮大...",
+      "raw_answer_len": 226
+    },
+    {
+      "case_id": "beijing_male_19700722_P008-Q37",
+      "year": "2025",
+      "correct": false,
+      "predicted": "D",
+      "expected": "A",
+      "raw_answer_excerpt": "根据命盘信息，命宫在子，主星紫微平位，紫微虽为帝星但力道不足，代表早年环境可能并非显赫，需靠自身努力。身宫在寅，主星破军得地，破军属水，为破耗变动之星，得地则力量强旺，主后天发展多变动、开创与突破，不喜守成，适合经商、创业或需要不断突破的工作。命宫与身宫结合来看，命主出社会后可能倾向于选择带有开创性和变动性的道路，而非稳定的体制内或按部就班的职业。选项A和B较稳定，与破军特质不符；C选项虽涉及企业...",
+      "raw_answer_len": 270
+    }
+  ],
+  "qualitative_b2c": [
+    {
+      "case_id": "beijing_male_19700722_P008-Q36",
+      "year": "2025",
+      "correct": true,
+      "predicted": "C",
+      "expected": "C",
+      "raw_answer_excerpt": "### 初步分析（基于八字）\n\n命主八字四柱为 **庚戌 癸未 癸卯 己未**，日主癸水生于未月，正值盛夏，土旺克水，官杀重重。年干庚金正印为用，但坐戌土受燥热所脆，印星虚浮无根，生身之力不足。日支卯木食神本可制杀，然卯未半合木局，食神被合，才华难以充分发挥。整体格局身弱官旺，印星无力，学业根基薄弱，早期求学阶段恐多阻滞，难以获得高学历。\n\n### 补充判断（基于紫微斗数）\n\n命宫 **紫微（平）...",
+      "raw_answer_len": 514
+    },
+    {
+      "case_id": "beijing_male_19700722_P008-Q36",
+      "year": "2025",
+      "correct": true,
+      "predicted": "C",
+      "expected": "C",
+      "raw_answer_excerpt": "### 八字分析\n命主八字为：**庚戌 癸未 癸卯 己未**，日主癸水生于未月，失令，但年干庚金正印生身，月干癸水比肩帮扶，日坐卯木食神泄秀。局中七杀（未、己）重重，杀旺身弱，幸有卯木食神制杀、庚金印星化杀，构成 **“食神制杀”与“杀印相生”** 的组合。  \n学历主要看印星，年干庚金为用，但坐戌土燥火脆金，印星根基受损，力量不足。食神制杀则主技艺、实用才能，早年大运走甲申、乙酉，金运地支助印，...",
+      "raw_answer_len": 600
+    },
+    {
+      "case_id": "beijing_male_19700722_P008-Q37",
+      "year": "2025",
+      "correct": false,
+      "predicted": "C",
+      "expected": "A",
+      "raw_answer_excerpt": "### 八字分析\n命主日主癸水，生于未月，火土燥烈，癸水失令。月干癸水比肩帮身，但坐未土受克。日支卯木为食神，泄水生火，加剧耗身。时柱己未七杀强旺，直克日主，幸有年柱庚戌正印化杀生身，形成“杀印相生”之格。此格局主贵，代表命主能以学识、权谋化解压力，获得地位。然官杀混杂且重，早年多奔波劳碌。食神卯木生财，有技艺或口才之长，但身弱难以任大财，必须依托强大平台（印星）方显其能。\n\n### 紫微斗数分析...",
+      "raw_answer_len": 718
+    },
+    {
+      "case_id": "beijing_male_19700722_P008-Q37",
+      "year": "2025",
+      "correct": false,
+      "predicted": "C",
+      "expected": "A",
+      "raw_answer_excerpt": "### 推理分析\n\n#### 一、八字命局初步分析\n1.  **日主强弱与格局**\n    *   日主癸水，生于未月（季夏），土旺水囚，火土燥气逼人。天干透出己土七杀，地支卯未半合木局，但全局土势浩大（未、未、戌），日主癸水在地支无强根，仅年支戌中有辛金余气，月干癸水比肩帮扶，属于**身弱**格局。\n    *   命局官杀（土）极旺，食神（卯木）制杀，但土重木折，食神制杀之力不足。年柱庚戌为正...",
+      "raw_answer_len": 1640
+    },
+    {
+      "case_id": "beijing_male_19700722_P008-Q37",
+      "year": "2025",
+      "correct": false,
+      "predicted": "C",
+      "expected": "A",
+      "raw_answer_excerpt": "### 八字分析\n- **日主强弱**：癸水生于未月，失令；地支未土重重，时干己土七杀透出，官杀极旺。日主仅得年干庚金正印及月干癸水比肩生扶，但地支无根，身弱无疑。\n- **格局特点**：官杀混杂（年支戌土正官，月时未土七杀），日支卯木食神制杀，年干庚金正印化杀，构成 **“食神制杀”** 与 **“杀印相生”** 双格局。食神主才华技艺，印主学历文职，显示命主有靠专业能力及贵人提携化解压力、获取...",
+      "raw_answer_len": 730
+    }
+  ],
+  "parse_failures": {
+    "strict_failures": [
+      {
+        "case_id": "female_19831028_P004-Q20",
+        "arm": "b1c",
+        "year": "2024",
+        "repeat": 1,
+        "terminal_state": "invalid",
+        "parser_failure_reason": "parser_invalid",
+        "finish_reason": "stop",
+        "raw_answer_excerpt": "### 命盘关键信息分析\n\n#### 1. 八字基础\n- 日主己土，生于戌月当令，自坐丑土，时柱己巳火土相生，年柱癸亥、月柱壬戌财星被土克制。整体土旺身强，夫星（甲木）深藏亥中，被旺土所克，夫缘薄弱，易有婚姻不顺之象。\n- 日支夫妻宫为丑土比肩，暗示夫妻间易有争执、互不相让。\n\n#### 2. 紫微斗数重点\n- **夫妻宫（身宫）**：主星紫微（旺）、贪狼（得），辅星火星、铃星、天魁，且贪狼化忌同度。此为关键组合：\n  - 紫微贪狼在卯宫，配偶有才艺但桃花重，贪狼化忌加重欲望过盛、嗜好不良或感情纠葛。\n  - 火星、铃星同度，构成“火贪/铃贪暴怒格”，主配偶脾气暴躁、突发冲突，易有暴力倾向。\n...",
+        "raw_answer_len": 634
+      },
+      {
+        "case_id": "male_19710412_P005-Q25",
+        "arm": "b2b",
+        "year": "2024",
+        "repeat": 1,
+        "terminal_state": "invalid",
+        "parser_failure_reason": "parser_invalid",
+        "finish_reason": "stop",
+        "raw_answer_excerpt": "根据命主八字辛亥、壬辰、丁卯、戊申，日主丁火生于辰月，得印星卯木生扶，时柱伤官生财。原局地支卯申暗合，有金木相战之象，申金为骨骼，卯木为四肢，卯申合已埋下外伤隐患。当流年冲克申金或卯木时，易引发骨折。\n\n看大运：阴年男命顺行，起运约8岁。1998年27岁在甲午运，2010年39岁在丙申运，2018年47岁在丙申运，2022年51岁在丁酉运。骨折为突发意外，需引动金木冲战。1998戊寅年，太岁寅木冲申，但大运甲午，寅午半合火局，合而解冲，冲力减弱。2018戊戌年，卯戌合火，无直接冲克，不主骨折。2022壬寅年，太岁寅冲申，大运丁酉，酉冲日支卯，有受伤之象，但天干丁壬合，冲克稍缓。\n\n2010庚寅...",
+        "raw_answer_len": 414
+      }
+    ],
+    "loose_sensitivity": {
+      "b1a_prime": {
+        "loose_accuracy": 0.3333,
+        "loose_correct": 80,
+        "n": 240
+      },
+      "b1b": {
+        "loose_accuracy": 0.3333,
+        "loose_correct": 80,
+        "n": 240
+      },
+      "b1c": {
+        "loose_accuracy": 0.35,
+        "loose_correct": 84,
+        "n": 240
+      },
+      "b2b": {
+        "loose_accuracy": 0.3708,
+        "loose_correct": 89,
+        "n": 240
+      },
+      "b2c": {
+        "loose_accuracy": 0.325,
+        "loose_correct": 78,
+        "n": 240
+      }
+    }
+  },
+  "hist_6b1_comparison": {
+    "b1a_prime": {
+      "accuracy": 0.2625,
+      "correct": 63,
+      "n": 240
+    },
+    "b1b": {
+      "accuracy": 0.3542,
+      "correct": 85,
+      "n": 240
+    },
+    "b1c": {
+      "accuracy": 0.3333,
+      "correct": 80,
+      "n": 240
+    },
+    "b1c_minus_b1b": -0.0209
+  },
+  "label_preflight": {
+    "question_complexity": {
+      "1": 51,
+      "2": 12,
+      "3": 17
+    },
+    "ziwei_info_richness": {
+      "1": 20,
+      "2": 45,
+      "3": 15
+    },
+    "bazi_info_richness": {
+      "1": 70,
+      "2": 5,
+      "3": 5
+    },
+    "annotator_disagreement": 0,
+    "total_dim_comparisons": 240
+  }
+}
