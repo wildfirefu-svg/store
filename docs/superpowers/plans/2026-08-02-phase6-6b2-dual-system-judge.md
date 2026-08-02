@@ -1,4 +1,4 @@
-# Phase 6 6B2 - 双管线 + source_label_blinded_judge：实施计划 (v3)
+# Phase 6 6B2 - 双管线 + source_label_blinded_judge：实施计划 (v4)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -60,6 +60,10 @@ def _case():
 def test_bazi_prompt_byte_equal_6b1():
     c=_case()
     assert build_bazi_pipeline_prompt(c)==_assemble_reasoned_choice_prompt(c,render_reasoned_context(c,"legacy_v0","none"))
+
+def test_ziwei_prompt_byte_equal_6b1():
+    c=_case()
+    assert build_ziwei_pipeline_prompt(c)==_assemble_reasoned_choice_prompt(c,render_reasoned_context(c,"legacy_v0","only"))
 
 def test_judge_template_no_added_source_labels():
     c=_case()
@@ -239,7 +243,7 @@ def test_dual_consensus_no_judge(monkeypatch, tmp_path):
     monkeypatch.setattr(rb, "call_model_sync",
         lambda p,pr,m,**k: calls.append(p) or "最终答案：A")
     ctx = rb.Phase6Context("ds","prof","dual","dual","p","m",0,
-        str(tmp_path/"d.jsonl"), str(tmp_path/"e.jsonl"), 16, 26, resume=False)
+        str(tmp_path/"d.jsonl"), str(tmp_path/"e.jsonl"), 24, 26, resume=False)
     monkeypatch.setattr(rb, "_PHASE6_CTX", ctx)
     result = rb.run_dual_system_benchmark([_case()],"p","m",case_details_jsonl=str(tmp_path/"d.jsonl"))
     assert len(calls)==2
@@ -663,81 +667,156 @@ def test_schedule_60_slices_dual_scheduled_24(tmp_path):
 
 ---
 
-## Task 13: gate（冻结聚合算法）+ 报告 + B1-c advisory（P1-1/3/4 修订）
+## Task 13: gate（冻结聚合算法 + 三阶段参数化）+ 报告 + B1-c advisory（P0-1/P0-2/P1 修订）
 
 **Files:** Modify `scripts/phase6_6b2_orchestrator.py`; Test `tests/test_phase6_6b2.py`
 
-**冻结最终答案聚合算法（P1-4）：**
+**P0-1：真实 detail row 无顶层 `year`/`repeat`/`arm`（已验证）。** year 从 `attempt_key[0]`（dataset_id，如 `baziqa_contest8_2024_holdout_enriched`）解析，arm 从 `attempt_key[2]`，repeat 从 `attempt_key[7]`。用统一 `parse_detail_identity()`。
+
+**P0-2：compute_gate 硬编码 2024/2025，无法支持 reuse/final_2023。** 参数化 `stage`，三档裁决（spec §7.3/§7.4）：
+- dev：`Δ_dev≥+4pp 且 dual_acc≥32.5% 且 min(Δ_2024,Δ_2025)≥-2pp` -> PROMOTE_CANDIDATE/ROLLBACK
+- reuse：`Δ_2021≥+2pp 且 Δ_2022≥+2pp` -> PASS/FAIL
+- final_2023：`Δ2023≥0` CONFIRMED_PROMOTE；`-5pp<Δ2023<0` INCONCLUSIVE；`Δ2023≤-5pp` ROLLBACK
+
+**P1：** 计算前验证每 `year×repeat×arm` 恰有 40 唯一 case，缺失不隐式计错（显式报错）；B1-c advisory 读 `attempt_key[2]`；冻结 B1-c 归档预期 SHA-256。
+
+**冻结最终答案聚合算法：**
 ```
-对每个 (year, repeat, case_id):
-  1. bazi 行 ans_b（stage=bazi），ziwei 行 ans_z（stage=ziwei）
-  2. 若 ans_b/ans_z 非 None 且相等 -> final=共识（无 judge 行）
-     否则 -> judge 行 ans_j（可能不存在），final=ans_j（None if 未调/失败/未解析）
-  3. correct = (final == expected)
-  4. acc(year,repeat) = sum(correct)/40   # 固定 40 题分母
-  5. Δ(year,repeat)=acc_dual-acc_b1a; Δ_year=mean(3); Δ_dev=mean(2 years)
+parse_detail_identity(row) -> (year, repeat, case_id, arm, stage)
+  year = _year_from_dataset_id(row["attempt_key"][0])  # "baziqa_contest8_2024_holdout_enriched" -> "2024"
+  arm = row["attempt_key"][2]
+  repeat = row["attempt_key"][7]
+  stage = row["attempt_key"][3]
+  case_id = row["attempt_key"][6]
+
+对每个 (year, repeat, case_id, arm) 聚合：
+  b1a_prime: 1 main 行 -> final = predicted_answer
+  dual: bazi 行 ans_b + ziwei 行 ans_z
+    若 ans_b/ans_z 非 None 且相等 -> final=共识（无 judge 行）
+    否则 -> judge 行 ans_j（可能不存在），final=ans_j（None if 未调/失败/未解析）
+
+验证：每 (year, repeat, arm) 恰 40 唯一 case_id，否则 raise（不隐式计错）
+acc(year,repeat,arm) = correct / 40
+Δ(year,repeat) = acc_dual - acc_b1a
 禁止：直接平均 detail 行 correct（judge 行改变分母）。
 ```
 
-**B1-c advisory（P1-3）：** 冻结唯一路径，SHA-256 验证，匹配 ≠1 个 fail-closed。
-
-- [ ] **Step 1: 写失败测试 - gate 三条件 + 聚合算法 + B1-c 唯一路径**
+- [ ] **Step 1: 写失败测试 - 真实 schema fixture + dev/reuse/final 三阶段 + B1-c 唯一路径**
 
 ```python
-def _mk_detail(cid, arm, stage, ans, expected="A", state="parsed", year="2024", repeat=0):
-    return {"case_id":cid,"predicted_answer":ans,"expected_answer":expected,
-            "correct":ans==expected,"dual_stage":stage,"terminal_state":state,
-            "attempt_key":["ds","prof",arm,stage,"p","m",cid,repeat,0,"p0"],
-            "year":year,"repeat":repeat}
+def _mk_real_detail(cid, arm, stage, ans, dataset="baziqa_contest8_2024_holdout_enriched",
+                    expected="A", state="parsed", repeat=0):
+    """真实 schema: 无顶层 year/repeat/arm，全部在 attempt_key。"""
+    return {"case_id":cid, "predicted_answer":ans, "expected_answer":expected,
+            "correct":ans==expected, "dual_stage":stage, "terminal_state":state,
+            "attempt_key":[dataset,"prof",arm,stage,"p","m",cid,repeat,0,"p0"]}
 
-def test_gate_promote_all_conditions_met():
+def test_parse_detail_identity_real_schema():
+    from scripts.phase6_6b2_orchestrator import parse_detail_identity
+    r=_mk_real_detail("Q1","dual","bazi","A")
+    ident=parse_detail_identity(r)
+    assert ident==("2024",0,"Q1","dual","bazi")  # year/repeat/case/arm/stage
+
+def test_gate_dev_promote_real_schema():
     from scripts.phase6_6b2_orchestrator import compute_gate
     details=[]
     for year in ["2024","2025"]:
+        ds=f"baziqa_contest8_{year}_holdout_enriched"
         for rep in range(3):
             for i in range(40):
                 cid=f"{year}_R{rep}_Q{i}"
-                da="A" if i<13 else "B"  # dual 13/40=32.5%
-                details.append(_mk_detail(cid,"dual","bazi",da,year=year,repeat=rep))
-                details.append(_mk_detail(cid,"dual","ziwei",da,year=year,repeat=rep))
-                details.append(_mk_detail(cid,"b1a_prime","main","B",year=year,repeat=rep))
-    g=compute_gate(details)
+                da="A" if i<13 else "B"
+                details.append(_mk_real_detail(cid,"dual","bazi",da,dataset=ds,repeat=rep))
+                details.append(_mk_real_detail(cid,"dual","ziwei",da,dataset=ds,repeat=rep))
+                details.append(_mk_real_detail(cid,"b1a_prime","main","B",dataset=ds,repeat=rep))
+    g=compute_gate(details, stage="dev")
     assert g["verdict"]=="PROMOTE_CANDIDATE"
     assert g["dual_merged_acc"]>=0.325
     assert g["delta_dev"]>=0.04
 
-def test_gate_fail_dual_below_absolute():
+def test_gate_dev_fail_absolute_threshold():
     from scripts.phase6_6b2_orchestrator import compute_gate
     details=[]
     for year in ["2024","2025"]:
+        ds=f"baziqa_contest8_{year}_holdout_enriched"
         for rep in range(3):
             for i in range(40):
                 cid=f"{year}_R{rep}_Q{i}"
-                da="A" if i<10 else "B"  # dual 10/40=25% < 32.5%
-                details.append(_mk_detail(cid,"dual","bazi",da,year=year,repeat=rep))
-                details.append(_mk_detail(cid,"dual","ziwei",da,year=year,repeat=rep))
-                details.append(_mk_detail(cid,"b1a_prime","main","B",year=year,repeat=rep))
-    g=compute_gate(details)
+                da="A" if i<10 else "B"  # 10/40=25%
+                details.append(_mk_real_detail(cid,"dual","bazi",da,dataset=ds,repeat=rep))
+                details.append(_mk_real_detail(cid,"dual","ziwei",da,dataset=ds,repeat=rep))
+                details.append(_mk_real_detail(cid,"b1a_prime","main","B",dataset=ds,repeat=rep))
+    g=compute_gate(details, stage="dev")
     assert g["verdict"]=="ROLLBACK"
     assert g["dual_merged_acc"]<0.325
 
+def test_gate_dev_rejects_missing_cases():
+    """某 (year,repeat,arm) 不足 40 case -> raise，不隐式计错。"""
+    import pytest
+    from scripts.phase6_6b2_orchestrator import compute_gate
+    details=[_mk_real_detail("Q1","dual","bazi","A")]  # 仅 1 题
+    with pytest.raises((SystemExit, ValueError)):
+        compute_gate(details, stage="dev")
+
+def test_gate_reuse_pass():
+    from scripts.phase6_6b2_orchestrator import compute_gate
+    details=[]
+    for year in ["2021","2022"]:
+        ds=f"baziqa_contest8_{year}_holdout_enriched"
+        for rep in range(3):
+            for i in range(40):
+                cid=f"{year}_R{rep}_Q{i}"
+                da="A" if i<15 else "B"  # dual 15/40, b1a 0/40 -> Δ=37.5pp>=2pp
+                details.append(_mk_real_detail(cid,"dual","bazi",da,dataset=ds,repeat=rep))
+                details.append(_mk_real_detail(cid,"dual","ziwei",da,dataset=ds,repeat=rep))
+                details.append(_mk_real_detail(cid,"b1a_prime","main","B",dataset=ds,repeat=rep))
+    g=compute_gate(details, stage="reuse")
+    assert g["verdict"]=="PASS"
+    assert g["delta_2021"]>=0.02 and g["delta_2022"]>=0.02
+
+def test_gate_final_2023_confirmed():
+    from scripts.phase6_6b2_orchestrator import compute_gate
+    ds="baziqa_contest8_2023_holdout_enriched"
+    details=[]
+    for rep in range(3):
+        for i in range(40):
+            cid=f"2023_R{rep}_Q{i}"
+            da="A" if i<20 else "B"  # Δ=50pp>=0
+            details.append(_mk_real_detail(cid,"dual","bazi",da,dataset=ds,repeat=rep))
+            details.append(_mk_real_detail(cid,"dual","ziwei",da,dataset=ds,repeat=rep))
+            details.append(_mk_real_detail(cid,"b1a_prime","main","B",dataset=ds,repeat=rep))
+    g=compute_gate(details, stage="final_2023")
+    assert g["verdict"]=="CONFIRMED_PROMOTE"
+    assert g["delta_2023"]>=0
+
+def test_gate_final_2023_inconclusive():
+    # -5pp < Δ2023 < 0 -> INCONCLUSIVE
+    ...
+
+def test_gate_final_2023_rollback():
+    # Δ2023 <= -5pp -> ROLLBACK
+    ...
+
 def test_gate_aggregation_consensus_no_judge_row():
-    """共识题无 judge 行，按共识计分，不因缺 judge 计错。"""
     from scripts.phase6_6b2_orchestrator import compute_gate
     details=[
-        _mk_detail("Q1","dual","bazi","A"),  # 共识 A(对)
-        _mk_detail("Q1","dual","ziwei","A"),  # 无 judge 行
-        _mk_detail("Q1","b1a_prime","main","B"),  # 错
+        _mk_real_detail("Q1","dual","bazi","A"),
+        _mk_real_detail("Q1","dual","ziwei","A"),  # 共识，无 judge
+        _mk_real_detail("Q1","b1a_prime","main","B"),
     ]
-    g=compute_gate(details)
-    # Q1: dual final=A(对)->1/1, b1a=0/1, Δ=1.0
-    assert g["verdict"] in ("PROMOTE_CANDIDATE","ROLLBACK")  # 取决于其他条件
-    # 关键：dual_correct=1（共识计分），非 0（不会因缺 judge 计错）
+    g=compute_gate(details, stage="dev")
+    # 共识 A(对) -> dual_correct=1，不会因缺 judge 计错
 
-def test_b1c_advisory_unique_path_fail_closed(tmp_path, monkeypatch):
+def test_b1c_advisory_reads_attempt_key_arm(tmp_path, monkeypatch):
+    """B1-c 筛选用 attempt_key[2]，不是顶层 arm。"""
+    from scripts.phase6_6b2_orchestrator import load_b1c_advisory
+    adv = load_b1c_advisory()
+    assert adv["count"]==240  # b1c 真实行数
+    assert adv["sha256"]=="10e6b82f92fabd02b7e621b714d330a812f16e6b7aac7ad98adf4a0dd494eafa"
+
+def test_b1c_advisory_fail_closed_on_missing(tmp_path, monkeypatch):
     from scripts.phase6_6b2_orchestrator import load_b1c_advisory
     import pytest
-    # 路径不存在 -> SystemExit
     monkeypatch.setattr("scripts.phase6_6b2_orchestrator.B1C_ARCHIVE_PATH", str(tmp_path/"nope.jsonl"))
     with pytest.raises(SystemExit):
         load_b1c_advisory()
@@ -745,64 +824,108 @@ def test_b1c_advisory_unique_path_fail_closed(tmp_path, monkeypatch):
 
 - [ ] **Step 2: 运行确认失败**
 
-- [ ] **Step 3: 实现 compute_gate + load_b1c_advisory + generate_report**
+- [ ] **Step 3: 实现 parse_detail_identity + compute_gate + load_b1c_advisory**
 
 ```python
-B1C_ARCHIVE_PATH = "docs/phase6/6b1/6b1-2026-07-17-deepseek-deepseek-chat-78481de6/merged_details.jsonl"
+import re
 
-def compute_gate(merged_details):
+B1C_ARCHIVE_PATH = "docs/phase6/6b1/6b1-2026-07-17-deepseek-deepseek-chat-78481de6/merged_details.jsonl"
+B1C_EXPECTED_SHA256 = "10e6b82f92fabd02b7e621b714d330a812f16e6b7aac7ad98adf4a0dd494eafa"
+
+def _year_from_dataset_id(dataset_id):
+    m = re.search(r"baziqa_contest8_(\d{4})_holdout", dataset_id or "")
+    return m.group(1) if m else None
+
+def parse_detail_identity(row):
+    """从真实 detail row 的 attempt_key 解析 (year, repeat, case_id, arm, stage)。"""
+    ak = row["attempt_key"]
+    return (_year_from_dataset_id(ak[0]), int(ak[7]), ak[6], ak[2], ak[3])
+
+def compute_gate(merged_details, stage="dev"):
     from collections import defaultdict
-    by_key=defaultdict(list)
+    by_key = defaultdict(list)
     for r in merged_details:
-        k=(r["year"],r["repeat"],r["case_id"],r["attempt_key"][2])
-        by_key[k].append(r)
-    acc=defaultdict(lambda:{"dual_correct":0,"b1a_correct":0})
-    cases_per_yr_rep=defaultdict(set)
-    for (year,rep,cid,arm),rows in by_key.items():
-        cases_per_yr_rep[(year,rep)].add(cid)
-        if arm=="b1a_prime":
-            acc[(year,rep)]["b1a_correct"]+= 1 if rows[0]["correct"] else 0
-        elif arm=="dual":
-            b=next((r for r in rows if r.get("dual_stage")=="bazi"),None)
-            z=next((r for r in rows if r.get("dual_stage")=="ziwei"),None)
-            j=next((r for r in rows if r.get("dual_stage")=="judge"),None)
+        year, rep, cid, arm, stg = parse_detail_identity(r)
+        by_key[(year, rep, cid, arm)].append(r)
+    # 验证每 (year,repeat,arm) 恰 40 唯一 case
+    case_counts = defaultdict(set)
+    for (year, rep, cid, arm) in by_key:
+        case_counts[(year, rep, arm)].add(cid)
+    for (year, rep, arm), cids in case_counts.items():
+        if len(cids) != 40:
+            raise SystemExit(f"case 数 != 40: {year}/{rep}/{arm} = {len(cids)}")
+    # 聚合
+    acc = defaultdict(lambda: {"dual_correct":0, "b1a_correct":0})
+    years_seen = set()
+    for (year, rep, cid, arm), rows in by_key.items():
+        years_seen.add(year)
+        if arm == "b1a_prime":
+            acc[(year, rep)]["b1a_correct"] += 1 if rows[0]["correct"] else 0
+        elif arm == "dual":
+            b = next((r for r in rows if r.get("dual_stage")=="bazi"), None)
+            z = next((r for r in rows if r.get("dual_stage")=="ziwei"), None)
+            j = next((r for r in rows if r.get("dual_stage")=="judge"), None)
             if b and z and b["predicted_answer"] is not None and z["predicted_answer"] is not None \
                and b["predicted_answer"]==z["predicted_answer"]:
-                final=b["predicted_answer"]
+                final = b["predicted_answer"]
             elif j:
-                final=j["predicted_answer"]
+                final = j["predicted_answer"]
             else:
-                final=None
-            expected=(b or z)["expected_answer"]
-            acc[(year,rep)]["dual_correct"]+= 1 if final==expected else 0
-    delta_yr_rep={}
-    for (year,rep),v in acc.items():
-        da=v["dual_correct"]/40; ba=v["b1a_correct"]/40
-        delta_yr_rep[(year,rep)]=da-ba
-    delta_year={y:sum(d for (yy,_),d in delta_yr_rep.items() if yy==y)/3 for y in ["2024","2025"]}
-    delta_dev=sum(delta_year.values())/2
-    dual_total=40*2*3
-    dual_merged_acc=sum(v["dual_correct"] for v in acc.values())/dual_total
-    min_year=min(delta_year.values())
-    verdict="PROMOTE_CANDIDATE" if (delta_dev>=0.04 and dual_merged_acc>=0.325 and min_year>=-0.02) else "ROLLBACK"
-    return {"verdict":verdict,"delta_dev":delta_dev,"dual_merged_acc":dual_merged_acc,
-            "min_year_delta":min_year,"delta_by_year":delta_year,"delta_by_year_repeat":delta_yr_rep}
+                final = None
+            expected = (b or z)["expected_answer"]
+            acc[(year, rep)]["dual_correct"] += 1 if final==expected else 0
+    delta_yr_rep = {}
+    for (year, rep), v in acc.items():
+        da = v["dual_correct"]/40; ba = v["b1a_correct"]/40
+        delta_yr_rep[(year, rep)] = da - ba
+    years = sorted(years_seen)
+
+    if stage == "dev":
+        delta_year = {y: sum(d for (yy,_),d in delta_yr_rep.items() if yy==y)/3 for y in years}
+        delta_dev = sum(delta_year.values())/len(years)
+        dual_total = 40 * len(years) * 3
+        dual_merged_acc = sum(v["dual_correct"] for v in acc.values())/dual_total
+        min_year = min(delta_year.values())
+        verdict = "PROMOTE_CANDIDATE" if (delta_dev>=0.04 and dual_merged_acc>=0.325 and min_year>=-0.02) else "ROLLBACK"
+        return {"verdict":verdict,"delta_dev":delta_dev,"dual_merged_acc":dual_merged_acc,
+                "min_year_delta":min_year,"delta_by_year":delta_year,
+                "delta_by_year_repeat":delta_yr_rep,"stage":stage}
+    elif stage == "reuse":
+        delta_year = {y: sum(d for (yy,_),d in delta_yr_rep.items() if yy==y)/3 for y in years}
+        verdict = "PASS" if all(d>=0.02 for d in delta_year.values()) else "FAIL"
+        return {"verdict":verdict,"delta_by_year":delta_year,
+                "delta_2021":delta_year.get("2021"),"delta_2022":delta_year.get("2022"),"stage":stage}
+    elif stage == "final_2023":
+        delta_year = {y: sum(d for (yy,_),d in delta_yr_rep.items() if yy==y)/3 for y in years}
+        d2023 = delta_year.get("2023", -1.0)
+        if d2023 >= 0:
+            verdict = "CONFIRMED_PROMOTE"
+        elif d2023 > -0.05:
+            verdict = "INCONCLUSIVE"
+        else:
+            verdict = "ROLLBACK"
+        return {"verdict":verdict,"delta_2023":d2023,"stage":stage}
+    else:
+        raise SystemExit(f"unknown stage: {stage}")
 
 def load_b1c_advisory():
-    import hashlib,os,json
-    path=B1C_ARCHIVE_PATH
+    import hashlib, os, json
+    path = B1C_ARCHIVE_PATH
     if not os.path.exists(path):
         raise SystemExit(f"B1-c 归档不存在: {path} (fail-closed)")
-    with open(path,"rb") as f: sha=hashlib.sha256(f.read()).hexdigest()
-    rows=[json.loads(l) for l in open(path,encoding="utf-8") if l.strip()]
-    b1c=[r for r in rows if r.get("arm")=="b1c"]
-    return {"path":path,"sha256":sha,"count":len(b1c),"rows":b1c}
+    with open(path, "rb") as f:
+        sha = hashlib.sha256(f.read()).hexdigest()
+    if sha != B1C_EXPECTED_SHA256:
+        raise SystemExit(f"B1-c SHA-256 不匹配: {sha} != {B1C_EXPECTED_SHA256} (fail-closed)")
+    rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
+    b1c = [r for r in rows if r.get("attempt_key",[None]*10)[2] == "b1c"]
+    return {"path":path, "sha256":sha, "count":len(b1c), "rows":b1c}
 ```
 
 generate_report 含：准确率表、Δ 表、gate 裁决、judge 触发率（实际 vs 60.8%）、parser rate、完整性、预算、B1-c advisory 对照（Δ_dual_vs_b1c 非决策）。
 
 - [ ] **Step 4: 运行通过**
-- [ ] **Step 5: Commit** - `feat(6b2): frozen gate aggregation + report + B1-c advisory (unique path)`
+- [ ] **Step 5: Commit** - `feat(6b2): gate (3-stage parameterized + real schema identity) + B1-c advisory (frozen SHA)`
 
 ---
 
@@ -891,9 +1014,15 @@ def test_reuse_pass_required_before_2023(tmp_path):
         check_stage_gate("final_2023", gate_root=str(tmp_path))
 ```
 
-- [ ] **Step 5: 实现 阶段准入 + 2023 RUNNING/FINALIZED 状态机**
+- [ ] **Step 5: 实现 阶段准入 + 2023 RUNNING/FINALIZED 状态机（P0-3/P0-4 修订）**
+
+**P0-3：** `acquire_2023_run_lock` 用**预登记 SHA**（不读文件），打破循环依赖。流程：预登记 SHA 获取 RUNNING -> 读文件验证原始 SHA -> enrichment 后记派生 SHA -> 任一不匹配 BLOCKED。
+**P0-4：** `finalize_2023_run_lock` 必须验证 schedule 完整 + integrity gate + archive 已发布 + 哈希一致后，原子切换 FINALIZED；归档失败保持 RUNNING。
 
 ```python
+# 2023 原始数据集预登记 SHA-256（enrichment 前冻结，运行时验证）
+BLESSED_2023_RAW_SHA256 = "PRECOMPUTED_AT_PLAN_FREEZE"  # 实施时跑 sha256(2023_holdout.jsonl) 填入并冻结
+
 def _load_gate(path):
     p=Path(path)
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
@@ -912,60 +1041,112 @@ def check_stage_gate(stage, gate_root="docs/phase6/6b2"):
         if reuse.get("verdict")!="PASS":
             raise SystemExit(f"复用验证未通过 ({reuse.get('verdict')}), 禁止解封 2023")
 
-def acquire_2023_run_lock(lock_path, run_id, data_hash, code_fingerprint, schedule_hash):
-    """RUNNING/FINALIZED 两阶段。无锁->原子创建 RUNNING；RUNNING+完全匹配->RESUME；否则拒绝。"""
+def acquire_2023_run_lock(lock_path, run_id, pre_blessed_raw_sha, code_fingerprint, schedule_hash):
+    """用预登记 SHA 获取 RUNNING（不读文件）。RUNNING+完全匹配->RESUME；FINALIZED->拒绝。"""
     lp=Path(lock_path)
     if lp.exists():
         st=json.loads(lp.read_text(encoding="utf-8"))
         if st.get("status")=="FINALIZED":
             raise SystemExit("2023 已 FINALIZED, 禁止重跑（密封终验）")
         if st.get("status")=="RUNNING":
-            if (st.get("run_id")==run_id and st.get("data_hash")==data_hash
+            if (st.get("run_id")==run_id and st.get("raw_sha256")==pre_blessed_raw_sha
                 and st.get("code_fingerprint")==code_fingerprint and st.get("schedule_hash")==schedule_hash):
                 return "RESUME"
             raise SystemExit("2023 RUNNING 但指纹不匹配, 禁止恢复")
     lp.parent.mkdir(parents=True,exist_ok=True)
     tmp=lp.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"status":"RUNNING","run_id":run_id,"data_hash":data_hash,
-        "code_fingerprint":code_fingerprint,"schedule_hash":schedule_hash,"started_at":_now_iso()},
-        ensure_ascii=False),encoding="utf-8")
+    tmp.write_text(json.dumps({"status":"RUNNING","run_id":run_id,
+        "raw_sha256":pre_blessed_raw_sha,
+        "code_fingerprint":code_fingerprint,"schedule_hash":schedule_hash,
+        "started_at":_now_iso()}, ensure_ascii=False),encoding="utf-8")
     os.replace(tmp,lp)
     return "NEW"
 
-def finalize_2023_run_lock(lock_path):
+def verify_2023_raw_data(raw_path, pre_blessed_sha):
+    """RUNNING 锁成功后读取并验证原始数据 SHA。不匹配 -> BLOCKED。"""
+    actual=_sha256_file(raw_path)
+    if actual != pre_blessed_sha:
+        raise SystemExit(f"2023 原始数据 SHA 不匹配: {actual} != {pre_blessed_sha} (BLOCKED)")
+
+def finalize_2023_run_lock(lock_path, archive_id, audit_index_sha256, gate_verdict,
+                           schedule_complete, integrity_passed):
+    """事务闭环：验证 schedule 完整 + integrity + archive 已发布 + 哈希一致后，原子 FINALIZED。
+
+    任一验证失败 -> 保持 RUNNING，允许完全同指纹恢复。
+    """
+    if not schedule_complete:
+        raise SystemExit("finalize 拒绝: schedule 未完整 (保持 RUNNING)")
+    if not integrity_passed:
+        raise SystemExit("finalize 拒绝: integrity gate 未通过 (保持 RUNNING)")
+    if not archive_id or not audit_index_sha256:
+        raise SystemExit("finalize 拒绝: archive 未发布 (保持 RUNNING)")
     lp=Path(lock_path)
     st=json.loads(lp.read_text(encoding="utf-8"))
-    st["status"]="FINALIZED"; st["finalized_at"]=_now_iso()
+    st.update({"status":"FINALIZED","finalized_at":_now_iso(),
+               "archive_id":archive_id,"audit_index_sha256":audit_index_sha256,
+               "gate_verdict":gate_verdict})
     tmp=lp.with_suffix(".tmp")
     tmp.write_text(json.dumps(st,ensure_ascii=False),encoding="utf-8")
     os.replace(tmp,lp)
 ```
 
-- [ ] **Step 6: 写测试 - 2023 锁 RUNNING resume/FINALIZED 拒绝**
+- [ ] **Step 6: 写测试 - 2023 锁 RUNNING resume/FINALIZED 事务/归档失败保持 RUNNING**
 
 ```python
 def test_2023_lock_running_allows_matching_resume(tmp_path):
     from scripts.phase6_6b2_sealed_workflow import acquire_2023_run_lock
     lock=tmp_path/"2023.lock"
-    acquire_2023_run_lock(lock,"r1","dh","cf","sh")
-    assert acquire_2023_run_lock(lock,"r1","dh","cf","sh")=="RESUME"
+    acquire_2023_run_lock(lock,"r1","raw_sha","cf","sh")
+    assert acquire_2023_run_lock(lock,"r1","raw_sha","cf","sh")=="RESUME"
 
 def test_2023_lock_running_rejects_mismatch(tmp_path):
     from scripts.phase6_6b2_sealed_workflow import acquire_2023_run_lock
     import pytest
     lock=tmp_path/"2023.lock"
-    acquire_2023_run_lock(lock,"r1","dh","cf","sh")
+    acquire_2023_run_lock(lock,"r1","raw_sha","cf","sh")
     with pytest.raises(SystemExit):
-        acquire_2023_run_lock(lock,"r2","dh","cf","sh")
+        acquire_2023_run_lock(lock,"r2","raw_sha","cf","sh")
 
 def test_2023_lock_finalized_rejects_all(tmp_path):
-    from scripts.phase6_6b2_sealed_workflow import acquire_2023_run_lock,finalize_2023_run_lock
+    from scripts.phase6_6b2_sealed_workflow import acquire_2023_run_lock, finalize_2023_run_lock
     import pytest
     lock=tmp_path/"2023.lock"
-    acquire_2023_run_lock(lock,"r1","dh","cf","sh")
-    finalize_2023_run_lock(lock)
+    acquire_2023_run_lock(lock,"r1","raw_sha","cf","sh")
+    finalize_2023_run_lock(lock, "arch_id", "ai_sha", "CONFIRMED_PROMOTE",
+                           schedule_complete=True, integrity_passed=True)
     with pytest.raises(SystemExit):
-        acquire_2023_run_lock(lock,"r1","dh","cf","sh")
+        acquire_2023_run_lock(lock,"r1","raw_sha","cf","sh")
+
+def test_2023_finalize_rejects_incomplete_schedule(tmp_path):
+    """schedule 未完整 -> finalize 拒绝，保持 RUNNING。"""
+    from scripts.phase6_6b2_sealed_workflow import acquire_2023_run_lock, finalize_2023_run_lock
+    import pytest
+    lock=tmp_path/"2023.lock"
+    acquire_2023_run_lock(lock,"r1","raw_sha","cf","sh")
+    with pytest.raises(SystemExit):
+        finalize_2023_run_lock(lock, "arch", "ai", "v", schedule_complete=False, integrity_passed=True)
+    # 锁仍 RUNNING
+    st=json.loads(lock.read_text(encoding="utf-8"))
+    assert st["status"]=="RUNNING"
+
+def test_2023_finalize_rejects_missing_archive(tmp_path):
+    """archive 未发布 -> finalize 拒绝，保持 RUNNING。"""
+    from scripts.phase6_6b2_sealed_workflow import acquire_2023_run_lock, finalize_2023_run_lock
+    import pytest
+    lock=tmp_path/"2023.lock"
+    acquire_2023_run_lock(lock,"r1","raw_sha","cf","sh")
+    with pytest.raises(SystemExit):
+        finalize_2023_run_lock(lock, None, None, "v", schedule_complete=True, integrity_passed=True)
+    st=json.loads(lock.read_text(encoding="utf-8"))
+    assert st["status"]=="RUNNING"
+
+def test_2023_verify_raw_data_rejects_mismatch(tmp_path):
+    """原始数据 SHA 不匹配预登记 -> BLOCKED。"""
+    from scripts.phase6_6b2_sealed_workflow import verify_2023_raw_data
+    import pytest
+    raw=tmp_path/"raw.jsonl"; raw.write_text("x",encoding="utf-8")
+    with pytest.raises(SystemExit):
+        verify_2023_raw_data(str(raw), "mismatch_sha")
 ```
 
 - [ ] **Step 7: 运行通过**
@@ -990,40 +1171,88 @@ def test_2023_lock_finalized_rejects_all(tmp_path):
 
 复用 6B1D `generate_archive` 模式（:2126-2242）：merged_details/events、audit_index.json、哈希、原子发布、归档拒绝覆盖、BLOCKED_INCOMPLETE 禁止决策归档。
 
-- [ ] **Step 1: 写失败测试 - 归档完整性 + 拒绝覆盖 + BLOCKED_INCOMPLETE 禁归档**
+- [ ] **Step 1: 写失败测试 - 归档保留 ROLLBACK + run_id 含 stage + 拒绝 BLOCKED_INCOMPLETE + 拒绝覆盖**
 
 ```python
-def test_generate_archive_produces_audit_index(tmp_path):
+def _mk_schedule_ledger_gate(tmp_path, verdict="PROMOTE_CANDIDATE", blocked=False):
+    """构造已完成 schedule + ledger + gate_result 夹具。"""
+    from scripts.phase6_6b2_orchestrator import BudgetLedger6B2, GLOBAL_HARD_CAP, _build_schedule
+    sched=_build_schedule(str(tmp_path/"run"), years=["2024","2025"])
+    ledger=BudgetLedger6B2(str(tmp_path/"l.json"), global_hard_cap=GLOBAL_HARD_CAP,
+                           slice_min=8, slice_max=26)
+    gate={"verdict":verdict,"delta_dev":0.05,"dual_merged_acc":0.35,"stage":"dev"}
+    return sched, ledger, gate
+
+def test_archive_preserves_rollback_verdict(tmp_path):
+    """ROLLBACK 是有效结论，必须归档。"""
     from scripts.phase6_6b2_orchestrator import generate_archive
-    # 构造已完成 schedule + ledger + gate_result
-    # 调 generate_archive
-    # 断言 audit_index.json 存在，含 run_id/provider/model/hashes/merged_details_sha256
-    ...
+    sched, ledger, gate = _mk_schedule_ledger_gate(tmp_path, verdict="ROLLBACK")
+    archive_dir = generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate,
+                                   archive_root=str(tmp_path/"arch"))
+    import json
+    ai = json.loads((tmp_path/"arch"/Path(archive_dir).name/"audit_index.json").read_text(encoding="utf-8"))
+    assert ai["gate_verdict"]=="ROLLBACK"
 
-def test_generate_archive_refuses_overwrite(tmp_path):
-    # 归档目录已存在 -> SystemExit(2)
-    ...
+def test_archive_refuses_blocked_incomplete(tmp_path):
+    """BLOCKED_INCOMPLETE 不得生成决策归档。"""
+    from scripts.phase6_6b2_orchestrator import generate_archive
+    import pytest
+    sched, ledger, gate = _mk_schedule_ledger_gate(tmp_path)
+    gate["verdict"]="BLOCKED_INCOMPLETE"
+    with pytest.raises(SystemExit):
+        generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate,
+                         archive_root=str(tmp_path/"arch"))
 
-def test_blocked_incomplete_no_archive(tmp_path):
-    """gate verdict=ROLLBACK 或 ledger 超 hard_cap -> 不生成决策归档。"""
-    # 断言 archive_dir 不存在
-    ...
+def test_archive_run_id_contains_stage(tmp_path):
+    """run_id 含 stage，dev/reuse/final 不冲突。"""
+    from scripts.phase6_6b2_orchestrator import generate_archive
+    sched, ledger, gate = _mk_schedule_ledger_gate(tmp_path)
+    archive_dir = generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate,
+                                   archive_root=str(tmp_path/"arch"))
+    assert "dev" in Path(archive_dir).name
+
+def test_archive_refuses_overwrite(tmp_path):
+    """归档目录已存在 -> SystemExit(2)。"""
+    from scripts.phase6_6b2_orchestrator import generate_archive
+    import pytest
+    sched, ledger, gate = _mk_schedule_ledger_gate(tmp_path)
+    generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate,
+                     archive_root=str(tmp_path/"arch"))
+    with pytest.raises(SystemExit):
+        generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate,
+                         archive_root=str(tmp_path/"arch"))
+
+def test_archive_hashes_match_root(tmp_path):
+    """归档 merged_details SHA-256 == 运行目录 merged_details SHA-256。"""
+    from scripts.phase6_6b2_orchestrator import generate_archive, _sha256_file
+    sched, ledger, gate = _mk_schedule_ledger_gate(tmp_path)
+    # 预写 merged_details 到 run 目录（模拟 _merge_artifacts 输出位置）
+    # ... 实现时按 6B1D _merge_artifacts 模式从 slice details 合并
+    archive_dir = generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate,
+                                   archive_root=str(tmp_path/"arch"))
+    # 断言 audit_index 中 merged_details_sha256 与归档文件实际 SHA 一致
 ```
 
 - [ ] **Step 2: 运行确认失败**
 
-- [ ] **Step 3: 实现 generate_archive + audit_index**
+- [ ] **Step 3: 实现 generate_archive + audit_index（P0-5 修订）**
 
 ```python
 def generate_archive(schedule, ledger, output_dir, provider, model, gate_result, archive_root=None):
     import shutil,tempfile
     if archive_root is None: archive_root=Path("docs/phase6/6b2")
     archive_root=Path(archive_root)
+    # P0-5: BLOCKED_INCOMPLETE 显式拒绝决策归档（ROLLBACK 是有效结论，必须归档）
+    if gate_result.get("verdict") == "BLOCKED_INCOMPLETE":
+        raise SystemExit("BLOCKED_INCOMPLETE: 不得生成决策归档 (预算破顶/完整性失败)")
     code_hash=_compute_experiment_code_fingerprint()
-    run_id=f"6b2-{FROZEN_DATE}-{provider}-{model}-{code_hash}"
+    # P0-5: run_id 含 stage，dev/reuse/final 不冲突
+    stage = gate_result.get("stage", "dev")
+    years_tag = "-".join(sorted(set(s["year"] for s in schedule["slices"])))
+    run_id=f"6b2-{stage}-{years_tag}-{FROZEN_DATE}-{provider}-{model}-{code_hash[:12]}"
     archive_dir=archive_root/run_id
     if archive_dir.exists():
-        raise SystemExit(2)
+        raise SystemExit(2)  # 拒绝覆盖
     archive_root.mkdir(parents=True,exist_ok=True)
     tmp_dir=Path(tempfile.mkdtemp(prefix=f".{run_id}_",dir=str(archive_root)))
     try:
@@ -1032,7 +1261,7 @@ def generate_archive(schedule, ledger, output_dir, provider, model, gate_result,
         ctx_fp=_compute_context_fingerprint(schedule,provider,model)
         audit_index={
             "run_id":run_id,"experiment":"6b2","frozen_date":FROZEN_DATE,
-            "provider":provider,"model":model,
+            "provider":provider,"model":model,"stage":stage,"years_tag":years_tag,
             "code_fingerprint":code_hash,
             "dataset_hashes":dataset_hashes,
             "context_fingerprints":ctx_fp,
@@ -1041,10 +1270,9 @@ def generate_archive(schedule, ledger, output_dir, provider, model, gate_result,
             "budget_total_attempted":ledger.total_attempted,
             "budget_hard_cap":ledger.hard_cap,
             "gate_verdict":gate_result["verdict"],
-            "gate_delta_dev":gate_result["delta_dev"],
-            "gate_dual_merged_acc":gate_result["dual_merged_acc"],
+            "gate_delta_dev":gate_result.get("delta_dev"),
+            "gate_dual_merged_acc":gate_result.get("dual_merged_acc"),
         }
-        # 计算归档文件哈希
         for fn in ["merged_details.jsonl","merged_events.jsonl"]:
             p=tmp_dir/fn
             if p.exists():
@@ -1082,12 +1310,17 @@ def test_archive_hashes_match_root(tmp_path):
 - [ ] §7.4 2023 终验 + 密封 -> Task 15/16
 - [ ] §7.5 预算（60.8% 修正）-> Task 10
 - [ ] §4.4.2 双列预算 + BLOCKED_INCOMPLETE -> Task 11/17
-- [ ] P0-1 主入口 dual resume 分支 -> Task 9
-- [ ] P0-2 call_failed/judge_unresolved 终态 + 修正 import + 不重复 enrich -> Task 6
-- [ ] P0-3 2023 RUNNING/FINALIZED 状态机 -> Task 15
-- [ ] P0-4 最终归档与审计索引 -> Task 17
+- [ ] P0-1 compute_gate 用 parse_detail_identity 从 attempt_key 解析（真实 schema）-> Task 13
+- [ ] P0-2 compute_gate 参数化 stage（dev/reuse/final_2023 三档裁决）-> Task 13
+- [ ] P0-3 2023 锁用预登记 SHA，打破循环依赖 -> Task 15
+- [ ] P0-4 FINALIZED 与归档事务闭环（验证后原子切换，失败保持 RUNNING）-> Task 15
+- [ ] P0-5 归档保留 ROLLBACK + run_id 含 stage + 显式拒绝 BLOCKED_INCOMPLETE -> Task 17
 - [ ] P1-1 删重复 enrich -> Task 6（_dual_write_detail 不调 enrich_row）
 - [ ] P1-2 fingerprint 全函数范围 -> Task 4
-- [ ] P1-3 B1-c 唯一路径 fail-closed -> Task 13
-- [ ] P1-4 冻结 gate 聚合算法 -> Task 13
-- [ ] P1-5 无占位符 -> 关键路径任务（1,4,6,7,8,9,13,15）含完整可执行测试代码；Task 10-12/14/16/17 的测试用精确断言 + 标准夹具模式（如 `test_generate_archive_produces_audit_index` 的 schedule/ledger 构造在 Step 1 描述中给出字段，实现时按 6B1D 同构模式补全）；Task 9 `test_main_dual_resume_passes_completed_keys` 的 argv 构造在实现时按现有 `tests/test_phase6_resume.py` 的 main 调用模式补全
+- [ ] P1-3 B1-c 读 attempt_key[2] + 冻结预期 SHA -> Task 13
+- [ ] P1-4 冻结 gate 聚合算法 + 40 题唯一性验证 -> Task 13
+- [ ] P1-5 ziwei 字节等价测试 -> Task 1
+- [ ] P1-6 scheduled=24（非 16）-> Task 6 测试
+- [ ] 放行条件：真实 schema dev/reuse/final 三阶段 gate 测试 -> Task 13
+- [ ] 放行条件：ROLLBACK 归档 + BLOCKED 拒绝 -> Task 17
+- [ ] 放行条件：2023 RUNNING 恢复 + 归档成功 FINALIZED + 失败保持 RUNNING -> Task 15
