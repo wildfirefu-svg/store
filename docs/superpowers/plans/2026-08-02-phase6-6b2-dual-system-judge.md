@@ -1,4 +1,4 @@
-# Phase 6 6B2 - 双管线 + source_label_blinded_judge：实施计划 (v4)
+# Phase 6 6B2 - 双管线 + source_label_blinded_judge：实施计划 (v5)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -254,16 +254,19 @@ def test_dual_consensus_no_judge(monkeypatch, tmp_path):
 
 - [ ] **Step 2: 运行确认失败**（函数不存在）
 
-- [ ] **Step 3: 实现 run_dual_system_benchmark**
+- [ ] **Step 3: 实现 run_dual_system_benchmark（P0-1 修订：模块级 import）**
 
 ```python
+# benchmark/runners/run_benchmark.py 顶部（与其他 formatter import 同区）
+from benchmark.formatters.dual_system_reasoning import (
+    build_bazi_pipeline_prompt, build_ziwei_pipeline_prompt,
+    build_judge_prompt, extract_judge_answer, judge_swap_seed)
+from benchmark.formatters.chart_context import extract_reasoned_choice_answer
+
+
 def run_dual_system_benchmark(cases, provider, model, max_cases=20, temperature=0.0,
         case_details_jsonl=None, chart_schema_version=None, resume_append=False,
         completed_keys=None):
-    from benchmark.formatters.dual_system_reasoning import (
-        build_bazi_pipeline_prompt, build_ziwei_pipeline_prompt,
-        build_judge_prompt, extract_judge_answer, judge_swap_seed)
-    from benchmark.formatters.chart_context import extract_reasoned_choice_answer
     ctx = _PHASE6_CTX
     if not resume_append:
         _prepare_jsonl(case_details_jsonl)
@@ -333,6 +336,9 @@ def _run_dual_case(case, ctx, provider, model, temperature, completed_keys,
         predictions[cid] = final
         case_details.append({"case_id": cid, "predicted_answer": final,
                              "dual_stages": {"bazi": b_ans, "ziwei": z_ans, "final": final}})
+        if final is None:
+            failed_cases.append({"case_id": cid, "reason": "unresolved",
+                                 "bazi_ans": b_ans, "ziwei_ans": z_ans})
     finally:
         ctx.attempt_stage = prev_stage
 
@@ -447,6 +453,9 @@ def test_judge_parse_fail_writes_judge_unresolved(monkeypatch, tmp_path):
     judge_row=[r for r in rows if r["attempt_key"][3]=="judge"][0]
     assert judge_row["terminal_state"]=="judge_unresolved"
     assert result["predictions"]["Q1"] is None
+    # P1: failed_cases 记录 unresolved
+    assert len(result["failed_cases"])==1
+    assert result["failed_cases"][0]["case_id"]=="Q1"
 
 def test_hardcap_exhausted_propagates(monkeypatch, tmp_path):
     import benchmark.runners.run_benchmark as rb, pytest
@@ -655,15 +664,85 @@ def test_schedule_60_slices_dual_scheduled_24(tmp_path):
 
 ---
 
-## Task 12: 多 stage 完整性门禁
+## Task 12: 多 stage 完整性门禁（P0-2 修订：验证 judge 基数）
 
 **Files:** Modify `scripts/phase6_6b2_orchestrator.py`; Test `tests/test_phase6_6b2.py`
 
-- [ ] **Step 1: 写失败测试** - b1a 1 main 行；dual expected bazi+ziwei（不含 judge）；judge 合法 extra；缺 bazi->MISSING；重复->DUPLICATE；call_failed/judge_unresolved 合法
+**P0-2：** judge 不能仅当"合法 extra"。必须按 bazi/ziwei 结果验证 judge 基数为 0 或 1：共识题 judge 行必须 0；分歧/单侧 unresolved 必须 1；缺失或多余均失败。
+
+- [ ] **Step 1: 写失败测试 - judge 基数验证**
+
+```python
+def _mk_detail_row(cid, arm, stage, ans, dataset="baziqa_contest8_2024_holdout_enriched", repeat=0, state="parsed"):
+    return {"case_id":cid,"predicted_answer":ans,"expected_answer":"A","correct":ans=="A",
+            "dual_stage":stage,"terminal_state":state,
+            "attempt_key":[dataset,"prof",arm,stage,"p","m",cid,repeat,0,"p0"]}
+
+def test_integrity_judge_count_consensus_zero():
+    from scripts.phase6_6b2_orchestrator import _integrity_gate
+    rows=[_mk_detail_row("Q1","b1a_prime","main","A"),
+          _mk_detail_row("Q1","dual","bazi","A"),_mk_detail_row("Q1","dual","ziwei","A")]
+    assert _integrity_gate(rows, ["Q1"])=="PASS"
+
+def test_integrity_judge_extra_on_consensus_fails():
+    from scripts.phase6_6b2_orchestrator import _integrity_gate
+    rows=[_mk_detail_row("Q1","dual","bazi","A"),_mk_detail_row("Q1","dual","ziwei","A"),
+          _mk_detail_row("Q1","dual","judge","A")]
+    assert _integrity_gate(rows, ["Q1"]).startswith("JUDGE_ON_CONSENSUS")
+
+def test_integrity_disagreement_requires_judge():
+    from scripts.phase6_6b2_orchestrator import _integrity_gate
+    rows=[_mk_detail_row("Q1","dual","bazi","A"),_mk_detail_row("Q1","dual","ziwei","B")]
+    assert _integrity_gate(rows, ["Q1"]).startswith("MISSING_JUDGE")
+
+def test_integrity_unilateral_unresolved_requires_judge():
+    from scripts.phase6_6b2_orchestrator import _integrity_gate
+    rows=[_mk_detail_row("Q1","dual","bazi",None,state="call_failed"),
+          _mk_detail_row("Q1","dual","ziwei","B")]
+    assert _integrity_gate(rows, ["Q1"]).startswith("MISSING_JUDGE")
+
+def test_integrity_missing_bazi_fails():
+    from scripts.phase6_6b2_orchestrator import _integrity_gate
+    assert _integrity_gate([_mk_detail_row("Q1","dual","ziwei","A")], ["Q1"]).startswith("MISSING")
+
+def test_integrity_duplicate_key_fails():
+    from scripts.phase6_6b2_orchestrator import _integrity_gate
+    rows=[_mk_detail_row("Q1","dual","bazi","A"),_mk_detail_row("Q1","dual","bazi","A"),
+          _mk_detail_row("Q1","dual","ziwei","A")]
+    assert _integrity_gate(rows, ["Q1"]).startswith("DUPLICATE")
+```
+
 - [ ] **Step 2: 运行确认失败**
-- [ ] **Step 3: 实现 _expected_keys_for_slice + _integrity_gate** - b1a: 1 key/case main；dual: 2 keys/case bazi/ziwei；judge 合法 extra；terminal_state ∈ TERMINAL_STATES
+- [ ] **Step 3: 实现 _integrity_gate（judge 基数验证）**
+
+```python
+def _integrity_gate(merged_details, case_ids):
+    from collections import defaultdict
+    by_case = defaultdict(lambda: defaultdict(list))
+    seen = set()
+    for r in merged_details:
+        ak = tuple(r["attempt_key"])
+        if ak in seen: return f"DUPLICATE: {ak}"
+        seen.add(ak)
+        cid = ak[6]; stage = ak[3]
+        by_case[cid][stage].append(r)
+    for cid in case_ids:
+        stages = by_case.get(cid, {})
+        bazi = stages.get("bazi",[]); ziwei = stages.get("ziwei",[]); judge = stages.get("judge",[])
+        if not bazi: return f"MISSING_BAZI: {cid}"
+        if not ziwei: return f"MISSING_ZIWEI: {cid}"
+        b_ans=bazi[0].get("predicted_answer"); z_ans=ziwei[0].get("predicted_answer")
+        consensus = (b_ans is not None and z_ans is not None and b_ans==z_ans)
+        if consensus and len(judge)>0: return f"JUDGE_ON_CONSENSUS: {cid}"
+        if not consensus and len(judge)!=1: return f"MISSING_JUDGE: {cid} (count={len(judge)})"
+    for r in merged_details:
+        if r.get("terminal_state") not in ("parsed","invalid","unresolved","judge_unresolved","call_failed"):
+            return f"INVALID_STATE: {r.get('terminal_state')}"
+    return "PASS"
+```
+
 - [ ] **Step 4: 运行通过**
-- [ ] **Step 5: Commit** - `feat(6b2): multi-stage integrity gate`
+- [ ] **Step 5: Commit** - `feat(6b2): integrity gate validates judge cardinality`
 
 ---
 
@@ -750,6 +829,39 @@ def test_gate_dev_fail_absolute_threshold():
     assert g["verdict"]=="ROLLBACK"
     assert g["dual_merged_acc"]<0.325
 
+def test_gate_dev_rejects_incomplete_matrix():
+    """整个 repeat/arm/year 缺失 -> raise；两臂 case_id 集合不同 -> raise。"""
+    import pytest
+    from scripts.phase6_6b2_orchestrator import compute_gate
+    # 仅 2 repeat（缺 R2）-> raise
+    details=[]
+    for year in ["2024","2025"]:
+        ds=f"baziqa_contest8_{year}_holdout_enriched"
+        for rep in range(2):  # 缺 rep=2
+            for i in range(40):
+                cid=f"{year}_R{rep}_Q{i}"
+                details.append(_mk_real_detail(cid,"dual","bazi","A",dataset=ds,repeat=rep))
+                details.append(_mk_real_detail(cid,"dual","ziwei","A",dataset=ds,repeat=rep))
+                details.append(_mk_real_detail(cid,"b1a_prime","main","B",dataset=ds,repeat=rep))
+    with pytest.raises((SystemExit, ValueError)):
+        compute_gate(details, stage="dev")
+
+def test_gate_dev_rejects_mismatched_case_sets():
+    """两臂 case_id 集合不同 -> raise。"""
+    import pytest
+    from scripts.phase6_6b2_orchestrator import compute_gate
+    details=[]
+    for year in ["2024","2025"]:
+        ds=f"baziqa_contest8_{year}_holdout_enriched"
+        for rep in range(3):
+            for i in range(40):
+                cid_d=f"{year}_R{rep}_D{i}"; cid_b=f"{year}_R{rep}_B{i}"  # 不同 case_id
+                details.append(_mk_real_detail(cid_d,"dual","bazi","A",dataset=ds,repeat=rep))
+                details.append(_mk_real_detail(cid_d,"dual","ziwei","A",dataset=ds,repeat=rep))
+                details.append(_mk_real_detail(cid_b,"b1a_prime","main","B",dataset=ds,repeat=rep))
+    with pytest.raises((SystemExit, ValueError)):
+        compute_gate(details, stage="dev")
+
 def test_gate_dev_rejects_missing_cases():
     """某 (year,repeat,arm) 不足 40 case -> raise，不隐式计错。"""
     import pytest
@@ -790,22 +902,57 @@ def test_gate_final_2023_confirmed():
     assert g["delta_2023"]>=0
 
 def test_gate_final_2023_inconclusive():
-    # -5pp < Δ2023 < 0 -> INCONCLUSIVE
-    ...
+    """-5pp < Δ2023 < 0 -> INCONCLUSIVE。"""
+    from scripts.phase6_6b2_orchestrator import compute_gate
+    ds="baziqa_contest8_2023_holdout_enriched"
+    details=[]
+    for rep in range(3):
+        for i in range(40):
+            cid=f"2023_R{rep}_Q{i}"
+            # dual 19/40, b1a 21/40 -> Δ=-5pp... 需 -5pp<Δ<0: dual 20/40,b1a 21/40 -> Δ=-2.5pp
+            da="A" if i<20 else "B"  # dual 20/40=50%
+            ba="A" if i<21 else "B"  # b1a 21/40=52.5%
+            details.append(_mk_real_detail(cid,"dual","bazi",da,dataset=ds,repeat=rep))
+            details.append(_mk_real_detail(cid,"dual","ziwei",da,dataset=ds,repeat=rep))
+            details.append(_mk_real_detail(cid,"b1a_prime","main",ba,dataset=ds,repeat=rep))
+    g=compute_gate(details, stage="final_2023")
+    assert g["verdict"]=="INCONCLUSIVE"
+    assert -0.05 < g["delta_2023"] < 0
 
 def test_gate_final_2023_rollback():
-    # Δ2023 <= -5pp -> ROLLBACK
-    ...
+    """Δ2023 <= -5pp -> ROLLBACK。"""
+    from scripts.phase6_6b2_orchestrator import compute_gate
+    ds="baziqa_contest8_2023_holdout_enriched"
+    details=[]
+    for rep in range(3):
+        for i in range(40):
+            cid=f"2023_R{rep}_Q{i}"
+            da="A" if i<15 else "B"  # dual 15/40=37.5%
+            ba="A" if i<22 else "B"  # b1a 22/40=55%
+            details.append(_mk_real_detail(cid,"dual","bazi",da,dataset=ds,repeat=rep))
+            details.append(_mk_real_detail(cid,"dual","ziwei",da,dataset=ds,repeat=rep))
+            details.append(_mk_real_detail(cid,"b1a_prime","main",ba,dataset=ds,repeat=rep))
+    g=compute_gate(details, stage="final_2023")
+    assert g["verdict"]=="ROLLBACK"
+    assert g["delta_2023"] <= -0.05
 
 def test_gate_aggregation_consensus_no_judge_row():
+    """共识题无 judge 行，按共识计分，不因缺 judge 计错。用完整 40 题矩阵。"""
     from scripts.phase6_6b2_orchestrator import compute_gate
-    details=[
-        _mk_real_detail("Q1","dual","bazi","A"),
-        _mk_real_detail("Q1","dual","ziwei","A"),  # 共识，无 judge
-        _mk_real_detail("Q1","b1a_prime","main","B"),
-    ]
+    details=[]
+    for year in ["2024","2025"]:
+        ds=f"baziqa_contest8_{year}_holdout_enriched"
+        for rep in range(3):
+            for i in range(40):
+                cid=f"{year}_R{rep}_Q{i}"
+                # Q0 共识 A(对), 其余共识 B(错) -> dual_correct=1/40
+                da = "A" if i==0 else "B"
+                details.append(_mk_real_detail(cid,"dual","bazi",da,dataset=ds,repeat=rep))
+                details.append(_mk_real_detail(cid,"dual","ziwei",da,dataset=ds,repeat=rep))  # 共识，无 judge
+                details.append(_mk_real_detail(cid,"b1a_prime","main","B",dataset=ds,repeat=rep))
     g=compute_gate(details, stage="dev")
-    # 共识 A(对) -> dual_correct=1，不会因缺 judge 计错
+    # 关键：共识计分正确（dual 1/40=2.5%），不会因缺 judge 计错
+    assert g["dual_merged_acc"] == 1/40
 
 def test_b1c_advisory_reads_attempt_key_arm(tmp_path, monkeypatch):
     """B1-c 筛选用 attempt_key[2]，不是顶层 arm。"""
@@ -847,18 +994,36 @@ def compute_gate(merged_details, stage="dev"):
     for r in merged_details:
         year, rep, cid, arm, stg = parse_detail_identity(r)
         by_key[(year, rep, cid, arm)].append(r)
-    # 验证每 (year,repeat,arm) 恰 40 唯一 case
-    case_counts = defaultdict(set)
+    # P0-3: 验证完整矩阵（不能只检查已出现的分组）
+    expected_years = {"2024","2025"} if stage=="dev" else (
+        {"2021","2022"} if stage=="reuse" else {"2023"})
+    seen_years = {y for (y,_,_,_) in by_key}
+    if seen_years != expected_years:
+        raise SystemExit(f"year 集合不匹配: {seen_years} != {expected_years}")
+    seen_reps = {rep for (_,rep,_,_) in by_key}
+    if seen_reps != {0,1,2}:
+        raise SystemExit(f"repeat 集合不完整: {seen_reps} != {{0,1,2}}")
+    seen_arms = {arm for (_,_,_,arm) in by_key}
+    if seen_arms != {"dual","b1a_prime"}:
+        raise SystemExit(f"arm 集合不完整: {seen_arms} != {{dual,b1a_prime}}")
+    # 每 (year,repeat,arm) 恰 40 唯一 case
+    case_sets = defaultdict(set)
     for (year, rep, cid, arm) in by_key:
-        case_counts[(year, rep, arm)].add(cid)
-    for (year, rep, arm), cids in case_counts.items():
+        case_sets[(year, rep, arm)].add(cid)
+    for (year, rep, arm), cids in case_sets.items():
         if len(cids) != 40:
             raise SystemExit(f"case 数 != 40: {year}/{rep}/{arm} = {len(cids)}")
-    # 聚合
+    # 两臂 case_id 集合完全相同（同年同 repeat）
+    for year in expected_years:
+        for rep in [0,1,2]:
+            dual_ids = case_sets.get((year,rep,"dual"), set())
+            b1a_ids = case_sets.get((year,rep,"b1a_prime"), set())
+            if dual_ids != b1a_ids:
+                raise SystemExit(f"两臂 case_id 集合不同: {year}/{rep}")
+    # 聚合（同前）
     acc = defaultdict(lambda: {"dual_correct":0, "b1a_correct":0})
-    years_seen = set()
+    years_seen = expected_years
     for (year, rep, cid, arm), rows in by_key.items():
-        years_seen.add(year)
         if arm == "b1a_prime":
             acc[(year, rep)]["b1a_correct"] += 1 if rows[0]["correct"] else 0
         elif arm == "dual":
@@ -1020,8 +1185,8 @@ def test_reuse_pass_required_before_2023(tmp_path):
 **P0-4：** `finalize_2023_run_lock` 必须验证 schedule 完整 + integrity gate + archive 已发布 + 哈希一致后，原子切换 FINALIZED；归档失败保持 RUNNING。
 
 ```python
-# 2023 原始数据集预登记 SHA-256（enrichment 前冻结，运行时验证）
-BLESSED_2023_RAW_SHA256 = "PRECOMPUTED_AT_PLAN_FREEZE"  # 实施时跑 sha256(2023_holdout.jsonl) 填入并冻结
+# 2023 原始数据集预登记 SHA-256（已核验：sha256(baziqa_contest8_2023_holdout.jsonl)）
+BLESSED_2023_RAW_SHA256 = "8933783ef7da9084adeb0a9940d12277de6a1c3def41374f836bec48c4afcd3d"
 
 def _load_gate(path):
     p=Path(path)
@@ -1042,7 +1207,12 @@ def check_stage_gate(stage, gate_root="docs/phase6/6b2"):
             raise SystemExit(f"复用验证未通过 ({reuse.get('verdict')}), 禁止解封 2023")
 
 def acquire_2023_run_lock(lock_path, run_id, pre_blessed_raw_sha, code_fingerprint, schedule_hash):
-    """用预登记 SHA 获取 RUNNING（不读文件）。RUNNING+完全匹配->RESUME；FINALIZED->拒绝。"""
+    """用预登记 SHA + O_CREAT|O_EXCL 原子排他获取 RUNNING（不读文件）。
+
+    复用 6B1D OutputDirLock 的原子创建机制（os.open O_EXCL），
+    不用 exists->tmp->replace（非排他，两进程可同时越过不存在检查）。
+    RUNNING+完全匹配 -> RESUME；FINALIZED -> 拒绝；不匹配 -> 拒绝。
+    """
     lp=Path(lock_path)
     if lp.exists():
         st=json.loads(lp.read_text(encoding="utf-8"))
@@ -1053,13 +1223,19 @@ def acquire_2023_run_lock(lock_path, run_id, pre_blessed_raw_sha, code_fingerpri
                 and st.get("code_fingerprint")==code_fingerprint and st.get("schedule_hash")==schedule_hash):
                 return "RESUME"
             raise SystemExit("2023 RUNNING 但指纹不匹配, 禁止恢复")
+    # 原子排他创建（O_CREAT|O_EXCL），失败说明被其他进程抢
     lp.parent.mkdir(parents=True,exist_ok=True)
-    tmp=lp.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"status":"RUNNING","run_id":run_id,
+    import os as _os
+    payload=json.dumps({"status":"RUNNING","run_id":run_id,
         "raw_sha256":pre_blessed_raw_sha,
         "code_fingerprint":code_fingerprint,"schedule_hash":schedule_hash,
-        "started_at":_now_iso()}, ensure_ascii=False),encoding="utf-8")
-    os.replace(tmp,lp)
+        "started_at":_now_iso()}, ensure_ascii=False)
+    try:
+        fd=_os.open(str(lp), _os.O_CREAT|_os.O_EXCL|_os.O_WRONLY)
+    except FileExistsError:
+        raise SystemExit("2023 锁已被其他进程持有 (fail-closed)")
+    with _os.fdopen(fd,"w",encoding="utf-8") as f:
+        f.write(payload)
     return "NEW"
 
 def verify_2023_raw_data(raw_path, pre_blessed_sha):
@@ -1068,22 +1244,35 @@ def verify_2023_raw_data(raw_path, pre_blessed_sha):
     if actual != pre_blessed_sha:
         raise SystemExit(f"2023 原始数据 SHA 不匹配: {actual} != {pre_blessed_sha} (BLOCKED)")
 
-def finalize_2023_run_lock(lock_path, archive_id, audit_index_sha256, gate_verdict,
-                           schedule_complete, integrity_passed):
-    """事务闭环：验证 schedule 完整 + integrity + archive 已发布 + 哈希一致后，原子 FINALIZED。
+def record_enriched_sha_to_lock(lock_path, enriched_path):
+    """enrichment 完成后，将派生文件 SHA 写回 RUNNING 锁（补充记录）。"""
+    lp=Path(lock_path)
+    st=json.loads(lp.read_text(encoding="utf-8"))
+    st["enriched_sha256"]=_sha256_file(enriched_path)
+    tmp=lp.with_suffix(".tmp")
+    tmp.write_text(json.dumps(st,ensure_ascii=False),encoding="utf-8")
+    os.replace(tmp,lp)
 
-    任一验证失败 -> 保持 RUNNING，允许完全同指纹恢复。
-    """
+def finalize_2023_run_lock(lock_path, archive_path, gate_verdict,
+                           schedule_complete, integrity_passed):
+    """事务闭环：验证锁 RUNNING + schedule 完整 + integrity + archive 实际存在 +
+    重算 audit_index SHA 后，原子切换 FINALIZED。任一失败保持 RUNNING。"""
     if not schedule_complete:
         raise SystemExit("finalize 拒绝: schedule 未完整 (保持 RUNNING)")
     if not integrity_passed:
         raise SystemExit("finalize 拒绝: integrity gate 未通过 (保持 RUNNING)")
-    if not archive_id or not audit_index_sha256:
-        raise SystemExit("finalize 拒绝: archive 未发布 (保持 RUNNING)")
+    archive_path = Path(archive_path)
+    audit_path = archive_path / "audit_index.json"
+    if not audit_path.exists():
+        raise SystemExit("finalize 拒绝: archive/audit_index.json 不存在 (保持 RUNNING)")
+    # 重算 audit_index SHA（不信任调用方传入）
+    audit_sha = _sha256_file(str(audit_path))
     lp=Path(lock_path)
     st=json.loads(lp.read_text(encoding="utf-8"))
+    if st.get("status") != "RUNNING":
+        raise SystemExit(f"finalize 拒绝: 锁非 RUNNING (当前 {st.get('status')})")
     st.update({"status":"FINALIZED","finalized_at":_now_iso(),
-               "archive_id":archive_id,"audit_index_sha256":audit_index_sha256,
+               "archive_id":archive_path.name,"audit_index_sha256":audit_sha,
                "gate_verdict":gate_verdict})
     tmp=lp.with_suffix(".tmp")
     tmp.write_text(json.dumps(st,ensure_ascii=False),encoding="utf-8")
@@ -1111,34 +1300,46 @@ def test_2023_lock_finalized_rejects_all(tmp_path):
     from scripts.phase6_6b2_sealed_workflow import acquire_2023_run_lock, finalize_2023_run_lock
     import pytest
     lock=tmp_path/"2023.lock"
+    arch=tmp_path/"archive"; arch.mkdir()
+    (arch/"audit_index.json").write_text("{}",encoding="utf-8")
     acquire_2023_run_lock(lock,"r1","raw_sha","cf","sh")
-    finalize_2023_run_lock(lock, "arch_id", "ai_sha", "CONFIRMED_PROMOTE",
+    finalize_2023_run_lock(lock, arch, "CONFIRMED_PROMOTE",
                            schedule_complete=True, integrity_passed=True)
     with pytest.raises(SystemExit):
         acquire_2023_run_lock(lock,"r1","raw_sha","cf","sh")
 
 def test_2023_finalize_rejects_incomplete_schedule(tmp_path):
-    """schedule 未完整 -> finalize 拒绝，保持 RUNNING。"""
     from scripts.phase6_6b2_sealed_workflow import acquire_2023_run_lock, finalize_2023_run_lock
     import pytest
     lock=tmp_path/"2023.lock"
     acquire_2023_run_lock(lock,"r1","raw_sha","cf","sh")
     with pytest.raises(SystemExit):
-        finalize_2023_run_lock(lock, "arch", "ai", "v", schedule_complete=False, integrity_passed=True)
-    # 锁仍 RUNNING
+        finalize_2023_run_lock(lock, tmp_path/"arch", "v", schedule_complete=False, integrity_passed=True)
     st=json.loads(lock.read_text(encoding="utf-8"))
     assert st["status"]=="RUNNING"
 
 def test_2023_finalize_rejects_missing_archive(tmp_path):
-    """archive 未发布 -> finalize 拒绝，保持 RUNNING。"""
     from scripts.phase6_6b2_sealed_workflow import acquire_2023_run_lock, finalize_2023_run_lock
     import pytest
     lock=tmp_path/"2023.lock"
     acquire_2023_run_lock(lock,"r1","raw_sha","cf","sh")
+    # archive 不存在 -> 拒绝
     with pytest.raises(SystemExit):
-        finalize_2023_run_lock(lock, None, None, "v", schedule_complete=True, integrity_passed=True)
+        finalize_2023_run_lock(lock, tmp_path/"nope", "v", schedule_complete=True, integrity_passed=True)
     st=json.loads(lock.read_text(encoding="utf-8"))
     assert st["status"]=="RUNNING"
+
+def test_2023_finalize_recomputes_audit_sha(tmp_path):
+    """finalizer 重算 audit_index SHA，不信任调用方。"""
+    from scripts.phase6_6b2_sealed_workflow import acquire_2023_run_lock, finalize_2023_run_lock, _sha256_file
+    lock=tmp_path/"2023.lock"
+    arch=tmp_path/"archive"; arch.mkdir()
+    (arch/"audit_index.json").write_text('{"x":1}',encoding="utf-8")
+    acquire_2023_run_lock(lock,"r1","raw_sha","cf","sh")
+    finalize_2023_run_lock(lock, arch, "CONFIRMED_PROMOTE", True, True)
+    st=json.loads(lock.read_text(encoding="utf-8"))
+    assert st["audit_index_sha256"]==_sha256_file(str(arch/"audit_index.json"))
+    assert st["status"]=="FINALIZED"
 
 def test_2023_verify_raw_data_rejects_mismatch(tmp_path):
     """原始数据 SHA 不匹配预登记 -> BLOCKED。"""
@@ -1174,20 +1375,23 @@ def test_2023_verify_raw_data_rejects_mismatch(tmp_path):
 - [ ] **Step 1: 写失败测试 - 归档保留 ROLLBACK + run_id 含 stage + 拒绝 BLOCKED_INCOMPLETE + 拒绝覆盖**
 
 ```python
-def _mk_schedule_ledger_gate(tmp_path, verdict="PROMOTE_CANDIDATE", blocked=False):
+def _mk_schedule_ledger_gate(tmp_path, verdict="PROMOTE_CANDIDATE", blocked=False, integrity="PASS"):
     """构造已完成 schedule + ledger + gate_result 夹具。"""
     from scripts.phase6_6b2_orchestrator import BudgetLedger6B2, GLOBAL_HARD_CAP, _build_schedule
     sched=_build_schedule(str(tmp_path/"run"), years=["2024","2025"])
     ledger=BudgetLedger6B2(str(tmp_path/"l.json"), global_hard_cap=GLOBAL_HARD_CAP,
                            slice_min=8, slice_max=26)
+    # 标记所有 slice 完成（模拟真实执行后状态）
+    for sl in sched["slices"]:
+        ledger.record_slice_completed(sl["slice_id"], sl["scheduled_calls"])
     gate={"verdict":verdict,"delta_dev":0.05,"dual_merged_acc":0.35,"stage":"dev"}
-    return sched, ledger, gate
+    return sched, ledger, gate, integrity
 
 def test_archive_preserves_rollback_verdict(tmp_path):
     """ROLLBACK 是有效结论，必须归档。"""
     from scripts.phase6_6b2_orchestrator import generate_archive
-    sched, ledger, gate = _mk_schedule_ledger_gate(tmp_path, verdict="ROLLBACK")
-    archive_dir = generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate,
+    sched, ledger, gate, integ = _mk_schedule_ledger_gate(tmp_path, verdict="ROLLBACK")
+    archive_dir = generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate, integ,
                                    archive_root=str(tmp_path/"arch"))
     import json
     ai = json.loads((tmp_path/"arch"/Path(archive_dir).name/"audit_index.json").read_text(encoding="utf-8"))
@@ -1197,59 +1401,85 @@ def test_archive_refuses_blocked_incomplete(tmp_path):
     """BLOCKED_INCOMPLETE 不得生成决策归档。"""
     from scripts.phase6_6b2_orchestrator import generate_archive
     import pytest
-    sched, ledger, gate = _mk_schedule_ledger_gate(tmp_path)
+    sched, ledger, gate, integ = _mk_schedule_ledger_gate(tmp_path)
     gate["verdict"]="BLOCKED_INCOMPLETE"
     with pytest.raises(SystemExit):
-        generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate,
+        generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate, integ,
                          archive_root=str(tmp_path/"arch"))
 
-def test_archive_run_id_contains_stage(tmp_path):
-    """run_id 含 stage，dev/reuse/final 不冲突。"""
+def test_archive_refuses_integrity_failure(tmp_path):
+    """P0-6: integrity 未通过 -> 拒绝归档，即使 verdict=PROMOTE。"""
     from scripts.phase6_6b2_orchestrator import generate_archive
-    sched, ledger, gate = _mk_schedule_ledger_gate(tmp_path)
-    archive_dir = generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate,
+    import pytest
+    sched, ledger, gate, integ = _mk_schedule_ledger_gate(tmp_path, integrity="MISSING_JUDGE: Q1")
+    with pytest.raises(SystemExit):
+        generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate, integ,
+                         archive_root=str(tmp_path/"arch"))
+
+def test_archive_refuses_incomplete_schedule(tmp_path):
+    """P0-6: schedule 未全部完成 -> 拒绝归档。"""
+    from scripts.phase6_6b2_orchestrator import generate_archive, BudgetLedger6B2, GLOBAL_HARD_CAP, _build_schedule
+    import pytest
+    sched=_build_schedule(str(tmp_path/"run"), years=["2024","2025"])
+    ledger=BudgetLedger6B2(str(tmp_path/"l.json"), global_hard_cap=GLOBAL_HARD_CAP, slice_min=8, slice_max=26)
+    # 只标记一半完成
+    for sl in sched["slices"][:30]:
+        ledger.record_slice_completed(sl["slice_id"], sl["scheduled_calls"])
+    gate={"verdict":"PROMOTE_CANDIDATE","delta_dev":0.05,"dual_merged_acc":0.35,"stage":"dev"}
+    with pytest.raises(SystemExit):
+        generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate, "PASS",
+                         archive_root=str(tmp_path/"arch"))
+
+def test_archive_run_id_contains_stage_and_dataset(tmp_path):
+    """run_id 含 stage + dataset hash，dev/reuse/final + 数据变更不冲突。"""
+    from scripts.phase6_6b2_orchestrator import generate_archive
+    sched, ledger, gate, integ = _mk_schedule_ledger_gate(tmp_path)
+    archive_dir = generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate, integ,
                                    archive_root=str(tmp_path/"arch"))
-    assert "dev" in Path(archive_dir).name
+    name = Path(archive_dir).name
+    assert "dev" in name  # stage
 
 def test_archive_refuses_overwrite(tmp_path):
     """归档目录已存在 -> SystemExit(2)。"""
     from scripts.phase6_6b2_orchestrator import generate_archive
     import pytest
-    sched, ledger, gate = _mk_schedule_ledger_gate(tmp_path)
-    generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate,
+    sched, ledger, gate, integ = _mk_schedule_ledger_gate(tmp_path)
+    generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate, integ,
                      archive_root=str(tmp_path/"arch"))
     with pytest.raises(SystemExit):
-        generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate,
+        generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate, integ,
                          archive_root=str(tmp_path/"arch"))
-
-def test_archive_hashes_match_root(tmp_path):
-    """归档 merged_details SHA-256 == 运行目录 merged_details SHA-256。"""
-    from scripts.phase6_6b2_orchestrator import generate_archive, _sha256_file
-    sched, ledger, gate = _mk_schedule_ledger_gate(tmp_path)
-    # 预写 merged_details 到 run 目录（模拟 _merge_artifacts 输出位置）
-    # ... 实现时按 6B1D _merge_artifacts 模式从 slice details 合并
-    archive_dir = generate_archive(sched, ledger, str(tmp_path/"run"), "p","m", gate,
-                                   archive_root=str(tmp_path/"arch"))
-    # 断言 audit_index 中 merged_details_sha256 与归档文件实际 SHA 一致
 ```
 
 - [ ] **Step 2: 运行确认失败**
 
-- [ ] **Step 3: 实现 generate_archive + audit_index（P0-5 修订）**
+- [ ] **Step 3: 实现 generate_archive + audit_index（P0-5/P0-6 修订：fail-closed 自验）**
 
 ```python
-def generate_archive(schedule, ledger, output_dir, provider, model, gate_result, archive_root=None):
+def generate_archive(schedule, ledger, output_dir, provider, model, gate_result,
+                     integrity_result, archive_root=None):
+    """fail-closed 归档：不信任 gate_result，自行验证完整性。"""
     import shutil,tempfile
     if archive_root is None: archive_root=Path("docs/phase6/6b2")
     archive_root=Path(archive_root)
     # P0-5: BLOCKED_INCOMPLETE 显式拒绝决策归档（ROLLBACK 是有效结论，必须归档）
     if gate_result.get("verdict") == "BLOCKED_INCOMPLETE":
         raise SystemExit("BLOCKED_INCOMPLETE: 不得生成决策归档 (预算破顶/完整性失败)")
+    # P0-6: fail-closed 自验（不信任调用方传入的 verdict）
+    if ledger.total_attempted > ledger.hard_cap:
+        raise SystemExit(f"归档拒绝: ledger 超 hard_cap ({ledger.total_attempted}>{ledger.hard_cap})")
+    completed = sum(1 for sl in schedule["slices"] if ledger.slice_completed(sl["slice_id"]))
+    if completed != len(schedule["slices"]):
+        raise SystemExit(f"归档拒绝: schedule 未全部完成 ({completed}/{len(schedule['slices'])})")
+    if integrity_result != "PASS":
+        raise SystemExit(f"归档拒绝: integrity gate 未通过 ({integrity_result})")
     code_hash=_compute_experiment_code_fingerprint()
-    # P0-5: run_id 含 stage，dev/reuse/final 不冲突
     stage = gate_result.get("stage", "dev")
     years_tag = "-".join(sorted(set(s["year"] for s in schedule["slices"])))
-    run_id=f"6b2-{stage}-{years_tag}-{FROZEN_DATE}-{provider}-{model}-{code_hash[:12]}"
+    dataset_hash = _compute_dataset_hashes()
+    # P0-5 + P1: run_id 含 stage + years + dataset_hash 前缀
+    ds_prefix = hashlib.sha256(json.dumps(dataset_hash,sort_keys=True).encode()).hexdigest()[:8]
+    run_id=f"6b2-{stage}-{years_tag}-{ds_prefix}-{FROZEN_DATE}-{provider}-{model}-{code_hash[:12]}"
     archive_dir=archive_root/run_id
     if archive_dir.exists():
         raise SystemExit(2)  # 拒绝覆盖
@@ -1257,18 +1487,23 @@ def generate_archive(schedule, ledger, output_dir, provider, model, gate_result,
     tmp_dir=Path(tempfile.mkdtemp(prefix=f".{run_id}_",dir=str(archive_root)))
     try:
         merge_counts=_merge_artifacts(schedule,tmp_dir,provider,model)
-        dataset_hashes=_compute_dataset_hashes()
+        # P0-6: 验证 merged 行数符合阶段矩阵
+        expected_rows = _expected_merged_rows(schedule)
+        if merge_counts["detail_rows"] != expected_rows["detail"]:
+            raise SystemExit(f"归档拒绝: merged detail 行数不符 ({merge_counts['detail_rows']}!={expected_rows['detail']})")
         ctx_fp=_compute_context_fingerprint(schedule,provider,model)
         audit_index={
             "run_id":run_id,"experiment":"6b2","frozen_date":FROZEN_DATE,
             "provider":provider,"model":model,"stage":stage,"years_tag":years_tag,
+            "dataset_hash_prefix":ds_prefix,
             "code_fingerprint":code_hash,
-            "dataset_hashes":dataset_hashes,
+            "dataset_hashes":dataset_hash,
             "context_fingerprints":ctx_fp,
             "merged_details_rows":merge_counts["detail_rows"],
             "merged_events_rows":merge_counts["event_rows"],
             "budget_total_attempted":ledger.total_attempted,
             "budget_hard_cap":ledger.hard_cap,
+            "integrity_result":integrity_result,
             "gate_verdict":gate_result["verdict"],
             "gate_delta_dev":gate_result.get("delta_dev"),
             "gate_dual_merged_acc":gate_result.get("dual_merged_acc"),
