@@ -912,17 +912,22 @@ def _compute_experiment_code_fingerprint():
         fn = getattr(OutputDirLock, fn_name, None)
         if fn is not None:
             parts.append(hashlib.sha256(inspect.getsource(fn).encode()).hexdigest())
+    # Sealed workflow functions (gate checks, 2023 locks, enrichment).
+    # Fail-closed: if any of these cannot be imported, abort rather than
+    # silently excluding the entire admission/lock layer from the fingerprint.
     try:
         from scripts.phase6_6b2_sealed_workflow import (
             check_stage_gate, acquire_2023_run_lock, enrich_year,
             record_enriched_sha_to_lock, finalize_2023_run_lock,
             update_lock_schedule_hash, verify_2023_raw_data)
-        for fn in (check_stage_gate, acquire_2023_run_lock, enrich_year,
-                   record_enriched_sha_to_lock, finalize_2023_run_lock,
-                   update_lock_schedule_hash, verify_2023_raw_data):
-            parts.append(hashlib.sha256(inspect.getsource(fn).encode()).hexdigest())
-    except ImportError:
-        pass
+    except (ImportError, AttributeError) as exc:
+        raise SystemExit(
+            f"sealed workflow fingerprint unavailable: {exc}"
+        ) from exc
+    for fn in (check_stage_gate, acquire_2023_run_lock, enrich_year,
+               record_enriched_sha_to_lock, finalize_2023_run_lock,
+               update_lock_schedule_hash, verify_2023_raw_data):
+        parts.append(hashlib.sha256(inspect.getsource(fn).encode()).hexdigest())
     # P0-2: Runner code fingerprint — hashes actual bytes of run_benchmark.py,
     # profiles.py, dual_system_reasoning.py, prompt formatters, API clients.
     # These files control prompt construction, parsing, and model invocation;

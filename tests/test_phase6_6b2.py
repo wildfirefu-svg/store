@@ -1882,6 +1882,28 @@ class TestCodeFingerprintCriticalCoverage:
         with pytest.raises(SystemExit, match="runner code fingerprint unavailable"):
             m._compute_experiment_code_fingerprint()
 
+    def test_fingerprint_fails_closed_when_sealed_workflow_unimportable(self, monkeypatch):
+        """P0: if sealed_workflow functions cannot be imported, fingerprint MUST raise
+        SystemExit (fail-closed), not silently skip the entire admission/lock layer."""
+        import sys
+        import types
+        import scripts.phase6_6b2_orchestrator as m
+
+        # Replace the module in sys.modules with a stub that lacks all required
+        # symbols, simulating a broken/truncated install (triggers ImportError from
+        # the `from ... import (a, b, c)` statement when names are missing).
+        saved = sys.modules.get("scripts.phase6_6b2_sealed_workflow")
+        stub = types.ModuleType("scripts.phase6_6b2_sealed_workflow")
+        sys.modules["scripts.phase6_6b2_sealed_workflow"] = stub
+        try:
+            with pytest.raises(SystemExit, match="sealed workflow fingerprint unavailable"):
+                m._compute_experiment_code_fingerprint()
+        finally:
+            if saved is not None:
+                sys.modules["scripts.phase6_6b2_sealed_workflow"] = saved
+            else:
+                sys.modules.pop("scripts.phase6_6b2_sealed_workflow", None)
+
 
 class TestDash6b2UserRunId:
     """P1: run_id containing '-6b2-' (e.g. 'alpha-6b2-beta') must be usable across all
