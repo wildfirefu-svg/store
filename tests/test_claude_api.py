@@ -1,5 +1,7 @@
 import os
 
+import pytest
+
 import claude_api
 from config import DEEPSEEK_BASE_URL
 
@@ -123,3 +125,109 @@ def test_call_model_messages_sync_sends_temperature(monkeypatch):
 
     assert out == "A"
     assert captured["payload"]["temperature"] == 0.0
+
+
+class _JsonResp:
+    def __init__(self, response):
+        self.response = response
+        self.status = 200
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+    def read(self):
+        return json.dumps(self.response).encode("utf-8")
+
+
+def _capture_sync_request(monkeypatch, response=None):
+    captured = {}
+    response = response or {
+        "id": "resp-default",
+        "choices": [{
+            "finish_reason": "stop",
+            "message": {"content": "A"},
+        }],
+    }
+
+    def fake_urlopen(req, timeout=180):
+        captured["payload"] = json.loads(req.data.decode("utf-8"))
+        return _JsonResp(response)
+
+    monkeypatch.setattr(claude_api.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(
+        claude_api,
+        "ANTHROPIC_API_KEY",
+        "sk-test-deepseek-key-1234567890",
+    )
+    return captured
+
+
+def test_sync_deepseek_explicitly_disables_thinking(monkeypatch):
+    captured = _capture_sync_request(
+        monkeypatch,
+        response={
+            "id": "resp-1",
+            "model": "deepseek-v4-flash",
+            "choices": [{
+                "finish_reason": "stop",
+                "message": {"content": "A"},
+            }],
+        },
+    )
+    text, meta = claude_api.call_model_messages_sync_with_meta(
+        [{"role": "user", "content": "只回答A"}],
+        provider="deepseek",
+        model="deepseek-v4-flash",
+        thinking_mode="disabled",
+        temperature=0.0,
+    )
+    assert text == "A"
+    assert captured["payload"]["thinking"] == {"type": "disabled"}
+    assert meta["requested_model"] == "deepseek-v4-flash"
+    assert meta["response_model"] == "deepseek-v4-flash"
+
+
+def test_sync_call_without_thinking_mode_preserves_payload(monkeypatch):
+    captured = _capture_sync_request(monkeypatch)
+    claude_api.call_model_messages_sync(
+        [{"role": "user", "content": "A"}],
+        provider="deepseek",
+        model="deepseek-v4-pro",
+    )
+    assert "thinking" not in captured["payload"]
+
+
+def test_non_deepseek_rejects_thinking_mode_before_network(monkeypatch):
+    called = False
+
+    def fail_urlopen(*args, **kwargs):
+        nonlocal called
+        called = True
+        raise AssertionError("network must not be called")
+
+    monkeypatch.setattr(claude_api.urllib.request, "urlopen", fail_urlopen)
+    with pytest.raises(ValueError, match="thinking_mode is only supported for deepseek"):
+        claude_api.call_model_messages_sync_with_meta(
+            [{"role": "user", "content": "A"}],
+            provider="anthropic",
+            model="claude-test",
+            thinking_mode="disabled",
+        )
+    assert called is False
+
+
+def test_response_model_is_missing_not_invented(monkeypatch):
+    _capture_sync_request(monkeypatch, response={
+        "choices": [{"finish_reason": "stop", "message": {"content": "A"}}],
+    })
+    _, meta = claude_api.call_model_messages_sync_with_meta(
+        [{"role": "user", "content": "A"}],
+        provider="deepseek",
+        model="deepseek-v4-flash",
+        thinking_mode="disabled",
+    )
+    assert meta["requested_model"] == "deepseek-v4-flash"
+    assert meta["response_model"] is None
