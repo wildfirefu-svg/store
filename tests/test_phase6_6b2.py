@@ -841,6 +841,85 @@ class TestTask15SealedWorkflow:
         with pytest.raises(SystemExit):
             check_stage_gate("reuse", gate_root=str(tmp_path))
 
+    def _make_minimal_receipt(self, gate_dir, stage, verdict, user_run_id,
+                              archive_run_id=None, provider="p", model="m",
+                              code_fp="fp" * 8, dataset_sha="c" * 64):
+        """Helper: place a minimal valid receipt + audit under gate_dir."""
+        archive_dir = gate_dir.parent / f"archive_{stage}"
+        archive_dir.mkdir(exist_ok=True)
+        arid = archive_run_id or f"{user_run_id}-6b2-{stage}-x"
+        audit = {
+            "run_id": arid, "user_run_id": user_run_id,
+            "stage": stage, "provider": provider, "model": model,
+            "code_fingerprint": code_fp, "gate_verdict": verdict,
+        }
+        audit_path = archive_dir / "audit_index.json"
+        audit_path.write_text(json.dumps(audit), encoding="utf-8")
+        receipt = {
+            "verdict": verdict, "stage": stage, "run_id": arid,
+            "user_run_id": user_run_id, "archive_dir": str(archive_dir),
+            "audit_index_sha256": m_sha256(str(audit_path)),
+            "provider": provider, "model": model,
+            "code_fingerprint": code_fp, "dataset_sha256": dataset_sha,
+        }
+        rpath = gate_dir / f"{stage}_gate.json"
+        rpath.write_text(json.dumps(receipt), encoding="utf-8")
+        return str(rpath)
+
+    def test_reuse_gate_rejects_wrong_expected_user_run_id(self, tmp_path):
+        """P0-1: check_stage_gate(reuse) must reject dev receipt whose
+        user_run_id doesn't match expected_user_run_id."""
+        from scripts.phase6_6b2_sealed_workflow import check_stage_gate
+        gate_dir = tmp_path / "gates"
+        gate_dir.mkdir()
+        self._make_minimal_receipt(gate_dir, "dev", "PROMOTE_CANDIDATE",
+                                   user_run_id="run-A")
+        with pytest.raises(SystemExit, match="user_run_id 不一致"):
+            check_stage_gate("reuse", gate_root=str(gate_dir),
+                             expected_user_run_id="run-B")
+
+    def test_final_gate_rejects_mixed_user_run_id_chain(self, tmp_path):
+        """P0-1: final_2023 must reject when dev.user_run_id != reuse.user_run_id,
+        even when expected_user_run_id is not provided (defense in depth)."""
+        from scripts.phase6_6b2_sealed_workflow import check_stage_gate
+        gate_dir = tmp_path / "gates"
+        gate_dir.mkdir()
+        # dev from run-A, reuse from run-B → MIXED chain must be rejected
+        self._make_minimal_receipt(gate_dir, "dev", "PROMOTE_CANDIDATE",
+                                   user_run_id="run-A")
+        self._make_minimal_receipt(gate_dir, "reuse", "PASS",
+                                   user_run_id="run-B")
+        with pytest.raises(SystemExit, match="跨阶段 user_run_id 不一致"):
+            # No expected_user_run_id — the cross-stage check itself must catch it
+            check_stage_gate("final_2023", gate_root=str(gate_dir))
+
+    def test_final_gate_expected_user_run_id_catches_mismatch(self, tmp_path):
+        """P0-1: expected_user_run_id parameter rejects any receipt that doesn't match."""
+        from scripts.phase6_6b2_sealed_workflow import check_stage_gate
+        gate_dir = tmp_path / "gates"
+        gate_dir.mkdir()
+        self._make_minimal_receipt(gate_dir, "dev", "PROMOTE_CANDIDATE",
+                                   user_run_id="run-A")
+        self._make_minimal_receipt(gate_dir, "reuse", "PASS",
+                                   user_run_id="run-A")
+        with pytest.raises(SystemExit, match="user_run_id 不一致"):
+            check_stage_gate("final_2023", gate_root=str(gate_dir),
+                             expected_user_run_id="run-C")
+
+    def test_final_gate_accepts_consistent_chain(self, tmp_path):
+        """P0-1: final_2023 accepts when all receipts share the same user_run_id."""
+        from scripts.phase6_6b2_sealed_workflow import check_stage_gate
+        gate_dir = tmp_path / "gates"
+        gate_dir.mkdir()
+        self._make_minimal_receipt(gate_dir, "dev", "PROMOTE_CANDIDATE",
+                                   user_run_id="run-A")
+        self._make_minimal_receipt(gate_dir, "reuse", "PASS",
+                                   user_run_id="run-A")
+        result = check_stage_gate("final_2023", gate_root=str(gate_dir),
+                                  expected_user_run_id="run-A")
+        assert result["dev"]["user_run_id"] == "run-A"
+        assert result["reuse"]["user_run_id"] == "run-A"
+
 
 class TestOutputDirLock:
     """OutputDirLock exclusive locking."""
@@ -1776,6 +1855,25 @@ class TestCodeFingerprintCriticalCoverage:
                             _verify_receipt_belongs_to_run_v2)
         fp2 = m._compute_experiment_code_fingerprint()
         assert fp1 != fp2, "_verify_receipt_belongs_to_run change must alter fingerprint"
+
+    def test_fingerprint_includes_runner_code_fingerprint(self, monkeypatch):
+        """P0-2: experiment fingerprint MUST include the runner _code_fingerprint() result,
+        so changes to run_benchmark.py / profiles.py / dual_system_reasoning.py are detected."""
+        import scripts.phase6_6b2_orchestrator as m
+        fp1 = m._compute_experiment_code_fingerprint()
+
+        # Monkey-patch runner _code_fingerprint to return a different value
+        import benchmark.runners.run_benchmark as rb
+        monkeypatch.setattr(rb, "_code_fingerprint", lambda: "deadbeef" * 8)
+        # Need to force re-import in the orchestrator's fingerprint function since
+        # it does a local import; but since Python caches modules, the patched
+        # function will be used. However, _compute_experiment_code_fingerprint
+        # does `from benchmark.runners.run_benchmark import _code_fingerprint as _runner_fp`
+        # which will grab the patched attribute.
+        fp2 = m._compute_experiment_code_fingerprint()
+        assert fp1 != fp2, (
+            "runner _code_fingerprint() change must alter experiment fingerprint; "
+            "runner code drift would otherwise be undetected across stages")
 
 
 class TestDash6b2UserRunId:

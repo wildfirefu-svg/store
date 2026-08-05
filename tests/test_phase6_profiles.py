@@ -27,11 +27,12 @@ def load_case() -> dict:
     return json.loads(FIXTURE.read_text(encoding="utf-8"))
 
 
-def test_five_named_configs_five_dims():
+def test_six_named_configs_six_dims():
     expected = {
         "baziqa_official_multi_turn": ("baziqa", "official", "multi_turn", "approved_v1", "baziqa_macro"),
         "baziqa_xjz_direct": ("baziqa", "xjz_direct", "direct", "approved_v1", "baziqa_macro"),
         "baziqa_xjz_reasoned": ("baziqa", "xjz_reasoned", "direct", "legacy_v0", "baziqa_macro"),
+        "baziqa_xjz_dual": ("baziqa", "xjz_dual", "direct", "legacy_v0", "baziqa_macro"),
         "mingli_official_cot_astro": ("mingli", "official", "direct", "approved_v1", "mingli_trimmed"),
         "mingli_xjz_direct": ("mingli", "xjz_direct", "direct", "approved_v1", "mingli_trimmed"),
     }
@@ -59,12 +60,14 @@ def test_derive_method_mapping():
     assert derive_method(resolve_profile("baziqa_official_multi_turn")) == "multi_turn"
     for pid in ("baziqa_xjz_direct", "mingli_official_cot_astro", "mingli_xjz_direct"):
         assert derive_method(resolve_profile(pid)) == "direct_choice"
+    assert derive_method(resolve_profile("baziqa_xjz_dual")) == "dual_system"
 
 
-def test_derive_formatter_all_five():
+def test_derive_formatter_all_six():
     assert derive_formatter(resolve_profile("baziqa_official_multi_turn")) == "format_multi_turn"
     assert derive_formatter(resolve_profile("baziqa_xjz_direct")) == "format_direct_choice_prompt"
     assert derive_formatter(resolve_profile("baziqa_xjz_reasoned")) == "format_reasoned_choice_prompt"
+    assert derive_formatter(resolve_profile("baziqa_xjz_dual")) == "format_dual_system_prompt"
     assert derive_formatter(resolve_profile("mingli_official_cot_astro")) == "format_official_cot_prompt"
     assert derive_formatter(resolve_profile("mingli_xjz_direct")) == "format_direct_choice_prompt"
 
@@ -129,3 +132,31 @@ def test_prompt_fingerprint_stable_and_sensitive(monkeypatch):
     monkeypatch.setattr(chart_context, "CHART_CONTEXT_TEMPLATE_VERSION",
                         chart_context.CHART_CONTEXT_TEMPLATE_VERSION + " ")
     assert prompt_fingerprint(p) != fp1
+
+
+def test_judge_visibility_rules():
+    """ziwei_arm='judge' 时 required 为空，forbidden 包含全部体系标记。"""
+    from benchmark.runners.profiles import visibility_requirements
+    p = resolve_profile("baziqa_xjz_dual")
+    req, forb = visibility_requirements(p, "legacy_v0", ziwei_arm="judge")
+    assert req == frozenset()
+    assert "【紫微斗数·本命】" in forb
+    assert "【四柱】" in forb
+
+
+def test_dual_fingerprint_includes_all_prompt_sources():
+    import inspect
+    p = resolve_profile("baziqa_xjz_dual")
+    fp = prompt_fingerprint(p)
+    assert isinstance(fp, str) and len(fp) == 64
+    fp2 = prompt_fingerprint(resolve_profile("baziqa_xjz_reasoned"))
+    assert fp != fp2
+
+
+def test_dual_fingerprint_source_scope():
+    """指纹计算源码应含 judge_swap_seed 等全部函数。"""
+    import inspect
+    src = inspect.getsource(prompt_fingerprint)
+    for fn in ("judge_swap_seed", "build_judge_prompt", "render_reasoned_context",
+               "_assemble_reasoned_choice_prompt", "extract_reasoned_choice_answer", "format_options"):
+        assert fn in src, f"fingerprint 缺少 {fn}"

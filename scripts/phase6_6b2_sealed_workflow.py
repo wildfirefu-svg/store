@@ -58,8 +58,12 @@ def enrich_year(year, input_path, output_path):
 
 
 def check_stage_gate(stage, gate_root="docs/phase6/6b2", provider=None, model=None,
-                     current_code_fingerprint=None):
-    """Stage gate admission. v16 field-level validation. Returns validated receipt or SystemExit."""
+                     current_code_fingerprint=None, expected_user_run_id=None):
+    """Stage gate admission. v16 field-level validation. Returns validated receipt or SystemExit.
+
+    expected_user_run_id: if provided, every receipt's user_run_id MUST equal this value.
+    For final_2023, dev and reuse receipts MUST also share the same user_run_id.
+    """
     r = Path(gate_root)
 
     def _validate_receipt(name, expect_stage, expect_verdicts):
@@ -74,6 +78,13 @@ def check_stage_gate(stage, gate_root="docs/phase6/6b2", provider=None, model=No
             raise SystemExit(f"receipt stage 不符: {rec['stage']} != {expect_stage}")
         if rec["verdict"] not in expect_verdicts:
             raise SystemExit(f"{expect_stage} 未通过 ({rec.get('verdict')})")
+        # P0-1: verify user_run_id matches expected if provided
+        if expected_user_run_id is not None:
+            rid = rec.get("user_run_id")
+            if rid != expected_user_run_id:
+                raise SystemExit(
+                    f"{expect_stage} receipt user_run_id 不一致: "
+                    f"receipt={rid!r}, expected={expected_user_run_id!r}")
         archive_dir = Path(rec["archive_dir"])
         audit_path = archive_dir / "audit_index.json"
         if not archive_dir.exists() or not audit_path.exists():
@@ -108,6 +119,13 @@ def check_stage_gate(stage, gate_root="docs/phase6/6b2", provider=None, model=No
     elif stage == "final_2023":
         dev_rec = _validate_receipt("dev_gate.json", "dev", ("PROMOTE_CANDIDATE",))
         reuse_rec = _validate_receipt("reuse_gate.json", "reuse", ("PASS",))
+        # P0-1: cross-stage chain integrity — dev and reuse MUST share user_run_id
+        dev_urid = dev_rec.get("user_run_id")
+        reuse_urid = reuse_rec.get("user_run_id")
+        if dev_urid != reuse_urid:
+            raise SystemExit(
+                f"final_2023 跨阶段 user_run_id 不一致: "
+                f"dev={dev_urid!r}, reuse={reuse_urid!r} (混合链拒绝)")
         return {"dev": dev_rec, "reuse": reuse_rec}
     else:
         raise SystemExit(f"unknown stage: {stage}")

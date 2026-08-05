@@ -923,6 +923,17 @@ def _compute_experiment_code_fingerprint():
             parts.append(hashlib.sha256(inspect.getsource(fn).encode()).hexdigest())
     except ImportError:
         pass
+    # P0-2: Runner code fingerprint — hashes actual bytes of run_benchmark.py,
+    # profiles.py, dual_system_reasoning.py, prompt formatters, API clients.
+    # These files control prompt construction, parsing, and model invocation;
+    # drift between stages MUST be detected.
+    try:
+        from benchmark.runners.run_benchmark import _code_fingerprint as _runner_fp
+        parts.append(_runner_fp())
+    except ImportError:
+        # Fail-closed: if runner fingerprint cannot be computed, mark a sentinel
+        # that will mismatch any stage that successfully imported it.
+        parts.append("<runner_fingerprint_unavailable>")
     return hashlib.sha256("".join(parts).encode()).hexdigest()
 
 
@@ -1286,7 +1297,8 @@ def run_reuse(provider, model, output_dir, dev_receipt_path, dataset_paths=None,
         _verify_receipt_belongs_to_run(dev_receipt_path, output_dir, run_id, "dev")
         gate_root = _gate_root(output_dir, run_id)
         _check("reuse", gate_root=str(gate_root),
-               provider=provider, model=model, current_code_fingerprint=code_fp)
+               provider=provider, model=model, current_code_fingerprint=code_fp,
+               expected_user_run_id=run_id)
         years = ["2021", "2022"]
         ds_paths = dict(dataset_paths) if dataset_paths else {}
         for y in years:
@@ -1338,7 +1350,8 @@ def run_2023_final(provider, model, output_dir, reuse_receipt_path, dataset_path
         _verify_receipt_belongs_to_run(reuse_receipt_path, output_dir, run_id, "reuse")
         gate_root = _gate_root(output_dir, run_id)
         _check("final_2023", gate_root=str(gate_root),
-               provider=provider, model=model, current_code_fingerprint=code_fp)
+               provider=provider, model=model, current_code_fingerprint=code_fp,
+               expected_user_run_id=run_id)
         ds_paths_in = dict(dataset_paths) if dataset_paths else {}
         raw_path = ds_paths_in.get("2023", "benchmark/datasets/baziqa_contest8_2023_holdout.jsonl")
         archive_run_id = f"{run_id}-6b2-final_2023-{FROZEN_DATE}-{provider}-{model}-{code_fp[:12]}"

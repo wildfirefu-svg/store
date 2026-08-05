@@ -27,6 +27,8 @@ PROFILES: dict[str, EvalProfile] = {
                     "baziqa", "xjz_direct", "direct", "approved_v1", "baziqa_macro"),
         EvalProfile("baziqa_xjz_reasoned",
                     "baziqa", "xjz_reasoned", "direct", "legacy_v0", "baziqa_macro"),
+        EvalProfile("baziqa_xjz_dual",
+                    "baziqa", "xjz_dual", "direct", "legacy_v0", "baziqa_macro"),
         EvalProfile("mingli_official_cot_astro",
                     "mingli", "official", "direct", "approved_v1", "mingli_trimmed"),
         EvalProfile("mingli_xjz_direct",
@@ -53,6 +55,8 @@ def resolve_profile(name: str, chart_schema_version: str | None = None) -> EvalP
 
 def derive_method(profile: EvalProfile) -> str:
     """interaction_mode → runner method；runner 不得接受与之冲突的显式 --method。"""
+    if profile.prompt_style == "xjz_dual":
+        return "dual_system"
     return "multi_turn" if profile.interaction_mode == "multi_turn" else "direct_choice"
 
 
@@ -60,6 +64,7 @@ _FORMATTER_MAP = {
     ("baziqa", "official", "multi_turn"): "format_multi_turn",
     ("baziqa", "xjz_direct", "direct"): "format_direct_choice_prompt",
     ("baziqa", "xjz_reasoned", "direct"): "format_reasoned_choice_prompt",
+    ("baziqa", "xjz_dual", "direct"): "format_dual_system_prompt",
     ("mingli", "official", "direct"): "format_official_cot_prompt",
     ("mingli", "xjz_direct", "direct"): "format_direct_choice_prompt",
 }
@@ -99,6 +104,7 @@ _APPROVED_BAZI_MARKERS_NO_ZIWEI = _APPROVED_BAZI_MARKERS - {"【紫微斗数·�
 def visibility_requirements(
     profile: EvalProfile, chart_schema_version: str,
     ziwei_arm: str | None = None,
+    stage: str | None = None,
 ) -> tuple[frozenset[str], frozenset[str]]:
     if ziwei_arm is not None:
         # Three-arm reasoned visibility matrix (design §6).
@@ -138,7 +144,17 @@ def visibility_requirements(
                            "请先基于八字信息进行初步分析"}),
                 _DENYLIST_MARKERS,
             )
+        if ziwei_arm == "judge":
+            return frozenset(), _APPROVED_BAZI_MARKERS | _APPROVED_ONLY_MARKERS | _DENYLIST_MARKERS
         raise NotImplementedError(f"Unknown ziwei_arm: {ziwei_arm!r}")
+    # Dual system stage-specific rules (no ziwei_arm, use stage)
+    if stage == "bazi":
+        return frozenset(), _ZIWEI_MARKERS | _DENYLIST_MARKERS
+    if stage == "ziwei":
+        return frozenset({"【紫微斗数·本命】"}), _APPROVED_BAZI_MARKERS_NO_ZIWEI | _DENYLIST_MARKERS
+    if stage == "judge":
+        # Blinded judge: no raw chart markers at all
+        return frozenset(), _APPROVED_BAZI_MARKERS | _ZIWEI_MARKERS | _DENYLIST_MARKERS
     if chart_schema_version == "legacy_v0":
         # 旧上下文对照臂：自身 schema 由渲染器逐字节等价保证；此处只做串扰检测。
         return frozenset(), _APPROVED_ONLY_MARKERS | _DENYLIST_MARKERS
@@ -156,11 +172,11 @@ def visibility_requirements(
 
 def assert_visibility(
     rendered_text: str, profile: EvalProfile, chart_schema_version: str,
-    ziwei_arm: str | None = None,
+    ziwei_arm: str | None = None, stage: str | None = None,
 ) -> list[str]:
     """渲染文本上的 required/forbidden 子串断言，返回违规列表（空表 = 通过）。"""
     required, forbidden = visibility_requirements(
-        profile, chart_schema_version, ziwei_arm)
+        profile, chart_schema_version, ziwei_arm, stage)
     violations = [f"required 缺失: {m}" for m in sorted(required) if m not in rendered_text]
     violations += [f"forbidden 命中: {m}" for m in sorted(forbidden) if m in rendered_text]
     return violations
@@ -168,11 +184,11 @@ def assert_visibility(
 
 def visibility_gate(
     rendered_text: str, profile: EvalProfile, chart_schema_version: str,
-    ziwei_arm: str | None = None,
+    ziwei_arm: str | None = None, stage: str | None = None,
 ) -> str:
     """runner 短路契约（裁决 1B）：返回 "PASS" | "BLOCKED_PRECONDITION"；
     BLOCKED_PRECONDITION 时 runner 禁止任何模型调用（Task 6 接线并以零调用测试断言）。"""
-    if assert_visibility(rendered_text, profile, chart_schema_version, ziwei_arm):
+    if assert_visibility(rendered_text, profile, chart_schema_version, ziwei_arm, stage):
         return "BLOCKED_PRECONDITION"
     return "PASS"
 
@@ -209,6 +225,22 @@ def prompt_fingerprint(profile: EvalProfile) -> str:
                 baziqa_prompt._assemble_reasoned_choice_prompt
             ),
             inspect.getsource(cc.extract_reasoned_choice_answer),
+        ]
+    elif formatter == "format_dual_system_prompt":
+        from benchmark.formatters import dual_system_reasoning as ds
+        from benchmark.formatters.chart_context import render_reasoned_context, extract_reasoned_choice_answer
+        from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt, format_options
+        parts += [
+            ds.JUDGE_TEMPLATE_VERSION,
+            inspect.getsource(ds.build_bazi_pipeline_prompt),
+            inspect.getsource(ds.build_ziwei_pipeline_prompt),
+            inspect.getsource(ds.build_judge_prompt),
+            inspect.getsource(ds.extract_judge_answer),
+            inspect.getsource(ds.judge_swap_seed),
+            inspect.getsource(render_reasoned_context),
+            inspect.getsource(_assemble_reasoned_choice_prompt),
+            inspect.getsource(extract_reasoned_choice_answer),
+            inspect.getsource(format_options),
         ]
     else:  # format_multi_turn
         parts.append(inspect.getsource(baziqa_prompt.format_multi_turn_context))

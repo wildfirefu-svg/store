@@ -26,6 +26,10 @@ from benchmark.formatters.two_stage_reasoning import (
     build_stage2_evidence,
     is_time_location_question,
 )
+from benchmark.formatters.dual_system_reasoning import (
+    build_bazi_pipeline_prompt, build_ziwei_pipeline_prompt,
+    build_judge_prompt, extract_judge_answer, judge_swap_seed)
+from benchmark.formatters.chart_context import extract_reasoned_choice_answer
 from benchmark.scorers.evidence_score import score_case_evidence, aggregate_evidence_score
 from benchmark.scorers.safety_score import score_safety, aggregate_safety_score
 from benchmark.reports.generate_report import save_report
@@ -160,6 +164,7 @@ _CODE_SCOPE: tuple = (
     "benchmark/formatters/chart_context.py",
     "benchmark/formatters/baziqa_prompt.py",
     "benchmark/formatters/mingli_prompt.py",
+    "benchmark/formatters/dual_system_reasoning.py",
     "benchmark/formatters/leak_scan.py",
     # 评审收口（6A0 CONDITIONAL_COMPLETE）：真实模型调用路径——provider 配置与
     # API 客户端改动必须产生 code_sha256 漂移，否则 resume manifest 无法拒绝。
@@ -431,6 +436,8 @@ def build_benchmark_prompt(case, method='direct_choice', phase4_exp_a=False,
         # case["chart_input"]["official_astro"]，不再经 render_chart_context 两参传入。
         from benchmark.formatters.mingli_prompt import format_official_cot_prompt
         return format_official_cot_prompt(case)
+    if profile_formatter == 'format_dual_system_prompt':
+        return build_bazi_pipeline_prompt(case)
     if profile_formatter == 'format_reasoned_choice_prompt':
         from benchmark.formatters.chart_context import render_reasoned_context
         from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt
@@ -776,9 +783,193 @@ def _phase4_runtime_config(provider, model, prompt_version, rag_k, retrieval_mod
     }
 
 
+# ---- Phase 6 6B2: dual_system reasoning pipeline ----
+
+def _dual_stage_seed(case) -> bool:
+    ctx = _PHASE6_CTX
+    return judge_swap_seed(ctx.dataset_id, case.get("case_id", ""), ctx.repeat_idx)
+
+
+def _load_existing_detail(detail_path, key):
+    if not detail_path or not os.path.exists(detail_path):
+        return "", None
+    target = list(key)
+    try:
+        with open(detail_path, "r", encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                if row.get("attempt_key") == target:
+                    return row.get("raw_answer", ""), row.get("predicted_answer")
+    except (OSError, json.JSONDecodeError):
+        pass
+    return "", None
+
+
+def _dual_write_detail(case, stage, raw, predicted, terminal_state=None, parser_valid=None):
+    ctx = _PHASE6_CTX
+    expected = extract_choice(case.get("answer"))
+    row = {
+        "case_id": case.get("case_id"),
+        "predicted_answer": predicted,
+        "raw_answer": raw,
+        "expected_answer": expected,
+        "correct": predicted == expected if predicted is not None else False,
+        "call_success": bool(raw) and not str(raw).startswith("model_call_failed"),
+        "dual_stage": stage,
+        "parser_valid": parser_valid if parser_valid is not None else (predicted is not None),
+        "sample_idx": 0,
+        "permutation_id": case.get("_permutation_id") or "p0",
+    }
+    if terminal_state:
+        row["terminal_state"] = terminal_state
+    _append_jsonl(ctx.detail_path, row)
+
+
+def _call_dual_stage(case, provider, model, temperature, stage, prompt, rag_k, retrieval_mode, option_evidence_k):
+    """单 stage 调用。只捕获 model_call_failed；HardCapExhausted/崩溃冒泡。
+    返回 (raw, ans, failed)。
+    """
+    from benchmark.runners.profiles import resolve_profile, visibility_gate
+    ctx = _PHASE6_CTX
+    # Visibility gate (Task 8)
+    ziwei_arm_map = {"bazi": "none", "ziwei": "only", "judge": "judge"}
+    profile = resolve_profile(ctx.profile_id)
+    gate = visibility_gate(prompt, profile, "legacy_v0", ziwei_arm=ziwei_arm_map.get(stage))
+    if gate != "PASS":
+        _dual_write_detail(case, stage, prompt, None, terminal_state="unresolved", parser_valid=False)
+        return prompt, None, True
+    prev = ctx.attempt_stage
+    ctx.attempt_stage = stage
+    try:
+        raw = call_model_sync(prompt, provider, model, case=case, temperature=temperature,
+                              **_retrieval_call_kwargs(rag_k, retrieval_mode, option_evidence_k))
+        if stage == "judge":
+            ans = extract_judge_answer(raw)
+            if ans is None:
+                _dual_write_detail(case, stage, raw, None, terminal_state="judge_unresolved", parser_valid=False)
+            else:
+                _dual_write_detail(case, stage, raw, ans)
+        else:
+            ans = extract_reasoned_choice_answer(raw)
+            if ans is None:
+                _dual_write_detail(case, stage, raw, None, terminal_state="invalid", parser_valid=False)
+            else:
+                _dual_write_detail(case, stage, raw, ans)
+        return raw, ans, False
+    except RuntimeError as exc:
+        if not str(exc).startswith("model_call_failed"):
+            raise
+        _dual_write_detail(case, stage, "", None, terminal_state="call_failed", parser_valid=False)
+        return "", None, True
+    finally:
+        ctx.attempt_stage = prev
+
+
+def _resolve_and_judge(case, provider, model, temperature, b_ans, b_raw, z_ans, z_raw,
+                       completed_keys, rag_k, retrieval_mode, option_evidence_k):
+    ctx = _PHASE6_CTX
+    cid = case.get("case_id")
+    if b_ans is not None and z_ans is not None and b_ans == z_ans:
+        return b_ans
+    if b_ans is None and z_ans is None:
+        return None
+    prev = ctx.attempt_stage
+    ctx.attempt_stage = "judge"
+    try:
+        j_key = ctx.attempt_key_for(case)
+        if completed_keys and tuple(j_key) in completed_keys:
+            _, existing = _load_existing_detail(ctx.detail_path, j_key)
+            return existing
+        r1 = b_raw if b_raw else "未达成结论"
+        r2 = z_raw if z_raw else "未达成结论"
+        a1 = b_ans or "未给出"
+        a2 = z_ans or "未给出"
+        swap = _dual_stage_seed(case)
+        prompt = build_judge_prompt(case, a1, r1, a2, r2, swap=swap)
+        _, verdict, _ = _call_dual_stage(case, provider, model, temperature, "judge", prompt,
+                                         rag_k, retrieval_mode, option_evidence_k)
+        return verdict
+    finally:
+        ctx.attempt_stage = prev
+
+
+def _run_dual_case(case, provider, model, temperature, rag_k, retrieval_mode, option_evidence_k,
+                   completed_keys):
+    ctx = _PHASE6_CTX
+    cid = case.get("case_id")
+    prev_stage = ctx.attempt_stage
+    b_raw, b_ans, z_raw, z_ans = "", None, "", None
+    try:
+        ctx.attempt_stage = "bazi"
+        b_key = ctx.attempt_key_for(case)
+        if completed_keys and tuple(b_key) in completed_keys:
+            b_raw, b_ans = _load_existing_detail(ctx.detail_path, b_key)
+        else:
+            b_raw, b_ans, _ = _call_dual_stage(
+                case, provider, model, temperature, "bazi", build_bazi_pipeline_prompt(case),
+                rag_k, retrieval_mode, option_evidence_k)
+
+        ctx.attempt_stage = "ziwei"
+        z_key = ctx.attempt_key_for(case)
+        if completed_keys and tuple(z_key) in completed_keys:
+            z_raw, z_ans = _load_existing_detail(ctx.detail_path, z_key)
+        else:
+            z_raw, z_ans, _ = _call_dual_stage(
+                case, provider, model, temperature, "ziwei", build_ziwei_pipeline_prompt(case),
+                rag_k, retrieval_mode, option_evidence_k)
+
+        final = _resolve_and_judge(case, provider, model, temperature,
+                                   b_ans, b_raw, z_ans, z_raw, completed_keys,
+                                   rag_k, retrieval_mode, option_evidence_k)
+        return cid, final, b_ans, z_ans
+    finally:
+        ctx.attempt_stage = prev_stage
+
+
+def run_dual_system_benchmark(cases, provider, model, prompt_version, max_cases=20, temperature=0.0,
+                              case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy',
+                              option_evidence_k=2, resume_append=False, completed_keys=None):
+    if case_details_jsonl and not resume_append:
+        _prepare_jsonl(case_details_jsonl)
+    predictions, case_details, failed_cases = {}, [], []
+
+    for case in (cases[:max_cases] if max_cases else cases):
+        cid, final, b_ans, z_ans = _run_dual_case(
+            case, provider, model, temperature, rag_k, retrieval_mode, option_evidence_k,
+            completed_keys)
+        predictions[cid] = final
+        case_details.append({
+            "case_id": cid,
+            "predicted_answer": final,
+            "bazi_answer": b_ans,
+            "ziwei_answer": z_ans,
+        })
+        if final is None:
+            failed_cases.append({"case_id": cid, "reason": "unresolved",
+                                 "bazi_ans": b_ans, "ziwei_ans": z_ans})
+        time.sleep(1)
+
+    return {
+        "cases": (cases[:max_cases] if max_cases else cases),
+        "predictions": predictions,
+        "evidence_results": [],
+        "safety_results": [],
+        "case_details": case_details,
+        "failed_cases": failed_cases,
+    }
+
+
 def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None, n_samples=1, sample_temperature=0.4, aggregate='majority', phase4_evidence_mode='all', phase4_stage1_cache=None, phase4_exp_b=False, phase4_exp_a=False, phase4_exp_c=False, phase4_exp_c2=False, phase4_direct_c2=False, chart_schema_version=None, profile_formatter=None, ziwei_arm=None, resume_append=False, completed_keys=None):
     if method == 'multi_turn':
         return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases, temperature=temperature, case_details_jsonl=case_details_jsonl, rag_k=rag_k, config_id=config_id, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k, chart_schema_version=chart_schema_version, resume_append=resume_append)
+    if method == 'dual_system':
+        return run_dual_system_benchmark(cases, provider, model, prompt_version, max_cases=max_cases,
+                                         temperature=temperature, case_details_jsonl=case_details_jsonl,
+                                         rag_k=rag_k, config_id=config_id, retrieval_mode=retrieval_mode,
+                                         option_evidence_k=option_evidence_k, resume_append=resume_append,
+                                         completed_keys=completed_keys)
     if phase4_exp_c and phase4_exp_c2:
         raise ValueError("run_model_benchmark: --phase4-exp-c and --phase4-exp-c2 are mutually exclusive")
     if phase4_direct_c2 and method != 'direct_choice':
@@ -1464,6 +1655,7 @@ def _phase6_visibility_filter(cases, profile, profile_formatter, args):
     """裁决 1B（计划 Task 6 增补）：per-case 可见性门禁。违规 case 不进入模型运行，
     直接以 terminal_state=unresolved 追加 detail（经 _append_jsonl 富化 attempt_key）；
     官方臂 gate 文本取官方 prompt，reasoned 臂取 render_reasoned_context，
+    dual_system 臂分别对 bazi/ziwei/judge 三段做检查，任一违规即 BLOCK，
     其余取 render_chart_context。"""
     from benchmark.runners.profiles import assert_visibility
     detail_abs = os.path.abspath(args.case_details_jsonl) if args.case_details_jsonl else None
@@ -1473,6 +1665,31 @@ def _phase6_visibility_filter(cases, profile, profile_formatter, args):
         if profile_formatter == 'format_official_cot_prompt':
             from benchmark.formatters.mingli_prompt import format_official_cot_prompt
             gate_text = format_official_cot_prompt(case)
+            violations = assert_visibility(gate_text, profile, profile.chart_schema_version,
+                                           ziwei_arm=ziwei_arm)
+        elif profile_formatter == 'format_dual_system_prompt':
+            # Dual system: check all three stages independently
+            violations = []
+            # Bazi stage
+            gate_b = build_bazi_pipeline_prompt(case)
+            v_b = assert_visibility(gate_b, profile, profile.chart_schema_version,
+                                    ziwei_arm="none", stage="bazi")
+            if v_b:
+                violations.extend([f"bazi:{v}" for v in v_b])
+            # Ziwei stage
+            gate_z = build_ziwei_pipeline_prompt(case)
+            v_z = assert_visibility(gate_z, profile, profile.chart_schema_version,
+                                    ziwei_arm="only", stage="ziwei")
+            if v_z:
+                violations.extend([f"ziwei:{v}" for v in v_z])
+            # Judge stage (check blinded version without answer labels)
+            swap = bool(_dual_stage_seed(case) % 2)
+            gate_j = build_judge_prompt(case, "A", "(bazi rationale placeholder)",
+                                        "B", "(ziwei rationale placeholder)", swap=swap)
+            v_j = assert_visibility(gate_j, profile, profile.chart_schema_version,
+                                    ziwei_arm=None, stage="judge")
+            if v_j:
+                violations.extend([f"judge:{v}" for v in v_j])
         elif profile_formatter == 'format_reasoned_choice_prompt':
             from benchmark.formatters.chart_context import render_reasoned_context
             if ziwei_arm is None:
@@ -1481,11 +1698,13 @@ def _phase6_visibility_filter(cases, profile, profile_formatter, args):
                     ensure_ascii=False))
                 raise SystemExit(2)
             gate_text = render_reasoned_context(case, profile.chart_schema_version, ziwei_arm)
+            violations = assert_visibility(gate_text, profile, profile.chart_schema_version,
+                                           ziwei_arm=ziwei_arm)
         else:
             from benchmark.formatters.chart_context import render_chart_context
             gate_text = render_chart_context(case, profile.chart_schema_version)
-        violations = assert_visibility(gate_text, profile, profile.chart_schema_version,
-                                       ziwei_arm=ziwei_arm)
+            violations = assert_visibility(gate_text, profile, profile.chart_schema_version,
+                                           ziwei_arm=ziwei_arm)
         if violations:
             print(f"  [gate BLOCKED] {case.get('case_id')}: {len(violations)} violations")
             _append_jsonl(detail_abs, {
@@ -1532,7 +1751,7 @@ def main(argv=None):
     parser.add_argument('--prompt-version', default='srp_v1', help='Prompt version')
     parser.add_argument('--output-dir', default='benchmark/outputs', help='Report output directory')
     parser.add_argument('--max-cases', type=int, default=20, help='Max cases to run (model mode)')
-    parser.add_argument('--method', default=None, choices=['direct_choice', 'multi_turn', 'structured_reasoning', 'two_stage_reasoning'])
+    parser.add_argument('--method', default=None, choices=['direct_choice', 'multi_turn', 'structured_reasoning', 'two_stage_reasoning', 'dual_system'])
     parser.add_argument('--rag', action='store_true', help='Enable BaziQA case retrieval augmentation (sets BAZI_RAG=1).')
     parser.add_argument('--rag-corpus', default='', help='JSONL corpus file used when --rag is enabled')
     parser.add_argument('--fewshot-file', default='', help='Optional JSONL file with few-shot example questions injected into the system prompt')
@@ -1620,6 +1839,16 @@ def main(argv=None):
                               f"实际 --ziwei-arm={ziwei_arg!r}",
                 }, ensure_ascii=False))
                 raise SystemExit(2)
+        elif profile.profile_id == "baziqa_xjz_dual":
+            # dual_system: 内置 bazi/ziwei/judge 三阶段，禁止外部传 --ziwei-arm
+            ziwei_arg = getattr(args, "ziwei_arm", None)
+            if ziwei_arg is not None:
+                print(json.dumps({
+                    "status": "BLOCKED",
+                    "reason": f"baziqa_xjz_dual 内置三阶段，禁止传 --ziwei-arm；"
+                              f"实际 --ziwei-arm={ziwei_arg!r}",
+                }, ensure_ascii=False))
+                raise SystemExit(2)
         # ---- end fail-closed mapping ----
         profile_formatter = derive_formatter(profile)
         detail_abs = os.path.abspath(args.case_details_jsonl) if args.case_details_jsonl else None
@@ -1698,8 +1927,8 @@ def main(argv=None):
     if args.profile and args.resume:
         completed = load_completed_keys(os.path.abspath(args.case_details_jsonl))
         ctx = _PHASE6_CTX
-        if args.aggregate == "emit_samples":
-            completed_keys = completed      # emit：case 级预过滤会误丢部分完成 case，改按样本跳过
+        if args.aggregate == "emit_samples" or args.method == "dual_system":
+            completed_keys = completed      # emit/dual：case 级预过滤会误丢部分完成 case，改按 stage 跳过
         else:
             cases = [c for c in cases if ctx.attempt_key_for(c) not in completed]
 
