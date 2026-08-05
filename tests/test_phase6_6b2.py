@@ -1860,20 +1860,27 @@ class TestCodeFingerprintCriticalCoverage:
         """P0-2: experiment fingerprint MUST include the runner _code_fingerprint() result,
         so changes to run_benchmark.py / profiles.py / dual_system_reasoning.py are detected."""
         import scripts.phase6_6b2_orchestrator as m
+        import benchmark.runners.run_benchmark as rb
         fp1 = m._compute_experiment_code_fingerprint()
 
-        # Monkey-patch runner _code_fingerprint to return a different value
-        import benchmark.runners.run_benchmark as rb
+        # Monkey-patch runner _code_fingerprint to return a different value.
+        # The local `from ... import _code_fingerprint` reads from the cached module,
+        # so setattr on the module object is seen by subsequent local imports.
         monkeypatch.setattr(rb, "_code_fingerprint", lambda: "deadbeef" * 8)
-        # Need to force re-import in the orchestrator's fingerprint function since
-        # it does a local import; but since Python caches modules, the patched
-        # function will be used. However, _compute_experiment_code_fingerprint
-        # does `from benchmark.runners.run_benchmark import _code_fingerprint as _runner_fp`
-        # which will grab the patched attribute.
         fp2 = m._compute_experiment_code_fingerprint()
         assert fp1 != fp2, (
             "runner _code_fingerprint() change must alter experiment fingerprint; "
             "runner code drift would otherwise be undetected across stages")
+
+    def test_fingerprint_fails_closed_when_runner_fp_missing(self, monkeypatch):
+        """P0: if runner _code_fingerprint() cannot be imported, _compute_experiment_code_fingerprint
+        MUST raise SystemExit (fail-closed), not silently return a degraded fingerprint."""
+        import scripts.phase6_6b2_orchestrator as m
+        import benchmark.runners.run_benchmark as rb
+        # Simulate AttributeError: _code_fingerprint was removed/renamed in runner
+        monkeypatch.delattr(rb, "_code_fingerprint", raising=False)
+        with pytest.raises(SystemExit, match="runner code fingerprint unavailable"):
+            m._compute_experiment_code_fingerprint()
 
 
 class TestDash6b2UserRunId:

@@ -926,14 +926,15 @@ def _compute_experiment_code_fingerprint():
     # P0-2: Runner code fingerprint — hashes actual bytes of run_benchmark.py,
     # profiles.py, dual_system_reasoning.py, prompt formatters, API clients.
     # These files control prompt construction, parsing, and model invocation;
-    # drift between stages MUST be detected.
+    # drift between stages MUST be detected. Fail-closed: if runner fingerprint
+    # cannot be obtained, abort rather than silently degrading drift detection.
     try:
         from benchmark.runners.run_benchmark import _code_fingerprint as _runner_fp
-        parts.append(_runner_fp())
-    except ImportError:
-        # Fail-closed: if runner fingerprint cannot be computed, mark a sentinel
-        # that will mismatch any stage that successfully imported it.
-        parts.append("<runner_fingerprint_unavailable>")
+    except (ImportError, AttributeError) as exc:
+        raise SystemExit(
+            f"runner code fingerprint unavailable: {exc}"
+        ) from exc
+    parts.append(_runner_fp())
     return hashlib.sha256("".join(parts).encode()).hexdigest()
 
 
