@@ -253,13 +253,15 @@ class _HardCapExhausted(Exception):
 
 class Phase6Context:
     def __init__(self, dataset_id, profile_id, arm, attempt_stage, provider, model,
-                 repeat_idx, detail_path, events_path, scheduled_calls, hard_cap, resume):
+                 repeat_idx, detail_path, events_path, scheduled_calls, hard_cap, resume,
+                 thinking_mode=None):
         self.dataset_id = dataset_id
         self.profile_id = profile_id
         self.arm = arm or "default"
         self.attempt_stage = attempt_stage
         self.provider = provider
         self.model = model
+        self.thinking_mode = thinking_mode
         self.repeat_idx = int(repeat_idx or 0)
         self.detail_path = detail_path
         self.events_path = events_path
@@ -324,6 +326,9 @@ class Phase6Context:
             "response_id": meta.get("response_id"),
             "provider": meta.get("provider"),
             "model": meta.get("model"),
+            "requested_model": meta.get("requested_model"),
+            "response_model": meta.get("response_model"),
+            "thinking_mode": meta.get("thinking_mode"),
             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
         }
         _append_jsonl(self.events_path, row)
@@ -356,6 +361,9 @@ class Phase6Context:
             row["latency_ms"] = meta.get("latency_ms")
             row["response_id"] = meta.get("response_id")
             row["usage"] = meta.get("usage")
+            row["requested_model"] = meta.get("requested_model")
+            row["response_model"] = meta.get("response_model")
+            row["thinking_mode"] = meta.get("thinking_mode")
         return row
 
 
@@ -419,6 +427,13 @@ def _attempt_with_ledger(case, call_once, sample_idx=0):
         # 正常完成：记录 meta 并返回文本
         if isinstance(meta, dict):
             ctx.record_call_meta(key, meta, truncated=False)
+            # 6B2 协议审计：显式 non-thinking 运行拒绝响应模型漂移（大小写敏感精确
+            # 匹配；抛于重试 try/except 之外，不消耗网络重试预算）
+            response_model = meta.get("response_model")
+            if ctx.thinking_mode == "disabled" and response_model and \
+                    response_model != ctx.model:
+                raise RuntimeError(
+                    f"response_model_mismatch: {response_model} != {ctx.model}")
         if isinstance(result, (tuple, list)):
             return result[0]
         return result
@@ -649,6 +664,9 @@ def _call_once_messages(messages, provider, model, case=None, temperature=None, 
         system_prompt=_resolve_system_prompt(case, rag_k=rag_k, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k, suppress_rag=suppress_rag, suppress_apb=suppress_apb),
         temperature=temperature,
         timeout=timeout,
+        thinking_mode=(
+            _PHASE6_CTX.thinking_mode if _PHASE6_CTX is not None else None
+        ),
     )
     return str(text).strip(), meta
 
@@ -1789,6 +1807,12 @@ def main(argv=None):
     parser.add_argument('--resume', action='store_true', help='续跑：跳过已完成 attempt key')
     parser.add_argument('--scheduled-calls', type=int, default=None)
     parser.add_argument('--hard-cap', type=int, default=None)
+    parser.add_argument(
+        "--thinking-mode",
+        choices=("disabled",),
+        default=None,
+        help="Explicit DeepSeek thinking protocol for controlled experiments",
+    )
     parser.add_argument('--ziwei-arm', choices=['none', 'only', 'combined', 'ziwei_mini', 'sequential'],
                         default=None, help='紫微星盘消融臂 (none/only/combined/ziwei_mini/sequential)')
     args = parser.parse_args(argv)
@@ -1898,6 +1922,7 @@ def main(argv=None):
             events_path=events_abs,
             scheduled_calls=args.scheduled_calls, hard_cap=args.hard_cap,
             resume=args.resume,
+            thinking_mode=args.thinking_mode,
         ))
     else:
         args.method = args.method or "direct_choice"
