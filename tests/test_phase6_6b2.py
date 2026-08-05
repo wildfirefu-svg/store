@@ -1437,8 +1437,9 @@ class TestRunDirIsolation:
                     "delta_by_year": {}, "delta_by_year_repeat": {}, "stage": stage}
         def fake_b1c():
             return {"count": 0, "sha256": "x", "rows": []}
-        def fake_report(gate, merged, sched, ledger, b1c, out_dir):
+        def fake_report(gate, merged, sched, ledger, b1c, out_dir, run_id=None):
             captured["report_dir"] = out_dir
+            captured["report_run_id"] = run_id
         def fake_archive(sched, ledger, run_dir, provider, model, gate_result,
                          archive_root=None, stage="dev", raw_dataset_paths=None,
                          enriched_dataset_paths=None, run_id=None, smoke_attempted=0):
@@ -1477,6 +1478,7 @@ class TestRunDirIsolation:
         assert result["run_id"] == "testrun1"
         assert "runs" + os.sep + "testrun1" + os.sep + "dev" in captured["sched_output_dir"]
         assert captured["smoke_count"] == 1  # single dual smoke per v18
+        assert captured["report_run_id"] == "testrun1"  # report receives user run id
         assert (out / "runs" / "testrun1" / "gates" / "dev_gate.json").exists()
 
 
@@ -1860,16 +1862,25 @@ class TestSmokeOnlyInDev:
             ds_paths[y] = str(p)
         return ds_paths
 
+    def _prepare_context(self, m, out, run_id):
+        """Create a real run context via _prepare_run_context, consistent with the
+        (possibly monkeypatched) fingerprint the entry point will compute."""
+        m._prepare_run_context(
+            output_dir=out, run_id=run_id, stage="dev", resume=False,
+            protocol=m._validate_frozen_protocol("deepseek", "deepseek-v4-flash"),
+            code_fingerprint=m._compute_experiment_code_fingerprint())
+
     def test_reuse_does_not_run_smoke(self, tmp_path, monkeypatch):
         import scripts.phase6_6b2_orchestrator as m
         captured = {}
         self._patch_all(m, monkeypatch, tmp_path, captured)
         out = tmp_path / "exp"
         out.mkdir()
+        self._prepare_context(m, out, "r1")
         dev_rpath = TestReceiptChain()._place_receipt(out, "r1", "dev")
         ds_paths = self._make_ds(tmp_path, ["2021", "2022"])
         m.run_reuse("deepseek", "deepseek-v4-flash", str(out), dev_rpath,
-                    dataset_paths=ds_paths, run_id="r1")
+                    dataset_paths=ds_paths, run_id="r1", resume=True)
         assert captured["smoke_count"] == 0, "reuse must NOT run smoke"
 
     def test_2023_final_does_not_run_smoke(self, tmp_path, monkeypatch):
@@ -1879,6 +1890,7 @@ class TestSmokeOnlyInDev:
         self._patch_all(m, monkeypatch, tmp_path, captured)
         out = tmp_path / "exp"
         out.mkdir()
+        self._prepare_context(m, out, "r1")
         TestReceiptChain()._place_receipt(out, "r1", "dev")
         # sealed workflow requires reuse verdict="PASS" (not PROMOTE_CANDIDATE)
         reuse_rpath = TestReceiptChain()._place_receipt(out, "r1", "reuse", verdict="PASS")
@@ -1896,7 +1908,7 @@ class TestSmokeOnlyInDev:
             for i in range(40):
                 f.write(json.dumps({"case_id": f"c{i:04d}"}) + "\n")
         m.run_2023_final("deepseek", "deepseek-v4-flash", str(out), reuse_rpath,
-                         dataset_paths={"2023": str(ds_2023)}, run_id="r1")
+                         dataset_paths={"2023": str(ds_2023)}, run_id="r1", resume=True)
         assert captured["smoke_count"] == 0, "2023 final must NOT run smoke"
 
     def test_dev_runs_single_smoke(self, tmp_path, monkeypatch):
@@ -2174,6 +2186,204 @@ class TestFrozenV4FlashProtocol:
         with pytest.raises(SystemExit, match="6B2 frozen protocol mismatch"):
             m.run_2023_final("deepseek", "deepseek-chat", str(tmp_path),
                              str(tmp_path / "reuse_gate.json"), run_id="r1")
+        assert not (tmp_path / "runs").exists()
+
+
+class TestRunContext:
+    """Task 5: atomic run_context.json creation; resume only via explicit opt-in
+    with exact frozen-field and code fingerprint match. No legacy migration."""
+
+    def _protocol(self, m):
+        return m._validate_frozen_protocol("deepseek", "deepseek-v4-flash")
+
+    def _fresh_dev_context(self, m, output_dir, run_id="r1",
+                           code_fingerprint="a" * 64):
+        return m._prepare_run_context(
+            output_dir=output_dir, run_id=run_id, stage="dev",
+            resume=False, protocol=self._protocol(m),
+            code_fingerprint=code_fingerprint)
+
+    def _publish_receipt(self, runs_root, stage):
+        gates = runs_root / "gates"
+        gates.mkdir(parents=True, exist_ok=True)
+        (gates / f"{stage}_gate.json").write_text(json.dumps({
+            "verdict": "PROMOTE_CANDIDATE", "stage": stage,
+        }), encoding="utf-8")
+
+    def test_fresh_dev_creates_context_atomically(self, tmp_path):
+        import scripts.phase6_6b2_orchestrator as m
+        runs_root, context = self._fresh_dev_context(m, tmp_path)
+        assert runs_root == tmp_path / "runs" / "r1"
+        assert (tmp_path / "runs").is_dir()  # parent created by helper
+        context_path = runs_root / "run_context.json"
+        assert context_path.exists()
+        on_disk = json.loads(context_path.read_text(encoding="utf-8"))
+        for field in m.RUN_CONTEXT_REQUIRED_FIELDS:
+            assert field in on_disk, f"required field missing: {field}"
+        assert on_disk["provider"] == "deepseek"
+        assert on_disk["model"] == "deepseek-v4-flash"
+        assert on_disk["thinking_mode"] == "disabled"
+        assert on_disk["model_label"] == "DeepSeek-V4-Flash non-thinking"
+        assert on_disk["code_fingerprint"] == "a" * 64
+        assert on_disk == context
+        # atomic write via _atomic_write_json: no temp leftover
+        assert not (runs_root / "run_context.tmp").exists()
+
+    def test_fresh_dev_rejects_existing_run_dir_without_modifying_it(self, tmp_path):
+        import scripts.phase6_6b2_orchestrator as m
+        runs_root = tmp_path / "runs" / "r1"
+        runs_root.mkdir(parents=True)
+        marker = runs_root / "marker.txt"
+        marker.write_text("keep", encoding="utf-8")
+        with pytest.raises(SystemExit):
+            self._fresh_dev_context(m, tmp_path)
+        assert not (runs_root / "run_context.json").exists()
+        assert marker.read_text(encoding="utf-8") == "keep"
+
+    def test_existing_run_without_context_is_rejected_without_migration(self, tmp_path):
+        import scripts.phase6_6b2_orchestrator as m
+        runs_root = tmp_path / "runs" / "legacy-v4-pro"
+        runs_root.mkdir(parents=True)
+        legacy = runs_root / "legacy.events.jsonl"
+        legacy.write_text('{"usage":{"reasoning_tokens":12}}\n', encoding="utf-8")
+        before = legacy.read_bytes()
+
+        with pytest.raises(SystemExit, match="run_context.json missing"):
+            m._prepare_run_context(
+                output_dir=tmp_path,
+                run_id="legacy-v4-pro",
+                stage="dev",
+                resume=True,
+                protocol=m._validate_frozen_protocol(
+                    "deepseek", "deepseek-v4-flash"
+                ),
+                code_fingerprint="a" * 64,
+            )
+
+        assert not (runs_root / "run_context.json").exists()
+        assert legacy.read_bytes() == before
+
+    @pytest.mark.parametrize("field,value", [
+        ("provider", "anthropic"),
+        ("model", "deepseek-v4-pro"),
+        ("thinking_mode", "enabled"),
+        ("model_label", "DeepSeek-V4-Pro"),
+        ("code_fingerprint", "b" * 64),
+    ])
+    def test_resume_rejects_context_drift(self, tmp_path, field, value):
+        import scripts.phase6_6b2_orchestrator as m
+        runs_root, _ = self._fresh_dev_context(m, tmp_path)
+        context_path = runs_root / "run_context.json"
+        context = json.loads(context_path.read_text(encoding="utf-8"))
+        context[field] = value
+        context_path.write_text(json.dumps(context), encoding="utf-8")
+        with pytest.raises(SystemExit):
+            m._prepare_run_context(
+                output_dir=tmp_path, run_id="r1", stage="dev",
+                resume=True, protocol=self._protocol(m),
+                code_fingerprint="a" * 64)
+
+    def test_resume_allows_unfinished_dev(self, tmp_path):
+        import scripts.phase6_6b2_orchestrator as m
+        runs_root, created = self._fresh_dev_context(m, tmp_path)
+        resumed_root, context = m._prepare_run_context(
+            output_dir=tmp_path, run_id="r1", stage="dev",
+            resume=True, protocol=self._protocol(m),
+            code_fingerprint="a" * 64)
+        assert resumed_root == runs_root
+        assert context == created
+
+    def test_dev_rerun_rejected_after_dev_receipt_published(self, tmp_path):
+        import scripts.phase6_6b2_orchestrator as m
+        runs_root, _ = self._fresh_dev_context(m, tmp_path)
+        self._publish_receipt(runs_root, "dev")
+        with pytest.raises(SystemExit):
+            m._prepare_run_context(
+                output_dir=tmp_path, run_id="r1", stage="dev",
+                resume=True, protocol=self._protocol(m),
+                code_fingerprint="a" * 64)
+
+    def test_reuse_requires_resume_and_dev_receipt(self, tmp_path):
+        import scripts.phase6_6b2_orchestrator as m
+        runs_root, _ = self._fresh_dev_context(m, tmp_path)
+        # reuse without resume is rejected even with a valid context
+        with pytest.raises(SystemExit):
+            m._prepare_run_context(
+                output_dir=tmp_path, run_id="r1", stage="reuse",
+                resume=False, protocol=self._protocol(m),
+                code_fingerprint="a" * 64)
+        # resume without published dev receipt is rejected
+        with pytest.raises(SystemExit):
+            m._prepare_run_context(
+                output_dir=tmp_path, run_id="r1", stage="reuse",
+                resume=True, protocol=self._protocol(m),
+                code_fingerprint="a" * 64)
+        # dev receipt published, reuse receipt not yet: allowed
+        self._publish_receipt(runs_root, "dev")
+        resumed_root, _ = m._prepare_run_context(
+            output_dir=tmp_path, run_id="r1", stage="reuse",
+            resume=True, protocol=self._protocol(m),
+            code_fingerprint="a" * 64)
+        assert resumed_root == runs_root
+        # reuse receipt already published: rerun rejected
+        self._publish_receipt(runs_root, "reuse")
+        with pytest.raises(SystemExit):
+            m._prepare_run_context(
+                output_dir=tmp_path, run_id="r1", stage="reuse",
+                resume=True, protocol=self._protocol(m),
+                code_fingerprint="a" * 64)
+
+    def test_final_2023_requires_resume_and_reuse_receipt(self, tmp_path):
+        import scripts.phase6_6b2_orchestrator as m
+        runs_root, _ = self._fresh_dev_context(m, tmp_path)
+        # final_2023 without resume is rejected
+        with pytest.raises(SystemExit):
+            m._prepare_run_context(
+                output_dir=tmp_path, run_id="r1", stage="final_2023",
+                resume=False, protocol=self._protocol(m),
+                code_fingerprint="a" * 64)
+        # resume with only dev receipt is rejected (needs reuse receipt)
+        self._publish_receipt(runs_root, "dev")
+        with pytest.raises(SystemExit):
+            m._prepare_run_context(
+                output_dir=tmp_path, run_id="r1", stage="final_2023",
+                resume=True, protocol=self._protocol(m),
+                code_fingerprint="a" * 64)
+        # reuse receipt published, final receipt not yet: allowed
+        self._publish_receipt(runs_root, "reuse")
+        resumed_root, _ = m._prepare_run_context(
+            output_dir=tmp_path, run_id="r1", stage="final_2023",
+            resume=True, protocol=self._protocol(m),
+            code_fingerprint="a" * 64)
+        assert resumed_root == runs_root
+        # final receipt already published: rerun rejected
+        self._publish_receipt(runs_root, "final_2023")
+        with pytest.raises(SystemExit):
+            m._prepare_run_context(
+                output_dir=tmp_path, run_id="r1", stage="final_2023",
+                resume=True, protocol=self._protocol(m),
+                code_fingerprint="a" * 64)
+
+    def test_failure_after_context_creation_is_recorded(self, tmp_path):
+        import scripts.phase6_6b2_orchestrator as m
+        missing_ds = tmp_path / "missing.jsonl"
+        with pytest.raises(SystemExit):
+            m.run_dev("deepseek", "deepseek-v4-flash", str(tmp_path),
+                      dataset_paths={"2024": str(missing_ds),
+                                     "2025": str(missing_ds)},
+                      run_id="r1")
+        failures = tmp_path / "runs" / "r1" / "run_failures.jsonl"
+        assert failures.exists()
+        lines = [json.loads(l) for l in
+                 failures.read_text(encoding="utf-8").splitlines() if l.strip()]
+        assert len(lines) == 1
+        assert lines[0]["stage"] == "dev"
+        assert "数据集路径不存在" in lines[0]["reason"]
+
+    def test_wrong_provider_model_rejected_before_context_without_files(self, tmp_path):
+        import scripts.phase6_6b2_orchestrator as m
+        with pytest.raises(SystemExit, match="6B2 frozen protocol mismatch"):
+            m.run_dev("deepseek", "deepseek-chat", str(tmp_path), run_id="r1")
         assert not (tmp_path / "runs").exists()
 
 

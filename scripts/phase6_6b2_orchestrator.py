@@ -750,7 +750,8 @@ def _accuracy_final(rows):
             "b1a_accuracy": b1a_acc, "b1a_rows": len(b1a_rows)}
 
 
-def generate_report(gate, merged_details, schedule, ledger, b1c_advisory, out_dir):
+def generate_report(gate, merged_details, schedule, ledger, b1c_advisory, out_dir,
+                    run_id=None):
     rows = merged_details
     total = max(len(rows), 1)
     parsed = sum(1 for r in rows if r.get("terminal_state") == "parsed")
@@ -1284,18 +1285,117 @@ def _gate_root(output_dir, run_id):
     return Path(output_dir) / "runs" / run_id / "gates"
 
 
-def run_dev(provider, model, output_dir, dataset_paths=None, run_id=None):
-    """Run dev stage (2024+2025). run_id is REQUIRED; caller must supply a validated slug."""
-    _validate_frozen_protocol(provider, model)
+# ── Task 5: atomic run context + explicit safe resume ──
+
+RUN_CONTEXT_REQUIRED_FIELDS = (
+    "provider",
+    "model",
+    "thinking_mode",
+    "model_label",
+    "code_fingerprint",
+    "created_at",
+)
+
+
+def _prepare_run_context(output_dir, run_id, stage, resume, protocol, code_fingerprint):
+    """Create (fresh dev) or verify (resume) runs/<run_id>/run_context.json.
+
+    fresh: only stage == "dev"; the run root must NOT exist. The runs/ parent is
+    created first, then the run root is exclusively created via os.mkdir and the
+    context is written with the existing _atomic_write_json.
+    resume: run root and context must already exist; frozen fields and code
+    fingerprint must match exactly; nothing is inferred or backfilled from
+    events, manifests, or directory names. Per-stage published receipts gate
+    reruns of completed stages.
+    Returns (runs_root, context)."""
+    output_dir = Path(output_dir)
+    runs_root = output_dir / "runs" / run_id
+    context_path = runs_root / "run_context.json"
+    if not resume:
+        if stage != "dev":
+            raise SystemExit(
+                f"run context 拒绝: fresh 仅允许 dev 阶段 (stage={stage}); "
+                f"{stage} 必须显式 --resume")
+        runs_root.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            os.mkdir(str(runs_root))  # 独占创建: 已存在即拒绝
+        except FileExistsError:
+            raise SystemExit(
+                f"run context 拒绝: run 目录已存在 ({runs_root}); "
+                f"中断恢复必须显式 --resume") from None
+        context = {
+            "provider": protocol["provider"],
+            "model": protocol["model"],
+            "thinking_mode": protocol["thinking_mode"],
+            "model_label": protocol["model_label"],
+            "code_fingerprint": code_fingerprint,
+            "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        }
+        _atomic_write_json(context_path, context)
+        return runs_root, context
+    if not context_path.exists():
+        raise SystemExit("run_context.json missing: refusing legacy run migration")
+    context = json.loads(context_path.read_text(encoding="utf-8"))
+    missing = [f for f in RUN_CONTEXT_REQUIRED_FIELDS if f not in context]
+    if missing:
+        raise SystemExit(f"run context 拒绝: 缺少必需字段 {missing}")
+    for field in ("provider", "model", "thinking_mode", "model_label"):
+        if context[field] != protocol[field]:
+            raise SystemExit(
+                f"run context 拒绝: {field} 漂移 "
+                f"(context={context[field]!r}, 当前={protocol[field]!r})")
+    if context["code_fingerprint"] != code_fingerprint:
+        raise SystemExit("run context 拒绝: code fingerprint 漂移")
+    gates_dir = runs_root / "gates"
+    published = {s: (gates_dir / f"{s}_gate.json").exists()
+                 for s in ("dev", "reuse", "final_2023")}
+    if stage == "dev":
+        if published["dev"]:
+            raise SystemExit(
+                "run context 拒绝: dev receipt 已发布, 禁止重跑已完成阶段")
+    elif stage == "reuse":
+        if not published["dev"]:
+            raise SystemExit(
+                "run context 拒绝: reuse 需要已发布的 dev receipt")
+        if published["reuse"]:
+            raise SystemExit(
+                "run context 拒绝: reuse receipt 已发布, 禁止重跑已完成阶段")
+    elif stage == "final_2023":
+        if not published["reuse"]:
+            raise SystemExit(
+                "run context 拒绝: final_2023 需要已发布的 reuse receipt")
+        if published["final_2023"]:
+            raise SystemExit(
+                "run context 拒绝: final_2023 receipt 已发布, 禁止重跑已完成阶段")
+    else:
+        raise SystemExit(f"run context 拒绝: 未知阶段 {stage}")
+    return runs_root, context
+
+
+def _record_run_failure(runs_root, stage, reason):
+    """Append a single-line JSON failure record to runs/<run_id>/run_failures.jsonl."""
+    path = Path(runs_root) / "run_failures.jsonl"
+    record = {"stage": stage, "reason": reason,
+              "at": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def run_dev(provider, model, output_dir, dataset_paths=None, run_id=None, resume=False):
+    """Run dev stage (2024+2025). run_id is REQUIRED; caller must supply a validated slug.
+    fresh dev 不传 resume; dev 中断恢复必须显式 resume=True."""
+    protocol = _validate_frozen_protocol(provider, model)
     _validate_run_id(run_id)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    runs_root = output_dir / "runs" / run_id
-    runs_root.mkdir(parents=True, exist_ok=True)
+    code_fp = _compute_experiment_code_fingerprint()
+    runs_root, _context = _prepare_run_context(
+        output_dir=output_dir, run_id=run_id, stage="dev", resume=resume,
+        protocol=protocol, code_fingerprint=code_fp)
     lock = OutputDirLock.acquire(str(runs_root))
-    if lock is None:
-        raise SystemExit(f"dev run dir locked: {runs_root}")
     try:
+        if lock is None:
+            raise SystemExit(f"dev run dir locked: {runs_root}")
         years = ["2024", "2025"]
         ds_paths = dict(dataset_paths) if dataset_paths else {}
         for y in years:
@@ -1315,7 +1415,8 @@ def run_dev(provider, model, output_dir, dataset_paths=None, run_id=None):
             raise SystemExit(f"dev integrity failed: {integrity}")
         gate_result = compute_gate(merged, stage="dev")
         b1c = load_b1c_advisory()
-        generate_report(gate_result, merged, schedule, ledger, b1c, str(stage_dir))
+        generate_report(gate_result, merged, schedule, ledger, b1c, str(stage_dir),
+                        run_id=run_id)
         arch = generate_archive(schedule, ledger, str(stage_dir),
                                 provider, model, gate_result, stage="dev",
                                 raw_dataset_paths=ds_paths,
@@ -1324,26 +1425,31 @@ def run_dev(provider, model, output_dir, dataset_paths=None, run_id=None):
                                 smoke_attempted=smoke_attempted)
         _publish_receipt_atomic(arch, _gate_root(output_dir, run_id), "dev_gate.json")
         return {"status": "ok", "gate": gate_result, "archive": arch, "run_id": run_id}
+    except (Exception, SystemExit) as exc:
+        _record_run_failure(runs_root, "dev", str(exc))
+        raise
     finally:
         if lock:
             lock.release()
 
 
-def run_reuse(provider, model, output_dir, dev_receipt_path, dataset_paths=None, run_id=None):
+def run_reuse(provider, model, output_dir, dev_receipt_path, dataset_paths=None,
+              run_id=None, resume=False):
     """Run reuse stage (2021+2022). run_id is REQUIRED and MUST match dev receipt's run_id.
-    v18: reuse does NOT run smoke (smoke is a dev-only gate)."""
-    _validate_frozen_protocol(provider, model)
+    v18: reuse does NOT run smoke (smoke is a dev-only gate). 必须显式 resume=True."""
+    protocol = _validate_frozen_protocol(provider, model)
     _validate_run_id(run_id)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    runs_root = output_dir / "runs" / run_id
-    runs_root.mkdir(parents=True, exist_ok=True)
+    code_fp = _compute_experiment_code_fingerprint()
+    runs_root, _context = _prepare_run_context(
+        output_dir=output_dir, run_id=run_id, stage="reuse", resume=resume,
+        protocol=protocol, code_fingerprint=code_fp)
     lock = OutputDirLock.acquire(str(runs_root))
-    if lock is None:
-        raise SystemExit(f"reuse run dir locked: {runs_root}")
     try:
+        if lock is None:
+            raise SystemExit(f"reuse run dir locked: {runs_root}")
         from scripts.phase6_6b2_sealed_workflow import check_stage_gate as _check
-        code_fp = _compute_experiment_code_fingerprint()
         # Verify dev receipt belongs to this run_id and lives in this output_dir's gates/
         _verify_receipt_belongs_to_run(dev_receipt_path, output_dir, run_id, "dev")
         gate_root = _gate_root(output_dir, run_id)
@@ -1367,7 +1473,8 @@ def run_reuse(provider, model, output_dir, dev_receipt_path, dataset_paths=None,
             raise SystemExit(f"reuse integrity failed: {integrity}")
         gate_result = compute_gate(merged, stage="reuse")
         b1c = load_b1c_advisory()
-        generate_report(gate_result, merged, schedule, ledger, b1c, str(stage_dir))
+        generate_report(gate_result, merged, schedule, ledger, b1c, str(stage_dir),
+                        run_id=run_id)
         arch = generate_archive(schedule, ledger, str(stage_dir),
                                 provider, model, gate_result, stage="reuse",
                                 raw_dataset_paths=ds_paths,
@@ -1376,29 +1483,34 @@ def run_reuse(provider, model, output_dir, dev_receipt_path, dataset_paths=None,
                                 smoke_attempted=0)
         _publish_receipt_atomic(arch, gate_root, "reuse_gate.json")
         return {"status": "ok", "gate": gate_result, "archive": arch, "run_id": run_id}
+    except (Exception, SystemExit) as exc:
+        _record_run_failure(runs_root, "reuse", str(exc))
+        raise
     finally:
         if lock:
             lock.release()
 
 
-def run_2023_final(provider, model, output_dir, reuse_receipt_path, dataset_paths=None, run_id=None):
+def run_2023_final(provider, model, output_dir, reuse_receipt_path, dataset_paths=None,
+                   run_id=None, resume=False):
     """Run 2023 final sealed stage. run_id is REQUIRED and MUST match reuse receipt's run_id.
-    v18: final does NOT run smoke."""
-    _validate_frozen_protocol(provider, model)
+    v18: final does NOT run smoke. 必须显式 resume=True."""
+    protocol = _validate_frozen_protocol(provider, model)
     _validate_run_id(run_id)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    runs_root = output_dir / "runs" / run_id
-    runs_root.mkdir(parents=True, exist_ok=True)
+    code_fp = _compute_experiment_code_fingerprint()
+    runs_root, _context = _prepare_run_context(
+        output_dir=output_dir, run_id=run_id, stage="final_2023", resume=resume,
+        protocol=protocol, code_fingerprint=code_fp)
     lock = OutputDirLock.acquire(str(runs_root))
-    if lock is None:
-        raise SystemExit(f"2023_final run dir locked: {runs_root}")
     try:
+        if lock is None:
+            raise SystemExit(f"2023_final run dir locked: {runs_root}")
         from scripts.phase6_6b2_sealed_workflow import (
             check_stage_gate as _check, acquire_2023_run_lock,
             verify_2023_raw_data, record_enriched_sha_to_lock, finalize_2023_run_lock,
             enrich_year, update_lock_schedule_hash, BLESSED_2023_RAW_SHA256)
-        code_fp = _compute_experiment_code_fingerprint()
         _verify_receipt_belongs_to_run(reuse_receipt_path, output_dir, run_id, "reuse")
         gate_root = _gate_root(output_dir, run_id)
         _check("final_2023", gate_root=str(gate_root),
@@ -1430,7 +1542,8 @@ def run_2023_final(provider, model, output_dir, reuse_receipt_path, dataset_path
         integrity = _integrity_gate(merged, schedule)
         gate_result = compute_gate(merged, stage="final_2023")
         b1c = load_b1c_advisory()
-        generate_report(gate_result, merged, schedule, ledger, b1c, str(stage_dir))
+        generate_report(gate_result, merged, schedule, ledger, b1c, str(stage_dir),
+                        run_id=run_id)
         arch = generate_archive(schedule, ledger, str(stage_dir), provider, model,
                                 gate_result, stage="final_2023",
                                 raw_dataset_paths=raw_paths,
@@ -1443,6 +1556,9 @@ def run_2023_final(provider, model, output_dir, reuse_receipt_path, dataset_path
                                integrity_passed=(integrity == "PASS"))
         _publish_receipt_atomic(arch, gate_root, "final_2023_gate.json")
         return {"status": "ok", "gate": gate_result, "archive": arch, "run_id": run_id}
+    except (Exception, SystemExit) as exc:
+        _record_run_failure(runs_root, "final_2023", str(exc))
+        raise
     finally:
         if lock:
             lock.release()
@@ -1473,6 +1589,9 @@ def main():
                        help="实验运行标识 (同一实验 dev/reuse/final 必须共用同一 run_id)")
         p.add_argument("--dataset-path", action="append", default=[],
                        help="数据集路径覆盖，格式 year=path，可多次指定")
+        p.add_argument("--resume", action="store_true",
+                       help="显式恢复已存在的 run (fresh dev 不得使用; "
+                            "dev 中断恢复/reuse/final_2023 必须传入)")
         if cmd_name == "run_reuse":
             p.add_argument("--dev-receipt", required=True,
                            help="dev 阶段 receipt 路径 (runs/<run_id>/gates/dev_gate.json)")
@@ -1483,13 +1602,16 @@ def main():
     ds_paths = _parse_dataset_path_args(args.dataset_path)
     if args.cmd == "run_dev":
         result = run_dev(args.provider, args.model, args.output_dir,
-                         dataset_paths=ds_paths, run_id=args.run_id)
+                         dataset_paths=ds_paths, run_id=args.run_id,
+                         resume=args.resume)
     elif args.cmd == "run_reuse":
         result = run_reuse(args.provider, args.model, args.output_dir,
-                           args.dev_receipt, dataset_paths=ds_paths, run_id=args.run_id)
+                           args.dev_receipt, dataset_paths=ds_paths, run_id=args.run_id,
+                           resume=args.resume)
     elif args.cmd == "run_2023_final":
         result = run_2023_final(args.provider, args.model, args.output_dir,
-                                args.reuse_receipt, dataset_paths=ds_paths, run_id=args.run_id)
+                                args.reuse_receipt, dataset_paths=ds_paths, run_id=args.run_id,
+                                resume=args.resume)
     print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
 
 
