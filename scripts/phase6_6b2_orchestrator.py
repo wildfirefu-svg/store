@@ -938,6 +938,9 @@ def _compute_experiment_code_fingerprint():
     # Run-id and receipt chain
     for fn in (_validate_run_id, _verify_receipt_belongs_to_run, _publish_receipt_atomic):
         parts.append(hashlib.sha256(inspect.getsource(fn).encode()).hexdigest())
+    # Frozen protocol and run context (v4-flash)
+    for fn in (_validate_frozen_protocol, _prepare_run_context, _record_run_failure):
+        parts.append(hashlib.sha256(inspect.getsource(fn).encode()).hexdigest())
     # Archive and report
     for fn in (generate_archive, _merge_all_details, _compute_dataset_hashes):
         parts.append(hashlib.sha256(inspect.getsource(fn).encode()).hexdigest())
@@ -1065,6 +1068,7 @@ def generate_archive(schedule, ledger, run_dir, provider, model, gate_result,
     import shutil
     archive_root = Path(archive_root or ARCHIVE_ROOT)
     run_dir = Path(run_dir)
+    _validate_frozen_protocol(provider, model)
     if gate_result.get("verdict") == "BLOCKED_INCOMPLETE":
         raise SystemExit("archive 拒绝: BLOCKED_INCOMPLETE 裁决不得归档")
     completed = {sl["slice_id"] for sl in schedule["slices"] if ledger.slice_completed(sl["slice_id"])}
@@ -1124,6 +1128,8 @@ def generate_archive(schedule, ledger, run_dir, provider, model, gate_result,
             "frozen_date": FROZEN_DATE,
             "provider": provider,
             "model": model,
+            "thinking_mode": FROZEN_THINKING_MODE,
+            "model_label": MODEL_LABEL,
             "code_fingerprint": code_fp,
             "sched_hash": sched_hash,
             "gate_verdict": gate_result["verdict"],
@@ -1155,6 +1161,8 @@ def generate_archive(schedule, ledger, run_dir, provider, model, gate_result,
             "audit_index_sha256": _sha256_file(str(audit_path)),
             "provider": provider,
             "model": model,
+            "thinking_mode": FROZEN_THINKING_MODE,
+            "model_label": MODEL_LABEL,
             "code_fingerprint": code_fp,
             "dataset_sha256": ds_hashes.get("raw") or ds_hashes.get("enriched"),
             "sched_hash": sched_hash,
@@ -1454,7 +1462,10 @@ def run_reuse(provider, model, output_dir, dev_receipt_path, dataset_paths=None,
         _verify_receipt_belongs_to_run(dev_receipt_path, output_dir, run_id, "dev")
         gate_root = _gate_root(output_dir, run_id)
         _check("reuse", gate_root=str(gate_root),
-               provider=provider, model=model, current_code_fingerprint=code_fp,
+               provider=provider, model=model,
+               thinking_mode=protocol["thinking_mode"],
+               model_label=protocol["model_label"],
+               current_code_fingerprint=code_fp,
                expected_user_run_id=run_id)
         years = ["2021", "2022"]
         ds_paths = dict(dataset_paths) if dataset_paths else {}
@@ -1514,7 +1525,10 @@ def run_2023_final(provider, model, output_dir, reuse_receipt_path, dataset_path
         _verify_receipt_belongs_to_run(reuse_receipt_path, output_dir, run_id, "reuse")
         gate_root = _gate_root(output_dir, run_id)
         _check("final_2023", gate_root=str(gate_root),
-               provider=provider, model=model, current_code_fingerprint=code_fp,
+               provider=provider, model=model,
+               thinking_mode=protocol["thinking_mode"],
+               model_label=protocol["model_label"],
+               current_code_fingerprint=code_fp,
                expected_user_run_id=run_id)
         ds_paths_in = dict(dataset_paths) if dataset_paths else {}
         raw_path = ds_paths_in.get("2023", "benchmark/datasets/baziqa_contest8_2023_holdout.jsonl")

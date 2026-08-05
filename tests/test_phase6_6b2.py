@@ -750,15 +750,24 @@ class TestTask16GenerateArchive:
         sched = _build_schedule(str(run_dir), years=["2024"], dataset_paths={"2024": str(ds_path)})
         ledger = BudgetLedger6B2(str(run_dir / "l.json"), global_hard_cap=530)
         with pytest.raises(SystemExit, match="未全部完成"):
-            generate_archive(sched, ledger, str(run_dir), "deepseek", "deepseek-chat",
+            generate_archive(sched, ledger, str(run_dir), "deepseek", "deepseek-v4-flash",
                              {"verdict": "PASS"})
 
     def test_archive_rejects_blocked_incomplete(self, tmp_path):
         sched, ledger, run_dir, _ = self._make_complete_run(tmp_path)
         from scripts.phase6_6b2_orchestrator import generate_archive
         with pytest.raises(SystemExit, match="BLOCKED_INCOMPLETE"):
-            generate_archive(sched, ledger, run_dir, "deepseek", "deepseek-chat",
+            generate_archive(sched, ledger, run_dir, "deepseek", "deepseek-v4-flash",
                              {"verdict": "BLOCKED_INCOMPLETE"})
+
+    def test_archive_rejects_protocol_drift_at_entry(self, tmp_path):
+        """Task 6: generate_archive validates the frozen protocol at entry;
+        caller cannot pass thinking/label or a drifted provider/model."""
+        sched, ledger, run_dir, _ = self._make_complete_run(tmp_path)
+        from scripts.phase6_6b2_orchestrator import generate_archive
+        with pytest.raises(SystemExit, match="6B2 frozen protocol mismatch"):
+            generate_archive(sched, ledger, run_dir, "deepseek", "deepseek-chat",
+                             {"verdict": "PASS"})
 
     def test_archive_creates_audit_index(self, tmp_path):
         sched, ledger, run_dir, _ = self._make_complete_run(tmp_path)
@@ -768,15 +777,23 @@ class TestTask16GenerateArchive:
         merged = _merge_all_details(sched)
         gate = compute_gate(merged, stage="dev")
         arch_root = tmp_path / "archives"
-        result = generate_archive(sched, ledger, run_dir, "deepseek", "deepseek-chat",
+        result = generate_archive(sched, ledger, run_dir, "deepseek", "deepseek-v4-flash",
                                   gate, archive_root=str(arch_root), stage="dev")
         audit_path = Path(result["archive_dir"]) / "audit_index.json"
         assert audit_path.exists()
         audit = json.loads(audit_path.read_text(encoding="utf-8"))
         assert audit["gate_verdict"] in ("PROMOTE_CANDIDATE", "ROLLBACK")
         assert audit["experiment_id"] == "6b2"
+        # Task 6: audit 写入冻结协议字段
+        assert audit["provider"] == "deepseek"
+        assert audit["model"] == "deepseek-v4-flash"
+        assert audit["thinking_mode"] == "disabled"
+        assert audit["model_label"] == "DeepSeek-V4-Flash non-thinking"
         receipt_path = Path(result["archive_dir"]) / "dev_gate.json"
         assert receipt_path.exists()
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        assert receipt["thinking_mode"] == "disabled"
+        assert receipt["model_label"] == "DeepSeek-V4-Flash non-thinking"
 
 
 class TestTask17bEntryPoints:
@@ -868,15 +885,20 @@ class TestTask15SealedWorkflow:
             check_stage_gate("reuse", gate_root=str(tmp_path))
 
     def _make_minimal_receipt(self, gate_dir, stage, verdict, user_run_id,
-                              archive_run_id=None, provider="p", model="m",
+                              archive_run_id=None, provider="deepseek",
+                              model="deepseek-v4-flash",
+                              thinking_mode="disabled",
+                              model_label="DeepSeek-V4-Flash non-thinking",
                               code_fp="fp" * 8, dataset_sha="c" * 64):
-        """Helper: place a minimal valid receipt + audit under gate_dir."""
+        """Helper: place a minimal valid receipt + audit under gate_dir.
+        合法夹具总是同时在 audit 与 receipt 写冻结协议字段。"""
         archive_dir = gate_dir.parent / f"archive_{stage}"
         archive_dir.mkdir(exist_ok=True)
         arid = archive_run_id or f"{user_run_id}-6b2-{stage}-x"
         audit = {
             "run_id": arid, "user_run_id": user_run_id,
             "stage": stage, "provider": provider, "model": model,
+            "thinking_mode": thinking_mode, "model_label": model_label,
             "code_fingerprint": code_fp, "gate_verdict": verdict,
         }
         audit_path = archive_dir / "audit_index.json"
@@ -886,6 +908,7 @@ class TestTask15SealedWorkflow:
             "user_run_id": user_run_id, "archive_dir": str(archive_dir),
             "audit_index_sha256": m_sha256(str(audit_path)),
             "provider": provider, "model": model,
+            "thinking_mode": thinking_mode, "model_label": model_label,
             "code_fingerprint": code_fp, "dataset_sha256": dataset_sha,
         }
         rpath = gate_dir / f"{stage}_gate.json"
@@ -945,6 +968,83 @@ class TestTask15SealedWorkflow:
                                   expected_user_run_id="run-A")
         assert result["dev"]["user_run_id"] == "run-A"
         assert result["reuse"]["user_run_id"] == "run-A"
+
+    def test_receipt_required_fields_include_protocol(self):
+        """Task 6: RECEIPT_REQUIRED_FIELDS must include thinking_mode/model_label."""
+        from scripts.phase6_6b2_sealed_workflow import RECEIPT_REQUIRED_FIELDS
+        assert "thinking_mode" in RECEIPT_REQUIRED_FIELDS
+        assert "model_label" in RECEIPT_REQUIRED_FIELDS
+
+    @pytest.mark.parametrize("field,bad_value", [
+        ("thinking_mode", "enabled"),
+        ("model_label", "DeepSeek-V4-Flash thinking"),
+    ])
+    def test_gate_rejects_receipt_protocol_field_drift(self, tmp_path, field, bad_value):
+        """Task 6: tampering receipt thinking_mode/model_label must be rejected
+        by the audit↔receipt cross-check."""
+        from scripts.phase6_6b2_sealed_workflow import check_stage_gate
+        gate_dir = tmp_path / "gates"
+        gate_dir.mkdir()
+        rpath = self._make_minimal_receipt(gate_dir, "dev", "PROMOTE_CANDIDATE",
+                                           user_run_id="run-A")
+        rec = json.loads(Path(rpath).read_text(encoding="utf-8"))
+        rec[field] = bad_value
+        Path(rpath).write_text(json.dumps(rec), encoding="utf-8")
+        with pytest.raises(SystemExit, match=field):
+            check_stage_gate("reuse", gate_root=str(gate_dir))
+
+    @pytest.mark.parametrize("field,bad_value", [
+        ("thinking_mode", "enabled"),
+        ("model_label", "DeepSeek-V4-Flash thinking"),
+    ])
+    def test_gate_rejects_audit_protocol_field_drift(self, tmp_path, field, bad_value):
+        """Task 6: tampering audit thinking_mode/model_label must be rejected
+        (audit SHA is recomputed so only the cross-check can catch it)."""
+        from scripts.phase6_6b2_sealed_workflow import check_stage_gate
+        gate_dir = tmp_path / "gates"
+        gate_dir.mkdir()
+        rpath = self._make_minimal_receipt(gate_dir, "dev", "PROMOTE_CANDIDATE",
+                                           user_run_id="run-A")
+        rec = json.loads(Path(rpath).read_text(encoding="utf-8"))
+        audit_path = Path(rec["archive_dir"]) / "audit_index.json"
+        audit = json.loads(audit_path.read_text(encoding="utf-8"))
+        audit[field] = bad_value
+        audit_path.write_text(json.dumps(audit), encoding="utf-8")
+        rec["audit_index_sha256"] = m_sha256(str(audit_path))
+        Path(rpath).write_text(json.dumps(rec), encoding="utf-8")
+        with pytest.raises(SystemExit, match=field):
+            check_stage_gate("reuse", gate_root=str(gate_dir))
+
+    @pytest.mark.parametrize("field,bad_value", [
+        ("thinking_mode", "enabled"),
+        ("model_label", "DeepSeek-V4-Flash thinking"),
+    ])
+    def test_gate_rejects_current_protocol_mismatch(self, tmp_path, field, bad_value):
+        """Task 6: receipt inconsistent with the current frozen protocol must be
+        rejected even when the receipt itself is internally consistent."""
+        from scripts.phase6_6b2_sealed_workflow import check_stage_gate
+        gate_dir = tmp_path / "gates"
+        gate_dir.mkdir()
+        self._make_minimal_receipt(gate_dir, "dev", "PROMOTE_CANDIDATE",
+                                   user_run_id="run-A")
+        with pytest.raises(SystemExit, match="不一致"):
+            check_stage_gate("reuse", gate_root=str(gate_dir),
+                             provider="deepseek", model="deepseek-v4-flash",
+                             **{field: bad_value})
+
+    def test_final_gate_rejects_cross_stage_thinking_mode_mismatch(self, tmp_path):
+        """Task 6: final_2023 must reject when dev and reuse receipts were issued
+        under different thinking modes."""
+        from scripts.phase6_6b2_sealed_workflow import check_stage_gate
+        gate_dir = tmp_path / "gates"
+        gate_dir.mkdir()
+        self._make_minimal_receipt(gate_dir, "dev", "PROMOTE_CANDIDATE",
+                                   user_run_id="run-A")
+        self._make_minimal_receipt(gate_dir, "reuse", "PASS",
+                                   user_run_id="run-A",
+                                   thinking_mode="enabled")
+        with pytest.raises(SystemExit, match="跨阶段 thinking_mode 不一致"):
+            check_stage_gate("final_2023", gate_root=str(gate_dir))
 
 
 class TestOutputDirLock:
@@ -1298,7 +1398,7 @@ class TestArchiveMergedFiles:
         merged = _merge_all_details(sched)
         gate = compute_gate(merged, stage="dev")
         arch_root = tmp_path / "archives"
-        result = generate_archive(sched, ledger, run_dir, "deepseek", "deepseek-chat",
+        result = generate_archive(sched, ledger, run_dir, "deepseek", "deepseek-v4-flash",
                                   gate, archive_root=str(arch_root), stage="dev",
                                   raw_dataset_paths=ds_paths,
                                   enriched_dataset_paths=ds_paths)
@@ -1451,11 +1551,16 @@ class TestRunDirIsolation:
                 "run_id": run_id or "fake", "archive_dir": str(arch_dir),
                 "audit_index_sha256": "a" * 64, "provider": provider,
                 "model": model, "code_fingerprint": "fp",
+                "thinking_mode": "disabled",
+                "model_label": "DeepSeek-V4-Flash non-thinking",
                 "dataset_sha256": "b" * 64, "sched_hash": "c" * 64,
                 "smoke_attempted": smoke_attempted,
             }), encoding="utf-8")
             (arch_dir / "audit_index.json").write_text(
-                json.dumps({"smoke_attempted": smoke_attempted}), encoding="utf-8")
+                json.dumps({"smoke_attempted": smoke_attempted,
+                            "thinking_mode": "disabled",
+                            "model_label": "DeepSeek-V4-Flash non-thinking"}),
+                encoding="utf-8")
             return {"archive_dir": str(arch_dir), "run_id": run_id or "fake", "receipt": {}}
         monkeypatch.setattr(m, "_run_all_slices", fake_run_all)
         monkeypatch.setattr(m, "_merge_all_details", fake_merge)
@@ -1498,6 +1603,8 @@ class TestReceiptChain:
             "run_id": archive_rid,
             "user_run_id": run_id,
             "stage": stage, "provider": "deepseek", "model": "deepseek-v4-flash",
+            "thinking_mode": "disabled",
+            "model_label": "DeepSeek-V4-Flash non-thinking",
             "code_fingerprint": "fp" * 8, "gate_verdict": verdict,
         }
         audit_path = archive_dir / "audit_index.json"
@@ -1508,6 +1615,8 @@ class TestReceiptChain:
             "archive_dir": str(archive_dir),
             "audit_index_sha256": m_sha256(str(audit_path)),
             "provider": "deepseek", "model": "deepseek-v4-flash",
+            "thinking_mode": "disabled",
+            "model_label": "DeepSeek-V4-Flash non-thinking",
             "code_fingerprint": "fp" * 8, "dataset_sha256": "c" * 64,
         }
         rpath = gate_dir / f"{stage}_gate.json"
@@ -1703,7 +1812,7 @@ class TestAtomicArchive:
         sched, ledger, run_dir = self._make_ready_schedule(tmp_path, monkeypatch)
         arch_root = tmp_path / "archives"
         gate_result = {"verdict": "PROMOTE_CANDIDATE", "delta_by_year_repeat": {}}
-        arch = generate_archive(sched, ledger, str(run_dir), "p", "m",
+        arch = generate_archive(sched, ledger, str(run_dir), "deepseek", "deepseek-v4-flash",
                                 gate_result, archive_root=str(arch_root),
                                 stage="dev", raw_dataset_paths={"2024": "x"},
                                 enriched_dataset_paths={"2024": "x"},
@@ -1730,7 +1839,7 @@ class TestAtomicArchive:
         monkeypatch.setattr(m, "_merge_all_details", boom)
         gate_result = {"verdict": "PROMOTE_CANDIDATE", "delta_by_year_repeat": {}}
         with pytest.raises(RuntimeError, match="simulated failure"):
-            generate_archive(sched, ledger, str(run_dir), "p", "m",
+            generate_archive(sched, ledger, str(run_dir), "deepseek", "deepseek-v4-flash",
                              gate_result, archive_root=str(arch_root),
                              stage="dev", raw_dataset_paths={"2024": "x"},
                              enriched_dataset_paths={"2024": "x"},
@@ -1826,6 +1935,8 @@ class TestSmokeOnlyInDev:
                 "run_id": arch_run_id, "user_run_id": run_id,
                 "stage": stage,
                 "provider": provider, "model": model,
+                "thinking_mode": "disabled",
+                "model_label": "DeepSeek-V4-Flash non-thinking",
                 "code_fingerprint": code_fp,
                 "gate_verdict": gate_result["verdict"],
             }
@@ -1837,6 +1948,8 @@ class TestSmokeOnlyInDev:
                 "archive_dir": str(arch_dir),
                 "audit_index_sha256": m_sha256(str(audit_path)),
                 "provider": provider, "model": model,
+                "thinking_mode": "disabled",
+                "model_label": "DeepSeek-V4-Flash non-thinking",
                 "code_fingerprint": code_fp,
                 "dataset_sha256": "b" * 64, "sched_hash": "c" * 64,
             }), encoding="utf-8")
@@ -1944,7 +2057,7 @@ class TestSmokeAttemptedInAudit:
         arch_root = tmp_path / "archives"
         gate_result = {"verdict": "PROMOTE_CANDIDATE", "delta_by_year_repeat": {}}
         smoke_val = 7
-        arch = m.generate_archive(sched, ledger, str(run_dir), "p", "m",
+        arch = m.generate_archive(sched, ledger, str(run_dir), "deepseek", "deepseek-v4-flash",
                                   gate_result, archive_root=str(arch_root),
                                   stage="dev", raw_dataset_paths={"2024": "x"},
                                   enriched_dataset_paths={"2024": "x"},
@@ -1971,6 +2084,8 @@ class TestCodeFingerprintCriticalCoverage:
         "determine_smoke_state", "verify_smoke_completed", "_smoke_integrity",
         # Run-id and receipt chain (NEW in this revision)
         "_validate_run_id", "_verify_receipt_belongs_to_run", "_publish_receipt_atomic",
+        # Frozen protocol and run context (v4-flash)
+        "_validate_frozen_protocol", "_prepare_run_context", "_record_run_failure",
         # Archive and report
         "generate_archive", "_merge_all_details", "_compute_dataset_hashes",
         # Stage entry points
@@ -2099,7 +2214,7 @@ class TestDash6b2UserRunId:
             tmp_path, monkeypatch)
         gate_result = {"verdict": "PROMOTE_CANDIDATE", "delta_by_year_repeat": {}}
         arch = m.generate_archive(
-            sched, ledger, str(run_dir), "p", "m", gate_result,
+            sched, ledger, str(run_dir), "deepseek", "deepseek-v4-flash", gate_result,
             archive_root=str(tmp_path / "ar"), stage="dev",
             raw_dataset_paths={"2024": "x"}, enriched_dataset_paths={"2024": "x"},
             run_id=weird_run_id, smoke_attempted=3,
