@@ -2567,3 +2567,351 @@ def m_sha256(path):
         for chunk in iter(lambda: f.read(8192), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+# ── Task 8: closed dev → reuse → final_2023 chain via fake subprocess ──
+
+
+def _task8_cmd_value(cmd, name, default=None):
+    if name not in cmd:
+        return default
+    return cmd[cmd.index(name) + 1]
+
+
+def _task8_write_dataset(path, year):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    rows = [
+        {
+            "case_id": f"{year}-Q{i:02d}",
+            "question": f"case {i}",
+            "options": ["A. one", "B. two", "C. three", "D. four"],
+            "answer": "A",
+        }
+        for i in range(40)
+    ]
+    path.write_text(
+        "".join(json.dumps(row) + "\n" for row in rows),
+        encoding="utf-8",
+    )
+    return str(path)
+
+
+class _Task8FakeRunner:
+    """Emulate only the runner-owned detail/events/manifest three-file contract."""
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, cmd, capture_output, text, timeout, cwd):
+        from types import SimpleNamespace
+
+        from benchmark.runners.profiles import resolve_profile
+        from benchmark.runners.run_benchmark import build_resume_manifest
+
+        self.calls.append(list(cmd))
+        detail_path = Path(_task8_cmd_value(cmd, "--case-details-jsonl"))
+        events_path = Path(str(detail_path).replace(".jsonl", ".events.jsonl"))
+        manifest_path = Path(str(detail_path).replace(".jsonl", ".manifest.json"))
+        case_ids_file = _task8_cmd_value(cmd, "--case-ids-file")
+        case_ids = json.loads(Path(case_ids_file).read_text(encoding="utf-8"))
+        dataset_path = _task8_cmd_value(cmd, "--dataset")
+        dataset_id = Path(dataset_path).stem
+        arm = _task8_cmd_value(cmd, "--arm")
+        provider = _task8_cmd_value(cmd, "--provider")
+        requested_model = _task8_cmd_value(cmd, "--model")
+        thinking_mode = _task8_cmd_value(cmd, "--thinking-mode")
+        repeat_idx = int(_task8_cmd_value(cmd, "--repeat-idx"))
+        profile_id = _task8_cmd_value(cmd, "--profile")
+        chart_schema = _task8_cmd_value(cmd, "--chart-schema-version")
+        profile = resolve_profile(profile_id, chart_schema)
+        detail_rows = []
+        event_rows = []
+
+        for case_id in case_ids:
+            case_index = int(case_id.rsplit("Q", 1)[1])
+            if arm == "b1a_prime":
+                stages = ("main",)
+                predicted = "A" if case_index < 13 else "B"
+            else:
+                stages = ("bazi", "ziwei")
+                predicted = "A" if case_index < 15 else "B"
+            for stage in stages:
+                attempt_key = [
+                    dataset_id,
+                    profile_id,
+                    arm,
+                    stage,
+                    provider,
+                    requested_model,
+                    case_id,
+                    repeat_idx,
+                    0,
+                    "p0",
+                ]
+                detail_rows.append({
+                    "attempt_key": attempt_key,
+                    "case_id": case_id,
+                    "expected_answer": "A",
+                    "predicted_answer": predicted,
+                    "correct": predicted == "A",
+                    "terminal_state": "parsed",
+                })
+                event_rows.extend((
+                    {"kind": "call_attempt", "attempt_key": attempt_key},
+                    {
+                        "kind": "call_meta",
+                        "attempt_key": attempt_key,
+                        "provider": provider,
+                        "requested_model": requested_model,
+                        "response_model": "deepseek-v4-flash",
+                        "thinking_mode": thinking_mode,
+                        "finish_reason": "stop",
+                    },
+                ))
+
+        detail_path.parent.mkdir(parents=True, exist_ok=True)
+        detail_path.write_text(
+            "".join(json.dumps(row) + "\n" for row in detail_rows),
+            encoding="utf-8",
+        )
+        events_path.write_text(
+            "".join(json.dumps(row) + "\n" for row in event_rows),
+            encoding="utf-8",
+        )
+        args = SimpleNamespace(
+            dataset=dataset_path,
+            case_ids_file=case_ids_file,
+            arm=arm,
+            ziwei_arm=_task8_cmd_value(cmd, "--ziwei-arm"),
+            attempt_stage=_task8_cmd_value(cmd, "--attempt-stage"),
+            repeat_idx=repeat_idx,
+            provider=provider,
+            model=requested_model,
+            thinking_mode=thinking_mode,
+            temperature=float(_task8_cmd_value(cmd, "--temperature")),
+            sample_temperature=0.4,
+            n_samples=1,
+            aggregate="majority",
+            method=_task8_cmd_value(cmd, "--method"),
+            scheduled_calls=int(_task8_cmd_value(cmd, "--scheduled-calls")),
+            hard_cap=int(_task8_cmd_value(cmd, "--hard-cap")),
+            as_of_date=_task8_cmd_value(cmd, "--as-of-date"),
+        )
+        manifest_path.write_text(
+            json.dumps(build_resume_manifest(args, profile)),
+            encoding="utf-8",
+        )
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+
+class TestV4FlashNonThinkingChain:
+    RUN_ID = "phase6-6b2-v4flash-nt-task8"
+
+    def _configure_environment(self, tmp_path, monkeypatch):
+        import scripts.phase6_6b2_orchestrator as m
+        from scripts import phase6_6b2_sealed_workflow as sw
+
+        paths = {}
+        for year in ("2021", "2022", "2023", "2024", "2025"):
+            paths[f"raw_{year}"] = _task8_write_dataset(
+                tmp_path / f"baziqa_contest8_{year}_holdout.jsonl", year)
+            paths[f"enriched_{year}"] = _task8_write_dataset(
+                tmp_path / f"baziqa_contest8_{year}_holdout_enriched.jsonl", year)
+
+        monkeypatch.setattr(m, "ARCHIVE_ROOT", str(tmp_path / "archive"))
+        b1c_path = tmp_path / "b1c_advisory.jsonl"
+        b1c_path.write_text("", encoding="utf-8")
+        monkeypatch.setattr(m, "B1C_ARCHIVE_PATH", str(b1c_path))
+        monkeypatch.setattr(m, "B1C_EXPECTED_SHA256", m_sha256(b1c_path))
+
+        raw_2023 = paths["raw_2023"]
+        monkeypatch.setattr(sw, "BLESSED_2023_RAW_SHA256", m_sha256(raw_2023))
+
+        def local_enrich(year, input_path, output_path):
+            del year
+            output = Path(output_path)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_bytes(Path(input_path).read_bytes())
+
+        monkeypatch.setattr(sw, "enrich_year", local_enrich)
+        return m, sw, paths
+
+    def _run_dev(self, m, paths, tmp_path, resume=False):
+        return m.run_dev(
+            "deepseek",
+            "deepseek-v4-flash",
+            str(tmp_path),
+            dataset_paths={
+                "2024": paths["enriched_2024"],
+                "2025": paths["enriched_2025"],
+            },
+            run_id=self.RUN_ID,
+            resume=resume,
+        )
+
+    def _run_reuse(self, m, paths, tmp_path):
+        dev_receipt = tmp_path / "runs" / self.RUN_ID / "gates" / "dev_gate.json"
+        return m.run_reuse(
+            "deepseek",
+            "deepseek-v4-flash",
+            str(tmp_path),
+            str(dev_receipt),
+            dataset_paths={
+                "2021": paths["enriched_2021"],
+                "2022": paths["enriched_2022"],
+            },
+            run_id=self.RUN_ID,
+            resume=True,
+        )
+
+    def _run_final(self, m, paths, tmp_path):
+        reuse_receipt = tmp_path / "runs" / self.RUN_ID / "gates" / "reuse_gate.json"
+        return m.run_2023_final(
+            "deepseek",
+            "deepseek-v4-flash",
+            str(tmp_path),
+            str(reuse_receipt),
+            dataset_paths={"2023": paths["raw_2023"]},
+            run_id=self.RUN_ID,
+            resume=True,
+        )
+
+    @staticmethod
+    def _assert_protocol(record):
+        assert record["thinking_mode"] == "disabled"
+        assert record["model_label"] == "DeepSeek-V4-Flash non-thinking"
+
+    def test_full_chain_uses_real_gate_archive_receipt_and_context(
+            self, tmp_path, monkeypatch):
+        m, _sw, paths = self._configure_environment(tmp_path, monkeypatch)
+        fake_runner = _Task8FakeRunner()
+        monkeypatch.setattr(m.subprocess, "run", fake_runner)
+
+        dev = self._run_dev(m, paths, tmp_path)
+        reuse = self._run_reuse(m, paths, tmp_path)
+        final = self._run_final(m, paths, tmp_path)
+
+        assert dev["gate"]["verdict"] == "PROMOTE_CANDIDATE"
+        assert reuse["gate"]["verdict"] == "PASS"
+        assert final["gate"]["verdict"] == "CONFIRMED_PROMOTE"
+        assert len(fake_runner.calls) == 151
+
+        run_root = tmp_path / "runs" / self.RUN_ID
+        context = json.loads((run_root / "run_context.json").read_text(encoding="utf-8"))
+        self._assert_protocol(context)
+        assert context["provider"] == "deepseek"
+        assert context["model"] == "deepseek-v4-flash"
+
+        sample_dir = run_root / "dev" / "2024_b1a_prime_0_g0"
+        manifest = json.loads((sample_dir / "details.manifest.json").read_text(encoding="utf-8"))
+        status = json.loads((sample_dir / "slice_status.json").read_text(encoding="utf-8"))
+        event = next(
+            json.loads(line)
+            for line in (sample_dir / "details.events.jsonl").read_text(encoding="utf-8").splitlines()
+            if json.loads(line).get("kind") == "call_meta"
+        )
+        assert manifest["thinking_mode"] == "disabled"
+        assert manifest["model"] == "deepseek-v4-flash"
+        assert status["thinking_mode"] == "disabled"
+        assert status["requested_model"] == status["response_model"] == "deepseek-v4-flash"
+        assert event["thinking_mode"] == "disabled"
+        assert event["requested_model"] == event["response_model"] == "deepseek-v4-flash"
+
+        for stage, result in (("dev", dev), ("reuse", reuse), ("final_2023", final)):
+            audit = result["archive"]["audit"]
+            receipt = json.loads(
+                (run_root / "gates" / f"{stage}_gate.json").read_text(encoding="utf-8")
+            )
+            report = json.loads(
+                (run_root / stage / "summary.json").read_text(encoding="utf-8")
+            )
+            self._assert_protocol(audit)
+            self._assert_protocol(receipt)
+            assert report["thinking_mode"] == "disabled"
+            assert report["model_protocol"] == "DeepSeek-V4-Flash non-thinking"
+            assert audit["user_run_id"] == receipt["user_run_id"] == self.RUN_ID
+            assert audit["provider"] == receipt["provider"] == "deepseek"
+            assert audit["model"] == receipt["model"] == "deepseek-v4-flash"
+
+        final_lock = json.loads((run_root / "2023.lock").read_text(encoding="utf-8"))
+        assert final_lock["status"] == "FINALIZED"
+
+    def test_tampered_dev_thinking_mode_blocks_reuse_before_runner(
+            self, tmp_path, monkeypatch):
+        m, _sw, paths = self._configure_environment(tmp_path, monkeypatch)
+        fake_runner = _Task8FakeRunner()
+        monkeypatch.setattr(m.subprocess, "run", fake_runner)
+        self._run_dev(m, paths, tmp_path)
+        before = len(fake_runner.calls)
+        receipt_path = tmp_path / "runs" / self.RUN_ID / "gates" / "dev_gate.json"
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        receipt["thinking_mode"] = "enabled"
+        receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+
+        with pytest.raises(SystemExit, match="thinking_mode"):
+            self._run_reuse(m, paths, tmp_path)
+        assert len(fake_runner.calls) == before
+
+    def test_tampered_reuse_label_blocks_before_sealed_data(
+            self, tmp_path, monkeypatch):
+        m, sw, paths = self._configure_environment(tmp_path, monkeypatch)
+        fake_runner = _Task8FakeRunner()
+        monkeypatch.setattr(m.subprocess, "run", fake_runner)
+        self._run_dev(m, paths, tmp_path)
+        self._run_reuse(m, paths, tmp_path)
+        before = len(fake_runner.calls)
+        receipt_path = tmp_path / "runs" / self.RUN_ID / "gates" / "reuse_gate.json"
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        receipt["model_label"] = "DeepSeek-V4-Pro non-thinking"
+        receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+        context = json.loads(
+            (tmp_path / "runs" / self.RUN_ID / "run_context.json")
+            .read_text(encoding="utf-8")
+        )
+        frozen_code_fingerprint = context["code_fingerprint"]
+        called = {"verify": 0, "enrich": 0}
+
+        def fail_if_verify_called(*args, **kwargs):
+            del args, kwargs
+            called["verify"] += 1
+            raise AssertionError("sealed raw data was read before gate rejection")
+
+        def fail_if_enrich_called(*args, **kwargs):
+            del args, kwargs
+            called["enrich"] += 1
+            raise AssertionError("sealed enrichment ran before gate rejection")
+
+        monkeypatch.setattr(sw, "verify_2023_raw_data", fail_if_verify_called)
+        monkeypatch.setattr(sw, "enrich_year", fail_if_enrich_called)
+        monkeypatch.setattr(
+            m,
+            "_compute_experiment_code_fingerprint",
+            lambda: frozen_code_fingerprint,
+        )
+        with pytest.raises(SystemExit, match="model_label"):
+            self._run_final(m, paths, tmp_path)
+        assert called == {"verify": 0, "enrich": 0}
+        assert len(fake_runner.calls) == before
+
+    def test_response_model_case_mismatch_blocks_in_smoke(
+            self, tmp_path, monkeypatch):
+        from types import SimpleNamespace
+
+        m, _sw, paths = self._configure_environment(tmp_path, monkeypatch)
+        seen = []
+
+        def reject_first_call(cmd, capture_output, text, timeout, cwd):
+            del capture_output, text, timeout, cwd
+            seen.append(list(cmd))
+            return SimpleNamespace(
+                returncode=1,
+                stdout="",
+                stderr=("response_model_mismatch: DeepSeek-V4-Flash != "
+                        "deepseek-v4-flash"),
+            )
+
+        monkeypatch.setattr(m.subprocess, "run", reject_first_call)
+        with pytest.raises(SystemExit, match="response_model_mismatch"):
+            self._run_dev(m, paths, tmp_path)
+        assert len(seen) == 1
+        assert any("smoke_" in str(arg) for arg in seen[0])

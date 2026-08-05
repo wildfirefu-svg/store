@@ -760,6 +760,12 @@ def generate_report(gate, merged_details, schedule, ledger, b1c_advisory, out_di
                    (r.get("attempt_key") or [None] * 10)[7],
                    r.get("case_id"))
                   for r in rows if (r.get("attempt_key") or [None] * 10)[2] == "dual"}
+    gate_serializable = dict(gate)
+    if "delta_by_year_repeat" in gate_serializable:
+        gate_serializable["delta_by_year_repeat"] = {
+            f"{year}_{repeat}": value
+            for (year, repeat), value in gate["delta_by_year_repeat"].items()
+        }
     report = {
         "model_protocol": MODEL_LABEL,
         "provider": FROZEN_PROVIDER,
@@ -771,9 +777,10 @@ def generate_report(gate, merged_details, schedule, ledger, b1c_advisory, out_di
                 "scheduled": schedule["total_scheduled_calls"],
                 "attempted": ledger.total_attempted,
                 "global_hard_cap": ledger.hard_cap},
-        "gate": gate,
+        "gate": gate_serializable,
         "accuracy": _accuracy_final(rows),
-        "delta": {k: v for k, v in gate.items() if k.startswith(("delta", "min_year"))},
+        "delta": {k: v for k, v in gate_serializable.items()
+                  if k.startswith(("delta", "min_year"))},
         "judge": {"trigger_rate": round(len(judge_rows) / max(len(dual_cells), 1), 4),
                   "reference_disagreement_rate": JUDGE_DISAGREEMENT_RATE,
                   "judge_calls": len(judge_rows)},
