@@ -156,6 +156,7 @@ RESUME_MANIFEST_FIELDS: tuple = (
     "temperature", "sample_temperature", "n_samples", "aggregate", "method",
     "prompt_template_sha256", "code_sha256", "scheduled_calls", "hard_cap",
     "as_of_date",                              # v6 高优 7：enrichment 锚定日期
+    "thinking_mode",                           # 6B2：显式 thinking 协议（None=未声明）
 )
 
 _CODE_SCOPE: tuple = (
@@ -227,6 +228,7 @@ def build_resume_manifest(args, profile) -> dict:
         "scheduled_calls": args.scheduled_calls,
         "hard_cap": args.hard_cap,
         "as_of_date": getattr(args, "as_of_date", ""),       # v6 高优 7
+        "thinking_mode": getattr(args, "thinking_mode", None),
     }
 
 
@@ -1759,7 +1761,8 @@ def _write_phase6_summary(args, status):
         json.dump(summary, f, ensure_ascii=False, indent=2)
 
 
-def main(argv=None):
+def _build_parser():
+    """构建 runner CLI parser（独立函数以便测试解析真实 argv 做 manifest 同源性校验）。"""
     parser = argparse.ArgumentParser(description='Run BaziQA-style benchmark')
     parser.add_argument('--dataset', required=True, help='Path to JSONL dataset')
     parser.add_argument('--predictions', help='Path to JSON predictions map (offline mode)')
@@ -1815,6 +1818,11 @@ def main(argv=None):
     )
     parser.add_argument('--ziwei-arm', choices=['none', 'only', 'combined', 'ziwei_mini', 'sequential'],
                         default=None, help='紫微星盘消融臂 (none/only/combined/ziwei_mini/sequential)')
+    return parser
+
+
+def main(argv=None):
+    parser = _build_parser()
     args = parser.parse_args(argv)
 
     # 防跨测试/跨调用污染（执行偏离）：每次 main 启动先清空全局 ctx，profile 分支再设真值

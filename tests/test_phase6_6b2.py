@@ -212,11 +212,33 @@ class TestTask11RunnerCmd:
             "scheduled_calls": 8,
             "case_ids": ["c1", "c2"],
             "arm": "b1a_prime", "repeat": 0,
+            "thinking_mode": "disabled",
         }
-        cmd = _build_runner_cmd(sl, "deepseek", "deepseek-chat")
+        cmd = _build_runner_cmd(sl, "deepseek", "deepseek-v4-flash")
         assert "--hard-cap" in cmd
         hc_idx = cmd.index("--hard-cap")
         assert cmd[hc_idx + 1] == "10"
+
+    def test_runner_cmd_includes_thinking_mode(self, tmp_path):
+        from scripts.phase6_6b2_orchestrator import _build_runner_cmd
+        sl = {
+            "slice_id": "2024_b1a_prime_0_g0",
+            "output_dir": str(tmp_path / "s1"),
+            "detail_path": str(tmp_path / "s1" / "details.jsonl"),
+            "events_path": str(tmp_path / "s1" / "details.events.jsonl"),
+            "dataset_path": str(tmp_path / "ds.jsonl"),
+            "case_ids_file": str(tmp_path / "s1" / "case_ids.json"),
+            "profile": "baziqa_xjz_reasoned",
+            "method": "direct_choice",
+            "hard_cap": 10, "max_cases": 8,
+            "scheduled_calls": 8,
+            "case_ids": ["c1", "c2"],
+            "arm": "b1a_prime", "repeat": 0,
+            "thinking_mode": "disabled",
+        }
+        cmd = _build_runner_cmd(sl, "deepseek", "deepseek-v4-flash")
+        tm_idx = cmd.index("--thinking-mode")
+        assert cmd[tm_idx + 1] == "disabled"
 
     def test_runner_cmd_b1a_uses_direct_choice(self, tmp_path):
         from scripts.phase6_6b2_orchestrator import _build_runner_cmd
@@ -233,8 +255,9 @@ class TestTask11RunnerCmd:
             "scheduled_calls": 8,
             "case_ids": ["c1"],
             "arm": "b1a_prime", "repeat": 0,
+            "thinking_mode": "disabled",
         }
-        cmd = _build_runner_cmd(sl, "deepseek", "deepseek-chat")
+        cmd = _build_runner_cmd(sl, "deepseek", "deepseek-v4-flash")
         assert "--method" in cmd
         m_idx = cmd.index("--method")
         assert cmd[m_idx + 1] == "direct_choice"
@@ -254,8 +277,9 @@ class TestTask11RunnerCmd:
             "scheduled_calls": 24,
             "case_ids": ["c1"],
             "arm": "dual", "repeat": 0,
+            "thinking_mode": "disabled",
         }
-        cmd = _build_runner_cmd(sl, "deepseek", "deepseek-chat")
+        cmd = _build_runner_cmd(sl, "deepseek", "deepseek-v4-flash")
         assert "--method" in cmd
         m_idx = cmd.index("--method")
         assert cmd[m_idx + 1] == "dual_system"
@@ -275,8 +299,9 @@ class TestTask11RunnerCmd:
             "scheduled_calls": 24,
             "case_ids": ["c1"],
             "arm": "dual", "repeat": 0,
+            "thinking_mode": "disabled",
         }
-        cmd = _build_runner_cmd(sl, "deepseek", "deepseek-chat")
+        cmd = _build_runner_cmd(sl, "deepseek", "deepseek-v4-flash")
         assert "--max-cases" in cmd
         mc_idx = cmd.index("--max-cases")
         assert cmd[mc_idx + 1] == "8"
@@ -298,8 +323,9 @@ class TestTask11RunnerCmd:
             "scheduled_calls": 8,
             "case_ids": ["c1", "c2"],
             "arm": "b1a_prime", "repeat": 0,
+            "thinking_mode": "disabled",
         }
-        _build_runner_cmd(sl, "deepseek", "deepseek-chat")
+        _build_runner_cmd(sl, "deepseek", "deepseek-v4-flash")
         assert os.path.exists(sl["case_ids_file"])
         with open(sl["case_ids_file"]) as f:
             assert json.load(f) == ["c1", "c2"]
@@ -957,14 +983,114 @@ class TestManifestHomology:
             "case_ids_file": str(tmp_path / "cids.json"),
             "profile": "baziqa_xjz_dual", "method": "dual_system",
             "scheduled_calls": 24, "hard_cap": 26,
+            "thinking_mode": "disabled",
         }
-        args = _slice_runner_args(sl, "deepseek", "deepseek-chat")
+        args = _slice_runner_args(sl, "deepseek", "deepseek-v4-flash")
         assert args.profile == "baziqa_xjz_dual"
         assert args.arm == "dual"
         assert args.repeat_idx == 1
         assert args.hard_cap == 26
         assert args.as_of_date == "2026-07-17"
         assert args.chart_schema_version == "legacy_v0"
+        assert args.thinking_mode == "disabled"
+
+    def test_runner_cmd_and_slice_args_build_identical_manifest(self, tmp_path):
+        """同源契约：真实 argv 解析出的 namespace 与 _slice_runner_args 重建的 namespace
+        必须产生完全一致的 resume manifest（thinking_mode 只从 slice 字段单源读取）。"""
+        from scripts.phase6_6b2_orchestrator import (
+            FROZEN_CHART_SCHEMA, _build_runner_cmd, _slice_runner_args,
+        )
+        from benchmark.runners.run_benchmark import _build_parser, build_resume_manifest
+        from benchmark.runners.profiles import resolve_profile
+        ds_path = tmp_path / "ds.jsonl"
+        ds_path.write_text(json.dumps({"case_id": "c1"}) + "\n", encoding="utf-8")
+        sl = {
+            "slice_id": "2024_b1a_prime_0_g0",
+            "output_dir": str(tmp_path / "s1"),
+            "detail_path": str(tmp_path / "s1" / "details.jsonl"),
+            "events_path": str(tmp_path / "s1" / "details.events.jsonl"),
+            "dataset_path": str(ds_path),
+            "case_ids_file": str(tmp_path / "s1" / "case_ids.json"),
+            "profile": "baziqa_xjz_reasoned",
+            "method": "direct_choice",
+            "hard_cap": 10, "max_cases": 8,
+            "scheduled_calls": 8,
+            "case_ids": ["c1"],
+            "arm": "b1a_prime", "repeat": 0,
+            "thinking_mode": "disabled",
+        }
+        cmd = _build_runner_cmd(sl, "deepseek", "deepseek-v4-flash")
+        argv_namespace = _build_parser().parse_args(cmd[3:])  # 跳过 [python, -m, module]
+        profile = resolve_profile(sl["profile"], FROZEN_CHART_SCHEMA)
+        reconstructed = _slice_runner_args(sl, "deepseek", "deepseek-v4-flash")
+        assert build_resume_manifest(argv_namespace, profile) == \
+            build_resume_manifest(reconstructed, profile)
+
+
+class TestSliceStatusResponseModel:
+    """Task 4: slice_status.json 从 events 的 call_meta 聚合 response_model
+    （唯一值写入；全缺失写 null；多值 fail-closed），并记录协议字段。"""
+
+    def _make_slice(self, tmp_path):
+        out = tmp_path / "s1"
+        return {
+            "slice_id": "2024_b1a_prime_0_g0",
+            "output_dir": str(out),
+            "detail_path": str(out / "details.jsonl"),
+            "events_path": str(out / "details.events.jsonl"),
+            "dataset_path": str(tmp_path / "ds.jsonl"),
+            "case_ids_file": str(out / "case_ids.json"),
+            "profile": "baziqa_xjz_reasoned",
+            "method": "direct_choice",
+            "hard_cap": 10, "max_cases": 8,
+            "scheduled_calls": 8,
+            "case_ids": ["c1"],
+            "arm": "b1a_prime", "repeat": 0,
+            "thinking_mode": "disabled",
+        }
+
+    def _run_with_meta(self, tmp_path, monkeypatch, metas):
+        import types as _types
+        import scripts.phase6_6b2_orchestrator as m
+        sl = self._make_slice(tmp_path)
+        ledger = m.BudgetLedger6B2(str(tmp_path / "ledger.json"),
+                                   global_hard_cap=1060)
+
+        def fake_run(cmd, capture_output=False, text=False, timeout=None, cwd=None):
+            with open(sl["detail_path"], "w", encoding="utf-8") as f:
+                f.write(json.dumps({"case_id": "c1"}) + "\n")
+            with open(sl["events_path"], "w", encoding="utf-8") as f:
+                for _ in range(8):
+                    f.write(json.dumps({"kind": "call_attempt"}) + "\n")
+                for meta in metas:
+                    f.write(json.dumps({"kind": "call_meta",
+                                        "response_model": meta}) + "\n")
+            Path(sl["detail_path"].replace(".jsonl", ".manifest.json")).write_text(
+                "{}", encoding="utf-8")
+            return _types.SimpleNamespace(returncode=0, stderr="")
+
+        monkeypatch.setattr(m.subprocess, "run", fake_run)
+        monkeypatch.setattr(m, "_slice_integrity_gate", lambda rows, info: "PASS")
+        m._run_slice(sl, ledger, "deepseek", "deepseek-v4-flash")
+        return json.loads(
+            (Path(sl["output_dir"]) / "slice_status.json").read_text(encoding="utf-8"))
+
+    def test_unique_response_model_recorded(self, tmp_path, monkeypatch):
+        status = self._run_with_meta(tmp_path, monkeypatch,
+                                     ["deepseek-v4-flash"] * 8)
+        assert status["response_model"] == "deepseek-v4-flash"
+        assert status["provider"] == "deepseek"
+        assert status["requested_model"] == "deepseek-v4-flash"
+        assert status["thinking_mode"] == "disabled"
+
+    def test_all_missing_response_model_writes_null(self, tmp_path, monkeypatch):
+        status = self._run_with_meta(tmp_path, monkeypatch, [None] * 8)
+        assert status["response_model"] is None
+
+    def test_multiple_response_models_fail_closed(self, tmp_path, monkeypatch):
+        with pytest.raises(SystemExit, match="response_model drift"):
+            self._run_with_meta(tmp_path, monkeypatch,
+                                ["deepseek-v4-flash"] * 7 + ["deepseek-v4-pro"])
 
 
 class TestB1CAdvisory:
@@ -1054,6 +1180,16 @@ class TestSmokeSliceConstruction:
             assert sl["group"] == 0
             assert sl["arm"] == "dual"
             assert sl["year"] == "2024"  # first year in dev schedule
+
+    def test_schedule_and_smoke_slices_carry_thinking_mode(self, tmp_path):
+        from scripts.phase6_6b2_orchestrator import (
+            FROZEN_THINKING_MODE, _build_smoke_slices,
+        )
+        sched = self._make_dev_schedule(tmp_path)
+        assert all(sl["thinking_mode"] == FROZEN_THINKING_MODE
+                   for sl in sched["slices"])
+        smoke = _build_smoke_slices(sched)
+        assert all(sl["thinking_mode"] == FROZEN_THINKING_MODE for sl in smoke)
 
 
 class TestVerifyCompletedSlice:
@@ -1489,6 +1625,16 @@ class TestScheduleHashCoversSlices:
         h = _compute_schedule_hash(s)
         assert len(h) == 64
         int(h, 16)  # valid hex
+
+    def test_hash_covers_thinking_mode(self, tmp_path):
+        from scripts.phase6_6b2_orchestrator import (
+            _SCHED_HASH_SLICE_KEYS, _compute_schedule_hash,
+        )
+        assert "thinking_mode" in _SCHED_HASH_SLICE_KEYS
+        s = self._make_schedule(tmp_path)
+        h1 = _compute_schedule_hash(s)
+        s["slices"][0]["thinking_mode"] = "enabled"
+        assert _compute_schedule_hash(s) != h1
 
 
 class TestAtomicArchive:

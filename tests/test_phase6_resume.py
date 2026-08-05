@@ -247,3 +247,38 @@ def test_response_model_missing_is_allowed(tmp_path, monkeypatch):
     assert event["requested_model"] == "deepseek-v4-flash"
     assert event["response_model"] is None
     assert event["thinking_mode"] == "disabled"
+
+
+def test_resume_manifest_records_thinking_mode(tmp_path, monkeypatch):
+    env = RunnerEnv(tmp_path, monkeypatch, n_cases=1)
+    env.model_returns("A")
+    assert env.run(
+        model="deepseek-v4-flash",
+        profile="baziqa_xjz_direct",
+        thinking_mode="disabled",
+    ) == 0
+    manifest = json.loads(
+        (tmp_path / "detail.manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["thinking_mode"] == "disabled"
+
+
+def test_manifest_rejects_thinking_mode_drift(tmp_path, monkeypatch):
+    env = RunnerEnv(tmp_path, monkeypatch, n_cases=1)
+    env.model_returns("A")
+    env.run(
+        model="deepseek-v4-flash",
+        profile="baziqa_xjz_direct",
+        thinking_mode="disabled",
+    )
+    path = tmp_path / "detail.manifest.json"
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    manifest["thinking_mode"] = "enabled"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(SystemExit):
+        env.run(
+            resume=True,
+            model="deepseek-v4-flash",
+            profile="baziqa_xjz_direct",
+            thinking_mode="disabled",
+        )

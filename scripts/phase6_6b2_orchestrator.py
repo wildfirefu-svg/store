@@ -124,6 +124,7 @@ def _build_schedule(output_dir, years=None, dataset_paths=None):
                         "method": "direct_choice" if arm == "b1a_prime" else "dual_system",
                         "hard_cap": slice_hard_cap, "max_cases": 8,
                         "scheduled_calls": scheduled, "case_ids": g_cases,
+                        "thinking_mode": FROZEN_THINKING_MODE,
                     })
     return {
         "slices": slices, "global_hard_cap": hard_cap,
@@ -230,6 +231,7 @@ def _build_runner_cmd(slice_info, provider, model, resume=False):
         "--output-dir", slice_info["output_dir"],
         "--as-of-date", FROZEN_DATE,
         "--chart-schema-version", FROZEN_CHART_SCHEMA,
+        "--thinking-mode", slice_info["thinking_mode"],
     ]
     if resume:
         common.append("--resume")
@@ -272,6 +274,7 @@ def _slice_runner_args(slice_info, provider, model):
         scheduled_calls=slice_info["scheduled_calls"],
         hard_cap=slice_info["hard_cap"],
         as_of_date=FROZEN_DATE,
+        thinking_mode=slice_info["thinking_mode"],
     )
 
 
@@ -513,6 +516,17 @@ def _run_slice(slice_info, ledger, provider, model, integrity="slice"):
             raise SystemExit(f"slice {slice_info['slice_id']} 失败: 完整性门禁 ({integrity_result})")
         actual = sum(1 for r in _load_events(str(events_path)) if r.get("kind") == "call_attempt")
         runner_manifest_sha = _sha256_file(str(runner_manifest_path))
+        response_models = {
+            row.get("response_model")
+            for row in _load_events(str(events_path))
+            if row.get("kind") == "call_meta" and row.get("response_model")
+        }
+        if len(response_models) > 1:
+            raise SystemExit(
+                f"slice {slice_info['slice_id']} response_model drift: "
+                f"{sorted(response_models)}"
+            )
+        response_model = next(iter(response_models), None)
         status_path.write_text(json.dumps({
             "slice_id": slice_info["slice_id"], "completed": True,
             "exit_code": result.returncode, "elapsed_s": round(elapsed, 1),
@@ -521,6 +535,9 @@ def _run_slice(slice_info, ledger, provider, model, integrity="slice"):
             "runner_manifest_sha256": runner_manifest_sha,
             "arm": slice_info["arm"], "integrity": integrity,
             "method": "dual_system" if slice_info["arm"] == "dual" else "direct_choice",
+            "provider": provider, "requested_model": model,
+            "thinking_mode": slice_info["thinking_mode"],
+            "response_model": response_model,
         }, ensure_ascii=False), encoding="utf-8")
         ledger.record_slice_completed(slice_info["slice_id"], actual,
                                       arm=("smoke" if is_smoke else slice_info["arm"]))
@@ -806,6 +823,7 @@ def _build_smoke_slices(schedule):
         "profile": target["profile"], "method": target["method"],
         "hard_cap": SMOKE_HARD_CAP, "max_cases": SMOKE_CASES_PER_GROUP,
         "scheduled_calls": SMOKE_SCHEDULED, "case_ids": smoke_cases,
+        "thinking_mode": FROZEN_THINKING_MODE,
     }]
 
 
@@ -1014,7 +1032,8 @@ def _atomic_write_json(path, data):
 
 # Fields excluded from schedule hash: runtime-dependent paths derived from output_dir.
 _SCHED_HASH_SLICE_KEYS = ("year", "repeat", "arm", "group", "slice_id", "case_ids",
-                          "profile", "method", "hard_cap", "max_cases", "scheduled_calls")
+                          "profile", "method", "hard_cap", "max_cases", "scheduled_calls",
+                          "thinking_mode")
 
 
 def _compute_schedule_hash(schedule):
