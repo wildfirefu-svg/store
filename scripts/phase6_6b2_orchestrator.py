@@ -44,6 +44,30 @@ B1C_ARCHIVE_PATH = "docs/phase6/6b1/6b1-2026-07-17-deepseek-deepseek-chat-78481d
 B1C_EXPECTED_SHA256 = "10e6b82f92fabd02b7e621b714d330a812f16e6b7aac7ad98adf4a0dd494eafa"
 ARCHIVE_ROOT = "docs/phase6/6b2"
 
+# ── Frozen V4-Flash non-thinking protocol (single source of truth) ──
+
+FROZEN_PROVIDER = "deepseek"
+FROZEN_MODEL = "deepseek-v4-flash"
+FROZEN_THINKING_MODE = "disabled"
+MODEL_LABEL = "DeepSeek-V4-Flash non-thinking"
+
+
+def _validate_frozen_protocol(provider, model):
+    protocol = {
+        "provider": FROZEN_PROVIDER,
+        "model": FROZEN_MODEL,
+        "thinking_mode": FROZEN_THINKING_MODE,
+        "model_label": MODEL_LABEL,
+    }
+    if provider != FROZEN_PROVIDER or model != FROZEN_MODEL:
+        raise SystemExit(
+            "6B2 frozen protocol mismatch: "
+            f"requested={provider}/{model}, "
+            f"required={FROZEN_PROVIDER}/{FROZEN_MODEL}/"
+            f"{FROZEN_THINKING_MODE}"
+        )
+    return protocol
+
 
 def _stage_hard_cap(years):
     years_set = set(years)
@@ -1243,6 +1267,7 @@ def _gate_root(output_dir, run_id):
 
 def run_dev(provider, model, output_dir, dataset_paths=None, run_id=None):
     """Run dev stage (2024+2025). run_id is REQUIRED; caller must supply a validated slug."""
+    _validate_frozen_protocol(provider, model)
     _validate_run_id(run_id)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -1288,6 +1313,7 @@ def run_dev(provider, model, output_dir, dataset_paths=None, run_id=None):
 def run_reuse(provider, model, output_dir, dev_receipt_path, dataset_paths=None, run_id=None):
     """Run reuse stage (2021+2022). run_id is REQUIRED and MUST match dev receipt's run_id.
     v18: reuse does NOT run smoke (smoke is a dev-only gate)."""
+    _validate_frozen_protocol(provider, model)
     _validate_run_id(run_id)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -1339,6 +1365,7 @@ def run_reuse(provider, model, output_dir, dev_receipt_path, dataset_paths=None,
 def run_2023_final(provider, model, output_dir, reuse_receipt_path, dataset_paths=None, run_id=None):
     """Run 2023 final sealed stage. run_id is REQUIRED and MUST match reuse receipt's run_id.
     v18: final does NOT run smoke."""
+    _validate_frozen_protocol(provider, model)
     _validate_run_id(run_id)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)

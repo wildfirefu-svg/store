@@ -1336,7 +1336,7 @@ class TestRunDirIsolation:
                     f.write(json.dumps({"case_id": cid}) + "\n")
             ds_paths[year] = str(ds_path)
         out = tmp_path / "experiment"
-        result = m.run_dev("deepseek", "deepseek-chat", str(out),
+        result = m.run_dev("deepseek", "deepseek-v4-flash", str(out),
                            dataset_paths=ds_paths, run_id="testrun1")
         assert result["run_id"] == "testrun1"
         assert "runs" + os.sep + "testrun1" + os.sep + "dev" in captured["sched_output_dir"]
@@ -1359,7 +1359,7 @@ class TestReceiptChain:
         audit = {
             "run_id": archive_rid,
             "user_run_id": run_id,
-            "stage": stage, "provider": "p", "model": "m",
+            "stage": stage, "provider": "deepseek", "model": "deepseek-v4-flash",
             "code_fingerprint": "fp" * 8, "gate_verdict": verdict,
         }
         audit_path = archive_dir / "audit_index.json"
@@ -1369,7 +1369,7 @@ class TestReceiptChain:
             "user_run_id": run_id,
             "archive_dir": str(archive_dir),
             "audit_index_sha256": m_sha256(str(audit_path)),
-            "provider": "p", "model": "m",
+            "provider": "deepseek", "model": "deepseek-v4-flash",
             "code_fingerprint": "fp" * 8, "dataset_sha256": "c" * 64,
         }
         rpath = gate_dir / f"{stage}_gate.json"
@@ -1639,7 +1639,7 @@ class TestValidateRunId:
         """Public entry points must validate run_id (not just CLI)."""
         import scripts.phase6_6b2_orchestrator as m
         with pytest.raises(SystemExit, match="run_id 拒绝"):
-            m.run_dev("p", "m", str(tmp_path), run_id=None)
+            m.run_dev("deepseek", "deepseek-v4-flash", str(tmp_path), run_id=None)
 
 
 class TestSmokeOnlyInDev:
@@ -1722,7 +1722,8 @@ class TestSmokeOnlyInDev:
         out.mkdir()
         dev_rpath = TestReceiptChain()._place_receipt(out, "r1", "dev")
         ds_paths = self._make_ds(tmp_path, ["2021", "2022"])
-        m.run_reuse("p", "m", str(out), dev_rpath, dataset_paths=ds_paths, run_id="r1")
+        m.run_reuse("deepseek", "deepseek-v4-flash", str(out), dev_rpath,
+                    dataset_paths=ds_paths, run_id="r1")
         assert captured["smoke_count"] == 0, "reuse must NOT run smoke"
 
     def test_2023_final_does_not_run_smoke(self, tmp_path, monkeypatch):
@@ -1748,7 +1749,7 @@ class TestSmokeOnlyInDev:
         with open(ds_2023, "w", encoding="utf-8") as f:
             for i in range(40):
                 f.write(json.dumps({"case_id": f"c{i:04d}"}) + "\n")
-        m.run_2023_final("p", "m", str(out), reuse_rpath,
+        m.run_2023_final("deepseek", "deepseek-v4-flash", str(out), reuse_rpath,
                          dataset_paths={"2023": str(ds_2023)}, run_id="r1")
         assert captured["smoke_count"] == 0, "2023 final must NOT run smoke"
 
@@ -1758,7 +1759,8 @@ class TestSmokeOnlyInDev:
         self._patch_all(m, monkeypatch, tmp_path, captured)
         out = tmp_path / "exp"
         ds_paths = self._make_ds(tmp_path, ["2024", "2025"])
-        m.run_dev("p", "m", str(out), dataset_paths=ds_paths, run_id="r1")
+        m.run_dev("deepseek", "deepseek-v4-flash", str(out),
+                  dataset_paths=ds_paths, run_id="r1")
         assert captured["smoke_count"] == 1, "dev must run exactly 1 smoke slice"
 
 
@@ -1951,6 +1953,82 @@ class TestDash6b2UserRunId:
         assert receipt["user_run_id"] == weird_run_id
         # archive run_id is different (has suffix), but user_run_id matches input
         assert receipt["run_id"] != weird_run_id  # archive run_id has suffix
+
+
+class TestFrozenV4FlashProtocol:
+    def test_constants_are_exact(self):
+        import scripts.phase6_6b2_orchestrator as m
+        assert m.FROZEN_PROVIDER == "deepseek"
+        assert m.FROZEN_MODEL == "deepseek-v4-flash"
+        assert m.FROZEN_THINKING_MODE == "disabled"
+        assert m.MODEL_LABEL == "DeepSeek-V4-Flash non-thinking"
+
+    @pytest.mark.parametrize("provider,model", [
+        ("anthropic", "deepseek-v4-flash"),
+        ("deepseek", "deepseek-v4-pro"),
+        ("deepseek", "deepseek-chat"),
+        ("DeepSeek", "deepseek-v4-flash"),
+    ])
+    def test_protocol_drift_is_rejected(self, provider, model):
+        import scripts.phase6_6b2_orchestrator as m
+        with pytest.raises(SystemExit, match="6B2 frozen protocol mismatch"):
+            m._validate_frozen_protocol(provider, model)
+
+    def test_valid_protocol_returns_frozen_values(self):
+        import scripts.phase6_6b2_orchestrator as m
+        assert m._validate_frozen_protocol(
+            "deepseek", "deepseek-v4-flash"
+        ) == {
+            "provider": "deepseek",
+            "model": "deepseek-v4-flash",
+            "thinking_mode": "disabled",
+            "model_label": "DeepSeek-V4-Flash non-thinking",
+        }
+
+    def test_environment_cannot_override_frozen_protocol(self, monkeypatch):
+        import scripts.phase6_6b2_orchestrator as m
+        monkeypatch.setenv("DEEPSEEK_MODEL", "deepseek-v4-pro")
+        monkeypatch.setenv("DEEPSEEK_THINKING", "enabled")
+        assert m._validate_frozen_protocol(
+            "deepseek", "deepseek-v4-flash"
+        ) == {
+            "provider": "deepseek",
+            "model": "deepseek-v4-flash",
+            "thinking_mode": "disabled",
+            "model_label": "DeepSeek-V4-Flash non-thinking",
+        }
+
+    def _install_lock_probe(self, m, monkeypatch):
+        def fail_acquire(*a, **kw):
+            raise AssertionError(
+                "OutputDirLock.acquire must not be reached on protocol drift")
+        monkeypatch.setattr(m.OutputDirLock, "acquire", fail_acquire)
+
+    def test_run_dev_rejects_drift_before_lock_or_artifacts(
+            self, tmp_path, monkeypatch):
+        import scripts.phase6_6b2_orchestrator as m
+        self._install_lock_probe(m, monkeypatch)
+        with pytest.raises(SystemExit, match="6B2 frozen protocol mismatch"):
+            m.run_dev("deepseek", "deepseek-chat", str(tmp_path), run_id="r1")
+        assert not (tmp_path / "runs").exists()
+
+    def test_run_reuse_rejects_drift_before_lock_or_artifacts(
+            self, tmp_path, monkeypatch):
+        import scripts.phase6_6b2_orchestrator as m
+        self._install_lock_probe(m, monkeypatch)
+        with pytest.raises(SystemExit, match="6B2 frozen protocol mismatch"):
+            m.run_reuse("deepseek", "deepseek-chat", str(tmp_path),
+                        str(tmp_path / "dev_gate.json"), run_id="r1")
+        assert not (tmp_path / "runs").exists()
+
+    def test_run_2023_final_rejects_drift_before_lock_or_artifacts(
+            self, tmp_path, monkeypatch):
+        import scripts.phase6_6b2_orchestrator as m
+        self._install_lock_probe(m, monkeypatch)
+        with pytest.raises(SystemExit, match="6B2 frozen protocol mismatch"):
+            m.run_2023_final("deepseek", "deepseek-chat", str(tmp_path),
+                             str(tmp_path / "reuse_gate.json"), run_id="r1")
+        assert not (tmp_path / "runs").exists()
 
 
 def m_sha256(path):
