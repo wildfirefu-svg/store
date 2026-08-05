@@ -19,6 +19,43 @@
 
 旧 B1-c `deepseek-chat` 结果仅作为历史 advisory 展示，不参与任何 gate。6B2 的主要证据来自同一时段、同一模型协议下的 b1a′ 与 dual 对照。
 
+### 1.1 文档性质与当前实现状态
+
+本文是待实施的目标状态设计，不表示下列契约已经存在于当前代码。设计批准时的仓库现状如下：
+
+| 目标契约 | 设计批准时状态 |
+|---|---|
+| `FROZEN_PROVIDER` / `FROZEN_MODEL` / `FROZEN_THINKING_MODE` / `MODEL_LABEL` | 尚未定义 |
+| 同步 API 的 `thinking_mode` 参数及 payload 写入 | 尚未实现 |
+| runner `--thinking-mode` | 尚未实现 |
+| orchestrator `--resume` 与 `run_context.json` | 尚未实现 |
+| resume manifest 的 `thinking_mode` | 尚未实现 |
+| audit/receipt/gate 的 thinking mode 与 model label 绑定 | 尚未实现 |
+
+这些项目是本设计后续实施计划的必做范围，不得在实现完成前启动合格的 V4-Flash non-thinking 实验。
+
+### 1.2 既有 V4-Pro Thinking Run 的处置
+
+设计批准期间曾启动以下旧协议运行：
+
+```text
+run directory: docs/phase6/6b2/runs/phase6-6b2-final-2023/
+requested model: deepseek-v4-pro
+observed mode: thinking（调用事件含 reasoning_tokens）
+progress: smoke 已完成，dev 已进入正式切片
+run_context.json: 不存在
+process: PID 5432 已停止
+classification: NONCOMPLIANT_V4_PRO_THINKING
+```
+
+该目录只保留作费用与失败路径审计，不属于本设计的证据集：
+
+- 不进入任何 6B2 accuracy、delta、gate 或模型对比；
+- 不允许以新协议补写 `run_context.json`；
+- 不允许被 V4-Flash non-thinking 的 dev/reuse/final resume；
+- 不自动删除、覆盖、迁移或改写其原始事件；
+- 新实验必须使用从未存在过的全新 `run_id`。
+
 ## 2. 目标
 
 1. 让 6B2 的每次真实模型调用显式使用 `deepseek-v4-flash` non-thinking。
@@ -74,7 +111,7 @@ phase6_6b2_orchestrator
 
 ### 5.2 响应模型核验
 
-同步 API metadata 记录响应中的 `model`。若响应提供该字段且不等于 `deepseek-v4-flash`，本次调用标记失败并阻断 smoke。响应未提供 model 时保留缺失事实，不伪造实际模型名称；请求协议仍由 manifest 与事件记录证明。
+同步 API metadata 记录响应中的 `model`。冻结响应标识是大小写敏感的精确字符串 `deepseek-v4-flash`；`DeepSeek-V4-Flash` 或其他展示名称不视为等价。若响应提供该字段且不等于冻结标识，本次调用标记失败并阻断 smoke。响应未提供 model 时保留缺失事实，不伪造实际模型名称；请求协议仍由 manifest 与事件记录证明。
 
 ## 6. Run Context 与全新运行
 
@@ -219,6 +256,21 @@ B1-c advisory 不得进入 delta、accuracy gate、promote/rollback 判定或显
 - 完成后运行 6B2 定向套件及 Phase 6 非网络回归套件。
 
 ## 11. 验收标准
+
+### 11.1 P0 实施前置闸
+
+以下项目全部实现并通过定向测试后，才能进入真实 smoke 验收：
+
+- [ ] orchestrator 定义并统一使用四个冻结常量；
+- [ ] 同步 DeepSeek API 接受显式 `thinking_mode` 并写入 non-thinking payload；
+- [ ] runner CLI 支持并向模型调用传递 `--thinking-mode disabled`；
+- [ ] orchestrator 支持显式 `--resume`，并原子创建/校验 `run_context.json`；
+- [ ] resume manifest 必填并校验 `thinking_mode`；
+- [ ] audit、receipt 与 `check_stage_gate` 必填并交叉校验 thinking mode/model label；
+- [ ] `NONCOMPLIANT_V4_PRO_THINKING` 目录被新协议入口与 resume 测试拒绝；
+- [ ] 实施前重新运行并记录回归基线；设计批准时已独立验证的定向基线为 148 passed，Phase 6 广泛基线由实施计划重新采集，不沿用口头数字。
+
+### 11.2 真实实验验收
 
 满足以下全部条件才允许启动真实 dev smoke：
 
