@@ -761,6 +761,12 @@ def generate_report(gate, merged_details, schedule, ledger, b1c_advisory, out_di
                    r.get("case_id"))
                   for r in rows if (r.get("attempt_key") or [None] * 10)[2] == "dual"}
     report = {
+        "model_protocol": MODEL_LABEL,
+        "provider": FROZEN_PROVIDER,
+        "requested_model": FROZEN_MODEL,
+        "thinking_mode": FROZEN_THINKING_MODE,
+        "run_id": run_id,
+        "primary_comparison": "concurrent b1a_prime vs dual",
         "run": {"slices": len(schedule["slices"]),
                 "scheduled": schedule["total_scheduled_calls"],
                 "attempted": ledger.total_attempted,
@@ -775,18 +781,28 @@ def generate_report(gate, merged_details, schedule, ledger, b1c_advisory, out_di
         "integrity": {"rows": total, "call_failed": sum(
             1 for r in rows if r.get("terminal_state") == "call_failed")},
         "b1c_advisory": {"count": b1c_advisory["count"], "sha256": b1c_advisory["sha256"],
-                         "note": "非同时段比较 + provider drift 风险，描述性附列，非预注册 gate"},
+                         "gate_inclusion": False,
+                         "note": "historical deepseek-chat advisory only; excluded from all gates"},
     }
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     (out / "summary.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     lines = [f"# 6B2 双管线报告",
+             f"- Model protocol：{report['model_protocol']}",
+             f"- Provider：{report['provider']}",
+             f"- Requested model：{report['requested_model']}",
+             f"- Thinking mode：{report['thinking_mode']}",
+             f"- Run ID：{report['run_id']}",
+             f"- Primary comparison：{report['primary_comparison']}",
              f"- gate：**{gate['verdict']}**（{gate.get('stage')}）",
              f"- judge 触发率：{report['judge']['trigger_rate']}（参照 {JUDGE_DISAGREEMENT_RATE}）",
              f"- parser rate：{report['parser_rate']}；call_failed：{report['integrity']['call_failed']}",
              f"- 预算：scheduled {report['run']['scheduled']} / attempted {report['run']['attempted']}"
              f" / cap {report['run']['global_hard_cap']}",
-             f"- B1-c advisory（非决策）：{report['b1c_advisory']['note']}",
+             f"- B1-c advisory（非决策）：count {report['b1c_advisory']['count']}"
+             f"，冻结 SHA {report['b1c_advisory']['sha256']}；"
+             f"gate_inclusion={report['b1c_advisory']['gate_inclusion']}；"
+             f"{report['b1c_advisory']['note']}",
              "", "如实声明：40 题/年度，2 题即 5pp；请求不携带 seed；B1-c 为 6B1 时段旧 run。"]
     (out / "report.md").write_text("\n".join(lines), encoding="utf-8")
     return report

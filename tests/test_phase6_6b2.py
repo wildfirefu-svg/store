@@ -599,6 +599,64 @@ class TestTask13ComputeGate:
             compute_gate(rows, stage="dev")
 
 
+def test_report_labels_v4_flash_nonthinking(tmp_path):
+    import types
+    from scripts.phase6_6b2_orchestrator import generate_report
+
+    gate = {"verdict": "PROMOTE_CANDIDATE", "stage": "dev"}
+    schedule = {"slices": [], "total_scheduled_calls": 0}
+    ledger = types.SimpleNamespace(total_attempted=0, hard_cap=1060)
+    report = generate_report(
+        gate,
+        [],
+        schedule,
+        ledger,
+        {"count": 1, "sha256": "a" * 64},
+        str(tmp_path),
+        run_id="phase6-6b2-v4flash-nt-20260805-r1",
+    )
+    assert report["model_protocol"] == "DeepSeek-V4-Flash non-thinking"
+    assert report["provider"] == "deepseek"
+    assert report["requested_model"] == "deepseek-v4-flash"
+    assert report["thinking_mode"] == "disabled"
+    assert report["run_id"] == "phase6-6b2-v4flash-nt-20260805-r1"
+    assert report["primary_comparison"] == "concurrent b1a_prime vs dual"
+    assert report["b1c_advisory"]["gate_inclusion"] is False
+
+
+def test_b1c_values_cannot_change_gate(tmp_path):
+    import inspect
+    import types
+    from scripts.phase6_6b2_orchestrator import compute_gate, generate_report
+
+    advisory_a = {"count": 1, "sha256": "a" * 64}
+    advisory_b = {"count": 9999, "sha256": "b" * 64}
+    assert advisory_a != advisory_b
+    assert "b1c_advisory" not in inspect.signature(compute_gate).parameters
+    gate = {"verdict": "PROMOTE_CANDIDATE", "stage": "dev"}
+    schedule = {"slices": [], "total_scheduled_calls": 0}
+    ledger = types.SimpleNamespace(total_attempted=0, hard_cap=1060)
+    report_a = generate_report(
+        gate,
+        [],
+        schedule,
+        ledger,
+        advisory_a,
+        str(tmp_path / "report-a"),
+        run_id="r-a",
+    )
+    report_b = generate_report(
+        gate,
+        [],
+        schedule,
+        ledger,
+        advisory_b,
+        str(tmp_path / "report-b"),
+        run_id="r-b",
+    )
+    assert report_a["gate"] == report_b["gate"] == gate
+
+
 class TestTask14SmokeGate:
     """Task 14: smoke gate state machine and verification."""
 
