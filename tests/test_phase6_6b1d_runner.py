@@ -159,8 +159,9 @@ class TestRunnerE2EManifest:
             "--as-of-date", "2026-07-22",
         ]
 
-    def test_runner_creates_20_field_manifest_and_parsed_details(self, tmp_path, monkeypatch):
-        """真实 runner: 8 cases -> 8 parsed rows + 8 call_attempt events + 20-field manifest."""
+    def test_runner_creates_21_field_manifest_and_parsed_details(self, tmp_path, monkeypatch):
+        """真实 runner: 8 cases -> 8 parsed rows + 8 call_attempt events + 21-field manifest
+        （6B2 Task 4 起含 thinking_mode）。"""
         from tests.phase6_helpers import RunnerEnv
         from benchmark.runners.run_benchmark import RESUME_MANIFEST_FIELDS
 
@@ -187,11 +188,11 @@ class TestRunnerE2EManifest:
         calls = env.read_events(kind="call_attempt")
         assert len(calls) == 8, f"expected 8 call_attempt events, got {len(calls)}"
 
-        # 3. manifest: 全部 20 个 RESUME_MANIFEST_FIELDS
+        # 3. manifest: 全部 21 个 RESUME_MANIFEST_FIELDS
         manifest_path = tmp_path / "detail.manifest.json"
         assert manifest_path.exists(), "manifest not created"
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        assert len(RESUME_MANIFEST_FIELDS) == 20, \
+        assert len(RESUME_MANIFEST_FIELDS) == 21, \
             f"RESUME_MANIFEST_FIELDS count drifted: {len(RESUME_MANIFEST_FIELDS)}"
         for field in RESUME_MANIFEST_FIELDS:
             assert field in manifest, f"manifest missing field: {field}"

@@ -183,3 +183,33 @@ def test_calls_attempted_restored_across_resume(tmp_path, monkeypatch):
     assert summary["calls_attempted"] == 3             # 从事件恢复，未归零
     assert len(env.read_events("call_attempt")) == 3   # 无新增调用
     assert len(env.read_detail()) == 2                 # c3 未再执行
+
+
+def test_response_model_mismatch_is_not_retried(tmp_path, monkeypatch):
+    env = RunnerEnv(tmp_path, monkeypatch, n_cases=1)
+    calls = 0
+
+    def fake_call(messages, provider=None, model=None, system_prompt=None,
+                  timeout=180, temperature=None, thinking_mode=None):
+        nonlocal calls
+        calls += 1
+        return "A", {
+            "provider": provider,
+            "model": model,
+            "requested_model": model,
+            "response_model": "deepseek-v4-pro",
+            "thinking_mode": thinking_mode,
+            "finish_reason": "stop",
+        }
+
+    monkeypatch.setattr(
+        "claude_api.call_model_messages_sync_with_meta", fake_call
+    )
+    with pytest.raises(RuntimeError, match="response_model_mismatch"):
+        env.run(
+            model="deepseek-v4-flash",
+            profile="baziqa_xjz_direct",
+            thinking_mode="disabled",
+        )
+    assert calls == 1
+    assert env.read_events("call_meta")[0]["response_model"] == "deepseek-v4-pro"

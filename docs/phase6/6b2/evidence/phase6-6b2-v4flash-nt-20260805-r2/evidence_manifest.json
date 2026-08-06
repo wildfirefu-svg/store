@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "run_id": "phase6-6b2-v4flash-nt-20260805-r2",
+  "verdict": "ROLLBACK",
+  "model_label": "DeepSeek-V4-Flash non-thinking",
+  "thinking_mode": "disabled",
+  "evidence_pack_built_from_commit": "2eec30ad9dd19df94fa88dab958a428577ee18d6",
+  "full_archive": {
+    "repo_relative_path": "docs/phase6/6b2/phase6-6b2-v4flash-nt-20260805-r2-6b2-dev-2026-07-17-deepseek-deepseek-v4-flash-642ba3da19d5",
+    "file_count": 424,
+    "total_bytes": 6135837,
+    "audit_index_sha256": "b18735abfb5235328983a8cd61fab41410426044323a5e11a936371502973056",
+    "merged_details_sha256": "3c56b1774358faa921408bc7555097477dcc59c10769a889f7e280ed45fab809",
+    "merged_events_sha256": "75264eabf07d18cde6f54da1a5e8ee85022b49b5e68e93353082430f39eeb533",
+    "git_policy": "raw archive remains untracked; this slim package is the reviewable Git evidence"
+  },
+  "included_files": {
+    "2025_error_attribution.json": "f8cec2701a78c092f6da92af87f4f5eb7063302c7d1b55991112e6c43d94e998",
+    "2025_error_attribution.md": "d2346d0a9e72988986789c82cb263e284da93ef3d6239f5c16c308fd8fee339e",
+    "audit_index.json": "372abddf2f19f7d0941c33037d696aef7d58960def1eb8fa30d6fe5b2b4c5ddb",
+    "dev_gate.json": "268a908b50f27366f23ef07fa9ec39ee48296e799225e3ea0af28e03fbe9dcb3",
+    "experiment_report.md": "f047e99a259c774006d2c58c116714de061275dd698980a50ceff0dc97d7cc65",
+    "summary.json": "ba7dfb73f9b44513dfd68260c215103411f62efa95ba83bb68cb080875039bdb"
+  },
+  "historical_b1c_sha_note": {
+    "experiment_reported_raw_crlf_sha256": "10e6b82f92fabd02b7e621b714d330a812f16e6b7aac7ad98adf4a0dd494eafa",
+    "canonical_lf_normalized_sha256_after_fix_2eec30a": "d3802b6f21cace91f28ec2ee417f33e6815e660121482871e7f41af39f10085d",
+    "result_impact": "none; B1-c was advisory and excluded from gates"
+  }
+}

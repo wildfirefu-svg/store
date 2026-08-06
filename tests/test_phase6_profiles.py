@@ -160,3 +160,20 @@ def test_dual_fingerprint_source_scope():
     for fn in ("judge_swap_seed", "build_judge_prompt", "render_reasoned_context",
                "_assemble_reasoned_choice_prompt", "extract_reasoned_choice_answer", "format_options"):
         assert fn in src, f"fingerprint 缺少 {fn}"
+
+
+class TestJudgeVisibilityProseSafe:
+    """judge 提示词含命理散文（如婚姻题的"夫妻"自然表述）不得被误杀；
+    宫位标签形式（紫微段标记）仍必须拦截。"""
+
+    def test_judge_stage_prose_not_blocked(self):
+        from benchmark.runners.profiles import assert_visibility, resolve_profile
+        p = resolve_profile("baziqa_xjz_dual", "legacy_v0")
+        prose = "分析：此造夫妻恩爱，婚后感情稳定，夫妻二人相敬如宾。"
+        assert assert_visibility(prose, p, "legacy_v0", stage="judge") == []
+
+    def test_judge_stage_palace_label_still_blocked(self):
+        from benchmark.runners.profiles import assert_visibility, resolve_profile
+        p = resolve_profile("baziqa_xjz_dual", "legacy_v0")
+        label = "【紫微斗数·本命】夫妻（戌·丙）"
+        assert assert_visibility(label, p, "legacy_v0", stage="judge") != []

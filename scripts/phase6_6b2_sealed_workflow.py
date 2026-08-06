@@ -35,6 +35,7 @@ BLESSED_2023_RAW_SHA256 = "8933783ef7da9084adeb0a9940d12277de6a1c3def41374f836be
 RECEIPT_REQUIRED_FIELDS = (
     "verdict", "stage", "run_id", "user_run_id", "archive_dir",
     "audit_index_sha256", "provider", "model",
+    "thinking_mode", "model_label",
     "code_fingerprint", "dataset_sha256",
 )
 
@@ -58,6 +59,7 @@ def enrich_year(year, input_path, output_path):
 
 
 def check_stage_gate(stage, gate_root="docs/phase6/6b2", provider=None, model=None,
+                     thinking_mode=None, model_label=None,
                      current_code_fingerprint=None, expected_user_run_id=None):
     """Stage gate admission. v16 field-level validation. Returns validated receipt or SystemExit.
 
@@ -104,12 +106,22 @@ def check_stage_gate(stage, gate_root="docs/phase6/6b2", provider=None, model=No
             raise SystemExit(f"{expect_stage} audit.provider != receipt.provider")
         if audit.get("model") != rec.get("model"):
             raise SystemExit(f"{expect_stage} audit.model != receipt.model")
+        if audit.get("thinking_mode") != rec.get("thinking_mode"):
+            raise SystemExit(f"{expect_stage} audit.thinking_mode != receipt.thinking_mode")
+        if audit.get("model_label") != rec.get("model_label"):
+            raise SystemExit(f"{expect_stage} audit.model_label != receipt.model_label")
         if audit.get("gate_verdict") != rec.get("verdict"):
             raise SystemExit(f"{expect_stage} audit.gate_verdict != receipt.verdict")
         if provider and rec["provider"] != provider:
             raise SystemExit(f"{expect_stage} provider 不一致: {rec['provider']} != {provider}")
         if model and rec["model"] != model:
             raise SystemExit(f"{expect_stage} model 不一致: {rec['model']} != {model}")
+        if thinking_mode and rec["thinking_mode"] != thinking_mode:
+            raise SystemExit(
+                f"{expect_stage} thinking_mode 不一致: {rec['thinking_mode']} != {thinking_mode}")
+        if model_label and rec["model_label"] != model_label:
+            raise SystemExit(
+                f"{expect_stage} model_label 不一致: {rec['model_label']} != {model_label}")
         if current_code_fingerprint and rec["code_fingerprint"] != current_code_fingerprint:
             raise SystemExit(f"{expect_stage} receipt 代码指纹与当前代码不一致")
         return rec
@@ -126,6 +138,13 @@ def check_stage_gate(stage, gate_root="docs/phase6/6b2", provider=None, model=No
             raise SystemExit(
                 f"final_2023 跨阶段 user_run_id 不一致: "
                 f"dev={dev_urid!r}, reuse={reuse_urid!r} (混合链拒绝)")
+        # v4-flash: dev and reuse MUST share the same thinking mode
+        dev_tm = dev_rec.get("thinking_mode")
+        reuse_tm = reuse_rec.get("thinking_mode")
+        if dev_tm != reuse_tm:
+            raise SystemExit(
+                f"final_2023 跨阶段 thinking_mode 不一致: "
+                f"dev={dev_tm!r}, reuse={reuse_tm!r} (混合链拒绝)")
         return {"dev": dev_rec, "reuse": reuse_rec}
     else:
         raise SystemExit(f"unknown stage: {stage}")

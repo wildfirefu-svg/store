@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Phase 6 6B2 orchestrator - dual-system judge experiment protocol v18.
 
 Implements Task 10-14, 16, 17b per APPROVED v18 plan.
@@ -41,8 +41,32 @@ SMOKE_CASES_PER_GROUP = 2
 SMOKE_PARSER_RATE_MIN = 0.95
 
 B1C_ARCHIVE_PATH = "docs/phase6/6b1/6b1-2026-07-17-deepseek-deepseek-chat-78481de6/merged_details.jsonl"
-B1C_EXPECTED_SHA256 = "10e6b82f92fabd02b7e621b714d330a812f16e6b7aac7ad98adf4a0dd494eafa"
+B1C_EXPECTED_SHA256 = "d3802b6f21cace91f28ec2ee417f33e6815e660121482871e7f41af39f10085d"
 ARCHIVE_ROOT = "docs/phase6/6b2"
+
+# ── Frozen V4-Flash non-thinking protocol (single source of truth) ──
+
+FROZEN_PROVIDER = "deepseek"
+FROZEN_MODEL = "deepseek-v4-flash"
+FROZEN_THINKING_MODE = "disabled"
+MODEL_LABEL = "DeepSeek-V4-Flash non-thinking"
+
+
+def _validate_frozen_protocol(provider, model):
+    protocol = {
+        "provider": FROZEN_PROVIDER,
+        "model": FROZEN_MODEL,
+        "thinking_mode": FROZEN_THINKING_MODE,
+        "model_label": MODEL_LABEL,
+    }
+    if provider != FROZEN_PROVIDER or model != FROZEN_MODEL:
+        raise SystemExit(
+            "6B2 frozen protocol mismatch: "
+            f"requested={provider}/{model}, "
+            f"required={FROZEN_PROVIDER}/{FROZEN_MODEL}/"
+            f"{FROZEN_THINKING_MODE}"
+        )
+    return protocol
 
 
 def _stage_hard_cap(years):
@@ -100,6 +124,7 @@ def _build_schedule(output_dir, years=None, dataset_paths=None):
                         "method": "direct_choice" if arm == "b1a_prime" else "dual_system",
                         "hard_cap": slice_hard_cap, "max_cases": 8,
                         "scheduled_calls": scheduled, "case_ids": g_cases,
+                        "thinking_mode": FROZEN_THINKING_MODE,
                     })
     return {
         "slices": slices, "global_hard_cap": hard_cap,
@@ -206,6 +231,7 @@ def _build_runner_cmd(slice_info, provider, model, resume=False):
         "--output-dir", slice_info["output_dir"],
         "--as-of-date", FROZEN_DATE,
         "--chart-schema-version", FROZEN_CHART_SCHEMA,
+        "--thinking-mode", slice_info["thinking_mode"],
     ]
     if resume:
         common.append("--resume")
@@ -248,6 +274,7 @@ def _slice_runner_args(slice_info, provider, model):
         scheduled_calls=slice_info["scheduled_calls"],
         hard_cap=slice_info["hard_cap"],
         as_of_date=FROZEN_DATE,
+        thinking_mode=slice_info["thinking_mode"],
     )
 
 
@@ -489,6 +516,17 @@ def _run_slice(slice_info, ledger, provider, model, integrity="slice"):
             raise SystemExit(f"slice {slice_info['slice_id']} 失败: 完整性门禁 ({integrity_result})")
         actual = sum(1 for r in _load_events(str(events_path)) if r.get("kind") == "call_attempt")
         runner_manifest_sha = _sha256_file(str(runner_manifest_path))
+        response_models = {
+            row.get("response_model")
+            for row in _load_events(str(events_path))
+            if row.get("kind") == "call_meta" and row.get("response_model")
+        }
+        if len(response_models) > 1:
+            raise SystemExit(
+                f"slice {slice_info['slice_id']} response_model drift: "
+                f"{sorted(response_models)}"
+            )
+        response_model = next(iter(response_models), None)
         status_path.write_text(json.dumps({
             "slice_id": slice_info["slice_id"], "completed": True,
             "exit_code": result.returncode, "elapsed_s": round(elapsed, 1),
@@ -497,6 +535,9 @@ def _run_slice(slice_info, ledger, provider, model, integrity="slice"):
             "runner_manifest_sha256": runner_manifest_sha,
             "arm": slice_info["arm"], "integrity": integrity,
             "method": "dual_system" if slice_info["arm"] == "dual" else "direct_choice",
+            "provider": provider, "requested_model": model,
+            "thinking_mode": slice_info["thinking_mode"],
+            "response_model": response_model,
         }, ensure_ascii=False), encoding="utf-8")
         ledger.record_slice_completed(slice_info["slice_id"], actual,
                                       arm=("smoke" if is_smoke else slice_info["arm"]))
@@ -671,10 +712,12 @@ def load_b1c_advisory():
     if not os.path.exists(path):
         raise SystemExit(f"B1-c 归档不存在: {path} (fail-closed)")
     with open(path, "rb") as f:
-        sha = _h.sha256(f.read()).hexdigest()
+        raw = f.read()
+    normalized = raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    sha = _h.sha256(normalized).hexdigest()
     if sha != B1C_EXPECTED_SHA256:
         raise SystemExit(f"B1-c SHA-256 不匹配: {sha} != {B1C_EXPECTED_SHA256} (fail-closed)")
-    rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
+    rows = [json.loads(l) for l in normalized.decode("utf-8").splitlines() if l.strip()]
     b1c = [r for r in rows if r.get("attempt_key", [None] * 10)[2] == "b1c"]
     return {"path": path, "sha256": sha, "count": len(b1c), "rows": b1c}
 
@@ -709,7 +752,8 @@ def _accuracy_final(rows):
             "b1a_accuracy": b1a_acc, "b1a_rows": len(b1a_rows)}
 
 
-def generate_report(gate, merged_details, schedule, ledger, b1c_advisory, out_dir):
+def generate_report(gate, merged_details, schedule, ledger, b1c_advisory, out_dir,
+                    run_id=None):
     rows = merged_details
     total = max(len(rows), 1)
     parsed = sum(1 for r in rows if r.get("terminal_state") == "parsed")
@@ -718,14 +762,27 @@ def generate_report(gate, merged_details, schedule, ledger, b1c_advisory, out_di
                    (r.get("attempt_key") or [None] * 10)[7],
                    r.get("case_id"))
                   for r in rows if (r.get("attempt_key") or [None] * 10)[2] == "dual"}
+    gate_serializable = dict(gate)
+    if "delta_by_year_repeat" in gate_serializable:
+        gate_serializable["delta_by_year_repeat"] = {
+            f"{year}_{repeat}": value
+            for (year, repeat), value in gate["delta_by_year_repeat"].items()
+        }
     report = {
+        "model_protocol": MODEL_LABEL,
+        "provider": FROZEN_PROVIDER,
+        "requested_model": FROZEN_MODEL,
+        "thinking_mode": FROZEN_THINKING_MODE,
+        "run_id": run_id,
+        "primary_comparison": "concurrent b1a_prime vs dual",
         "run": {"slices": len(schedule["slices"]),
                 "scheduled": schedule["total_scheduled_calls"],
                 "attempted": ledger.total_attempted,
                 "global_hard_cap": ledger.hard_cap},
-        "gate": gate,
+        "gate": gate_serializable,
         "accuracy": _accuracy_final(rows),
-        "delta": {k: v for k, v in gate.items() if k.startswith(("delta", "min_year"))},
+        "delta": {k: v for k, v in gate_serializable.items()
+                  if k.startswith(("delta", "min_year"))},
         "judge": {"trigger_rate": round(len(judge_rows) / max(len(dual_cells), 1), 4),
                   "reference_disagreement_rate": JUDGE_DISAGREEMENT_RATE,
                   "judge_calls": len(judge_rows)},
@@ -733,18 +790,28 @@ def generate_report(gate, merged_details, schedule, ledger, b1c_advisory, out_di
         "integrity": {"rows": total, "call_failed": sum(
             1 for r in rows if r.get("terminal_state") == "call_failed")},
         "b1c_advisory": {"count": b1c_advisory["count"], "sha256": b1c_advisory["sha256"],
-                         "note": "非同时段比较 + provider drift 风险，描述性附列，非预注册 gate"},
+                         "gate_inclusion": False,
+                         "note": "historical deepseek-chat advisory only; excluded from all gates"},
     }
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     (out / "summary.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     lines = [f"# 6B2 双管线报告",
+             f"- Model protocol：{report['model_protocol']}",
+             f"- Provider：{report['provider']}",
+             f"- Requested model：{report['requested_model']}",
+             f"- Thinking mode：{report['thinking_mode']}",
+             f"- Run ID：{report['run_id']}",
+             f"- Primary comparison：{report['primary_comparison']}",
              f"- gate：**{gate['verdict']}**（{gate.get('stage')}）",
              f"- judge 触发率：{report['judge']['trigger_rate']}（参照 {JUDGE_DISAGREEMENT_RATE}）",
              f"- parser rate：{report['parser_rate']}；call_failed：{report['integrity']['call_failed']}",
              f"- 预算：scheduled {report['run']['scheduled']} / attempted {report['run']['attempted']}"
              f" / cap {report['run']['global_hard_cap']}",
-             f"- B1-c advisory（非决策）：{report['b1c_advisory']['note']}",
+             f"- B1-c advisory（非决策）：count {report['b1c_advisory']['count']}"
+             f"，冻结 SHA {report['b1c_advisory']['sha256']}；"
+             f"gate_inclusion={report['b1c_advisory']['gate_inclusion']}；"
+             f"{report['b1c_advisory']['note']}",
              "", "如实声明：40 题/年度，2 题即 5pp；请求不携带 seed；B1-c 为 6B1 时段旧 run。"]
     (out / "report.md").write_text("\n".join(lines), encoding="utf-8")
     return report
@@ -782,6 +849,7 @@ def _build_smoke_slices(schedule):
         "profile": target["profile"], "method": target["method"],
         "hard_cap": SMOKE_HARD_CAP, "max_cases": SMOKE_CASES_PER_GROUP,
         "scheduled_calls": SMOKE_SCHEDULED, "case_ids": smoke_cases,
+        "thinking_mode": FROZEN_THINKING_MODE,
     }]
 
 
@@ -895,6 +963,9 @@ def _compute_experiment_code_fingerprint():
     # Run-id and receipt chain
     for fn in (_validate_run_id, _verify_receipt_belongs_to_run, _publish_receipt_atomic):
         parts.append(hashlib.sha256(inspect.getsource(fn).encode()).hexdigest())
+    # Frozen protocol and run context (v4-flash)
+    for fn in (_validate_frozen_protocol, _prepare_run_context, _record_run_failure):
+        parts.append(hashlib.sha256(inspect.getsource(fn).encode()).hexdigest())
     # Archive and report
     for fn in (generate_archive, _merge_all_details, _compute_dataset_hashes):
         parts.append(hashlib.sha256(inspect.getsource(fn).encode()).hexdigest())
@@ -990,7 +1061,8 @@ def _atomic_write_json(path, data):
 
 # Fields excluded from schedule hash: runtime-dependent paths derived from output_dir.
 _SCHED_HASH_SLICE_KEYS = ("year", "repeat", "arm", "group", "slice_id", "case_ids",
-                          "profile", "method", "hard_cap", "max_cases", "scheduled_calls")
+                          "profile", "method", "hard_cap", "max_cases", "scheduled_calls",
+                          "thinking_mode")
 
 
 def _compute_schedule_hash(schedule):
@@ -1021,6 +1093,7 @@ def generate_archive(schedule, ledger, run_dir, provider, model, gate_result,
     import shutil
     archive_root = Path(archive_root or ARCHIVE_ROOT)
     run_dir = Path(run_dir)
+    _validate_frozen_protocol(provider, model)
     if gate_result.get("verdict") == "BLOCKED_INCOMPLETE":
         raise SystemExit("archive 拒绝: BLOCKED_INCOMPLETE 裁决不得归档")
     completed = {sl["slice_id"] for sl in schedule["slices"] if ledger.slice_completed(sl["slice_id"])}
@@ -1080,6 +1153,8 @@ def generate_archive(schedule, ledger, run_dir, provider, model, gate_result,
             "frozen_date": FROZEN_DATE,
             "provider": provider,
             "model": model,
+            "thinking_mode": FROZEN_THINKING_MODE,
+            "model_label": MODEL_LABEL,
             "code_fingerprint": code_fp,
             "sched_hash": sched_hash,
             "gate_verdict": gate_result["verdict"],
@@ -1111,6 +1186,8 @@ def generate_archive(schedule, ledger, run_dir, provider, model, gate_result,
             "audit_index_sha256": _sha256_file(str(audit_path)),
             "provider": provider,
             "model": model,
+            "thinking_mode": FROZEN_THINKING_MODE,
+            "model_label": MODEL_LABEL,
             "code_fingerprint": code_fp,
             "dataset_sha256": ds_hashes.get("raw") or ds_hashes.get("enriched"),
             "sched_hash": sched_hash,
@@ -1241,17 +1318,117 @@ def _gate_root(output_dir, run_id):
     return Path(output_dir) / "runs" / run_id / "gates"
 
 
-def run_dev(provider, model, output_dir, dataset_paths=None, run_id=None):
-    """Run dev stage (2024+2025). run_id is REQUIRED; caller must supply a validated slug."""
+# ── Task 5: atomic run context + explicit safe resume ──
+
+RUN_CONTEXT_REQUIRED_FIELDS = (
+    "provider",
+    "model",
+    "thinking_mode",
+    "model_label",
+    "code_fingerprint",
+    "created_at",
+)
+
+
+def _prepare_run_context(output_dir, run_id, stage, resume, protocol, code_fingerprint):
+    """Create (fresh dev) or verify (resume) runs/<run_id>/run_context.json.
+
+    fresh: only stage == "dev"; the run root must NOT exist. The runs/ parent is
+    created first, then the run root is exclusively created via os.mkdir and the
+    context is written with the existing _atomic_write_json.
+    resume: run root and context must already exist; frozen fields and code
+    fingerprint must match exactly; nothing is inferred or backfilled from
+    events, manifests, or directory names. Per-stage published receipts gate
+    reruns of completed stages.
+    Returns (runs_root, context)."""
+    output_dir = Path(output_dir)
+    runs_root = output_dir / "runs" / run_id
+    context_path = runs_root / "run_context.json"
+    if not resume:
+        if stage != "dev":
+            raise SystemExit(
+                f"run context 拒绝: fresh 仅允许 dev 阶段 (stage={stage}); "
+                f"{stage} 必须显式 --resume")
+        runs_root.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            os.mkdir(str(runs_root))  # 独占创建: 已存在即拒绝
+        except FileExistsError:
+            raise SystemExit(
+                f"run context 拒绝: run 目录已存在 ({runs_root}); "
+                f"中断恢复必须显式 --resume") from None
+        context = {
+            "provider": protocol["provider"],
+            "model": protocol["model"],
+            "thinking_mode": protocol["thinking_mode"],
+            "model_label": protocol["model_label"],
+            "code_fingerprint": code_fingerprint,
+            "created_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        }
+        _atomic_write_json(context_path, context)
+        return runs_root, context
+    if not context_path.exists():
+        raise SystemExit("run_context.json missing: refusing legacy run migration")
+    context = json.loads(context_path.read_text(encoding="utf-8"))
+    missing = [f for f in RUN_CONTEXT_REQUIRED_FIELDS if f not in context]
+    if missing:
+        raise SystemExit(f"run context 拒绝: 缺少必需字段 {missing}")
+    for field in ("provider", "model", "thinking_mode", "model_label"):
+        if context[field] != protocol[field]:
+            raise SystemExit(
+                f"run context 拒绝: {field} 漂移 "
+                f"(context={context[field]!r}, 当前={protocol[field]!r})")
+    if context["code_fingerprint"] != code_fingerprint:
+        raise SystemExit("run context 拒绝: code fingerprint 漂移")
+    gates_dir = runs_root / "gates"
+    published = {s: (gates_dir / f"{s}_gate.json").exists()
+                 for s in ("dev", "reuse", "final_2023")}
+    if stage == "dev":
+        if published["dev"]:
+            raise SystemExit(
+                "run context 拒绝: dev receipt 已发布, 禁止重跑已完成阶段")
+    elif stage == "reuse":
+        if not published["dev"]:
+            raise SystemExit(
+                "run context 拒绝: reuse 需要已发布的 dev receipt")
+        if published["reuse"]:
+            raise SystemExit(
+                "run context 拒绝: reuse receipt 已发布, 禁止重跑已完成阶段")
+    elif stage == "final_2023":
+        if not published["reuse"]:
+            raise SystemExit(
+                "run context 拒绝: final_2023 需要已发布的 reuse receipt")
+        if published["final_2023"]:
+            raise SystemExit(
+                "run context 拒绝: final_2023 receipt 已发布, 禁止重跑已完成阶段")
+    else:
+        raise SystemExit(f"run context 拒绝: 未知阶段 {stage}")
+    return runs_root, context
+
+
+def _record_run_failure(runs_root, stage, reason):
+    """Append a single-line JSON failure record to runs/<run_id>/run_failures.jsonl."""
+    path = Path(runs_root) / "run_failures.jsonl"
+    record = {"stage": stage, "reason": reason,
+              "at": time.strftime("%Y-%m-%dT%H:%M:%S")}
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def run_dev(provider, model, output_dir, dataset_paths=None, run_id=None, resume=False):
+    """Run dev stage (2024+2025). run_id is REQUIRED; caller must supply a validated slug.
+    fresh dev 不传 resume; dev 中断恢复必须显式 resume=True."""
+    protocol = _validate_frozen_protocol(provider, model)
     _validate_run_id(run_id)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    runs_root = output_dir / "runs" / run_id
-    runs_root.mkdir(parents=True, exist_ok=True)
+    code_fp = _compute_experiment_code_fingerprint()
+    runs_root, _context = _prepare_run_context(
+        output_dir=output_dir, run_id=run_id, stage="dev", resume=resume,
+        protocol=protocol, code_fingerprint=code_fp)
     lock = OutputDirLock.acquire(str(runs_root))
-    if lock is None:
-        raise SystemExit(f"dev run dir locked: {runs_root}")
     try:
+        if lock is None:
+            raise SystemExit(f"dev run dir locked: {runs_root}")
         years = ["2024", "2025"]
         ds_paths = dict(dataset_paths) if dataset_paths else {}
         for y in years:
@@ -1271,7 +1448,8 @@ def run_dev(provider, model, output_dir, dataset_paths=None, run_id=None):
             raise SystemExit(f"dev integrity failed: {integrity}")
         gate_result = compute_gate(merged, stage="dev")
         b1c = load_b1c_advisory()
-        generate_report(gate_result, merged, schedule, ledger, b1c, str(stage_dir))
+        generate_report(gate_result, merged, schedule, ledger, b1c, str(stage_dir),
+                        run_id=run_id)
         arch = generate_archive(schedule, ledger, str(stage_dir),
                                 provider, model, gate_result, stage="dev",
                                 raw_dataset_paths=ds_paths,
@@ -1280,30 +1458,39 @@ def run_dev(provider, model, output_dir, dataset_paths=None, run_id=None):
                                 smoke_attempted=smoke_attempted)
         _publish_receipt_atomic(arch, _gate_root(output_dir, run_id), "dev_gate.json")
         return {"status": "ok", "gate": gate_result, "archive": arch, "run_id": run_id}
+    except (Exception, SystemExit) as exc:
+        _record_run_failure(runs_root, "dev", str(exc))
+        raise
     finally:
         if lock:
             lock.release()
 
 
-def run_reuse(provider, model, output_dir, dev_receipt_path, dataset_paths=None, run_id=None):
+def run_reuse(provider, model, output_dir, dev_receipt_path, dataset_paths=None,
+              run_id=None, resume=False):
     """Run reuse stage (2021+2022). run_id is REQUIRED and MUST match dev receipt's run_id.
-    v18: reuse does NOT run smoke (smoke is a dev-only gate)."""
+    v18: reuse does NOT run smoke (smoke is a dev-only gate). 必须显式 resume=True."""
+    protocol = _validate_frozen_protocol(provider, model)
     _validate_run_id(run_id)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    runs_root = output_dir / "runs" / run_id
-    runs_root.mkdir(parents=True, exist_ok=True)
+    code_fp = _compute_experiment_code_fingerprint()
+    runs_root, _context = _prepare_run_context(
+        output_dir=output_dir, run_id=run_id, stage="reuse", resume=resume,
+        protocol=protocol, code_fingerprint=code_fp)
     lock = OutputDirLock.acquire(str(runs_root))
-    if lock is None:
-        raise SystemExit(f"reuse run dir locked: {runs_root}")
     try:
+        if lock is None:
+            raise SystemExit(f"reuse run dir locked: {runs_root}")
         from scripts.phase6_6b2_sealed_workflow import check_stage_gate as _check
-        code_fp = _compute_experiment_code_fingerprint()
         # Verify dev receipt belongs to this run_id and lives in this output_dir's gates/
         _verify_receipt_belongs_to_run(dev_receipt_path, output_dir, run_id, "dev")
         gate_root = _gate_root(output_dir, run_id)
         _check("reuse", gate_root=str(gate_root),
-               provider=provider, model=model, current_code_fingerprint=code_fp,
+               provider=provider, model=model,
+               thinking_mode=protocol["thinking_mode"],
+               model_label=protocol["model_label"],
+               current_code_fingerprint=code_fp,
                expected_user_run_id=run_id)
         years = ["2021", "2022"]
         ds_paths = dict(dataset_paths) if dataset_paths else {}
@@ -1322,7 +1509,8 @@ def run_reuse(provider, model, output_dir, dev_receipt_path, dataset_paths=None,
             raise SystemExit(f"reuse integrity failed: {integrity}")
         gate_result = compute_gate(merged, stage="reuse")
         b1c = load_b1c_advisory()
-        generate_report(gate_result, merged, schedule, ledger, b1c, str(stage_dir))
+        generate_report(gate_result, merged, schedule, ledger, b1c, str(stage_dir),
+                        run_id=run_id)
         arch = generate_archive(schedule, ledger, str(stage_dir),
                                 provider, model, gate_result, stage="reuse",
                                 raw_dataset_paths=ds_paths,
@@ -1331,32 +1519,41 @@ def run_reuse(provider, model, output_dir, dev_receipt_path, dataset_paths=None,
                                 smoke_attempted=0)
         _publish_receipt_atomic(arch, gate_root, "reuse_gate.json")
         return {"status": "ok", "gate": gate_result, "archive": arch, "run_id": run_id}
+    except (Exception, SystemExit) as exc:
+        _record_run_failure(runs_root, "reuse", str(exc))
+        raise
     finally:
         if lock:
             lock.release()
 
 
-def run_2023_final(provider, model, output_dir, reuse_receipt_path, dataset_paths=None, run_id=None):
+def run_2023_final(provider, model, output_dir, reuse_receipt_path, dataset_paths=None,
+                   run_id=None, resume=False):
     """Run 2023 final sealed stage. run_id is REQUIRED and MUST match reuse receipt's run_id.
-    v18: final does NOT run smoke."""
+    v18: final does NOT run smoke. 必须显式 resume=True."""
+    protocol = _validate_frozen_protocol(provider, model)
     _validate_run_id(run_id)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    runs_root = output_dir / "runs" / run_id
-    runs_root.mkdir(parents=True, exist_ok=True)
+    code_fp = _compute_experiment_code_fingerprint()
+    runs_root, _context = _prepare_run_context(
+        output_dir=output_dir, run_id=run_id, stage="final_2023", resume=resume,
+        protocol=protocol, code_fingerprint=code_fp)
     lock = OutputDirLock.acquire(str(runs_root))
-    if lock is None:
-        raise SystemExit(f"2023_final run dir locked: {runs_root}")
     try:
+        if lock is None:
+            raise SystemExit(f"2023_final run dir locked: {runs_root}")
         from scripts.phase6_6b2_sealed_workflow import (
             check_stage_gate as _check, acquire_2023_run_lock,
             verify_2023_raw_data, record_enriched_sha_to_lock, finalize_2023_run_lock,
             enrich_year, update_lock_schedule_hash, BLESSED_2023_RAW_SHA256)
-        code_fp = _compute_experiment_code_fingerprint()
         _verify_receipt_belongs_to_run(reuse_receipt_path, output_dir, run_id, "reuse")
         gate_root = _gate_root(output_dir, run_id)
         _check("final_2023", gate_root=str(gate_root),
-               provider=provider, model=model, current_code_fingerprint=code_fp,
+               provider=provider, model=model,
+               thinking_mode=protocol["thinking_mode"],
+               model_label=protocol["model_label"],
+               current_code_fingerprint=code_fp,
                expected_user_run_id=run_id)
         ds_paths_in = dict(dataset_paths) if dataset_paths else {}
         raw_path = ds_paths_in.get("2023", "benchmark/datasets/baziqa_contest8_2023_holdout.jsonl")
@@ -1384,7 +1581,8 @@ def run_2023_final(provider, model, output_dir, reuse_receipt_path, dataset_path
         integrity = _integrity_gate(merged, schedule)
         gate_result = compute_gate(merged, stage="final_2023")
         b1c = load_b1c_advisory()
-        generate_report(gate_result, merged, schedule, ledger, b1c, str(stage_dir))
+        generate_report(gate_result, merged, schedule, ledger, b1c, str(stage_dir),
+                        run_id=run_id)
         arch = generate_archive(schedule, ledger, str(stage_dir), provider, model,
                                 gate_result, stage="final_2023",
                                 raw_dataset_paths=raw_paths,
@@ -1397,6 +1595,9 @@ def run_2023_final(provider, model, output_dir, reuse_receipt_path, dataset_path
                                integrity_passed=(integrity == "PASS"))
         _publish_receipt_atomic(arch, gate_root, "final_2023_gate.json")
         return {"status": "ok", "gate": gate_result, "archive": arch, "run_id": run_id}
+    except (Exception, SystemExit) as exc:
+        _record_run_failure(runs_root, "final_2023", str(exc))
+        raise
     finally:
         if lock:
             lock.release()
@@ -1415,6 +1616,16 @@ def _parse_dataset_path_args(args_list):
     return result
 
 
+def _json_safe(obj):
+    """递归净化 JSON 序列化目标：tuple 键转 str（delta_by_year_repeat 等），
+    Path 等非标值经 default=str 处理（main 末尾结果打印用）。"""
+    if isinstance(obj, dict):
+        return {str(k): _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+    return obj
+
+
 def main():
     parser = argparse.ArgumentParser(description="Phase 6 6B2 orchestrator")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -1427,6 +1638,9 @@ def main():
                        help="实验运行标识 (同一实验 dev/reuse/final 必须共用同一 run_id)")
         p.add_argument("--dataset-path", action="append", default=[],
                        help="数据集路径覆盖，格式 year=path，可多次指定")
+        p.add_argument("--resume", action="store_true",
+                       help="显式恢复已存在的 run (fresh dev 不得使用; "
+                            "dev 中断恢复/reuse/final_2023 必须传入)")
         if cmd_name == "run_reuse":
             p.add_argument("--dev-receipt", required=True,
                            help="dev 阶段 receipt 路径 (runs/<run_id>/gates/dev_gate.json)")
@@ -1437,14 +1651,17 @@ def main():
     ds_paths = _parse_dataset_path_args(args.dataset_path)
     if args.cmd == "run_dev":
         result = run_dev(args.provider, args.model, args.output_dir,
-                         dataset_paths=ds_paths, run_id=args.run_id)
+                         dataset_paths=ds_paths, run_id=args.run_id,
+                         resume=args.resume)
     elif args.cmd == "run_reuse":
         result = run_reuse(args.provider, args.model, args.output_dir,
-                           args.dev_receipt, dataset_paths=ds_paths, run_id=args.run_id)
+                           args.dev_receipt, dataset_paths=ds_paths, run_id=args.run_id,
+                           resume=args.resume)
     elif args.cmd == "run_2023_final":
         result = run_2023_final(args.provider, args.model, args.output_dir,
-                                args.reuse_receipt, dataset_paths=ds_paths, run_id=args.run_id)
-    print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+                                args.reuse_receipt, dataset_paths=ds_paths, run_id=args.run_id,
+                                resume=args.resume)
+    print(json.dumps(_json_safe(result), ensure_ascii=False, indent=2, default=str))
 
 
 if __name__ == "__main__":

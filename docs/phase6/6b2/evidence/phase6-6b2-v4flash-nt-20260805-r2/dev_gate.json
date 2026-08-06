@@ -1,0 +1,17 @@
+{
+  "verdict": "ROLLBACK",
+  "stage": "dev",
+  "run_id": "phase6-6b2-v4flash-nt-20260805-r2-6b2-dev-2026-07-17-deepseek-deepseek-v4-flash-642ba3da19d5",
+  "user_run_id": "phase6-6b2-v4flash-nt-20260805-r2",
+  "archive_dir": "docs\\phase6\\6b2\\phase6-6b2-v4flash-nt-20260805-r2-6b2-dev-2026-07-17-deepseek-deepseek-v4-flash-642ba3da19d5",
+  "audit_index_sha256": "b18735abfb5235328983a8cd61fab41410426044323a5e11a936371502973056",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "thinking_mode": "disabled",
+  "model_label": "DeepSeek-V4-Flash non-thinking",
+  "code_fingerprint": "642ba3da19d59b29e75124ae5678683bd4a1e690aebd690154c58c3332a8d389",
+  "dataset_sha256": "e23477f845e873fb73c8a7f349789cb2df5235c06e497990d1e341f4713ea5f4",
+  "sched_hash": "04b2e6852028075a5a024fbebd105cb1e6dfaeff98c9301a278dcd0caf46f30b",
+  "smoke_attempted": 4,
+  "issued_at": "2026-08-06T16:00:13"
+}

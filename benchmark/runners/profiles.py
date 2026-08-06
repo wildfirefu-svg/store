@@ -89,6 +89,9 @@ _MINGLI_BAZI_CORE_MARKERS = frozenset({
 # 宫位名无"宫"后缀（golden approved_v1_case1.txt：`夫妻（戌·丙）`），照抄导致 mingli
 # 可见性测试必失败。裸名已核实仅在紫微段出现，无误杀；同时兼容带"宫"后缀的变体。
 _ZIWEI_MARKERS = frozenset({"【紫微斗数·本命】", "夫妻", "财帛", "官禄"})
+# judge 阶段专用：裸宫位名会误杀命理散文（婚姻题"夫妻二人"、财运题"财帛"等自然表述），
+# 改用宫位标签形式（渲染为"夫妻（戌·丙）"）；仅 judge 提示词含推理散文，其余分支保持裸名
+_ZIWEI_MARKERS_PROSE_SAFE = frozenset({"【紫微斗数·本命】", "夫妻（", "财帛（", "官禄（"})
 _DENYLIST_MARKERS = frozenset({"【流年】", "空亡：", "空亡（"})
 # 裁决 1B：官方臂独立 required（结构性 astro 标记，astro 块注入即恒真，
 # 不依赖有星宫位，避免误杀）；不与 mingli_xjz_direct 共享 required。
@@ -153,8 +156,10 @@ def visibility_requirements(
     if stage == "ziwei":
         return frozenset({"【紫微斗数·本命】"}), _APPROVED_BAZI_MARKERS_NO_ZIWEI | _DENYLIST_MARKERS
     if stage == "judge":
-        # Blinded judge: no raw chart markers at all
-        return frozenset(), _APPROVED_BAZI_MARKERS | _ZIWEI_MARKERS | _DENYLIST_MARKERS
+        # Blinded judge: no raw chart markers at all（散文安全变体：宫位名用标签形式，
+        # 避免误杀推理散文中的"夫妻/财帛/官禄"自然表述——真实缺陷证据：2025 Q9 同性婚姻题
+        # gate_blocked 导致 BAZI_COUNT=0 切片失败）
+        return frozenset(), _APPROVED_BAZI_MARKERS | _ZIWEI_MARKERS_PROSE_SAFE | _DENYLIST_MARKERS
     if chart_schema_version == "legacy_v0":
         # 旧上下文对照臂：自身 schema 由渲染器逐字节等价保证；此处只做串扰检测。
         return frozenset(), _APPROVED_ONLY_MARKERS | _DENYLIST_MARKERS

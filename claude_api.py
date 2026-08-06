@@ -133,18 +133,19 @@ class TruncatedResponseError(RuntimeError):
     pass
 
 
-def call_model_messages_sync(messages, provider=None, model=None, system_prompt=None, timeout=180, temperature=None):
+def call_model_messages_sync(messages, provider=None, model=None, system_prompt=None, timeout=180, temperature=None, thinking_mode=None):
     """同步调用模型补全接口，支持 multi-turn messages。返回纯文本。"""
     text, _ = call_model_messages_sync_with_meta(
         messages, provider=provider, model=model, system_prompt=system_prompt,
-        timeout=timeout, temperature=temperature)
+        timeout=timeout, temperature=temperature, thinking_mode=thinking_mode)
     return text
 
 
-def call_model_messages_sync_with_meta(messages, provider=None, model=None, system_prompt=None, timeout=180, temperature=None):
+def call_model_messages_sync_with_meta(messages, provider=None, model=None, system_prompt=None, timeout=180, temperature=None, thinking_mode=None):
     """同步调用模型补全接口，返回 (text, meta_dict)。
 
-    meta 包含 finish_reason / usage / response_id / latency_ms / provider / model / http_status。
+    meta 包含 finish_reason / usage / response_id / latency_ms / provider / model /
+    requested_model / response_model / thinking_mode / http_status。
     仅当 finish_reason 明确不是正常终止时，text 仍取 message content（可能被截断），
     由调用方决定是否触发重试。
     """
@@ -152,6 +153,11 @@ def call_model_messages_sync_with_meta(messages, provider=None, model=None, syst
     provider = provider or detected_provider
     model = model or default_model
     sys_text = system_prompt if system_prompt is not None else ""
+
+    if thinking_mode is not None and provider != "deepseek":
+        raise ValueError("thinking_mode is only supported for deepseek")
+    if provider == "deepseek" and thinking_mode is not None and thinking_mode != "disabled":
+        raise ValueError(f"unsupported deepseek thinking_mode: {thinking_mode}")
 
     # 统一使用 ANTHROPIC_API_KEY（_load_api_key 加载的当前激活 key，非 Anthropic 专属）。
     # url 取 _detect_provider 返回的 detected_url（基于 key 前缀匹配 provider 对应的 base_url）。
@@ -193,6 +199,8 @@ def call_model_messages_sync_with_meta(messages, provider=None, model=None, syst
             if provider == "kimi":
                 _t = 1.0
             payload["temperature"] = _t
+        if provider == "deepseek" and thinking_mode is not None:
+            payload["thinking"] = {"type": thinking_mode}
         headers = {
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
@@ -205,6 +213,9 @@ def call_model_messages_sync_with_meta(messages, provider=None, model=None, syst
     meta = {
         "provider": provider,
         "model": model,
+        "requested_model": model,
+        "response_model": None,
+        "thinking_mode": thinking_mode,
         "http_status": None,
         "latency_ms": None,
         "finish_reason": None,
@@ -237,6 +248,7 @@ def call_model_messages_sync_with_meta(messages, provider=None, model=None, syst
                 text += block.get("text", "")
         return text, meta
     choices = data.get("choices", []) or []
+    meta["response_model"] = data.get("model")
     meta["finish_reason"] = choices[0].get("finish_reason") if choices else None
     meta["usage"] = data.get("usage")
     meta["response_id"] = data.get("id")

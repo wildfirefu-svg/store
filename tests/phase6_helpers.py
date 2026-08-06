@@ -12,6 +12,11 @@ RunnerEnv / RunnerSpy / fake_config / make_case / with_chart / write_jsonl。
 - RunnerEnv.__init__ 额外两处 monkeypatch（Task 6 登记）：data_store.save_benchmark_run
   → no-op（避免集成测试反复写真实 sqlite）；run_benchmark.time.sleep → no-op（每 case
   1s sleep 会拖慢套件）。均为测试副作用隔离，不改变被测语义。
+- RunnerEnv.run 的 call_model_messages_sync_with_meta patch 改为条件 patch（Task 3
+  登记）：仅当当前绑定仍是 claude_api 真实函数时才替换为 _fake_call_with_meta；测试
+  已自行 monkeypatch 自定义 fake（如 thinking_mode/response_model 协议测试）时保留
+  测试的 fake，否则 run 会覆盖测试 patch 使计划逐字测试无法成立。resume 二次运行
+  时绑定已是 _fake_call_with_meta，跳过 patch 语义不变。
 - with_chart 形状照 tests/fixtures/phase6/case_sample_1.json 的最小批准字段集；
   不含 kong_wang / liu_nian（denylist：空亡：/空亡（/【流年】）。
 """
@@ -24,6 +29,11 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
+
+import claude_api as _claude_api
+
+# 真实边界函数引用：RunnerEnv.run 据此判断测试是否已自行 patch（见模块 docstring）
+_REAL_CALL_WITH_META = _claude_api.call_model_messages_sync_with_meta
 
 
 def make_case(case_id: str = "c1", answer: str = "B", person_id: str = "p1") -> dict:
@@ -162,15 +172,23 @@ class RunnerEnv:
             "response_id": f"fake-{len(self.received)}",
             "provider": kw.get("provider"),
             "model": kw.get("model"),
+            "requested_model": kw.get("model"),
+            "response_model": None,
+            "thinking_mode": kw.get("thinking_mode"),
         }
         return payload, meta
 
     # ---- 运行 ----
     def run(self, resume: bool = False, model: str = "deepseek-chat",
             scheduled_calls: int | None = None, hard_cap: int | None = None,
-            profile: str | None = None, extra_argv: list[str] | None = None) -> int:
+            profile: str | None = None, thinking_mode: str | None = None,
+            extra_argv: list[str] | None = None) -> int:
         import run_benchmark_proxy  # tests 内薄封装：转发到 benchmark.runners.run_benchmark.main(argv)
-        self.monkeypatch.setattr("claude_api.call_model_messages_sync_with_meta", self._fake_call_with_meta)
+        import claude_api
+        # 条件 patch（执行偏离，见模块 docstring）：测试已自行 patch 时保留其 fake
+        if claude_api.call_model_messages_sync_with_meta is _REAL_CALL_WITH_META:
+            self.monkeypatch.setattr(
+                "claude_api.call_model_messages_sync_with_meta", self._fake_call_with_meta)
         argv = ["--dataset", str(self.dataset), "--model-runner", "--provider", "deepseek",
                 "--model", model, "--case-details-jsonl", str(self.detail),
                 "--output-dir", str(self.tmp)]
@@ -182,6 +200,8 @@ class RunnerEnv:
             argv += ["--hard-cap", str(hard_cap)]
         if profile:
             argv += ["--profile", profile]
+        if thinking_mode is not None:
+            argv += ["--thinking-mode", thinking_mode]
         argv += extra_argv or []
         return run_benchmark_proxy.main(argv)
 
