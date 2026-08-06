@@ -1614,6 +1614,16 @@ def _parse_dataset_path_args(args_list):
     return result
 
 
+def _json_safe(obj):
+    """递归净化 JSON 序列化目标：tuple 键转 str（delta_by_year_repeat 等），
+    Path 等非标值经 default=str 处理（main 末尾结果打印用）。"""
+    if isinstance(obj, dict):
+        return {str(k): _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+    return obj
+
+
 def main():
     parser = argparse.ArgumentParser(description="Phase 6 6B2 orchestrator")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -1649,7 +1659,7 @@ def main():
         result = run_2023_final(args.provider, args.model, args.output_dir,
                                 args.reuse_receipt, dataset_paths=ds_paths, run_id=args.run_id,
                                 resume=args.resume)
-    print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
+    print(json.dumps(_json_safe(result), ensure_ascii=False, indent=2, default=str))
 
 
 if __name__ == "__main__":
