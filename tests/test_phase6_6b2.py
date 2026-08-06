@@ -2915,3 +2915,48 @@ class TestV4FlashNonThinkingChain:
             self._run_dev(m, paths, tmp_path)
         assert len(seen) == 1
         assert any("smoke_" in str(arg) for arg in seen[0])
+
+
+class TestB1cShaNewlineInsensitive:
+    """P0 fix: B1-c SHA must be invariant under CRLF/LF normalization.
+
+    A fresh clone from Git gets LF line endings; a Windows checkout may get
+    CRLF. Both must produce the same SHA after normalization."""
+
+    def test_crlf_and_lf_produce_same_sha(self, tmp_path, monkeypatch):
+        import scripts.phase6_6b2_orchestrator as m
+        import hashlib
+
+        content_lines = [
+            json.dumps({"attempt_key": ["d", "p", "b1c", "main", "deepseek",
+                                         "model", "case1", 0, 0, "p0"]}),
+            json.dumps({"attempt_key": ["d", "p", "b1c", "main", "deepseek",
+                                         "model", "case2", 0, 0, "p0"]}),
+        ]
+        lf_content = "\n".join(content_lines) + "\n"
+        crlf_content = lf_content.replace("\n", "\r\n")
+
+        lf_path = tmp_path / "b1c_lf.jsonl"
+        crlf_path = tmp_path / "b1c_crlf.jsonl"
+        lf_path.write_bytes(lf_content.encode("utf-8"))
+        crlf_path.write_bytes(crlf_content.encode("utf-8"))
+
+        lf_norm = lf_content.encode("utf-8").replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+        crlf_norm = crlf_content.encode("utf-8").replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+        expected_sha = hashlib.sha256(lf_norm).hexdigest()
+
+        assert lf_norm == crlf_norm, "LF and CRLF should normalize to identical bytes"
+        assert hashlib.sha256(lf_norm).hexdigest() == hashlib.sha256(crlf_norm).hexdigest()
+
+        monkeypatch.setattr(m, "B1C_ARCHIVE_PATH", str(crlf_path))
+        monkeypatch.setattr(m, "B1C_EXPECTED_SHA256", expected_sha)
+        result = m.load_b1c_advisory()
+        assert result["sha256"] == expected_sha
+        assert result["count"] == 2
+
+    def test_real_b1c_file_passes_with_normalization(self):
+        """The actual B1-c archive must pass SHA check with normalization."""
+        import scripts.phase6_6b2_orchestrator as m
+        result = m.load_b1c_advisory()
+        assert result["sha256"] == m.B1C_EXPECTED_SHA256
+        assert result["count"] > 0

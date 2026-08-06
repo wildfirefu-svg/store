@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Phase 6 6B2 orchestrator - dual-system judge experiment protocol v18.
 
 Implements Task 10-14, 16, 17b per APPROVED v18 plan.
@@ -41,7 +41,7 @@ SMOKE_CASES_PER_GROUP = 2
 SMOKE_PARSER_RATE_MIN = 0.95
 
 B1C_ARCHIVE_PATH = "docs/phase6/6b1/6b1-2026-07-17-deepseek-deepseek-chat-78481de6/merged_details.jsonl"
-B1C_EXPECTED_SHA256 = "10e6b82f92fabd02b7e621b714d330a812f16e6b7aac7ad98adf4a0dd494eafa"
+B1C_EXPECTED_SHA256 = "d3802b6f21cace91f28ec2ee417f33e6815e660121482871e7f41af39f10085d"
 ARCHIVE_ROOT = "docs/phase6/6b2"
 
 # ── Frozen V4-Flash non-thinking protocol (single source of truth) ──
@@ -712,10 +712,12 @@ def load_b1c_advisory():
     if not os.path.exists(path):
         raise SystemExit(f"B1-c 归档不存在: {path} (fail-closed)")
     with open(path, "rb") as f:
-        sha = _h.sha256(f.read()).hexdigest()
+        raw = f.read()
+    normalized = raw.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    sha = _h.sha256(normalized).hexdigest()
     if sha != B1C_EXPECTED_SHA256:
         raise SystemExit(f"B1-c SHA-256 不匹配: {sha} != {B1C_EXPECTED_SHA256} (fail-closed)")
-    rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
+    rows = [json.loads(l) for l in normalized.decode("utf-8").splitlines() if l.strip()]
     b1c = [r for r in rows if r.get("attempt_key", [None] * 10)[2] == "b1c"]
     return {"path": path, "sha256": sha, "count": len(b1c), "rows": b1c}
 
