@@ -1,0 +1,453 @@
+{
+  "year": "2025",
+  "paired_cells": 120,
+  "baseline_correct": 29,
+  "dual_correct": 36,
+  "baseline_accuracy": 0.24166666666666667,
+  "dual_accuracy": 0.3,
+  "delta": 0.058333333333333334,
+  "transitions": {
+    "both_correct": 19,
+    "regression": 10,
+    "both_wrong": 74,
+    "rescue": 17
+  },
+  "final_source": {
+    "judge": 70,
+    "consensus": 50
+  },
+  "naive_exact_paired_binomial_p": 0.24778856337070465,
+  "statistical_caveat": "Attempts are repeated measures over 40 cases; this naive cell-level p-value is descriptive, not independent-case significance.",
+  "domains": [
+    {
+      "domain": "annual_fortune",
+      "n": 6,
+      "baseline_correct": 1,
+      "dual_correct": 0,
+      "both_wrong": 5,
+      "regression": 1,
+      "baseline_accuracy": 0.16666666666666666,
+      "dual_accuracy": 0.0,
+      "delta": -0.16666666666666666
+    },
+    {
+      "domain": "career",
+      "n": 27,
+      "baseline_correct": 8,
+      "dual_correct": 6,
+      "regression": 4,
+      "both_wrong": 17,
+      "rescue": 2,
+      "both_correct": 4,
+      "baseline_accuracy": 0.2962962962962963,
+      "dual_accuracy": 0.2222222222222222,
+      "delta": -0.07407407407407407
+    },
+    {
+      "domain": "family",
+      "n": 12,
+      "baseline_correct": 2,
+      "dual_correct": 5,
+      "rescue": 3,
+      "both_wrong": 7,
+      "both_correct": 2,
+      "baseline_accuracy": 0.16666666666666666,
+      "dual_accuracy": 0.4166666666666667,
+      "delta": 0.25
+    },
+    {
+      "domain": "health",
+      "n": 9,
+      "baseline_correct": 2,
+      "dual_correct": 2,
+      "both_wrong": 6,
+      "both_correct": 1,
+      "rescue": 1,
+      "regression": 1,
+      "baseline_accuracy": 0.2222222222222222,
+      "dual_accuracy": 0.2222222222222222,
+      "delta": 0.0
+    },
+    {
+      "domain": "relationship",
+      "n": 21,
+      "baseline_correct": 3,
+      "dual_correct": 7,
+      "rescue": 4,
+      "both_wrong": 14,
+      "both_correct": 3,
+      "baseline_accuracy": 0.14285714285714285,
+      "dual_accuracy": 0.3333333333333333,
+      "delta": 0.19047619047619047
+    },
+    {
+      "domain": "study",
+      "n": 3,
+      "baseline_correct": 1,
+      "dual_correct": 3,
+      "both_correct": 1,
+      "rescue": 2,
+      "baseline_accuracy": 0.3333333333333333,
+      "dual_accuracy": 1.0,
+      "delta": 0.6666666666666666
+    },
+    {
+      "domain": "unknown",
+      "n": 42,
+      "baseline_correct": 12,
+      "dual_correct": 13,
+      "both_correct": 8,
+      "both_wrong": 25,
+      "rescue": 5,
+      "regression": 4,
+      "baseline_accuracy": 0.2857142857142857,
+      "dual_accuracy": 0.30952380952380953,
+      "delta": 0.023809523809523808
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "taiwan_female_19880215_P007-Q33",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 3,
+      "rescue": 3,
+      "net": 3
+    },
+    {
+      "case_id": "beijing_male_19700722_P008-Q36",
+      "n": 3,
+      "baseline_correct": 1,
+      "dual_correct": 3,
+      "both_correct": 1,
+      "rescue": 2,
+      "net": 2
+    },
+    {
+      "case_id": "hongkong_female_19870705_P002-Q10",
+      "n": 3,
+      "baseline_correct": 1,
+      "dual_correct": 3,
+      "rescue": 2,
+      "both_correct": 1,
+      "net": 2
+    },
+    {
+      "case_id": "beijing_male_19700722_P008-Q37",
+      "n": 3,
+      "baseline_correct": 2,
+      "dual_correct": 0,
+      "regression": 2,
+      "both_wrong": 1,
+      "net": -2
+    },
+    {
+      "case_id": "malaysia_male_19730824_P006-Q26",
+      "n": 3,
+      "baseline_correct": 3,
+      "dual_correct": 1,
+      "both_correct": 1,
+      "regression": 2,
+      "net": -2
+    },
+    {
+      "case_id": "guangdong_female_19511114_P001-Q2",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 1,
+      "rescue": 1,
+      "both_wrong": 2,
+      "net": 1
+    },
+    {
+      "case_id": "guangdong_female_19511114_P001-Q3",
+      "n": 3,
+      "baseline_correct": 1,
+      "dual_correct": 2,
+      "both_wrong": 1,
+      "both_correct": 1,
+      "rescue": 1,
+      "net": 1
+    },
+    {
+      "case_id": "malaysia_male_19730824_P006-Q27",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 1,
+      "rescue": 1,
+      "both_wrong": 2,
+      "net": 1
+    },
+    {
+      "case_id": "malaysia_male_19880110_P005-Q25",
+      "n": 3,
+      "baseline_correct": 2,
+      "dual_correct": 3,
+      "both_correct": 2,
+      "rescue": 1,
+      "net": 1
+    },
+    {
+      "case_id": "miyazaki_male_19830421_P003-Q15",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 1,
+      "both_wrong": 2,
+      "rescue": 1,
+      "net": 1
+    },
+    {
+      "case_id": "singapore_male_19930408_P004-Q16",
+      "n": 3,
+      "baseline_correct": 1,
+      "dual_correct": 2,
+      "both_wrong": 1,
+      "rescue": 1,
+      "both_correct": 1,
+      "net": 1
+    },
+    {
+      "case_id": "singapore_male_19930408_P004-Q17",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 1,
+      "both_wrong": 2,
+      "rescue": 1,
+      "net": 1
+    },
+    {
+      "case_id": "taiwan_female_19880215_P007-Q35",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 1,
+      "rescue": 1,
+      "both_wrong": 2,
+      "net": 1
+    },
+    {
+      "case_id": "guangdong_female_19511114_P001-Q5",
+      "n": 3,
+      "baseline_correct": 3,
+      "dual_correct": 2,
+      "both_correct": 2,
+      "regression": 1,
+      "net": -1
+    },
+    {
+      "case_id": "hongkong_female_19870705_P002-Q7",
+      "n": 3,
+      "baseline_correct": 1,
+      "dual_correct": 0,
+      "regression": 1,
+      "both_wrong": 2,
+      "net": -1
+    },
+    {
+      "case_id": "singapore_male_19930408_P004-Q20",
+      "n": 3,
+      "baseline_correct": 1,
+      "dual_correct": 0,
+      "both_wrong": 2,
+      "regression": 1,
+      "net": -1
+    },
+    {
+      "case_id": "taiwan_female_19880215_P007-Q32",
+      "n": 3,
+      "baseline_correct": 1,
+      "dual_correct": 0,
+      "regression": 1,
+      "both_wrong": 2,
+      "net": -1
+    },
+    {
+      "case_id": "beijing_male_19700722_P008-Q38",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "beijing_male_19700722_P008-Q39",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "beijing_male_19700722_P008-Q40",
+      "n": 3,
+      "baseline_correct": 3,
+      "dual_correct": 3,
+      "both_correct": 3,
+      "net": 0
+    },
+    {
+      "case_id": "guangdong_female_19511114_P001-Q1",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "guangdong_female_19511114_P001-Q4",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "hongkong_female_19870705_P002-Q6",
+      "n": 3,
+      "baseline_correct": 2,
+      "dual_correct": 2,
+      "both_correct": 1,
+      "rescue": 1,
+      "regression": 1,
+      "net": 0
+    },
+    {
+      "case_id": "hongkong_female_19870705_P002-Q8",
+      "n": 3,
+      "baseline_correct": 2,
+      "dual_correct": 2,
+      "rescue": 1,
+      "both_correct": 1,
+      "regression": 1,
+      "net": 0
+    },
+    {
+      "case_id": "hongkong_female_19870705_P002-Q9",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "malaysia_male_19730824_P006-Q28",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "malaysia_male_19730824_P006-Q29",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "malaysia_male_19730824_P006-Q30",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "malaysia_male_19880110_P005-Q21",
+      "n": 3,
+      "baseline_correct": 2,
+      "dual_correct": 2,
+      "both_correct": 2,
+      "both_wrong": 1,
+      "net": 0
+    },
+    {
+      "case_id": "malaysia_male_19880110_P005-Q22",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "malaysia_male_19880110_P005-Q23",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "malaysia_male_19880110_P005-Q24",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "miyazaki_male_19830421_P003-Q11",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "miyazaki_male_19830421_P003-Q12",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "miyazaki_male_19830421_P003-Q13",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "miyazaki_male_19830421_P003-Q14",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "singapore_male_19930408_P004-Q18",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "singapore_male_19930408_P004-Q19",
+      "n": 3,
+      "baseline_correct": 3,
+      "dual_correct": 3,
+      "both_correct": 3,
+      "net": 0
+    },
+    {
+      "case_id": "taiwan_female_19880215_P007-Q31",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    },
+    {
+      "case_id": "taiwan_female_19880215_P007-Q34",
+      "n": 3,
+      "baseline_correct": 0,
+      "dual_correct": 0,
+      "both_wrong": 3,
+      "net": 0
+    }
+  ]
+}
