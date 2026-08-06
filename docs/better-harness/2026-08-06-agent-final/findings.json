@@ -1,0 +1,97 @@
+{
+  "summary": {
+    "projectName": "agent",
+    "locale": "zh-CN",
+    "modelId": "agent-work-loop-v4",
+    "reportContractVersion": 25,
+    "overview": "本轮修复后未发现仍可由当前证据支持的具体可执行问题。项目资产基线为 0 lint/integrity findings；14 项 Harness 专项测试与 182 项八字核心路由测试通过；focused smoke、CI workflow configuration 与本地 runtime 均有可执行证据。完整测试状态和远程 CI 状态仍明确保持 UNVERIFIED。当前没有可用 Task Episode，因此不对代理行为与学习成效作推断。",
+    "aiAgentPractice": {
+      "inspectedSurfaces": [
+        "Rules",
+        "Skills",
+        "Workflows"
+      ],
+      "coverageRows": [
+        {
+          "surface": "Rules",
+          "scopes": [
+            "Project"
+          ],
+          "count": 1,
+          "paths": [
+            "AGENTS.md"
+          ]
+        },
+        {
+          "surface": "Skills",
+          "scopes": [
+            "Project"
+          ],
+          "count": 4,
+          "paths": [
+            ".qoder/skills/dev/SKILL.md",
+            ".qoder/skills/docker-up/SKILL.md",
+            ".qoder/skills/quality-check/SKILL.md",
+            ".qoder/skills/test-suite/SKILL.md"
+          ]
+        },
+        {
+          "surface": "Workflows",
+          "scopes": [
+            "Project"
+          ],
+          "count": 1,
+          "paths": [
+            ".github/workflows/ci.yml"
+          ]
+        },
+        {
+          "surface": "Custom Agents",
+          "scopes": [
+            "Project"
+          ],
+          "count": 0
+        }
+      ]
+    },
+    "assignmentSummaries": [],
+    "dimensions": [
+      {
+        "id": "task-understanding",
+        "label": "任务理解",
+        "score": 78,
+        "summary": "仓库规则、四个项目技能和验证入口已形成一致的任务路由；因无可用会话证据，不评价实际选择效果。",
+        "findingRefs": []
+      },
+      {
+        "id": "controlled-execution",
+        "label": "可控执行",
+        "score": 78,
+        "summary": "验证入口可移植、Windows 与 Docker 指令已校准，运行时检查使用动态端口并绑定新子进程。",
+        "findingRefs": []
+      },
+      {
+        "id": "change-validation",
+        "label": "改动验证",
+        "score": 82,
+        "summary": "Harness 自测、affected-tests、focused smoke、CI 配置校验和运行时健康检查均有可执行证据，声明边界与实际范围一致。",
+        "findingRefs": []
+      },
+      {
+        "id": "reliable-delivery",
+        "label": "可靠交付",
+        "score": 65,
+        "summary": "本地交付证据链完整；远程 CI 当前状态未接入本地证据，因此保持未验证而未被静态配置冒充。",
+        "findingRefs": []
+      },
+      {
+        "id": "learning-capture",
+        "label": "经验沉淀",
+        "score": 35,
+        "summary": "所选 Qoder 窗口没有 eligible Task Episode，无法评估技能使用、重复需求或修复后的长期成效。",
+        "findingRefs": []
+      }
+    ]
+  },
+  "findings": []
+}

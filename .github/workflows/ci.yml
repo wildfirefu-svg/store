@@ -35,14 +35,17 @@ jobs:
       - name: Syntax check (all Python files)
         run: |
           python -c "
-          import py_compile, glob, sys
+          import py_compile, sys
+          from pathlib import Path
           errors = []
-          for pattern in ['*.py', 'knowledge-base/*.py', 'tests/*.py']:
-              for f in glob.glob(pattern):
-                  try:
-                      py_compile.compile(f, doraise=True)
-                  except py_compile.PyCompileError as e:
-                      errors.append(str(e))
+          excluded = {'.git', '.venv', '.tmp', '.cache', '.pytest_cache', '__pycache__'}
+          for f in Path('.').rglob('*.py'):
+              if any(part in excluded for part in f.parts):
+                  continue
+              try:
+                  py_compile.compile(str(f), doraise=True)
+              except py_compile.PyCompileError as e:
+                  errors.append(str(e))
           if errors:
               print(f'{len(errors)} files failed to compile:')
               for e in errors:
@@ -63,3 +66,54 @@ jobs:
         run: |
           docker build -t xuanjizi-test .
           echo "Docker build succeeded"
+
+  affected-tests:
+    # Optional fast path: run only the tests mapped to changed files
+    # (see scripts/affected_tests.py). Failure here does not block the
+    # merge; the full `test` job above remains the authoritative gate.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Resolve affected tests
+        id: affected
+        run: |
+          BASE="origin/${{ github.base_ref }}"
+          if ! git rev-parse --verify "$BASE" >/dev/null 2>&1; then
+            BASE="HEAD~1"
+          fi
+          FILES=$(python scripts/affected_tests.py --base "$BASE")
+          echo "resolved: $FILES"
+          { echo "tests<<EOF"; echo "$FILES"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+
+      - name: Run affected tests
+        if: steps.affected.outputs.tests != '# no test mapping needed for changed files'
+        run: |
+          if [ "${{ steps.affected.outputs.tests }}" = "FULL_SUITE" ]; then
+            python -m pytest tests/ -q --tb=short --timeout=120
+          else
+            python -m pytest ${{ steps.affected.outputs.tests }} -q --tb=short --timeout=120
+          fi

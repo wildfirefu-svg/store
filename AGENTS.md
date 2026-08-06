@@ -1,7 +1,7 @@
 # AGENTS.md — 玄机子（XuanJiZi）项目代理规范
 
 > 面向本仓库所有编码代理（Kimi Code / Codex / Claude Code / Reasonix 等）的操作规范。**每个任务开始前先读本文件。**
-> 遵循 [AGENTS.md](https://agents.md) 开放标准。本仓库同时存在 `CLAUDE.md`（英文原版），二者保持一致，冲突时以本文件与用户显式指令为准。
+> 遵循 [AGENTS.md](https://agents.md) 开放标准。`CLAUDE.md` 仅含 Claude Code 专用补充，通用规则以本文件为准。
 
 **只交付可运行的代码。把活干完。看起来对 ≠ 正确。**
 
@@ -68,26 +68,13 @@ docker-compose up --build
 
 ---
 
-## 4. 目录结构
+## 4. 目录要点（高风险 / 必须知道）
 
-| 路径 | 说明 |
-|---|---|
-| `api_server.py` | FastAPI REST 服务入口 |
-| `mcp_server.py` | MCP 服务入口 |
-| `bazi_calculator.py` | 八字排盘核心引擎（四柱/神煞/大运/紫微） |
-| `prompt_engine.py` / `rag_prompt_builder.py` | Prompt 组装与 RAG 提示构建 |
-| `report_builder.py` / `report_to_pdf.py` | 报告渲染与 PDF 生成 |
-| `case_index.py` / `case_dense_index.py` / `case_reranker.py` / `hybrid_retrieval.py` | 案例检索、稠密索引、重排、混合检索与证据评分 |
-| `knowledge-base/` | SQLite 知识库与传统命理工具（格局/合婚/流年/神煞等） |
-| `benchmark/` | 评测框架（BaziQA + MingLi-Bench），含 `datasets/`、`formatters/`、`outputs/` |
-| `scripts/` | 离线评估、数据构建、消融实验、质量门禁脚本 |
-| `prompts/` | 各模式 prompt 模板（general/hehun/liunian/name/结构化推理） |
-| `quality/` | 模型质量测试与报告 |
-| `tests/` | 单元测试与集成测试 |
-| `docs/` | 架构、审计报告、实验报告；`docs/superpowers/{specs,plans}/` 是设计与实施计划 |
-| `static/` / `templates/` | 前端资源与页面模板 |
-
-**不要修改**：与当前任务无关的用户文件；被跟踪的数据/二进制产物（如 `knowledge-base/*.json`、`tests/case_db.json`、`data/*.json`、`benchmark/datasets/*.jsonl`）；`.tmp/`、`.cache/`、`.chromadb_case_index/` 等运行产物目录。
+- `bazi_calculator.py` 是排盘核心引擎；`scripts/` 含验证与门禁脚本（见第 9 节），两者变更受核心代码边界约束。
+- 设计与实施计划在 `docs/superpowers/{specs,plans}/`，动手前先看对应文档。
+- **不要修改**：被跟踪的数据产物（`knowledge-base/*.json`、`tests/case_db.json`、`data/*.json`、`benchmark/datasets/*.jsonl`）。
+- **不要碰**：`.tmp/`、`.cache/`、`.chromadb_case_index/` 等运行产物目录，以及与当前任务无关的用户文件。
+- 其余结构直接用工具探索，不在此维护全量目录表。
 
 ---
 
@@ -142,18 +129,47 @@ docker-compose up --build
 
 ---
 
-## 9. 与 Superpowers 技能协同
+## 9. 可执行验证入口（harness / agent 可直接触发）
+
+以下脚本由代理或 harness 运行，产出 passed/ok 或具体失败信息，并写入 `.better-harness/verified-claims.json` 供 `core-change-watch` 证据包消费。它们只消除本地实际验证过的声明；远程 CI 状态仍须由 CI 平台证据单独确认。
+
+| 声明 | 命令 | 验证内容 |
+|------|------|----------|
+| focused smoke tests passed | `python scripts/verify_smoke.py` | 运行 pytest 聚焦 smoke 测试（四柱 + 前端资产），不代表全量测试通过 |
+| CI workflow configuration | `python scripts/verify_ci.py` | 校验 `.github/workflows/ci.yml` 结构与 pytest 步骤，不代表远程 CI 已通过 |
+| runtime behavior | `python scripts/verify_runtime.py` | 启动 `api_server.py` 并检查 `/api/health` |
+
+一键生成已验证证据包：
+
+```
+python scripts/run_verified_evidence_pack.py [.qoder/better-harness/<run-dir>]
+```
+
+该命令会依次运行上述三个验证脚本、合并为 `verified-claims.json`、调用 `core-change-watch evidence-pack`、并自动把验证结果写入 evidence pack 的 `reviewMatrix` 与 `evidenceSources`。
+
+按变更范围选测试（affected-tests 门控）：
+
+```
+python scripts/affected_tests.py            # git diff 路径 → 最小 pytest 文件列表
+python scripts/affected_tests.py --run      # 顺带执行选中的测试
+```
+
+CI 中的可选 `affected-tests` 作业（`continue-on-error`）即调用此脚本；全量 `test` 作业仍是合并门禁。
+
+---
+
+## 10. 与 Superpowers 技能协同
 
 本机已装 Superpowers 技能。**动手前先判断是否有技能适用**，命中就先读其 `SKILL.md` 并遵循：
 
 - "做个 X" → 先 `brainstorming`；"修 bug" → 先 `systematic-debugging`。
 - 有设计 → `writing-plans` 拆 TDD 小任务；执行 → `subagent-driven-development` + `test-driven-development`；收尾 → `finishing-a-development-branch`。
 - 本仓库的设计/计划沉淀在 `docs/superpowers/{specs,plans}/`，动手前先看对应文档。
-- 另有项目自带 `.reasonix/skills/`（`dev`、`docker-up`、`quality-check`、`test-suite`）可直接复用。
+- 另有项目自带 `.reasonix/skills/`（`dev`、`docker-up`、`quality-check`、`test-suite`）可直接复用；在 qoder provider 下这些技能已同步注册到 `.qoder/skills/`，供当前 agent 资产层发现。
 
 ---
 
-## 10. Git 与工作区
+## 11. Git 与工作区
 
 - 主分支保持稳定基线；功能开发优先用功能分支或 `git worktree` 隔离。
 - 提交信息说明"为什么改"（主题 <72 字符，正文讲动机），遵循语义化提交；不写"update file""fix bug"这类空信息；不加 `Co-Authored-By` 除非项目明确要求。
@@ -163,7 +179,7 @@ docker-compose up --build
 
 ---
 
-## 11. 沟通风格
+## 12. 沟通风格
 
 - 直接，不外交辞令："这样不行，因为 X"胜过"这思路挺有意思，不过……"。
 - 默认简洁：两三段短文，除非用户要深入。不复述问题、不加仪式性结尾、不堆无谓的标题/emoji。
@@ -172,7 +188,7 @@ docker-compose up --build
 
 ---
 
-## 12. 何时问、何时干
+## 13. 何时问、何时干
 
 **先问**：需求有两种合理解读且影响结果；改动触及被告知是"承重/带迁移路径"的部分；需要你没有的凭据/密钥/生产资源；用户目标与字面需求冲突。
 
@@ -180,7 +196,7 @@ docker-compose up --build
 
 ---
 
-## 13. Project Learnings（由代理维护）
+## 14. Project Learnings（由代理维护）
 
 用户纠正你的做法后，在此追加一行**具体**规则（"总是用 X 做 Y"，而非"注意 Y"）。已有行能覆盖就收紧它而不是新增；问题消失（模型升级/重构）就删除对应行。保持精简——本文件越短越会被认真执行（建议 <300 行）。
 

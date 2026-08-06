@@ -29,8 +29,14 @@ _v2*
 debug.log
 .agents/
 .codex/
-.qoder/
+.qoder/*
+!.qoder/skills/
+!.qoder/skills/**
 .vscode/
+
+# Better Harness generated verification results (keep .better-harness/core-code tracked)
+.better-harness/*.result.json
+.better-harness/verified-claims.json
 
 build/
 dist/
@@ -44,8 +50,20 @@ quality/model_quality_report.json
 benchmark/outputs/baziqa_smoke_*.md
 benchmark/outputs/run_*.md
 
+# Benchmark run outputs (untracked runtime artifacts, keep diff noise out)
+benchmark/outputs/phase6_*/
+benchmark/outputs/phase6_*.log
+
+# Run logs and scratch analysis artifacts
+logs/
+task8_test_block.py
+
 # 真实 BaziQA 数据集导入产物 (从 F:\project\BaziQA 本地生成，不入仓)
 benchmark/datasets/baziqa_contest8_*.jsonl
+
+# Phase6 benchmark run outputs under docs (runtime artifacts)
+docs/phase6/*/runs/
+docs/phase6/6b2/
 
 # smoke 脚本自动生成的 fixture jsonl (源 fixture 是 .json)
 tests/fixtures/baziqa/contest8_sample.jsonl
