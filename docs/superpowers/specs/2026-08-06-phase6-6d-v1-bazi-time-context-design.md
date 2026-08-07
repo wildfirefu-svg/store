@@ -4,7 +4,7 @@
 **状态：** 修订版（v6），待确认
 **适用范围：** Phase 6 6D v1 时间定位题的确定性上下文注入
 **前置依赖：** 6B2 ROLLBACK 证据归档（commit `acb63a1`）
-**修订历史：** v1 -> v2（5 阻断）-> v3（4P0+3中优）-> v4（5P0+3中优）-> v5（4P0+3中优）-> v6（2P0+4中优）-> v6.1（1P0+1低优）-> v6.2（2设计勘误：AB/BA 粒度 + 双年度 dataset SHA）
+**修订历史：** v1 -> v2（5 阻断）-> v3（4P0+3中优）-> v4（5P0+3中优）-> v5（4P0+3中优）-> v6（2P0+4中优）-> v6.1（1P0+1低优）-> v6.2（2设计勘误：AB/BA 粒度 + 双年度 dataset SHA）-> v6.3（1设计勘误：SHA-256 AB/BA 算法 + 映射入 provenance）
 
 ## 1. 背景与决策
 
@@ -304,11 +304,16 @@ ROLLBACK:          paired_delta < -0.02
 
 AB/BA 在 **group-pair 级** 而非 case 级：
 
-- 每个 group 按 `hash(year, group_idx) % 2` 决定该组 off/on 执行顺序
-- hash=0：该组先跑 off slice，再跑 on slice（AB 顺序）
-- hash=1：该组先跑 on slice，再跑 off slice（BA 顺序）
+- 每个 group 按稳定 SHA-256 算法决定 off/on 执行顺序（**v6.3 修正：不用 Python `hash()`，因其受 `PYTHONHASHSEED` 影响不可跨进程复现**）：
+  ```python
+  key = f"{year}:{group_idx}".encode("utf-8")
+  parity = hashlib.sha256(key).digest()[0] & 1
+  ```
+- parity=0：该组先跑 off slice，再跑 on slice（AB 顺序）
+- parity=1：该组先跑 on slice，再跑 off slice（BA 顺序）
 - 不拆 slice，保持现有分组（2024: 3 groups, 2025: 2 groups）和 486 预算
 - 实际 subprocess 调用序列必须可审计
+- **五个 group 的最终 AB/BA 映射写入 condition manifest、run context、receipt 和 audit，resume 时交叉核对（v6.3 新增）**
 
 ### 7.2b 双年度 dataset SHA（v6.2 勘误）
 
