@@ -4,7 +4,7 @@
 **状态：** 修订版（v6），待确认
 **适用范围：** Phase 6 6D v1 时间定位题的确定性上下文注入
 **前置依赖：** 6B2 ROLLBACK 证据归档（commit `acb63a1`）
-**修订历史：** v1 -> v2（5 阻断）-> v3（4P0+3中优）-> v4（5P0+3中优）-> v5（4P0+3中优）-> v6（2P0+4中优）
+**修订历史：** v1 -> v2（5 阻断）-> v3（4P0+3中优）-> v4（5P0+3中优）-> v5（4P0+3中优）-> v6（2P0+4中优）-> v6.1（1P0+1低优）-> v6.2（2设计勘误：AB/BA 粒度 + 双年度 dataset SHA）
 
 ## 1. 背景与决策
 
@@ -281,6 +281,8 @@ ROLLBACK:          paired_delta < -0.02
 | run 级 | `extraction_strategy_sha256` | str | manifest / run_context / receipt / audit |
 | run 级 | `temporal_routed_cases_sha256` | str | manifest / run_context / receipt / audit |
 | run 级 | `condition_manifest_sha256` | str | manifest / run_context / receipt / audit |
+| run 级 | `dataset_sha256_by_year` | dict `{"2024":"...","2025":"..."}` | manifest / run_context / receipt / audit |
+| run 级 | `dataset_set_sha256` | str（`dataset_sha256_by_year` canonical JSON 的 SHA） | manifest / run_context / receipt / audit |
 | slice 级 | `time_context_injection` | `"on"`/`"off"` | slice manifest |
 | slice 级 | `arm` | `b1a_time_off`/`b1a_time_on` | slice manifest |
 | case/detail 级 | `temporal_route_state` | 三态 | detail.jsonl 每行 |
@@ -297,6 +299,26 @@ ROLLBACK:          paired_delta < -0.02
 - 检查点在 6D orchestrator 的 `_prepare_run_context`
 - 6D run 不允许 resume 任何 6B2 run（不同 orchestrator）
 - **off slice 不能 resume on slice**，反之亦然（slice 级隔离，非 run 级，因为 paired run 同时含两条件）
+
+### 7.2a AB/BA 调度粒度（v6.2 勘误）
+
+AB/BA 在 **group-pair 级** 而非 case 级：
+
+- 每个 group 按 `hash(year, group_idx) % 2` 决定该组 off/on 执行顺序
+- hash=0：该组先跑 off slice，再跑 on slice（AB 顺序）
+- hash=1：该组先跑 on slice，再跑 off slice（BA 顺序）
+- 不拆 slice，保持现有分组（2024: 3 groups, 2025: 2 groups）和 486 预算
+- 实际 subprocess 调用序列必须可审计
+
+### 7.2b 双年度 dataset SHA（v6.2 勘误）
+
+6B2 的 `dataset_sha256` 是单值，6D 同时使用 2024+2025 两个 dataset，不兼容。v6.2 改为：
+
+- `dataset_sha256_by_year`：dict，key 为年份字符串，value 为该年 dataset SHA-256
+- `dataset_set_sha256`：对 `dataset_sha256_by_year` 做 canonical JSON（`json.dumps(..., sort_keys=True, ensure_ascii=False, separators=(",",":"))`）后取 SHA-256
+- 两字段同时进入 manifest / run_context / receipt / audit
+- 四处交叉核对，任何缺失或漂移 fail-closed
+- 不继承 6B2 的单值 `dataset_sha256` 字段语义
 
 ### 7.3 可见性矩阵扩展（按三态分别定义）
 
@@ -392,7 +414,7 @@ canonical JSON：`json.dumps(obj, sort_keys=True, ensure_ascii=False, separators
 | temperature | 0.0 |
 | arm off | `b1a_time_off`（`ziwei_arm=none`，slice `time_context_injection=off`） |
 | arm on | `b1a_time_on`（`ziwei_arm=none`，slice `time_context_injection=on`） |
-| 调度 | AB/BA 平衡：每 case 在 off/on 间交替首跑顺序，按 case_id hash 分配 |
+| 调度 | **group-pair 级 AB/BA**：按 group hash 决定整组 off/on 执行顺序（保持现有分组和 486 预算，不拆 slice） |
 | per-slice scheduled | 真实题数（8/5/2） |
 | per-slice hard_cap | `compute_hard_cap(scheduled)` |
 | global scheduled | 186 |

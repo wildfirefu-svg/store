@@ -177,6 +177,7 @@
 - [ ] 5.3 RED：写 `test_offline_gate_atomic_write`：写入是原子的（`.tmp` + rename）
 - [ ] 5.4 RED：写 `test_offline_gate_dataset_sha_verified`：每项 dataset_sha256 与实际文件 SHA 一致
 - [ ] 5.5 RED：写 `test_offline_gate_n_31`：2024(18) + 2025(13) = 31
+- [ ] 5.5a RED：写 `test_offline_gate_blocks_when_n_below_20`：若 N < 20，离线门输出 BLOCKED，不生成 routed manifest
 - [ ] 5.6 GREEN：实现 `scripts/phase6_6d_offline_gate.py`
   - CLI：`python scripts/phase6_6d_offline_gate.py --datasets 2024,2025 --output docs/phase6/6d/temporal_routed_cases.json`
   - 读取数据集，对每 case 调 `detect_temporal_rules` + `extract_target_years` + `classify_route_state`
@@ -235,31 +236,33 @@
 - [ ] 7.7 RED：写端到端测试 `test_cli_to_prompt_off_on_different`：CLI `--time-context-injection off` vs `on` 生成不同 prompt（off 无时空块，on 有时空块）
 - [ ] 7.7a RED：写 `test_prompt_diff_only_in_temporal_block`：off/on prompt 差异**仅限** temporal context 段（diff 前后非 temporal 部分逐字节一致）
 - [ ] 7.8 RED：写 `test_detail_records_time_context_sha256`：detail.jsonl 每行含 `time_context_sha256`（case 级 provenance）
-- [ ] 7.8a RED：写 `test_detail_records_temporal_route_state`：detail.jsonl 每行含 `temporal_route_state`（三态之一）
+- [ ] 7.7b RED：写 `test_runner_receives_temporal_routed_cases_file`：runner CLI 接受 `--temporal-routed-cases-file` 参数，按 `(year, case_id)` 查表获取 route_state
+- [ ] 7.7c RED：写 `test_runner_manifest_includes_routed_cases_sha`：resume manifest 含 `temporal_routed_cases_sha256`，与冻结文件 SHA 一致
+- [ ] 7.7d RED：写 `test_runner_route_state_matches_frozen_manifest`：runner 本地不重算 route_state，必须与冻结 manifest 一致，不一致即阻断
+- [ ] 7.8a RED：写 `test_detail_records_temporal_route_state`：detail.jsonl 每行含 `temporal_route_state`（三态之一，从冻结 manifest 查表）
 - [ ] 7.8b RED：写 `test_detail_sha_on_routed_is_actual_context_sha`：on + ROUTED_WITH_TARGETS 时 `time_context_sha256` = 实际 TimeContext.sha256()
 - [ ] 7.8c RED：写 `test_detail_sha_on_not_routed_is_null`：on + NOT_ROUTED 时 `time_context_sha256` = null
 - [ ] 7.8d RED：写 `test_detail_sha_on_without_targets_is_actual_context_sha`：on + ROUTED_WITHOUT_TARGETS 时 `time_context_sha256` = 实际 TimeContext.sha256()（含大运排布但无目标流年）
 - [ ] 7.8e RED：写 `test_detail_sha_off_is_null`：off 时 `time_context_sha256` = null（不计算 TimeContext）
+- [ ] 7.8f RED：写 `test_detail_route_state_invariant_to_injection`：同一 case 的 off/on 记录**相同** `temporal_route_state`（route_state 是题目属性，不随 injection 变化）
+- [ ] 7.8g RED：写 `test_detail_off_on_route_state_pair`：paired detail 中 off 和 on 的 route_state 必须一致，否则 provenance 矛盾
 - [ ] 7.9 GREEN：在 `Phase6Context.__init__` 加 `time_context_injection=None` 参数
 - [ ] 7.10 GREEN：在 `RESUME_MANIFEST_FIELDS` 加 `"time_context_injection"`
 - [ ] 7.11 GREEN：在 `_REASONED_ARM_MAP` 加 `"b1a_time_off": "none"` 和 `"b1a_time_on": "none"`
 - [ ] 7.12 GREEN：在 `_CODE_SCOPE` 加 `"benchmark/formatters/bazi_time_context.py"`
 - [ ] 7.13 GREEN：改造 `_prepare_prompt` / `format_reasoned_choice_prompt`：从 `Phase6Context.time_context_injection` 读取并传入 `render_reasoned_context`
 - [ ] 7.14 GREEN：加 CLI `--time-context-injection {off,on}` flag（默认 off），传入 Phase6Context
-- [ ] 7.15 GREEN：在 detail 写入时追加 `time_context_sha256` 和 `temporal_route_state`；SHA 语义：on+routed=实际 SHA，on+NOT_ROUTED=null，off=null
-- [ ] 7.15a GREEN：实现 `compute_detail_provenance(case, time_context_injection) -> (route_state, sha256_or_null)`：off 时返回 (NOT_ROUTED, None)；on 时调 build_time_context 并按 route_state 返回 SHA 或 None
+- [ ] 7.15 GREEN：在 detail 写入时追加 `time_context_sha256` 和 `temporal_route_state`；**route_state 是题目属性，off/on 相同**；SHA 语义：on+routed=实际 SHA，on+NOT_ROUTED=null，off=null
+- [ ] 7.15a GREEN：实现 `compute_detail_provenance(case, route_state, time_context_injection) -> sha256_or_null`：route_state 从冻结 manifest 查表（不随 injection 变化）；off 时返回 None；on 时按 route_state 返回 SHA 或 None
 - [ ] 7.16 GREEN：运行 `python -m pytest tests/test_phase6_6b2.py tests/test_phase6_profiles.py tests/test_claude_api.py -q`，确认无破坏
 - [ ] 7.17 GREEN：运行 Phase 6 广泛回归，确认无新增失败
 - [ ] 7.18 COMMIT：`feat(6d): wire time_context_injection through runner full chain`
 
-- [ ] 7.18a RED：写 `test_run_manifest_contains_all_temporal_fields`：run manifest 含 `temporal_context_version` / `experiment_conditions` / `extraction_strategy_sha256` / `temporal_routed_cases_sha256` / `condition_manifest_sha256`
-- [ ] 7.18b RED：写 `test_run_context_matches_manifest`：run_context.json 与 run manifest 同源（5 个 temporal 字段一致）
-- [ ] 7.18c RED：写 `test_audit_index_contains_temporal_fields`：audit_index.json 含 5 个 temporal run 级字段
-- [ ] 7.18d GREEN：实现 `build_run_manifest(...)`：含 5 个 temporal run 级字段
-- [ ] 7.18e GREEN：实现 run_context / audit 写入时与 manifest 同源
-- [ ] 7.18f GREEN：运行 `python -m pytest tests/test_phase6_6b2.py tests/test_phase6_profiles.py tests/test_claude_api.py -q`，确认无破坏
+- [ ] 7.18 GREEN：运行 `python -m pytest tests/test_phase6_6b2.py tests/test_phase6_profiles.py tests/test_claude_api.py -q`，确认无破坏
 
-**验证：** CLI -> Phase6Context -> prompt 端到端贯通；off/on 生成不同 prompt；resume manifest fail-closed；detail 含 case 级 SHA + route_state；run manifest / run_context / audit 同源含 5 个 temporal 字段。
+**验证：** CLI -> Phase6Context -> prompt 端到端贯通；off/on 生成不同 prompt（仅 temporal 段差异）；resume manifest fail-closed（含 `time_context_injection`）；detail 含 case 级 SHA + route_state（off/on route_state 相同）；runner 接入冻结 routed manifest。
+
+> **注：** run manifest / run_context / audit 的 temporal 字段实现移到 Task 8（orchestrator 创建后）。
 
 ---
 
@@ -270,7 +273,7 @@
 - [ ] 8.1 RED：写 `test_6d_schedule_per_year_grouping`：2024->3 groups(8,8,2)，2025->2 groups(8,5)
 - [ ] 8.2 RED：写 `test_6d_schedule_tail_group_scheduled`：尾组 scheduled=真实题数（2 或 5）
 - [ ] 8.3 RED：写 `test_6d_schedule_global_scheduled_186`：global scheduled = 31×2×3 = 186
-- [ ] 8.4 RED：写 `test_6d_schedule_global_hard_cap_486`：global hard_cap = 486（精确值，2.61× 上限）
+- [ ] 8.4 RED：写 `test_6d_schedule_global_hard_cap_486`：global hard_cap = 486（精确值，2.61× 上限，group-pair 级 AB/BA 不拆 slice）
 - [ ] 8.5 RED：写 `test_6d_schedule_off_on_arms`：每 slice arm 是 `b1a_time_off` 或 `b1a_time_on`
 - [ ] 8.6 RED：写 `test_6d_runner_command_construction`：每 slice 生成正确的 `python -m benchmark.runners.run_benchmark` 命令（含 `--time-context-injection`、`--model deepseek-v4-flash`、`--thinking-mode disabled`、`--temperature 0.0`、`--profile baziqa_xjz_reasoned`、`--method direct_choice`、`--ziwei-arm none`）
 - [ ] 8.6a RED：写 `test_6d_frozen_protocol_rejects_non_frozen_model`：model != deepseek-v4-flash -> SystemExit
@@ -278,13 +281,16 @@
 - [ ] 8.6c RED：写 `test_6d_frozen_protocol_rejects_non_frozen_temperature`：temperature != 0.0 -> SystemExit
 - [ ] 8.6d RED：写 `test_6d_frozen_protocol_rejects_non_frozen_profile`：profile != baziqa_xjz_reasoned -> SystemExit
 - [ ] 8.6e RED：写 `test_6d_frozen_protocol_rejects_non_frozen_method`：method != direct_choice -> SystemExit
-- [ ] 8.6f RED：写 `test_6d_abba_scheduling_balanced`：按 case_id hash 分配 AB/BA 首跑顺序，off/on 交替平衡
+- [ ] 8.6f RED：写 `test_6d_abba_group_pair_level`：按 `hash(year, group_idx) % 2` 决定整组 off/on 执行顺序（group-pair 级，不拆 slice）
+- [ ] 8.6f1 RED：写 `test_6d_abba_actual_subprocess_sequence`：断言实际 subprocess 调用序列符合 AB/BA 分配（不只测辅助函数返回值）
 - [ ] 8.6g RED：写 `test_6d_resume_protocol_drift_fail_closed`：resume 时 model/thinking/temperature/profile/method 漂移 -> fail-closed
 - [ ] 8.7 RED：写 `test_6d_budget_ledger`：BudgetLedger 记录 scheduled/hard_cap/calls_attempted，恢复后剩余预算正确
 - [ ] 8.8 RED：写 `test_6d_merge_details`：off+on details 合并为 paired 结构
 - [ ] 8.9 RED：写 `test_6d_completeness_check`：每 (year,repeat,case_id) 恰一条 off/main + on/main
 - [ ] 8.10 RED：写 `test_6d_receipt_fields`：receipt 含 6B2 全部字段 + 5 个 temporal run 级字段
-- [ ] 8.10a RED：写 `test_6d_provenance_cross_validation`：run manifest == run_context == receipt == audit，5 个 temporal 字段任何缺失或漂移均拒绝
+- [ ] 8.10a RED：写 `test_6d_provenance_cross_validation`：run manifest == run_context == receipt == audit，7 个 temporal run 级字段（含 `dataset_sha256_by_year` + `dataset_set_sha256`）任何缺失或漂移均拒绝
+- [ ] 8.10b RED：写 `test_6d_dataset_sha256_by_year_dual_year`：`dataset_sha256_by_year` = `{"2024":"<sha>","2025":"<sha>"}`，`dataset_set_sha256` = canonical JSON 的 SHA
+- [ ] 8.10c RED：写 `test_6d_no_single_dataset_sha256_field`：receipt 不含 6B2 的单值 `dataset_sha256` 字段（改用 `dataset_set_sha256`）
 - [ ] 8.10b RED：写 `test_6d_receipt_run_manifest_temporal_fields`：receipt 含 `temporal_context_version` / `experiment_conditions` / `extraction_strategy_sha256` / `temporal_routed_cases_sha256` / `condition_manifest_sha256`
 - [ ] 8.11 RED：写 `test_6d_resume_isolation_all_checks`：version/strategy/routed_cases/condition_manifest 不匹配均 fail-closed
 - [ ] 8.12 RED：写 `test_6d_condition_manifest_canonical_json`：canonical JSON 排序和字段
@@ -298,7 +304,24 @@
 - [ ] 8.20 GREEN：实现 `_run_slice(slice_def, ledger)`：调用 runner，写 detail/events
 - [ ] 8.21 GREEN：实现 `_merge_details(slices)`：off+on 配对合并
 - [ ] 8.22 GREEN：实现 `_check_completeness(merged)`：single main-stage 完整性门
-- [ ] 8.23 GREEN：实现 `6D_RECEIPT_REQUIRED_FIELDS`（枚举完整字段：6B2 全部字段 + `temporal_context_version` + `experiment_conditions` + `extraction_strategy_sha256` + `temporal_routed_cases_sha256` + `condition_manifest_sha256`）
+- [ ] 8.23 GREEN：实现 `6D_RECEIPT_REQUIRED_FIELDS` 完整 tuple：
+  ```python
+  6D_RECEIPT_REQUIRED_FIELDS = (
+      "verdict", "stage", "run_id", "user_run_id", "archive_dir",
+      "audit_index_sha256", "provider", "model",
+      "thinking_mode", "model_label",
+      "code_fingerprint", "dataset_set_sha256",
+      "temporal_context_version", "experiment_conditions",
+      "extraction_strategy_sha256", "temporal_routed_cases_sha256",
+      "condition_manifest_sha256", "dataset_sha256_by_year",
+  )
+  ```
+- [ ] 8.23a GREEN：实现 `build_run_manifest(...)`：含全部 7 个 temporal run 级字段（含 `dataset_sha256_by_year` + `dataset_set_sha256`）
+- [ ] 8.23b GREEN：实现 run_context / audit 写入时与 manifest 同源（交叉核对）
+- [ ] 8.23c GREEN：实现 `compute_6d_gate(details, n_cases)`（从 Task 9 前移）：基础设施门早返回 BLOCKED + 准确率五分支
+- [ ] 8.23d GREEN：实现 `check_6d_gate`（单阶段自验，field-level validation + temporal 字段一致性）
+- [ ] 8.23e GREEN：实现冻结协议校验 `_validate_frozen_protocol(args)`：拒绝非冻结 model/thinking/temperature/profile/method
+- [ ] 8.23f GREEN：实现 group-pair 级 AB/BA 调度 `_assign_group_abba_order(years, groups)`：按 `hash(year, group_idx) % 2` 决定整组顺序
 - [ ] 8.23a GREEN：实现 `compute_6d_gate(details, n_cases)`（从 Task 9 前移）：基础设施门早返回 BLOCKED + 准确率五分支
 - [ ] 8.23b GREEN：实现 `check_6d_gate`（单阶段自验，field-level validation + temporal 字段一致性）
 - [ ] 8.23c GREEN：实现冻结协议校验 `_validate_frozen_protocol(args)`：拒绝非冻结 model/thinking/temperature/profile/method
@@ -337,8 +360,8 @@
   - 验证 report.md 含 verdict
   - 验证 receipt 含 temporal 字段
   - 验证 archive 含 audit_index.json
-- [ ] 9.13 GREEN：实现 fake runner 集成测试夹具
-- [ ] 9.13a RED：写 `test_fake_runner_no_network_calls`：monkeypatch 网络调用为"调用即失败"，证明 READY_FOR_SMOKE 阶段无真实 API 请求（fake runner 不触发网络层）
+- [ ] 9.13 RED：写 `test_fake_runner_no_network_calls`：monkeypatch 网络调用为"调用即失败"，证明 READY_FOR_SMOKE 阶段无真实 API 请求（fake runner 不触发网络层）
+- [ ] 9.13a GREEN：实现 fake runner 集成测试夹具
 - [ ] 9.14 GREEN：运行 `python -m pytest tests/test_phase6_6d_orchestrator.py -q`，全部通过
 - [ ] 9.15 GREEN：运行全量回归：`$files = (Get-ChildItem tests -Filter 'test_phase6_*.py').FullName; python -m pytest $files tests/test_dual_system_reasoning.py tests/test_claude_api.py tests/test_bazi_time_context.py tests/test_phase6_6d_orchestrator.py tests/test_phase6_6d_offline_gate.py -q`，无新增失败
 - [ ] 9.16 GREEN：输出阶段二启动命令（不执行）：
