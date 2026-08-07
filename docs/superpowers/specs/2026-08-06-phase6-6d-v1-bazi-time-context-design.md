@@ -4,7 +4,7 @@
 **状态：** 修订版（v6），待确认
 **适用范围：** Phase 6 6D v1 时间定位题的确定性上下文注入
 **前置依赖：** 6B2 ROLLBACK 证据归档（commit `acb63a1`）
-**修订历史：** v1 -> v2（5 阻断）-> v3（4P0+3中优）-> v4（5P0+3中优）-> v5（4P0+3中优）-> v6（2P0+4中优）-> v6.1（1P0+1低优）-> v6.2（2设计勘误：AB/BA 粒度 + 双年度 dataset SHA）-> v6.3（1设计勘误：SHA-256 AB/BA 算法 + 映射入 provenance）
+**修订历史：** v1 -> v2（5 阻断）-> v3（4P0+3中优）-> v4（5P0+3中优）-> v5（4P0+3中优）-> v6（2P0+4中优）-> v6.1（1P0+1低优）-> v6.2（2设计勘误：AB/BA 粒度 + 双年度 dataset SHA）-> v6.3（1设计勘误：SHA-256 AB/BA 算法 + 映射入 provenance）-> v6.4（group_abba_order 入 provenance 表 + condition manifest + 阶段一 receipt）
 
 ## 1. 背景与决策
 
@@ -283,6 +283,7 @@ ROLLBACK:          paired_delta < -0.02
 | run 级 | `condition_manifest_sha256` | str | manifest / run_context / receipt / audit |
 | run 级 | `dataset_sha256_by_year` | dict `{"2024":"...","2025":"..."}` | manifest / run_context / receipt / audit |
 | run 级 | `dataset_set_sha256` | str（`dataset_sha256_by_year` canonical JSON 的 SHA） | manifest / run_context / receipt / audit |
+| run 级 | `group_abba_order` | dict `{"2024:g0":"AB",...}` | manifest / run_context / receipt / audit |
 | slice 级 | `time_context_injection` | `"on"`/`"off"` | slice manifest |
 | slice 级 | `arm` | `b1a_time_off`/`b1a_time_on` | slice manifest |
 | case/detail 级 | `temporal_route_state` | 三态 | detail.jsonl 每行 |
@@ -355,7 +356,8 @@ AB/BA 在 **group-pair 级** 而非 case 级：
   "per_slice_scheduled": [[8,8,2],[8,5]],
   "temporal_context_version": "6d-v1",
   "extraction_strategy_sha256": "<sha>",
-  "temporal_routed_cases_sha256": "<sha>"
+  "temporal_routed_cases_sha256": "<sha>",
+  "group_abba_order": {"2024:g0":"AB","2024:g1":"BA","2024:g2":"AB","2025:g0":"BA","2025:g1":"AB"}
 }
 ```
 
@@ -387,7 +389,7 @@ canonical JSON：`json.dumps(obj, sort_keys=True, ensure_ascii=False, separators
 | attempt identity | off/on 用不同 arm，无碰撞 |
 | 完整性门 | single main-stage 检查通过 |
 
-**阶段一输出**：`temporal_routed_cases.json`，每项含：
+**阶段一输出**：`temporal_routed_cases.json` + `phase1_receipt.json`（含 `status`/`dataset_set_sha256`/`temporal_routed_cases_sha256`/`n_routed`；BLOCKED 时原子写 BLOCKED receipt，旧 manifest 不覆盖但无法通过阶段二准入），每项含：
 
 ```json
 {
