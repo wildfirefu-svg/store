@@ -4,7 +4,7 @@
 **状态：** 修订版（v6），待确认
 **适用范围：** Phase 6 6D v1 时间定位题的确定性上下文注入
 **前置依赖：** 6B2 ROLLBACK 证据归档（commit `acb63a1`）
-**修订历史：** v1 -> v2（5 阻断）-> v3（4P0+3中优）-> v4（5P0+3中优）-> v5（4P0+3中优）-> v6（2P0+4中优）-> v6.1（1P0+1低优）-> v6.2（2设计勘误：AB/BA 粒度 + 双年度 dataset SHA）-> v6.3（1设计勘误：SHA-256 AB/BA 算法 + 映射入 provenance）-> v6.4（group_abba_order 入 provenance 表 + condition manifest + 阶段一 receipt）
+**修订历史：** v1 -> v2（5 阻断）-> v3（4P0+3中优）-> v4（5P0+3中优）-> v5（4P0+3中优）-> v6（2P0+4中优）-> v6.1（1P0+1低优）-> v6.2（2设计勘误：AB/BA 粒度 + 双年度 dataset SHA）-> v6.3（1设计勘误：SHA-256 AB/BA 算法 + 映射入 provenance）-> v6.4（group_abba_order 入 provenance 表 + condition manifest + 阶段一 receipt）-> v6.5（修正 AB/BA 黄金映射 + canonical SHA 口径）
 
 ## 1. 背景与决策
 
@@ -357,7 +357,7 @@ AB/BA 在 **group-pair 级** 而非 case 级：
   "temporal_context_version": "6d-v1",
   "extraction_strategy_sha256": "<sha>",
   "temporal_routed_cases_sha256": "<sha>",
-  "group_abba_order": {"2024:g0":"AB","2024:g1":"BA","2024:g2":"AB","2025:g0":"BA","2025:g1":"AB"}
+  "group_abba_order": {"2024:g0":"BA","2024:g1":"AB","2024:g2":"AB","2025:g0":"AB","2025:g1":"BA"}
 }
 ```
 

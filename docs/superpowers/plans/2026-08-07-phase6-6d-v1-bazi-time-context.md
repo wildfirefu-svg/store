@@ -181,9 +181,7 @@
 - [ ] 5.5b RED：写 `test_offline_gate_blocks_does_not_overwrite_existing_manifest`：BLOCKED 时若输出路径已有旧 manifest，不覆盖
 - [ ] 5.5c RED：写 `test_offline_gate_writes_phase1_receipt_pass`：N>=20 时原子写 `phase1_receipt.json`，含 `status=PASS` + `dataset_set_sha256` + `temporal_routed_cases_sha256` + `n_routed`
 - [ ] 5.5d RED：写 `test_offline_gate_writes_phase1_receipt_blocked`：N<20 时原子写 `phase1_receipt.json`，含 `status=BLOCKED`，旧 manifest 不覆盖
-- [ ] 5.5e RED：写 `test_run_dev_validates_phase1_receipt`：`run_dev` 验证 phase1 receipt 状态=PASS + 三方 SHA 一致 + n_routed>=20，否则阻断
 - [ ] 5.6 GREEN：实现 `scripts/phase6_6d_offline_gate.py`：含 phase1 receipt 原子写入（PASS/BLOCKED）
-- [ ] 5.6a GREEN：实现 `run_dev` 的 phase1 receipt 准入校验：状态=PASS + 三方 SHA 一致 + n_routed>=20
   - CLI：`python scripts/phase6_6d_offline_gate.py --datasets 2024,2025 --output docs/phase6/6d/temporal_routed_cases.json`
   - 读取数据集，对每 case 调 `detect_temporal_rules` + `extract_target_years` + `classify_route_state`
   - 原子写入 JSON（`.tmp` + `os.replace`）
@@ -259,8 +257,8 @@
 - [ ] 7.15a GREEN：实现 `compute_detail_provenance(case, route_state, time_context_injection) -> sha256_or_null`：route_state 从冻结 manifest 查表（不随 injection 变化）；off 时返回 None；on 时按 route_state 返回 SHA 或 None
 - [ ] 7.15b GREEN：加 CLI 参数 `--temporal-routed-cases-file` 到 argparse，传入 `Phase6Context`
 - [ ] 7.15c GREEN：在 `Phase6Context.__init__` 加 `temporal_routed_cases_file` 和 `temporal_routed_cases_sha256` 参数
-- [ ] 7.15d GREEN：实现 `load_routed_manifest(path) -> dict`：加载 JSON，计算 canonical SHA-256，返回 `(year, case_id) -> {route_state, matched_rules, target_years}` 完整冻结项
 - [ ] 7.15d1 RED：写 `test_runtime_target_years_match_frozen_manifest`：运行时 `build_time_context` 使用的 `target_years` 与冻结 manifest 完全一致
+- [ ] 7.15d GREEN：实现 `load_routed_manifest(path) -> dict`：加载 JSON，计算 canonical SHA-256，返回 `(year, case_id) -> {route_state, matched_rules, target_years}` 完整冻结项
 - [ ] 7.15e GREEN：在 `RESUME_MANIFEST_FIELDS` 加 `"temporal_routed_cases_sha256"`
 - [ ] 7.15f GREEN：在 `build_resume_manifest()` 写入 `temporal_routed_cases_sha256`
 - [ ] 7.15g GREEN：实现 routed manifest 查表 fail-closed：缺 case、重复 case、year/case 不匹配时 SystemExit
@@ -293,11 +291,12 @@
 - [ ] 8.6d RED：写 `test_6d_frozen_protocol_rejects_non_frozen_profile`：profile != baziqa_xjz_reasoned -> SystemExit
 - [ ] 8.6e RED：写 `test_6d_frozen_protocol_rejects_non_frozen_method`：method != direct_choice -> SystemExit
 - [ ] 8.6f RED：写 `test_6d_abba_group_pair_level`：按 SHA-256 `hashlib.sha256(f"{year}:{group_idx}".encode()).digest()[0] & 1` 决定整组 off/on 执行顺序（group-pair 级，不拆 slice，不用 Python `hash()`）
+- [ ] 8.6f1 RED：写 `test_6d_abba_golden_mapping_exact`：精确断言五项黄金映射：`{"2024:g0":"BA","2024:g1":"AB","2024:g2":"AB","2025:g0":"AB","2025:g1":"BA"}`，不只测试"算法可运行"
 - [ ] 8.6f1 RED：写 `test_6d_abba_actual_subprocess_sequence`：断言实际 subprocess 调用序列符合 AB/BA 分配（不只测辅助函数返回值）
 - [ ] 8.6g RED：写 `test_6d_resume_protocol_drift_fail_closed`：resume 时 model/thinking/temperature/profile/method 漂移 -> fail-closed
 - [ ] 8.6h RED：写 `test_6d_slice_def_contains_routed_manifest_path`：slice definition 含 `routed_manifest_path` 和 `routed_manifest_sha256`
 - [ ] 8.6i RED：写 `test_6d_runner_command_includes_routed_manifest_file`：`_build_runner_command()` 显式传 `--temporal-routed-cases-file`
-- [ ] 8.6j RED：写 `test_6d_pre_launch_routed_manifest_sha_check`：启动 subprocess 前验证 routed manifest 文件 SHA 与 run manifest 一致，不一致阻断
+- [ ] 8.6j RED：写 `test_6d_pre_launch_routed_manifest_sha_check`：启动 subprocess 前验证 routed manifest 的 **canonical JSON SHA**（非原始字节 `_sha256_file()`）与 run manifest 一致，不一致阻断
 - [ ] 8.7 RED：写 `test_6d_budget_ledger`：BudgetLedger 记录 scheduled/hard_cap/calls_attempted，恢复后剩余预算正确
 - [ ] 8.8 RED：写 `test_6d_merge_details`：off+on details 合并为 paired 结构
 - [ ] 8.9 RED：写 `test_6d_completeness_check`：每 (year,repeat,case_id) 恰一条 off/main + on/main
@@ -311,9 +310,11 @@
 - [ ] 8.14 RED：写 `test_6d_report_generation`：report.md 含 verdict/paired_delta/min_case_delta/parser_rate
 - [ ] 8.15 RED：写 `test_6d_archive_creation`：archive 目录含 audit_index.json + summary.json
 - [ ] 8.16 RED：写 `test_6d_run_dev_cli`：`python scripts/phase6_6d_orchestrator.py run_dev --help` 显示正确参数
+- [ ] 8.16a RED：写 `test_run_dev_validates_phase1_receipt`：`run_dev` 验证 phase1 receipt 状态=PASS + 三方 SHA 一致 + n_routed>=20，否则阻断
+- [ ] 8.16b GREEN：实现 `run_dev` 的 phase1 receipt 准入校验：状态=PASS + 三方 SHA 一致 + n_routed>=20
 - [ ] 8.17 GREEN：实现 `_build_schedule(years, repeats, per_group, routed_manifest_path)`：读 routed manifest，按年度分组；每 slice def 含 `routed_manifest_path` + `routed_manifest_sha256`
 - [ ] 8.17a GREEN：实现 `_build_runner_command()`：显式传 `--temporal-routed-cases-file <path>`
-- [ ] 8.17b GREEN：实现 pre-launch SHA 校验：subprocess 启动前验证 routed manifest 文件 SHA 与 run manifest 一致
+- [ ] 8.17b GREEN：实现 pre-launch SHA 校验：subprocess 启动前验证 routed manifest 的 canonical JSON SHA（与 Task 5 / runner manifest 同口径）与 run manifest 一致
 - [ ] 8.18 GREEN：实现 `_build_runner_command(slice_def)`：构造 run_benchmark CLI 命令
 - [ ] 8.19 GREEN：实现 `BudgetLedger`：scheduled/hard_cap/calls_attempted 追踪
 - [ ] 8.20 GREEN：实现 `_run_slice(slice_def, ledger)`：调用 runner，写 detail/events
