@@ -10,12 +10,13 @@ import random
 import re
 from typing import List, Optional
 
-# Time/location keywords for identifying time-location questions
-_TIME_KEYWORDS = [
-    "哪年", "何时", "什么时候", "时间", "年份", "何年", "哪一年",
-    "几年", "几时", "何時", "那年", "多久", "大运", "流年",
-    "岁运", "年运", "年份",
-]
+from benchmark.formatters.bazi_time_context import (
+    compute_branch_relation as _compute_branch_relation,
+    compute_gan_relation as _compute_gan_relation,
+    compute_shishen_combo,
+    _KEY_SHENSHA,
+    _TIME_KEYWORDS,
+)
 
 # Stage 1 prompt template (normal mode with options)
 _STAGE1_PROMPT_TEMPLATE = """你是一位严谨的八字命理评测助手。
@@ -364,97 +365,9 @@ def _get_liunian_for_year(chart: dict, year: int) -> Optional[dict]:
     return None
 
 
-def _compute_branch_relation(zhi1: str, zhi2: str) -> List[str]:
-    """Compute branch relations between two zhi (地支).
-    Returns list of relation descriptions.
-    """
-    relations = []
-    # 六冲
-    chong = {
-        ("子", "午"), ("丑", "未"), ("寅", "申"), ("卯", "酉"),
-        ("辰", "戌"), ("巳", "亥"),
-    }
-    # 六合
-    liuhe = {
-        ("子", "丑"), ("寅", "亥"), ("卯", "戌"), ("辰", "酉"),
-        ("巳", "申"), ("午", "未"),
-    }
-    # 三合 (partial match - any two of the three)
-    sanhe = [
-        {"申", "子", "辰"}, {"寅", "午", "戌"}, {"巳", "酉", "丑"}, {"亥", "卯", "未"},
-    ]
-    # 六害
-    liuhai = {
-        ("子", "未"), ("丑", "午"), ("寅", "巳"), ("卯", "辰"),
-        ("申", "亥"), ("酉", "戌"),
-    }
-    # 三刑
-    sanxing = [
-        {"寅", "巳", "申"}, {"丑", "戌", "未"},
-    ]
-
-    pair = (zhi1, zhi2)
-    pair_rev = (zhi2, zhi1)
-
-    if pair in chong or pair_rev in chong:
-        relations.append("冲")
-    if pair in liuhe or pair_rev in liuhe:
-        relations.append("合")
-    if pair in liuhai or pair_rev in liuhai:
-        relations.append("害")
-    for group in sanhe:
-        if zhi1 in group and zhi2 in group:
-            relations.append("三合")
-            break
-    for group in sanxing:
-        if zhi1 in group and zhi2 in group:
-            relations.append("刑")
-            break
-
-    return relations
-
-
-# Wuxing generation cycle for computing gan relations
-_WUXING_CYCLE = {
-    "金": {"生": "水", "克": "木", "被生": "土", "被克": "火"},
-    "木": {"生": "火", "克": "土", "被生": "水", "被克": "金"},
-    "水": {"生": "木", "克": "火", "被生": "金", "被克": "土"},
-    "火": {"生": "土", "克": "金", "被生": "木", "被克": "水"},
-    "土": {"生": "金", "克": "水", "被生": "火", "被克": "木"},
-}
-
-# Gan to wuxing mapping
-_GAN_WUXING = {
-    "甲": "木", "乙": "木", "丙": "火", "丁": "火",
-    "戊": "土", "己": "土", "庚": "金", "辛": "金",
-    "壬": "水", "癸": "水",
-}
-
 # Shishen mapping for day master (simplified - only primary relations)
 # This is a helper for evidence building, not a full shishen calculator
 _SHISHEN_LABELS = ["比肩", "劫财", "食神", "伤官", "偏财", "正财", "七杀", "正官", "偏印", "正印"]
-
-
-def _compute_gan_relation(gan1: str, gan2: str) -> str:
-    """Compute relation between two gan (天干) based on wuxing.
-    Returns a description like '生', '克', '被生', '被克', '同'.
-    """
-    wx1 = _GAN_WUXING.get(gan1, "")
-    wx2 = _GAN_WUXING.get(gan2, "")
-    if not wx1 or not wx2:
-        return ""
-    if wx1 == wx2:
-        return "同"
-    cycle = _WUXING_CYCLE.get(wx1, {})
-    if cycle.get("生") == wx2:
-        return f"{gan1}生{gan2}"
-    if cycle.get("克") == wx2:
-        return f"{gan1}克{gan2}"
-    if cycle.get("被生") == wx2:
-        return f"{gan2}生{gan1}"
-    if cycle.get("被克") == wx2:
-        return f"{gan2}克{gan1}"
-    return ""
 
 
 def _get_question_type_hints(question: str) -> List[str]:
@@ -491,13 +404,6 @@ def _get_question_type_hints(question: str) -> List[str]:
         hints.append("迁移对应驿马、流年冲动日支或迁移宫")
 
     return hints
-
-
-# Key shensha names relevant to common life events (shared with dayun evidence)
-_KEY_SHENSHA = [
-    "桃花", "红鸾", "天喜", "丧门", "白虎", "驿马", "华盖", "天乙贵人",
-    "文昌贵人", "将星", "魁罡", "十恶大败", "阴差阳错", "孤鸾煞", "红艳煞",
-]
 
 
 def _build_nontime_structured_evidence(case: dict) -> List[str]:
@@ -742,22 +648,7 @@ def _build_dayun_evidence(case: dict) -> List[str]:
                 # Compute dayun+liunian shishen combination effect
                 combo_hint = ""
                 if ln and dy_shishen_gan and ln_shishen:
-                    combo = f"{dy_shishen_gan}+{ln_shishen}"
-                    # Common problematic combinations
-                    if "伤官" in combo and "正官" in combo:
-                        combo_hint = "，组合效应：伤官见官"
-                    elif "七杀" in combo and "食神" in combo:
-                        combo_hint = "，组合效应：食神制杀"
-                    elif "偏财" in combo and "正印" in combo:
-                        combo_hint = "，组合效应：财坏印"
-                    elif "劫财" in combo and "正财" in combo:
-                        combo_hint = "，组合效应：劫财夺财"
-                    elif "正官" in combo and "七杀" in combo:
-                        combo_hint = "，组合效应：官杀混杂"
-                    elif "正印" in combo and "正财" in combo:
-                        combo_hint = "，组合效应：财坏印"
-                    elif "偏印" in combo and "食神" in combo:
-                        combo_hint = "，组合效应：枭神夺食"
+                    combo_hint = compute_shishen_combo(dy_shishen_gan, ln_shishen)
 
                 # Build detailed relation string
                 all_rels = []
