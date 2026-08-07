@@ -1,10 +1,10 @@
 # Phase 6 6D v1：八字命局 × 大运 × 目标流年确定性注入设计
 
 **日期：** 2026-08-06
-**状态：** 修订版（v5），待确认
+**状态：** 修订版（v6），待确认
 **适用范围：** Phase 6 6D v1 时间定位题的确定性上下文注入
 **前置依赖：** 6B2 ROLLBACK 证据归档（commit `acb63a1`）
-**修订历史：** v1 -> v2（5 阻断）-> v3（4 P0+3 中优）-> v4（5 P0+3 中优）-> v5（4 P0+3 中优）
+**修订历史：** v1 -> v2（5 阻断）-> v3（4P0+3中优）-> v4（5P0+3中优）-> v5（4P0+3中优）-> v6（2P0+4中优）
 
 ## 1. 背景与决策
 
@@ -149,32 +149,33 @@ runner 的 `build_attempt_key`（run_benchmark.py:55）第 3 位是 `arm`。off/
 
 两个 arm 共用 `ziwei_arm=none`（single B1-a′ 基线）。`time_context_injection` 是 **slice 级**字段，不是 run 级（见 §7.1）。
 
-### 5.3 完整性门与基础设施门（v5 P0 修正）
-
-v4 的完整性门允许 `call_failed`/`invalid`/`unresolved`，全失败也能进 accuracy gate。v5 拆为两层：
+### 5.3 完整性门与基础设施门
 
 **层 1：完整性门**（terminal 覆盖）
 
 每 `(year, repeat, case_id)` 恰有一条 `b1a_time_off/main` 和一条 `b1a_time_on/main` 的 terminal 记录（`terminal_state` ∈ `("parsed", "invalid", "unresolved", "call_failed")`）。
 
-**层 2：基础设施门**（parser rate + call_failed）
+**层 2：基础设施门**（parser rate + call_failed，v6 中优修正：按臂分别报告）
 
 | 检查项 | 阈值 | 失败 verdict |
 |---|---|---|
-| `call_failed` 计数 | 必须 = 0 | `BLOCKED` |
-| parser rate（`parsed` / total terminal） | >= 0.85 | `BLOCKED` |
-| `invalid` / `unresolved` 计入分母 | 固定分母 = `N × 2 × 3`（N routed cases × off/on × repeats） | - |
+| `call_failed` 计数（off 臂 + on 臂分别） | 两臂各自必须 = 0 | `BLOCKED` |
+| parser rate off 臂（`parsed` / total terminal） | >= 0.85 | `BLOCKED` |
+| parser rate on 臂（`parsed` / total terminal） | >= 0.85 | `BLOCKED` |
+| `invalid` / `unresolved` 计入分母 | 固定分母 = `N × 2 × 3` | - |
 
-**关键**：基础设施门失败时 verdict = `BLOCKED`（不是 `ROLLBACK`）。`BLOCKED` 表示实验无效，不进入 PROMOTE/REVIEW/NON_INFERIOR/ROLLBACK 判定。
+两臂分别检查，避免一臂 100%、另一臂 70% 时聚合后仍通过。
+
+**关键**：基础设施门失败时 verdict = `BLOCKED`（不是 `ROLLBACK`）。`BLOCKED` 表示实验无效，不进入准确率判定。
 
 准确性计算规则：
 - `parsed` -> 按答案对错计入
 - `invalid` / `unresolved` -> 固定计错
 - `call_failed` -> 触发 BLOCKED，不计算准确率
 
-### 5.4 Schedule 冻结（v5 P0 修正：按年度分组）
+### 5.4 Schedule 冻结（按年度分组）
 
-v4 把 N=31 当成单 dataset 切片是错误的（runner 每 slice 只读一个 dataset）。v5 按年度分组：
+v4 把 N=31 当成单 dataset 切片是错误的（runner 每 slice 只读一个 dataset）。v5+ 按年度分组：
 
 ```text
 N_2024 = 18（阶段一离线门冻结）
@@ -191,30 +192,50 @@ global scheduled = (18 × 2 + 13 × 2) × 3 = 186
 global hard_cap = sum(per-slice hard_cap) × 2 conditions × 3 repeats
 ```
 
-**预算记账修正（v5 P0 修正）**：
+**预算记账**：
 
-v4 说"截断重试不计入 hard_cap"与源码不符。`before_call`（run_benchmark.py:285-293）先记账后调用，**所有重试（含截断重试）都消耗 hard_cap**。
+`before_call`（run_benchmark.py:285-293）先记账后调用，**所有重试（含截断重试）都消耗 hard_cap**。
 
 | 维度 | 冻结值 | 说明 |
 |---|---|---|
 | per-slice scheduled_calls | 真实题数（8/5/2） | 不是固定 8 |
 | per-slice hard_cap | `compute_hard_cap(scheduled)` | slice 级 |
 | 网络重试 | 计入 hard_cap | `before_call` 每次 +1 |
-| 截断重试 | 计入 hard_cap | `before_call` 每次 +1（v5 修正） |
+| 截断重试 | 计入 hard_cap | `before_call` 每次 +1 |
 | global scheduled | 186 | `31 × 2 × 3` |
-| global hard_cap | sum(per-slice hard_cap) × 2 × 3 | slice 级累加 |
+| global hard_cap | ~486（2.61× 上限） | slice 级累加（v6 中优：明确接受该上限） |
 
-### 5.5 6D Gate（v5 P0 修正：护栏语义 + 完备函数）
+v6 明确接受 2.61× 上限（`global hard_cap / global scheduled ≈ 486/186 ≈ 2.61`），不收紧手工 cap，以保留重试余量。
 
-v4 的 `min_case_delta >= -1/3` 允许净回退一次仍 PROMOTE。v5 选择"不允许任何净回退"：阈值改为 `>= 0`。
+### 5.5 6D Gate（v6 P0 修正：分母 + 完备函数）
+
+**v6 P0-1 修正**：v5 的 `paired_delta = sum(case_delta) / (N × 2 × 3)` 多除了条件数 2。正确公式：
 
 ```text
-case_delta = on_correct_count - off_correct_count   # 整数，∈ {-3..3}
-paired_delta = sum(case_delta) / (N × 2 × 3)        # 全量 paired 准确率差
-min_case_delta = min(case_delta) / 3                # 最差单题，∈ {-1..1}
+on_correct_total  = sum(on_correct per case per repeat)
+off_correct_total = sum(off_correct per case per repeat)
 
+on_acc  = on_correct_total  / (N × 3)
+off_acc = off_correct_total / (N × 3)
+
+paired_delta = on_acc - off_acc = sum(case_delta) / (N × 3)
+```
+
+示例：净增 5 个 paired cell、N=31：
+- 正确：`5 / 93 = 5.38pp`，达到 +5pp PROMOTE 阈值
+- v5 错误：`5 / 186 = 2.69pp`，误判为 NON_INFERIOR
+
+**单题 delta 步长**：3 次重复下，`case_delta = on_correct - off_correct ∈ {-3..3}`，`min_case_delta = min(case_delta) / 3 ∈ {-1..1}`。
+
+**v6 护栏**：`min_case_delta >= 0`（不允许任何单题净回退，保守立场）。
+
+**完整 gate**：
+
+```text
 # 层 2 基础设施门先检查
-if call_failed > 0 or parser_rate < 0.85:
+if call_failed_off > 0 or call_failed_on > 0:
+    verdict = BLOCKED
+elif parser_rate_off < 0.85 or parser_rate_on < 0.85:
     verdict = BLOCKED
     return
 
@@ -225,12 +246,11 @@ NON_INFERIOR:     -0.02 <= paired_delta < +0.05
 ROLLBACK:          paired_delta < -0.02
 ```
 
-四个分支覆盖全部空间：
-- `paired_delta >= 0.05`：看 `min_case_delta`，`>= 0` 则 PROMOTE，`< 0` 则 REVIEW_REQUIRED
+五个分支覆盖全部空间：
+- 基础设施门失败 -> BLOCKED
+- `paired_delta >= 0.05`：`min_case_delta >= 0` 则 PROMOTE，`< 0` 则 REVIEW_REQUIRED
 - `-0.02 <= paired_delta < 0.05`：NON_INFERIOR
 - `paired_delta < -0.02`：ROLLBACK
-
-`min_case_delta >= 0` 含义：任何单题都不允许净回退（on 比 off 差）。这是保守护栏，与 6B2 ROLLBACK 的保守立场一致。
 
 ## 6. 注入点设计
 
@@ -250,9 +270,7 @@ ROLLBACK:          paired_delta < -0.02
 
 ## 7. 可见性、Schema 与 Resume 隔离契约
 
-### 7.1 Provenance 字段分层（v5 P0 修正：run 级不含 injection 单值）
-
-v4 把 `time_context_injection` 写成 run 级单值，但 paired run 同时含 off+on，不可能单一值。v5 改为：
+### 7.1 Provenance 字段分层
 
 | 层级 | 字段 | 类型 | 位置 |
 |---|---|---|---|
@@ -268,16 +286,17 @@ v4 把 `time_context_injection` 写成 run 级单值，但 paired run 同时含 
 
 **run 级**字段跨 run 校验（resume 隔离）；**slice 级**字段标识条件；**case 级**字段在 detail 中审计。
 
-### 7.2 Resume 隔离规则
+### 7.2 Resume 隔离规则（v6 中优修正：措辞）
 
 - `temporal_context_version` 不匹配时 fail-closed
 - `extraction_strategy_sha256` 不匹配时 fail-closed
-- `temporal_routed_cases_sha256` 不匹配时 fail-closed（防止 routed 集事后变动）
+- `temporal_routed_cases_sha256` 不匹配时 fail-closed
 - `condition_manifest_sha256` 不匹配时 fail-closed
 - 检查点在 6D orchestrator 的 `_prepare_run_context`
 - 6D run 不允许 resume 任何 6B2 run（不同 orchestrator）
+- **off slice 不能 resume on slice**，反之亦然（slice 级隔离，非 run 级，因为 paired run 同时含两条件）
 
-### 7.3 可见性矩阵扩展（v5 中优修正：三态分别定义）
+### 7.3 可见性矩阵扩展（按三态分别定义）
 
 `profiles.py` 的 `visibility_requirements` 扩展，按三态分别定义 marker：
 
@@ -292,7 +311,28 @@ v4 把 `time_context_injection` 写成 run 级单值，但 paired run 同时含 
 
 `run_benchmark.py:_CODE_SCOPE`（line 162）必须扩展，加入 `benchmark/formatters/bazi_time_context.py`。
 
-### 7.5 Receipt 契约（单阶段自验）
+### 7.5 `condition_manifest_sha256` canonical JSON（v6 中优修正）
+
+`condition_manifest_sha256` 的输入定义：
+
+```json
+{
+  "conditions": ["off", "on"],
+  "arms": ["b1a_time_off", "b1a_time_on"],
+  "years": ["2024", "2025"],
+  "n_cases_per_year": {"2024": 18, "2025": 13},
+  "groups_per_year": {"2024": 3, "2025": 2},
+  "repeats": 3,
+  "per_slice_scheduled": [[8,8,2],[8,5]],
+  "temporal_context_version": "6d-v1",
+  "extraction_strategy_sha256": "<sha>",
+  "temporal_routed_cases_sha256": "<sha>"
+}
+```
+
+canonical JSON：`json.dumps(obj, sort_keys=True, ensure_ascii=False, separators=(",", ":"))`，SHA-256 对该字符串计算。
+
+### 7.6 Receipt 契约（单阶段自验）
 
 - 6D v1 在 `phase6_6d_orchestrator.py` 新建 `6D_RECEIPT_REQUIRED_FIELDS`
 - 6D v1 在 `phase6_6d_orchestrator.py` 新建 `check_6d_gate`，做**单阶段 receipt 自验**（field-level validation + temporal 字段一致性）
@@ -312,7 +352,7 @@ v4 把 `time_context_injection` 写成 run 级单值，但 paired run 同时含 
 | 路由覆盖 | 三态分流边界明确，N >= 20 |
 | 上下文序列化 | `TimeContext` canonical JSON + SHA 可复现 |
 | 可见性矩阵 | on/off × 三态 marker 检查通过 |
-| manifest 隔离 | on run 不能被 off resume（fail-closed） |
+| manifest 隔离 | off slice 不能 resume on slice（fail-closed） |
 | prompt diff | on vs off 差异仅在 temporal context 段 |
 | code_fingerprint | `bazi_time_context.py` 加入 `_CODE_SCOPE` 后产生漂移 |
 | attempt identity | off/on 用不同 arm，无碰撞 |
@@ -325,6 +365,7 @@ v4 把 `time_context_injection` 写成 run 级单值，但 paired run 同时含 
   "year": "2025",
   "dataset_sha256": "...",
   "case_id": "hongkong_female_19870705_P002-Q6",
+  "domain": "health",
   "route_state": "ROUTED_WITH_TARGETS",
   "matched_rules": ["R6"],
   "target_years": [2022]
@@ -353,20 +394,23 @@ v4 把 `time_context_injection` 写成 run 级单值，但 paired run 同时含 
 | per-slice scheduled | 真实题数（8/5/2） |
 | per-slice hard_cap | `compute_hard_cap(scheduled)` |
 | global scheduled | 186 |
+| global hard_cap | ~486（2.61× 上限，明确接受） |
 | parser | 现有 `direct_choice` parser |
 | 完整性门 | single main-stage（每 (year,repeat,case_id) 恰一条 off/main + on/main） |
-| 基础设施门 | `call_failed=0` 且 `parser_rate >= 0.85` |
+| 基础设施门 | off 臂 + on 臂各自 `call_failed=0` 且 `parser_rate >= 0.85` |
 | run_id | 全新，不 resume 任何 6B2 run |
 
-**判定阈值（v5 P0 修正：完备函数 + 保守护栏）**：
+**判定阈值（v6 P0 修正：正确分母 + 完备函数）**：
 
 | 判定 | 条件 | 含义 |
 |---|---|---|
-| BLOCKED | `call_failed > 0` 或 `parser_rate < 0.85` | 实验无效，不进入准确率判定 |
+| BLOCKED | off 臂或 on 臂 `call_failed > 0`，或任臂 `parser_rate < 0.85` | 实验无效 |
 | PROMOTE | `paired_delta >= +0.05` 且 `min_case_delta >= 0` | 显著正向收益且无任何单题净回退 |
-| REVIEW_REQUIRED | `paired_delta >= +0.05` 且 `min_case_delta < 0` | 整体收益但存在单题净回退，需人工复核 |
-| NON_INFERIOR | `-0.02 <= paired_delta < +0.05` | 无害也无显著收益，保留 flag |
+| REVIEW_REQUIRED | `paired_delta >= +0.05` 且 `min_case_delta < 0` | 整体收益但存在单题净回退 |
+| NON_INFERIOR | `-0.02 <= paired_delta < +0.05` | 无害也无显著收益 |
 | ROLLBACK | `paired_delta < -0.02` | 有害，关闭 flag |
+
+其中 `paired_delta = sum(case_delta) / (N × 3)`（分母不含条件数 2）。
 
 五个分支覆盖全部空间。阈值在实验启动前冻结。
 
@@ -379,21 +423,30 @@ v4 把 `time_context_injection` 写成 run 级单值，但 paired run 同时含 
 | 全量预声明 temporal-routed 题 | 正式 paired gate | 阶段一离线门完成后预声明 | 是 |
 | rescue/regression 样本 | 诊断回放 | 从 6B2 归因报告选取 | 否 |
 
-## 9. 隐性时间题检测规则
+## 9. 隐性时间题检测规则（v6 P0 修正：domain 非过滤条件）
 
-| 规则 | 检测方式 | 覆盖 domain | 缺目标年份时 |
+**重要声明**：下表"覆盖 domain"**仅用于审计汇总，不是 allowlist**。路由判定只根据问题和选项文本（R1-R7），**不得根据 domain 值过滤**。domain 字段在 `temporal_routed_cases.json` 中作为元数据记录，不参与路由逻辑。
+
+| 规则 | 检测方式 | 覆盖 domain（审计汇总） | 缺目标年份时 |
 |---|---|---|---|
-| R1 显式时间关键词 | 现有 `_TIME_KEYWORDS` | annual_fortune | 视选项而定 |
-| R2 选项为 4 位年份 | 现有 `year_pattern`（剥离 `A.` 后） | annual_fortune | N/A |
-| R3 选项为年龄区间 | 剥离 `A.` 后 `\d+[-–]\d+` 且含"岁" | career / annual_fortune | 按 §3.5 转换为起止年 |
-| R4 题目含"大运/流年/岁运/年运" | 扩展关键词 | career | `ROUTED_WITHOUT_TARGETS` |
-| R5 题目含"何时/哪年/几年后" + 选项含年份 | 关键词 + 选项年份混合 | annual_fortune | 按 §3.5 转换 |
-| R6 问题正文含 4 位年份 | `\d{4}` 且 1900-2100 | annual_fortune / career / health | N/A（年份即目标） |
-| R7 选项为单年龄（v5 中优修正） | 剥离 `A.` 后 `^\d+岁$` 或 `^\d+$` 且 1-120 | career | 按 §3.5 转换为 target_year |
+| R1 显式时间关键词 | 现有 `_TIME_KEYWORDS` | annual_fortune（实测） | 视选项而定 |
+| R2 选项为 4 位年份 | 现有 `year_pattern`（剥离 `A.` 后） | annual_fortune（实测） | N/A |
+| R3 选项为年龄区间 | 剥离 `A.` 后 `\d+[-–]\d+` 且含"岁" | career / annual_fortune（实测 0 命中） | 按 §3.5 转换 |
+| R4 题目含"大运/流年/岁运/年运" | 扩展关键词 | career（实测 0 命中） | `ROUTED_WITHOUT_TARGETS` |
+| R5 题目含"何时/哪年/几年后" + 选项含年份 | 关键词 + 选项年份混合 | annual_fortune（实测 0 命中） | 按 §3.5 转换 |
+| R6 问题正文含 4 位年份 | `\d{4}` 且 1900-2100 | relationship/unknown/health/career（实测分布广泛） | N/A |
+| R7 选项为单年龄 | 剥离 `A.` 后 `^\d+岁?$` 且 1-120 | career（实测 0 命中） | 按 §3.5 转换 |
 
-R7 修正：v4 的 `^\d+$` 不剥离 `A.` 标签，真实选项 `A. 30岁` 匹配不到。v5 先剥离 `A.`，再匹配 `^\d+岁?$`。实测 2024+2025 R7 命中 0（但规则保留，防止未来数据集变化）。
+**v6 R6 实测 domain 分布**（证明 domain 不是 allowlist）：
 
-**2024+2025 实测命中**（v4 离线脚本验证）：
+| 年份 | R6 命中 | relationship | unknown | health | career |
+|---|---|---|---|---|---|
+| 2024 | 8 | 4 | 4 | 0 | 0 |
+| 2025 | 10 | 0 | 6 | 2 | 2 |
+
+若按 v5 表格的"annual_fortune / career / health" allowlist 过滤，N 会从 31 缩小到 4，低于 N>=20 阈值，阻断 gate。因此 v6 明确 domain 不参与路由。
+
+**2024+2025 实测命中**：
 
 | 规则 | 2025 命中 | 2024 命中 |
 |---|---|---|
@@ -470,15 +523,17 @@ class TimeContext:
 | 隐性时间题检测过宽 | R3-R7 独立单测 + 2024+2025 命中 case 审计 + 三态分类 |
 | 历史流年计算与排盘不一致 | 算法冻结 + SHA 锁定 + 立春逻辑分离 |
 | 注入内容过长 | 长度上限 + 截断策略 |
-| 6D-on/off 误续跑 | resume 隔离 fail-closed |
+| 6D-on/off 误续跑 | slice 级隔离 fail-closed |
 | 6D orchestrator 与 6B2 冲突 | 独立文件，不共享 schedule/gate/receipt |
 | `TimeContext` 不可变性 | tuple 字段 + canonical JSON + SHA |
-| N 过小 | 阶段一若 N<20 阻断 gate 或扩展 2024+2025 |
+| N 过小 | 阶段一若 N<20 阻断 gate |
 | attempt key 碰撞 | off/on 用不同 arm |
 | gate 无 verdict | 五分支完备覆盖 |
 | 全失败误判 ROLLBACK | 基础设施门 BLOCKED 优先 |
 | 截断重试预算误计 | 所有重试计入 hard_cap（与源码一致） |
-| run 级 injection 单值矛盾 | injection 下沉到 slice 级 |
+| run 级 injection 单值矛盾 | injection 下沉 slice 级 |
+| paired_delta 分母误除 2 | 正确分母 N×3（v6 修正） |
+| domain 误用作 allowlist | 明确声明 domain 仅为审计元数据（v6 修正） |
 
 回退：`--time-context-injection off`（默认），不修改 6B2 已归档证据。
 
@@ -486,21 +541,23 @@ class TimeContext:
 
 6D v1 设计阶段的完成定义：
 
-1. 本设计文档进入 Git（v5）
+1. 本设计文档进入 Git（v6）
 2. `bazi_time_context.py` 模块边界与 `TimeContext` 契约确认（tuple + to_dict + canonical_json + sha256）
 3. 历史流年计算算法版本冻结（`temporal_context_version`）
 4. 目标年份提取策略冻结 + hash 规则确认
 5. 隐性时间题检测规则 R3-R7 的 2024+2025 命中 case 列表 + 三态分类可审计
 6. 可见性矩阵扩展方案确认（按三态分别定义，不绕过现有 DENYLIST）
-7. resume 隔离规则确认（on/off 不可互续）
+7. resume 隔离规则确认（slice 级，off/on 不可互续）
 8. 两阶段评估方案确认（离线门 + 真实 paired dev）
 9. 独立 6D orchestrator 的 schedule/gate/receipt/report 契约确认
-10. paired dev 冻结参数 + 完备判定阈值确认（五分支覆盖）
+10. paired dev 冻结参数 + 完备判定阈值确认（五分支覆盖，分母 N×3）
 11. `_CODE_SCOPE` 扩展确认
 12. provenance 字段分层确认（run 级 vs slice 级 vs case 级）
 13. attempt identity 确认（b1a_time_off / b1a_time_on）
-14. 完整性门 + 基础设施门确认（single main-stage + call_failed/parser_rate BLOCKED）
-15. 预算层级确认（slice 级 scheduled/hard_cap，所有重试计入 hard_cap）
+14. 完整性门 + 基础设施门确认（single main-stage + 按臂分别检查 call_failed/parser_rate BLOCKED）
+15. 预算层级确认（slice 级 scheduled/hard_cap，所有重试计入 hard_cap，2.61× 上限明确接受）
 16. 按年度分组确认（2024: 3 groups，2025: 2 groups，尾组 scheduled=真实题数）
+17. domain 非过滤条件声明确认（仅审计元数据，不参与路由）
+18. `condition_manifest_sha256` canonical JSON 定义确认
 
 实施计划（Task 1-N）在本设计确认后单独编写。
