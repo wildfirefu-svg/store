@@ -32,6 +32,13 @@ debug.log
 .qoder/*
 !.qoder/skills/
 !.qoder/skills/**
+!.qoder/rules/
+!.qoder/rules/**
+!.qoder/agents/
+!.qoder/agents/**
+!.qoder/hooks/
+!.qoder/hooks/**
+!.qoder/settings.json
 .vscode/
 
 # Better Harness generated verification results (keep .better-harness/core-code tracked)
