@@ -1431,6 +1431,39 @@ class TestArchiveIntegrityGate:
         assert ei.value.code == 2
 
 
+class TestFingerprintFailClosed:
+    """Fail-closed semantics for _compute_experiment_code_fingerprint (aligned with 6b2).
+
+    Regression guard: 6b2 hardened its fingerprint to fail-closed; 6b1 must not
+    silently degrade the run_id code fingerprint when a scope file is missing
+    or when the caller's cwd is not the project root.
+    """
+
+    def test_missing_scope_file_aborts(self, monkeypatch):
+        """Missing scope file -> abort with an error, never a silent fingerprint."""
+        import scripts.phase6_6b1_orchestrator as orch
+        monkeypatch.setattr(
+            orch, "_FINGERPRINT_SCOPE_FILES",
+            ["scripts/phase6_6b1_orchestrator.py",
+             "scripts/__definitely_missing_scope__.py"],
+        )
+        with pytest.raises(FileNotFoundError):
+            orch._compute_experiment_code_fingerprint()
+
+    def test_fingerprint_anchored_at_repo_root(self, tmp_path, monkeypatch):
+        """Non-project-root cwd must not change or break the fingerprint."""
+        import scripts.phase6_6b1_orchestrator as orch
+        baseline = orch._compute_experiment_code_fingerprint()
+        assert len(baseline) == 8
+        monkeypatch.chdir(tmp_path)
+        assert orch._compute_experiment_code_fingerprint() == baseline
+
+    def test_fingerprint_stable_across_calls(self):
+        """Repeated computation on an unchanged tree is deterministic."""
+        from scripts.phase6_6b1_orchestrator import _compute_experiment_code_fingerprint
+        assert _compute_experiment_code_fingerprint() == _compute_experiment_code_fingerprint()
+
+
 class TestReportAnalysisConsistency:
     """compute_consistency: 4:1/3:2 分类、平局标注、5x5 两两一致率矩阵."""
 

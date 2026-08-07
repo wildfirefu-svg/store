@@ -1021,23 +1021,36 @@ def _merge_artifacts(schedule: dict, archive_dir: Path,
             "per_slice": per_slice_report}
 
 
+# P1-3: experiment-scope sources covered by the code fingerprint.
+# Module-level so tests can substitute a scope list; anchored at the repo
+# root and fail-closed below (aligned with the 6b2 hardening).
+_FINGERPRINT_SCOPE_FILES = [
+    "scripts/phase6_6b1_orchestrator.py",
+    "benchmark/runners/run_benchmark.py",
+    "benchmark/formatters/chart_context.py",
+    "benchmark/formatters/baziqa_prompt.py",
+    "benchmark/runners/profiles.py",
+]
+
+
 def _compute_experiment_code_fingerprint() -> str:
     """P1-3: hash all experiment-scope source files (not just orchestrator).
     Includes runner, formatters, prompt builder, profiles - any change to
-    experiment-affecting code produces a different run_id."""
-    scope_files = [
-        "scripts/phase6_6b1_orchestrator.py",
-        "benchmark/runners/run_benchmark.py",
-        "benchmark/formatters/chart_context.py",
-        "benchmark/formatters/baziqa_prompt.py",
-        "benchmark/runners/profiles.py",
-    ]
+    experiment-affecting code produces a different run_id.
+
+    Fail-closed (aligned with 6b2): a missing scope file aborts instead of
+    being silently excluded, and paths are anchored at the repo root so the
+    fingerprint never depends on the caller's cwd.
+    """
     h = hashlib.sha256()
-    for rel in scope_files:
-        path = os.path.join(os.getcwd(), rel)
-        if os.path.exists(path):
-            h.update(open(path, "rb").read())
-            h.update(b"\x00")                          # separator
+    for rel in _FINGERPRINT_SCOPE_FILES:
+        path = os.path.join(_PROJECT_ROOT, rel)
+        if not os.path.isfile(path):
+            raise FileNotFoundError(
+                f"experiment code fingerprint: scope file missing: {rel}")
+        with open(path, "rb") as f:
+            h.update(f.read())
+        h.update(b"\x00")                          # separator
     return h.hexdigest()[:8]
 
 

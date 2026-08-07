@@ -29,13 +29,17 @@ def main() -> int:
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
     python = find_python()
-    # Fast, core pytest files: calculator pillars + frontend asset checks.
+    # Fast, core pytest files: calculator pillars + frontend asset checks,
+    # plus the phase6 experiment focused suites so the verified smoke layer
+    # intersects the active experiment change surface.
     command = [
         python,
         "-m",
         "pytest",
         "tests/test_bazi_calculator_pillars.py",
         "tests/test_frontend_assets.py",
+        "tests/test_phase6_6b1.py",
+        "tests/test_phase6_6b2.py",
         "-q",
         "--tb=short",
     ]
