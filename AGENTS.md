@@ -46,6 +46,7 @@
 # 安装（首次）
 python -m venv .venv; .venv\Scripts\activate
 pip install -r requirements-dev.txt
+pre-commit install                              # 本地提交门禁（见 §9），每个 clone 跑一次
 playwright install
 copy .env.example .env   # 编辑填入 DEEPSEEK_API_KEY / ANTHROPIC_API_KEY
 
@@ -64,7 +65,7 @@ python -m pytest -m e2e -q                        # 仅 E2E（会起真实服务
 docker-compose up --build
 ```
 
-迭代阶段优先跑单文件/单测；全量套件留给最终验证。测试范围可参考 `.reasonix/skills/test-suite.md` 里"改了什么→跑哪个测试"的映射表。
+迭代阶段优先跑单文件/单测；全量套件留给最终验证。测试范围可参考 `.qoder/skills/test-suite/SKILL.md` 里“改了什么→跑哪个测试”的映射表。
 
 ---
 
@@ -154,7 +155,18 @@ python scripts/affected_tests.py            # git diff 路径 → 最小 pytest 
 python scripts/affected_tests.py --run      # 顺带执行选中的测试
 ```
 
-CI 中的可选 `affected-tests` 作业（`continue-on-error`）即调用此脚本；全量 `test` 作业仍是合并门禁。
+CI 中的 `affected-tests` 作业即调用此脚本，为阻塞式快速门禁；全量 `test` 作业仍是最终合并门禁。`test` 作业在 pytest 之前还运行 lint（`ruff check .`，配置见 `ruff.toml`）与类型检查（`mypy`，增量白名单见 `mypy.ini`）两个机械化门禁。
+
+本地提交门禁（pre-commit hook，失败阻塞提交）：
+
+```
+pre-commit install    # 每个 clone 安装一次（依赖已在 requirements-dev.txt）
+git commit ...        # 自动依次运行 ruff check（E9/F821 基线）+ 聚焦 smoke 测试（scripts/verify_smoke.py），任一失败即阻塞提交
+```
+
+配置见 `.pre-commit-config.yaml`。hook 只做本地快速拦截（有界 smoke 层，不含全量套件）；全量验证仍以 CI `test` 作业为准。紧急情况可用 `git commit --no-verify` 绕过，但必须随后补跑验证。
+
+> 为何不直接用 `affected_tests.py --run` 作 hook：改动命中 `tests/`、`pytest.ini`、`requirements*.txt` 时它会触发全量套件（见脚本 `FULL_SUITE_TRIGGERS`），不适合提交级时延，故 hook 用其同层的有界 smoke（`verify_smoke.py`）；`affected_tests.py` 仍供手动与 CI 使用。
 
 ---
 
@@ -165,7 +177,7 @@ CI 中的可选 `affected-tests` 作业（`continue-on-error`）即调用此脚�
 - "做个 X" → 先 `brainstorming`；"修 bug" → 先 `systematic-debugging`。
 - 有设计 → `writing-plans` 拆 TDD 小任务；执行 → `subagent-driven-development` + `test-driven-development`；收尾 → `finishing-a-development-branch`。
 - 本仓库的设计/计划沉淀在 `docs/superpowers/{specs,plans}/`，动手前先看对应文档。
-- 另有项目自带 `.reasonix/skills/`（`dev`、`docker-up`、`quality-check`、`test-suite`）可直接复用；在 qoder provider 下这些技能已同步注册到 `.qoder/skills/`，供当前 agent 资产层发现。
+- 项目自带技能（`dev`、`docker-up`、`quality-check`、`test-suite`）的唯一权威面是 `.qoder/skills/`，本文档所有技能引用均指向该面；`.reasonix/skills/` 仅为其他 provider 的镜像副本。两侧一致性用 `python scripts/verify_skill_sync.py` 校验（漂移时报错并提示以 `.qoder/skills/` 为准重新同步）。
 
 ---
 
