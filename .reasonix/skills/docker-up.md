@@ -1,6 +1,9 @@
 ---
 name: docker-up
 description: 构建并启动玄机子 Docker 容器，包含健康检查验证
+trigger: 用户需要容器化部署、Docker 构建/重建、或验证容器环境下的运行时行为时使用；纯本地开发调试优先用 dev skill
+output: 处于 healthy 状态的 Docker 容器（docker compose up -d），以及 /api/health 健康检查结果
+validation: curl /api/health 返回 {"status":"ok","version":"1.0.0"}；失败时用 docker compose logs api 定位
 ---
 # Docker Skill — 玄机子
 

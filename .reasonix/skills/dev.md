@@ -1,6 +1,9 @@
 ---
 name: dev
 description: 启动玄机子开发服务器并验证运行状态
+trigger: 用户需要启动本地开发/调试服务器，或要求访问 Web UI、API docs、健康检查端点时使用；不需要运行测试或容器化部署
+output: 后台运行的 Uvicorn 服务进程，以及 Web UI（http://localhost:8000）、API docs、健康检查三个访问地址
+validation: 启动输出中出现 "Uvicorn running on" 或 "Started server process"，且 http://localhost:8000/api/health 可访问
 ---
 # Dev Server Skill — 玄机子
 

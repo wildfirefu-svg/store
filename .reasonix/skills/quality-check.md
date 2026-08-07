@@ -1,6 +1,9 @@
 ---
 name: quality-check
 description: 运行模型质量检查和代码审计，验证八字计算准确性
+trigger: 用户要求验证八字计算准确性、回归基线、幻觉检测或知识库缺口审计时使用；代码改动后需要领域级质量确认也适用
+output: 质量报告摘要：总体结论（pass/fail/warn）、各组件准确率、回归项与针对警告的修复建议
+validation: model_quality_test 与一致性检查命令退出码为 0 且无 FAIL 指标；失败时输出具体失败项而非笼统报错
 ---
 # Quality Check Skill — 玄机子
 

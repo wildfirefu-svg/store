@@ -1,6 +1,9 @@
 ---
 name: test-suite
 description: 运行玄机子测试套件，根据变更范围选择测试范围
+trigger: 代码改动后需要验证回归、合并前需要跑全量套件、或需要按变更范围选择测试时使用
+output: 测试结果报告：PASS/FAIL 计数、失败项的断言错误信息、缺失模块的跳过说明
+validation: 选定的 pytest 命令退出码为 0；失败时给出具体断言信息且失败归因于实现而非测试选择错误
 ---
 # Test Suite Skill — 玄机子
 
