@@ -94,3 +94,63 @@ def test_calculate_liunian_for_year_out_of_range():
         calculate_liunian_for_year(1899, "甲")
     with pytest.raises(ValueError):
         calculate_liunian_for_year(2101, "甲")
+
+
+def test_r1_explicit_time_keyword():
+    from benchmark.formatters.bazi_time_context import detect_temporal_rules
+    rules = detect_temporal_rules("命主哪年结婚？", ["A. 1990年", "B. 1995年"])
+    assert "R1" in rules
+
+
+def test_r2_option_four_digit_year():
+    from benchmark.formatters.bazi_time_context import detect_temporal_rules
+    rules = detect_temporal_rules("发生何事？", ["A. 1989", "B. 1990", "C. 1991", "D. 1992"])
+    assert "R2" in rules
+
+
+def test_r3_age_range():
+    from benchmark.formatters.bazi_time_context import detect_temporal_rules
+    rules = detect_temporal_rules("事业如何？", ["A. 25-30岁", "B. 31-35岁"])
+    assert "R3" in rules
+
+
+def test_r4_dayun_keyword():
+    from benchmark.formatters.bazi_time_context import detect_temporal_rules
+    rules = detect_temporal_rules("大运什么时候开始", ["A. 甲", "B. 乙"])
+    assert "R4" in rules
+
+
+def test_r5_when_year_mixed():
+    from benchmark.formatters.bazi_time_context import detect_temporal_rules
+    rules = detect_temporal_rules("何时结婚", ["A. 1995年", "B. 1998年"])
+    assert "R5" in rules
+
+
+def test_r6_question_body_year():
+    from benchmark.formatters.bazi_time_context import detect_temporal_rules
+    rules = detect_temporal_rules("1980年发生何事？", ["A. 结婚", "B. 升职"])
+    assert "R6" in rules
+
+
+def test_r6_long_digit_no_false_positive():
+    from benchmark.formatters.bazi_time_context import detect_temporal_rules
+    rules = detect_temporal_rules("订单号12345678是什么？", ["A. 甲", "B. 乙"])
+    assert "R6" not in rules
+
+
+def test_r7_single_age():
+    from benchmark.formatters.bazi_time_context import detect_temporal_rules
+    rules = detect_temporal_rules("何时结婚？", ["A. 30岁", "B. 35岁"])
+    assert "R7" in rules
+
+
+def test_r7_plain_number():
+    from benchmark.formatters.bazi_time_context import detect_temporal_rules
+    rules = detect_temporal_rules("何时结婚？", ["A. 30", "B. 35"])
+    assert "R7" in rules
+
+
+def test_no_rules_matched():
+    from benchmark.formatters.bazi_time_context import detect_temporal_rules
+    rules = detect_temporal_rules("命主性格如何？", ["A. 温和", "B. 刚强"])
+    assert len(rules) == 0

@@ -7,6 +7,8 @@ Earthly-Branch / Heavenly-Stem relation logic and stream-year (流年) computati
 
 from __future__ import annotations
 
+import re
+
 from bazi_calculator import get_shishen, sexagenary_by_index
 
 # Time/location keywords for identifying time-location questions
@@ -158,3 +160,62 @@ def calculate_liunian_for_year(target_year: int, day_master_gan: str) -> dict:
         "zhi": zhi,
         "shi_shen": shi_shen,
     }
+
+
+# Option prefix pattern (e.g. "A. ", "B. ")
+_OPTION_PREFIX = re.compile(r"^[A-D]\.\s*")
+
+# Keywords that mark dayun/liunian routing questions (R4)
+_DAYUN_KEYWORDS = ("大运", "流年", "岁运", "年运")
+
+# When-keywords used by R5
+_WHEN_KEYWORDS = ("何时", "哪年", "几年后", "几年")
+
+
+def detect_temporal_rules(question: str, options: list[str]) -> frozenset[str]:
+    """Detect temporal/routing rules in a BaziQA question and its options.
+
+    Returns a frozenset of matched rule names (R1..R7). Each rule is an
+    independent signal; multiple rules may fire for the same question.
+    """
+    matched: set[str] = set()
+
+    stripped = [_OPTION_PREFIX.sub("", o) for o in options]
+
+    # R1: question contains any time keyword
+    if any(kw in question for kw in _TIME_KEYWORDS):
+        matched.add("R1")
+
+    # R2: all options (>=2) are bare 4-digit years
+    if len(stripped) >= 2 and all(re.match(r"^\d{4}$", s) for s in stripped):
+        matched.add("R2")
+
+    # R3: any option contains a numeric range AND "岁"
+    if any(re.search(r"\d+[-–]\d+", s) and "岁" in s for s in stripped):
+        matched.add("R3")
+
+    # R4: question contains dayun/liunian routing keywords
+    if any(kw in question for kw in _DAYUN_KEYWORDS):
+        matched.add("R4")
+
+    # R5: question contains a when-keyword AND any option has a 4-digit year
+    if any(kw in question for kw in _WHEN_KEYWORDS) and any(
+        re.search(r"\d{4}", s) for s in stripped
+    ):
+        matched.add("R5")
+
+    # R6: question body contains a standalone 4-digit year in [1900, 2100]
+    for m in re.finditer(r"(?<!\d)\d{4}(?!\d)", question):
+        year = int(m.group())
+        if 1900 <= year <= 2100:
+            matched.add("R6")
+            break
+
+    # R7: any option is a bare age (with optional 岁) in [1, 120]
+    for s in stripped:
+        m = re.match(r"^(\d+)岁?$", s)
+        if m and 1 <= int(m.group(1)) <= 120:
+            matched.add("R7")
+            break
+
+    return frozenset(matched)
