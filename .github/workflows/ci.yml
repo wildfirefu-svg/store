@@ -54,6 +54,14 @@ jobs:
           print(f'All Python files pass syntax check')
           "
 
+      - name: Lint (ruff)
+        run: |
+          ruff check .
+
+      - name: Type check (mypy)
+        run: |
+          mypy
+
       - name: Run tests
         run: |
           python -m pytest tests/ -v --tb=short --timeout=120
@@ -68,12 +76,11 @@ jobs:
           echo "Docker build succeeded"
 
   affected-tests:
-    # Optional fast path: run only the tests mapped to changed files
-    # (see scripts/affected_tests.py). Failure here does not block the
-    # merge; the full `test` job above remains the authoritative gate.
+    # Fast path: run only the tests mapped to changed files
+    # (see scripts/affected_tests.py). This job is a blocking early
+    # signal; the full `test` job above remains the authoritative gate.
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4

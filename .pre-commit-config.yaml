@@ -1,0 +1,16 @@
+# Local pre-commit gate (AGENTS.md §9). Blocks commit on failure.
+# Install once per clone: pip install -r requirements-dev.txt && pre-commit install
+# Bypass for a non-code emergency only: git commit --no-verify
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.1
+    hooks:
+      - id: ruff
+  - repo: local
+    hooks:
+      - id: smoke-tests
+        name: focused smoke tests (scripts/verify_smoke.py)
+        entry: python scripts/verify_smoke.py
+        language: system
+        pass_filenames: false
+        always_run: true
