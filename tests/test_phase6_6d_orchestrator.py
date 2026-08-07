@@ -1,0 +1,593 @@
+"""Phase 6 6D orchestrator tests - schedule/ledger/merge/gate/report/archive/CLI."""
+from __future__ import annotations
+
+import json
+import os
+import sys
+
+import pytest
+
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from scripts.phase6_6d_orchestrator import (
+    ARMS,
+    CHART_SCHEMA,
+    FROZEN_METHOD,
+    FROZEN_MODEL,
+    FROZEN_PROFILE,
+    FROZEN_PROVIDER,
+    FROZEN_TEMPERATURE,
+    FROZEN_THINKING_MODE,
+    MODEL_LABEL,
+    PARSER_RATE_MIN,
+    REPEATS,
+    ROUTED_MANIFEST_PATH,
+    SIXD_RECEIPT_REQUIRED_FIELDS,
+    TEMPORAL_CONTEXT_VERSION,
+    BudgetLedger,
+    _assign_group_abba_order,
+    _build_runner_command,
+    _build_schedule,
+    _check_completeness,
+    _compute_experiment_code_fingerprint,
+    _compute_schedule_metadata,
+    _merge_details,
+    _prepare_run_context,
+    _validate_frozen_protocol,
+    _validate_phase1_receipt,
+    build_run_manifest,
+    check_6d_gate,
+    compute_6d_gate,
+)
+
+_MANIFEST = os.path.join(PROJECT_ROOT, ROUTED_MANIFEST_PATH)
+_RECEIPT = os.path.join(PROJECT_ROOT, "docs/phase6/6d/phase1_receipt.json")
+
+
+def _make_detail_row(year, arm, case_id, repeat, correct=True,
+                     terminal="parsed"):
+    ds = f"baziqa_contest8_{year}_holdout_enriched"
+    return {
+        "attempt_key": [ds, "baziqa_xjz_reasoned", arm, "main",
+                        "deepseek", "deepseek-v4-flash", case_id,
+                        repeat, 0, "p0"],
+        "case_id": case_id,
+        "terminal_state": terminal,
+        "correct": correct,
+        "predicted_answer": "A",
+        "expected_answer": "A",
+    }
+
+
+# -- Schedule tests --
+
+
+def test_schedule_per_year_grouping():
+    sched = _build_schedule("/tmp/6d_test", _MANIFEST)
+    by_yg = {}
+    for sl in sched["slices"]:
+        key = (sl["year"], sl["group"])
+        by_yg.setdefault(key, set()).add(sl["slice_id"])
+    assert sched["groups_per_year"] == {"2024": 3, "2025": 2}
+    for (year, g), ids in by_yg.items():
+        assert len(ids) == REPEATS * 2
+
+
+def test_schedule_group_sizes():
+    sched = _build_schedule("/tmp/6d_test", _MANIFEST)
+    by_yg = {}
+    for sl in sched["slices"]:
+        key = (sl["year"], sl["group"])
+        if key not in by_yg:
+            by_yg[key] = sl["scheduled_calls"]
+    assert by_yg[("2024", 0)] == 8
+    assert by_yg[("2024", 1)] == 8
+    assert by_yg[("2024", 2)] == 2
+    assert by_yg[("2025", 0)] == 8
+    assert by_yg[("2025", 1)] == 5
+
+
+def test_schedule_tail_group_scheduled_real_count():
+    sched = _build_schedule("/tmp/6d_test", _MANIFEST)
+    tail_2024 = [s for s in sched["slices"] if s["year"] == "2024" and s["group"] == 2]
+    tail_2025 = [s for s in sched["slices"] if s["year"] == "2025" and s["group"] == 1]
+    for s in tail_2024:
+        assert s["scheduled_calls"] == 2
+        assert s["max_cases"] == 2
+    for s in tail_2025:
+        assert s["scheduled_calls"] == 5
+        assert s["max_cases"] == 5
+
+
+def test_schedule_global_scheduled_186():
+    sched = _build_schedule("/tmp/6d_test", _MANIFEST)
+    assert sched["total_scheduled_calls"] == 186
+
+
+def test_schedule_global_hard_cap_486():
+    sched = _build_schedule("/tmp/6d_test", _MANIFEST)
+    assert sched["global_hard_cap"] == 486
+
+
+def test_schedule_arms_are_b1a_time_off_on():
+    sched = _build_schedule("/tmp/6d_test", _MANIFEST)
+    arms = {s["arm"] for s in sched["slices"]}
+    assert arms == {"b1a_time_off", "b1a_time_on"}
+    assert len(sched["slices"]) == 30
+
+
+# -- AB/BA golden mapping --
+
+
+def test_abba_golden_mapping():
+    expected = {
+        "2024:g0": "BA", "2024:g1": "AB", "2024:g2": "AB",
+        "2025:g0": "AB", "2025:g1": "BA",
+    }
+    for key, expected_order in expected.items():
+        year, g = key.split(":g")
+        assert _assign_group_abba_order(year, int(g)) == expected_order
+    sched = _build_schedule("/tmp/6d_test", _MANIFEST)
+    assert sched["group_abba_order"] == expected
+
+
+# -- Runner command --
+
+
+def test_runner_command_includes_frozen_params(tmp_path):
+    sched = _build_schedule(str(tmp_path), _MANIFEST)
+    sl = sched["slices"][0]
+    cmd = _build_runner_command(sl, FROZEN_PROVIDER, FROZEN_MODEL)
+    cmd_str = " ".join(cmd)
+    assert "--profile" in cmd and FROZEN_PROFILE in cmd
+    assert "--method" in cmd and FROZEN_METHOD in cmd
+    assert "--model" in cmd and FROZEN_MODEL in cmd
+    assert "--thinking-mode" in cmd and FROZEN_THINKING_MODE in cmd
+    assert "--temperature" in cmd and "0.0" in cmd
+    assert "--ziwei-arm" in cmd and "none" in cmd
+    assert "--time-context-injection" in cmd
+    assert "--temporal-routed-cases-file" in cmd
+    assert sl["routed_manifest_path"] in cmd
+    assert "--arm" in cmd and sl["arm"] in cmd
+
+
+def test_runner_command_off_vs_on_differs(tmp_path):
+    sched = _build_schedule(str(tmp_path), _MANIFEST)
+    off_sl = next(s for s in sched["slices"] if s["arm"] == "b1a_time_off")
+    on_sl = next(s for s in sched["slices"] if s["arm"] == "b1a_time_on")
+    off_cmd = _build_runner_command(off_sl, FROZEN_PROVIDER, FROZEN_MODEL)
+    on_cmd = _build_runner_command(on_sl, FROZEN_PROVIDER, FROZEN_MODEL)
+    off_inj = off_cmd[off_cmd.index("--time-context-injection") + 1]
+    on_inj = on_cmd[on_cmd.index("--time-context-injection") + 1]
+    assert off_inj == "off"
+    assert on_inj == "on"
+    off_arm = off_cmd[off_cmd.index("--arm") + 1]
+    on_arm = on_cmd[on_cmd.index("--arm") + 1]
+    assert off_arm == "b1a_time_off"
+    assert on_arm == "b1a_time_on"
+
+
+# -- Frozen protocol rejection --
+
+
+def test_frozen_protocol_reject_wrong_model():
+    with pytest.raises(SystemExit):
+        _validate_frozen_protocol(FROZEN_PROVIDER, "wrong-model",
+                                  FROZEN_THINKING_MODE, FROZEN_TEMPERATURE,
+                                  FROZEN_PROFILE, FROZEN_METHOD)
+
+
+def test_frozen_protocol_reject_wrong_thinking():
+    with pytest.raises(SystemExit):
+        _validate_frozen_protocol(FROZEN_PROVIDER, FROZEN_MODEL,
+                                  "enabled", FROZEN_TEMPERATURE,
+                                  FROZEN_PROFILE, FROZEN_METHOD)
+
+
+def test_frozen_protocol_reject_wrong_temperature():
+    with pytest.raises(SystemExit):
+        _validate_frozen_protocol(FROZEN_PROVIDER, FROZEN_MODEL,
+                                  FROZEN_THINKING_MODE, 0.7,
+                                  FROZEN_PROFILE, FROZEN_METHOD)
+
+
+def test_frozen_protocol_reject_wrong_profile():
+    with pytest.raises(SystemExit):
+        _validate_frozen_protocol(FROZEN_PROVIDER, FROZEN_MODEL,
+                                  FROZEN_THINKING_MODE, FROZEN_TEMPERATURE,
+                                  "wrong_profile", FROZEN_METHOD)
+
+
+def test_frozen_protocol_reject_wrong_method():
+    with pytest.raises(SystemExit):
+        _validate_frozen_protocol(FROZEN_PROVIDER, FROZEN_MODEL,
+                                  FROZEN_THINKING_MODE, FROZEN_TEMPERATURE,
+                                  FROZEN_PROFILE, "dual_system")
+
+
+def test_frozen_protocol_accepts_correct():
+    protocol = _validate_frozen_protocol(
+        FROZEN_PROVIDER, FROZEN_MODEL, FROZEN_THINKING_MODE,
+        FROZEN_TEMPERATURE, FROZEN_PROFILE, FROZEN_METHOD)
+    assert protocol["model"] == FROZEN_MODEL
+    assert protocol["model_label"] == MODEL_LABEL
+
+
+# -- Resume protocol drift --
+
+
+def test_resume_protocol_drift_fail_closed(tmp_path):
+    protocol = _validate_frozen_protocol(
+        FROZEN_PROVIDER, FROZEN_MODEL, FROZEN_THINKING_MODE,
+        FROZEN_TEMPERATURE, FROZEN_PROFILE, FROZEN_METHOD)
+    code_fp = _compute_experiment_code_fingerprint()
+    rm = build_run_manifest(FROZEN_PROVIDER, FROZEN_MODEL, protocol, code_fp, _MANIFEST)
+    _prepare_run_context(tmp_path, "test_run", False, rm, code_fp)
+    drifted = dict(rm)
+    drifted["temporal_context_version"] = "6d-v2"
+    with pytest.raises(SystemExit):
+        _prepare_run_context(tmp_path, "test_run", True, drifted, code_fp)
+
+
+def test_resume_abba_drift_fail_closed(tmp_path):
+    protocol = _validate_frozen_protocol(
+        FROZEN_PROVIDER, FROZEN_MODEL, FROZEN_THINKING_MODE,
+        FROZEN_TEMPERATURE, FROZEN_PROFILE, FROZEN_METHOD)
+    code_fp = _compute_experiment_code_fingerprint()
+    rm = build_run_manifest(FROZEN_PROVIDER, FROZEN_MODEL, protocol, code_fp, _MANIFEST)
+    _prepare_run_context(tmp_path, "test_run2", False, rm, code_fp)
+    drifted = dict(rm)
+    drifted["group_abba_order"] = {"2024:g0": "AB"}
+    with pytest.raises(SystemExit):
+        _prepare_run_context(tmp_path, "test_run2", True, drifted, code_fp)
+
+
+def test_no_cross_orchestrator_resume(tmp_path):
+    protocol = _validate_frozen_protocol(
+        FROZEN_PROVIDER, FROZEN_MODEL, FROZEN_THINKING_MODE,
+        FROZEN_TEMPERATURE, FROZEN_PROFILE, FROZEN_METHOD)
+    code_fp = _compute_experiment_code_fingerprint()
+    rm = build_run_manifest(FROZEN_PROVIDER, FROZEN_MODEL, protocol, code_fp, _MANIFEST)
+    context = dict(rm)
+    context["experiment_id"] = "6b2"
+    context["code_fingerprint"] = code_fp
+    context["created_at"] = "2026-01-01T00:00:00"
+    runs_root = tmp_path / "runs" / "cross_run"
+    runs_root.parent.mkdir(parents=True, exist_ok=True)
+    runs_root.mkdir()
+    import json as _json
+    (runs_root / "run_context.json").write_text(
+        _json.dumps(context, ensure_ascii=False), encoding="utf-8")
+    from scripts.phase6_6d_orchestrator import _prepare_run_context
+    with pytest.raises(SystemExit):
+        _prepare_run_context(tmp_path, "cross_run", True, rm, code_fp)
+
+
+# -- Receipt fields --
+
+
+def test_receipt_fields_complete():
+    expected = (
+        "verdict", "stage", "run_id", "user_run_id", "archive_dir",
+        "audit_index_sha256", "provider", "model",
+        "thinking_mode", "model_label",
+        "code_fingerprint", "dataset_set_sha256",
+        "temporal_context_version", "experiment_conditions",
+        "extraction_strategy_sha256", "temporal_routed_cases_sha256",
+        "condition_manifest_sha256", "dataset_sha256_by_year",
+        "group_abba_order",
+    )
+    assert SIXD_RECEIPT_REQUIRED_FIELDS == expected
+    assert len(SIXD_RECEIPT_REQUIRED_FIELDS) == 19
+
+
+def test_check_6d_gate_rejects_missing_fields():
+    with pytest.raises(SystemExit):
+        check_6d_gate({"verdict": "PROMOTE"})
+
+
+def test_check_6d_gate_accepts_complete():
+    receipt = {f: "x" for f in SIXD_RECEIPT_REQUIRED_FIELDS}
+    receipt["temporal_context_version"] = TEMPORAL_CONTEXT_VERSION
+    receipt["experiment_conditions"] = ["off", "on"]
+    assert check_6d_gate(receipt) is True
+
+
+# -- Provenance cross-validation --
+
+
+def test_provenance_8_temporal_run_fields():
+    protocol = _validate_frozen_protocol(
+        FROZEN_PROVIDER, FROZEN_MODEL, FROZEN_THINKING_MODE,
+        FROZEN_TEMPERATURE, FROZEN_PROFILE, FROZEN_METHOD)
+    code_fp = _compute_experiment_code_fingerprint()
+    rm = build_run_manifest(FROZEN_PROVIDER, FROZEN_MODEL, protocol, code_fp, _MANIFEST)
+    temporal_fields = (
+        "temporal_context_version", "experiment_conditions",
+        "extraction_strategy_sha256", "temporal_routed_cases_sha256",
+        "condition_manifest_sha256", "dataset_sha256_by_year",
+        "dataset_set_sha256", "group_abba_order",
+    )
+    for f in temporal_fields:
+        assert f in rm, f"missing temporal field: {f}"
+    assert rm["temporal_context_version"] == TEMPORAL_CONTEXT_VERSION
+    assert rm["experiment_conditions"] == ["off", "on"]
+
+
+def test_provenance_run_context_has_temporal_fields(tmp_path):
+    protocol = _validate_frozen_protocol(
+        FROZEN_PROVIDER, FROZEN_MODEL, FROZEN_THINKING_MODE,
+        FROZEN_TEMPERATURE, FROZEN_PROFILE, FROZEN_METHOD)
+    code_fp = _compute_experiment_code_fingerprint()
+    rm = build_run_manifest(FROZEN_PROVIDER, FROZEN_MODEL, protocol, code_fp, _MANIFEST)
+    runs_root, context = _prepare_run_context(tmp_path, "prov_run", False, rm, code_fp)
+    temporal_fields = (
+        "temporal_context_version", "experiment_conditions",
+        "extraction_strategy_sha256", "temporal_routed_cases_sha256",
+        "condition_manifest_sha256", "dataset_sha256_by_year",
+        "dataset_set_sha256", "group_abba_order",
+    )
+    for f in temporal_fields:
+        assert context[f] == rm[f], f"run_context {f} != run_manifest"
+
+
+# -- dataset_sha256_by_year --
+
+
+def test_dataset_sha256_by_year_dual_year():
+    from scripts.phase6_6d_orchestrator import _compute_dataset_sha256_by_year
+    ds = _compute_dataset_sha256_by_year(_MANIFEST)
+    assert "2024" in ds and "2025" in ds
+    assert len(ds) == 2
+    assert all(len(v) == 64 for v in ds.values())
+
+
+def test_no_single_dataset_sha256_field():
+    protocol = _validate_frozen_protocol(
+        FROZEN_PROVIDER, FROZEN_MODEL, FROZEN_THINKING_MODE,
+        FROZEN_TEMPERATURE, FROZEN_PROFILE, FROZEN_METHOD)
+    code_fp = _compute_experiment_code_fingerprint()
+    rm = build_run_manifest(FROZEN_PROVIDER, FROZEN_MODEL, protocol, code_fp, _MANIFEST)
+    assert "dataset_sha256" not in rm
+    assert "dataset_set_sha256" in rm
+    assert "dataset_sha256_by_year" in rm
+
+
+# -- BudgetLedger --
+
+
+def test_budget_ledger_tracks_attempts(tmp_path):
+    ledger = BudgetLedger(str(tmp_path / "ledger.json"), global_hard_cap=486)
+    assert ledger.hard_cap == 486
+    assert ledger.total_attempted == 0
+    assert ledger.remaining_budget() == 486
+    ledger.record_slice_completed("s1", 8, 8)
+    assert ledger.total_attempted == 8
+    assert ledger.total_scheduled == 8
+    assert ledger.slice_completed("s1")
+    assert ledger.remaining_budget() == 478
+
+
+def test_budget_ledger_resume(tmp_path):
+    ledger = BudgetLedger(str(tmp_path / "ledger.json"), global_hard_cap=486)
+    ledger.record_slice_completed("s1", 8, 8)
+    ledger.record_slice_completed("s2", 5, 5)
+    ledger2 = BudgetLedger(str(tmp_path / "ledger.json"), global_hard_cap=486)
+    assert ledger2.total_attempted == 13
+    assert ledger2.slice_completed("s1")
+    assert ledger2.slice_completed("s2")
+    assert ledger2.remaining_budget() == 473
+
+
+def test_budget_ledger_reject_hard_cap_breach(tmp_path):
+    ledger = BudgetLedger(str(tmp_path / "ledger.json"), global_hard_cap=10)
+    ledger.record_slice_completed("s1", 8, 8)
+    with pytest.raises(SystemExit):
+        ledger.record_slice_completed("s2", 5, 5)
+
+
+# -- Completeness --
+
+
+def test_completeness_pass(tmp_path):
+    sched = _build_schedule(str(tmp_path), _MANIFEST)
+    merged = []
+    for sl in sched["slices"]:
+        for cid in sl["case_ids"]:
+            merged.append(_make_detail_row(sl["year"], sl["arm"], cid, sl["repeat"]))
+    assert _check_completeness(merged, sched) == "PASS"
+
+
+def test_completeness_missing_on(tmp_path):
+    sched = _build_schedule(str(tmp_path), _MANIFEST)
+    merged = []
+    for sl in sched["slices"]:
+        if sl["arm"] == "b1a_time_off":
+            for cid in sl["case_ids"]:
+                merged.append(_make_detail_row(sl["year"], sl["arm"], cid, sl["repeat"]))
+    result = _check_completeness(merged, sched)
+    assert result != "PASS"
+
+
+# -- Gate: BLOCKED branches --
+
+
+def test_gate_blocked_call_failed_off():
+    rows = [_make_detail_row("2024", "b1a_time_off", "c1", 0, terminal="call_failed")]
+    rows += [_make_detail_row("2024", "b1a_time_on", "c1", 0)]
+    result = compute_6d_gate(rows, 1)
+    assert result["verdict"] == "BLOCKED"
+
+
+def test_gate_blocked_call_failed_on():
+    rows = [_make_detail_row("2024", "b1a_time_off", "c1", 0)]
+    rows += [_make_detail_row("2024", "b1a_time_on", "c1", 0, terminal="call_failed")]
+    result = compute_6d_gate(rows, 1)
+    assert result["verdict"] == "BLOCKED"
+
+
+def test_gate_blocked_parser_rate_off():
+    rows = []
+    for i in range(10):
+        rows.append(_make_detail_row("2024", "b1a_time_off", f"c{i}", 0,
+                                     terminal="invalid"))
+    rows += [_make_detail_row("2024", "b1a_time_on", "c0", 0)]
+    result = compute_6d_gate(rows, 1)
+    assert result["verdict"] == "BLOCKED"
+
+
+def test_gate_blocked_parser_rate_on():
+    rows = [_make_detail_row("2024", "b1a_time_off", "c0", 0)]
+    for i in range(10):
+        rows.append(_make_detail_row("2024", "b1a_time_on", f"c{i}", 0,
+                                     terminal="invalid"))
+    result = compute_6d_gate(rows, 1)
+    assert result["verdict"] == "BLOCKED"
+
+
+def test_gate_blocked_early_return_no_overwrite():
+    rows = [_make_detail_row("2024", "b1a_time_off", "c1", 0, terminal="call_failed")]
+    rows += [_make_detail_row("2024", "b1a_time_on", "c1", 0, correct=True)]
+    result = compute_6d_gate(rows, 1)
+    assert result["verdict"] == "BLOCKED"
+    assert result.get("paired_delta") is None
+
+
+# -- Gate: paired_delta denominator --
+
+
+def test_gate_paired_delta_denominator_n3():
+    n_cases = 2
+    rows = []
+    for cid in ["c0", "c1"]:
+        for rep in range(3):
+            rows.append(_make_detail_row("2024", "b1a_time_off", cid, rep, correct=False))
+            rows.append(_make_detail_row("2024", "b1a_time_on", cid, rep, correct=True))
+    result = compute_6d_gate(rows, n_cases)
+    assert result["verdict"] == "PROMOTE"
+    assert abs(result["paired_delta"] - (6 / (n_cases * 3))) < 1e-9
+
+
+# -- Gate: accuracy branches --
+
+
+def test_gate_promote():
+    n_cases = 2
+    rows = []
+    for cid in ["c0", "c1"]:
+        for rep in range(3):
+            rows.append(_make_detail_row("2024", "b1a_time_off", cid, rep, correct=False))
+            rows.append(_make_detail_row("2024", "b1a_time_on", cid, rep, correct=True))
+    result = compute_6d_gate(rows, n_cases)
+    assert result["verdict"] == "PROMOTE"
+    assert result["paired_delta"] >= 0.05
+    assert result["min_case_delta"] >= 0
+
+
+def test_gate_review_required():
+    n_cases = 10
+    rows = []
+    for i in range(n_cases - 1):
+        for rep in range(3):
+            rows.append(_make_detail_row("2024", "b1a_time_off", f"c{i}", rep, correct=False))
+            rows.append(_make_detail_row("2024", "b1a_time_on", f"c{i}", rep, correct=True))
+    for rep in range(3):
+        rows.append(_make_detail_row("2024", "b1a_time_off", "c9", rep, correct=True))
+        rows.append(_make_detail_row("2024", "b1a_time_on", "c9", rep, correct=False))
+    result = compute_6d_gate(rows, n_cases)
+    assert result["paired_delta"] >= 0.05
+    assert result["min_case_delta"] < 0
+    assert result["verdict"] == "REVIEW_REQUIRED"
+
+
+def test_gate_non_inferior():
+    n_cases = 10
+    rows = []
+    for cid in range(n_cases):
+        for rep in range(3):
+            rows.append(_make_detail_row("2024", "b1a_time_off", f"c{cid}", rep, correct=True))
+            rows.append(_make_detail_row("2024", "b1a_time_on", f"c{cid}", rep, correct=True))
+    result = compute_6d_gate(rows, n_cases)
+    assert result["paired_delta"] == 0.0
+    assert -0.02 <= result["paired_delta"] < 0.05
+    assert result["verdict"] == "NON_INFERIOR"
+
+
+def test_gate_rollback():
+    n_cases = 2
+    rows = []
+    for cid in ["c0", "c1"]:
+        for rep in range(3):
+            rows.append(_make_detail_row("2024", "b1a_time_off", cid, rep, correct=True))
+            rows.append(_make_detail_row("2024", "b1a_time_on", cid, rep, correct=False))
+    result = compute_6d_gate(rows, n_cases)
+    assert result["paired_delta"] < -0.02
+    assert result["verdict"] == "ROLLBACK"
+
+
+# -- CLI --
+
+
+def test_run_dev_help_works():
+    import subprocess
+    r = subprocess.run(
+        [sys.executable, "scripts/phase6_6d_orchestrator.py", "run_dev", "--help"],
+        capture_output=True, text=True, cwd=PROJECT_ROOT, timeout=30)
+    assert r.returncode == 0
+    assert "--provider" in r.stdout
+    assert "--model" in r.stdout
+    assert "--output-dir" in r.stdout
+    assert "--run-id" in r.stdout
+
+
+# -- Phase1 receipt validation --
+
+
+def test_phase1_receipt_valid():
+    receipt = _validate_phase1_receipt(_RECEIPT, _MANIFEST)
+    assert receipt["status"] == "PASS"
+    assert receipt["n_routed"] >= 20
+
+
+def test_phase1_receipt_reject_blocked(tmp_path):
+    import json as _json
+    bad = _json.loads(open(_RECEIPT, encoding="utf-8").read())
+    bad["status"] = "BLOCKED"
+    bad_path = str(tmp_path / "bad_receipt.json")
+    open(bad_path, "w", encoding="utf-8").write(_json.dumps(bad))
+    with pytest.raises(SystemExit):
+        _validate_phase1_receipt(bad_path, _MANIFEST)
+
+
+def test_phase1_receipt_reject_low_n_routed(tmp_path):
+    import json as _json
+    bad = _json.loads(open(_RECEIPT, encoding="utf-8").read())
+    bad["n_routed"] = 10
+    bad_path = str(tmp_path / "bad_receipt.json")
+    open(bad_path, "w", encoding="utf-8").write(_json.dumps(bad))
+    with pytest.raises(SystemExit):
+        _validate_phase1_receipt(bad_path, _MANIFEST)
+
+
+def test_phase1_receipt_reject_sha_mismatch(tmp_path):
+    import json as _json
+    bad = _json.loads(open(_RECEIPT, encoding="utf-8").read())
+    bad["temporal_routed_cases_sha256"] = "0" * 64
+    bad_path = str(tmp_path / "bad_receipt.json")
+    open(bad_path, "w", encoding="utf-8").write(_json.dumps(bad))
+    with pytest.raises(SystemExit):
+        _validate_phase1_receipt(bad_path, _MANIFEST)
+
+
+def test_run_dev_validates_phase1_receipt(tmp_path):
+    import subprocess
+    r = subprocess.run(
+        [sys.executable, "scripts/phase6_6d_orchestrator.py", "run_dev",
+         "--provider", "deepseek", "--model", "deepseek-v4-flash",
+         "--output-dir", str(tmp_path / "out"),
+         "--run-id", "test6d",
+         "--phase1-receipt", "nonexistent_receipt.json"],
+        capture_output=True, text=True, cwd=PROJECT_ROOT, timeout=30)
+    assert r.returncode != 0
