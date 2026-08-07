@@ -17,6 +17,8 @@ from benchmark.runners.profiles import (
     derive_method,
     prompt_fingerprint,
     resolve_profile,
+    visibility_gate,
+    visibility_requirements,
 )
 
 FIXTURE = PROJECT_ROOT / "tests" / "fixtures" / "phase6" / "case_sample_1.json"
@@ -177,3 +179,57 @@ class TestJudgeVisibilityProseSafe:
         p = resolve_profile("baziqa_xjz_dual", "legacy_v0")
         label = "【紫微斗数·本命】夫妻（戌·丙）"
         assert assert_visibility(label, p, "legacy_v0", stage="judge") != []
+
+
+
+# ---- 6D v1 Task 6: temporal context visibility matrix ----
+
+def test_visibility_off_denies_all_temporal():
+    """injection=off 时 3 个 temporal markers 在 deny 侧."""
+    req, deny = visibility_requirements(time_context_injection="off")
+    assert "【时间上下文·预计算】" in deny
+    assert "【大运排布】" in deny
+    assert "【目标流年详析】" in deny
+
+
+def test_visibility_on_not_routed_denies_all():
+    """injection=on + NOT_ROUTED 时 3 个 markers 在 deny 侧."""
+    req, deny = visibility_requirements(time_context_injection="on", route_state="NOT_ROUTED")
+    assert "【时间上下文·预计算】" in deny
+    assert "【大运排布】" in deny
+    assert "【目标流年详析】" in deny
+
+
+def test_visibility_on_without_targets_denies_liunian():
+    """injection=on + ROUTED_WITHOUT_TARGETS 时 【目标流年详析】 在 deny 侧."""
+    req, deny = visibility_requirements(time_context_injection="on", route_state="ROUTED_WITHOUT_TARGETS")
+    assert "【时间上下文·预计算】" in req
+    assert "【大运排布】" in req
+    assert "【目标流年详析】" in deny
+
+
+def test_visibility_on_with_targets_requires_all():
+    """injection=on + ROUTED_WITH_TARGETS 时 3 个 markers 在 required 侧."""
+    req, deny = visibility_requirements(time_context_injection="on", route_state="ROUTED_WITH_TARGETS")
+    assert "【时间上下文·预计算】" in req
+    assert "【大运排布】" in req
+    assert "【目标流年详析】" in req
+
+
+def test_visibility_requirements_accepts_injection_and_route_state():
+    """visibility_requirements 签名接受 time_context_injection 和 route_state 参数."""
+    req, deny = visibility_requirements(time_context_injection="on", route_state="ROUTED_WITH_TARGETS")
+    assert isinstance(req, frozenset)
+    assert isinstance(deny, frozenset)
+
+
+def test_assert_visibility_injection_aware():
+    """assert_visibility 接受 injection + route_state."""
+    violations = assert_visibility("test text", time_context_injection="off")
+    assert isinstance(violations, list)
+
+
+def test_visibility_gate_injection_aware():
+    """visibility_gate 接受 injection + route_state."""
+    result = visibility_gate("test text", time_context_injection="off")
+    assert result in ("PASS", "BLOCKED_PRECONDITION")

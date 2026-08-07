@@ -416,3 +416,54 @@ class TestExtractReasonedChoiceAnswer:
         assert extract_reasoned_choice_answer("无法判断") is None
         assert extract_reasoned_choice_answer("") is None
         assert extract_reasoned_choice_answer(None) is None
+
+
+# ---- 6D v1 Task 6: temporal context injection into render_reasoned_context ----
+
+def test_render_reasoned_context_off_no_temporal():
+    """injection=off 时输出无 temporal markers."""
+    case = load_fixture(1)
+    result = render_reasoned_context(case, "v1", "none", time_context_injection="off")
+    assert "【时间上下文·预计算】" not in result
+    assert "【大运排布】" not in result
+    assert "【目标流年详析】" not in result
+
+
+def test_render_reasoned_context_on_not_routed():
+    """injection=on + NOT_ROUTED 时无 temporal markers."""
+    case = load_fixture(1)
+    result = render_reasoned_context(case, "v1", "none", time_context_injection="on", route_state="NOT_ROUTED")
+    assert "【时间上下文·预计算】" not in result
+
+
+def test_render_reasoned_context_on_routed_without_targets():
+    """injection=on + ROUTED_WITHOUT_TARGETS 时含 2 markers, 不含 【目标流年详析】."""
+    case = load_fixture(1)
+    result = render_reasoned_context(case, "v1", "none", time_context_injection="on", route_state="ROUTED_WITHOUT_TARGETS")
+    assert "【时间上下文·预计算】" in result
+    assert "【大运排布】" in result
+    assert "【目标流年详析】" not in result
+
+
+def test_render_reasoned_context_on_routed_with_targets():
+    """injection=on + ROUTED_WITH_TARGETS 时含全部 3 markers."""
+    from benchmark.formatters.bazi_time_context import (
+        detect_temporal_rules, extract_target_years, classify_route_state,
+    )
+    path = PROJECT_ROOT / "benchmark" / "datasets" / "baziqa_contest8_2025_holdout_enriched.jsonl"
+    rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
+    case = None
+    for row in rows:
+        rules = detect_temporal_rules(row.get("question", ""), row.get("options", []))
+        if "R6" in rules:
+            birth_year = row.get("birth_year") or row.get("person", {}).get("birth", {}).get("year")
+            years = extract_target_years(row["question"], row["options"], birth_year)
+            state = classify_route_state(rules, years)
+            if state.name == "ROUTED_WITH_TARGETS":
+                case = row
+                break
+    assert case is not None, "No ROUTED_WITH_TARGETS case found in 2025 dataset"
+    result = render_reasoned_context(case, "v1", "none", time_context_injection="on", route_state="ROUTED_WITH_TARGETS")
+    assert "【时间上下文·预计算】" in result
+    assert "【大运排布】" in result
+    assert "【目标流年详析】" in result

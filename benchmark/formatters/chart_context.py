@@ -9,6 +9,9 @@ import json
 import re
 
 from benchmark.formatters.baziqa_prompt import format_birth_line
+from benchmark.formatters.bazi_time_context import (
+    build_time_context, TimeContext, TemporalRouteState,
+)
 
 CHART_CONTEXT_TEMPLATE_VERSION = "approved_v1"
 SCHEMA_VERSIONS = ("legacy_v0", "approved_v1")
@@ -28,6 +31,12 @@ APPROVED_BAZI_FIELDS: tuple[str, ...] = (
     "true_solar_info",
 )
 DENYLIST_FIELDS: tuple[str, ...] = ("kong_wang", "liu_nian")
+
+_TEMPORAL_CONTEXT_MARKERS = frozenset({
+    "【时间上下文·预计算】",
+    "【大运排布】",
+    "【目标流年详析】",
+})
 
 _PILLAR_ORDER = ("year", "month", "day", "hour")
 _PILLAR_LABEL = {"year": "年柱", "month": "月柱", "day": "日柱", "hour": "时柱"}
@@ -365,10 +374,34 @@ def extract_reasoned_choice_answer(raw: str) -> str | None:
     return None
 
 
+def format_temporal_context(ctx: TimeContext) -> str:
+    """Format TimeContext as a prompt section string."""
+    lines = ["【时间上下文·预计算】"]
+    if ctx.dayun_table:
+        lines.append("【大运排布】")
+        for row in ctx.dayun_table:
+            lines.append(
+                f"{row.gan}{row.zhi}（{row.start_age}-{row.end_age}岁，"
+                f"{row.start_year}年起）十神：{row.shishen}"
+            )
+    if ctx.option_liunian:
+        lines.append("【目标流年详析】")
+        for opt in ctx.option_liunian:
+            rels = "、".join(opt.branch_relation) if opt.branch_relation else "无"
+            gan_rel = opt.gan_relation or "无"
+            lines.append(
+                f"{opt.target_year}年：{opt.gan}{opt.zhi} 十神：{opt.shishen}"
+                f" 地支关系：{rels} 天干关系：{gan_rel}"
+            )
+    return "\n".join(lines)
+
+
 def render_reasoned_context(
     case: dict,
     chart_schema_version: str,
     ziwei_arm: str,
+    time_context_injection: str = "off",
+    route_state=None,
 ) -> str:
     """Render context for reasoned choice ablation arm.
 
@@ -378,11 +411,15 @@ def render_reasoned_context(
         chart_schema_version: Schema version (passed through; not used for
             output branching, but available for isolation assertions).
         ziwei_arm:
-            ``"none"`` — format_birth_line(case) only (八字基线, no ziwei).
+            ``"none"`` - format_birth_line(case) only (八字基线, no ziwei).
             ``"only"`` - identity header + 本命紫微盘 (no 四柱, no 日主).
             ``"combined"`` - format_birth_line(case) + 本命紫微盘.
             ``"ziwei_mini"`` - identity header + 精简紫微 (命宫/身宫/主星 only).
             ``"sequential"`` - 八字 + 分隔 + 紫微 + 顺序推理指令.
+        time_context_injection: ``"off"`` (default) skips temporal context;
+            ``"on"`` appends temporal context per ``route_state``.
+        route_state: ``TemporalRouteState`` or its string value; only used
+            when ``time_context_injection == "on"``.
 
     Returns:
         Rendered context string.
@@ -392,28 +429,36 @@ def render_reasoned_context(
             ``"combined"``, ``"ziwei_mini"``, ``"sequential"``.
     """
     if ziwei_arm == "none":
-        return format_birth_line(case)
+        result = format_birth_line(case)
+    else:
+        identity = _identity_header(case)
+        ziwei_data = case.get("chart_input", {}).get("ziwei", {})
 
-    identity = _identity_header(case)
-    ziwei_data = case.get("chart_input", {}).get("ziwei", {})
+        if ziwei_arm == "only":
+            ziwei_text = _render_ziwei(ziwei_data)
+            result = identity + "\n\n" + ziwei_text
+        elif ziwei_arm == "combined":
+            birth = format_birth_line(case)
+            ziwei_text = _render_ziwei(ziwei_data)
+            result = birth + "\n\n" + ziwei_text
+        elif ziwei_arm == "ziwei_mini":
+            ziwei_text = _render_ziwei_mini(ziwei_data)
+            result = identity + "\n\n" + ziwei_text
+        elif ziwei_arm == "sequential":
+            result = _render_sequential(case, ziwei_data)
+        else:
+            raise ValueError(
+                f"Unknown ziwei_arm: {ziwei_arm!r}. "
+                "Expected one of: none, only, combined, ziwei_mini, sequential."
+            )
 
-    if ziwei_arm == "only":
-        ziwei_text = _render_ziwei(ziwei_data)
-        return identity + "\n\n" + ziwei_text
+    if time_context_injection == "on" and route_state is not None:
+        state = route_state
+        if isinstance(state, str):
+            state = TemporalRouteState(state)
+        if state != TemporalRouteState.NOT_ROUTED:
+            ctx = build_time_context(case, state)
+            if ctx is not None:
+                result = result + "\n\n" + format_temporal_context(ctx)
 
-    if ziwei_arm == "combined":
-        birth = format_birth_line(case)
-        ziwei_text = _render_ziwei(ziwei_data)
-        return birth + "\n\n" + ziwei_text
-
-    if ziwei_arm == "ziwei_mini":
-        ziwei_text = _render_ziwei_mini(ziwei_data)
-        return identity + "\n\n" + ziwei_text
-
-    if ziwei_arm == "sequential":
-        return _render_sequential(case, ziwei_data)
-
-    raise ValueError(
-        f"Unknown ziwei_arm: {ziwei_arm!r}. "
-        "Expected one of: none, only, combined, ziwei_mini, sequential."
-    )
+    return result
