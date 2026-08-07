@@ -9,6 +9,11 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from benchmark.formatters.bazi_time_context import (
+    extract_target_years, classify_route_state, TemporalRouteState,
+    TimeContext, NatalStructure, DayunRow, OptionLiunian, TimeContextKind,
+)
+
 DIZHI = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]
 TIANGAN = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]
 SHISHEN_LABELS = ["比肩", "劫财", "食神", "伤官", "偏财", "正财", "七杀", "正官", "偏印", "正印"]
@@ -154,3 +159,105 @@ def test_no_rules_matched():
     from benchmark.formatters.bazi_time_context import detect_temporal_rules
     rules = detect_temporal_rules("命主性格如何？", ["A. 温和", "B. 刚强"])
     assert len(rules) == 0
+
+
+def test_extract_target_years_four_digit():
+    years = extract_target_years("发生何事？", ["A. 1989", "B. 1990"], None)
+    assert 1989 in years
+
+
+def test_extract_target_years_age_range():
+    years = extract_target_years("事业如何？", ["A. 25-30岁"], 1980)
+    assert years == (2005, 2010)
+
+
+def test_extract_target_years_single_age():
+    years = extract_target_years("何时结婚？", ["A. 30岁"], 1980)
+    assert years == (2010,)
+
+
+def test_extract_target_years_routed_without_targets():
+    years = extract_target_years("大运如何？", ["A. 甲", "B. 乙"], None)
+    assert years == ()
+
+
+def test_extract_target_years_years_after_with_base():
+    years = extract_target_years("2020年起3年后发生何事？", ["A. 升职", "B. 结婚"], None)
+    assert 2023 in years
+
+
+def test_extract_target_years_years_after_no_base():
+    years = extract_target_years("3年后发生何事？", ["A. 升职", "B. 结婚"], None)
+    assert years == ()
+
+
+def test_extract_target_years_years_after_multiple():
+    years = extract_target_years(
+        "2020年起3年后，2021年起5年后发生何事？", ["A. 升职", "B. 结婚"], None
+    )
+    assert 2023 in years
+    assert 2026 in years
+
+
+def test_extract_target_years_out_of_range_fail_closed():
+    import pytest
+    with pytest.raises(ValueError):
+        extract_target_years("何时？", ["A. 30岁"], 2095)
+
+
+def test_classify_route_state_with_targets():
+    state = classify_route_state(frozenset({"R6"}), (2020,))
+    assert state == TemporalRouteState.ROUTED_WITH_TARGETS
+
+
+def test_classify_route_state_without_targets():
+    state = classify_route_state(frozenset({"R4"}), ())
+    assert state == TemporalRouteState.ROUTED_WITHOUT_TARGETS
+
+
+def test_classify_route_state_not_routed():
+    state = classify_route_state(frozenset(), ())
+    assert state == TemporalRouteState.NOT_ROUTED
+
+
+def test_time_context_is_frozen():
+    import pytest
+    natal = NatalStructure("甲", ("甲子", "乙丑", "丙寅", "丁卯"), (), (), ())
+    ctx = TimeContext(
+        natal, (), (), TimeContextKind.NATAL,
+        TemporalRouteState.ROUTED_WITHOUT_TARGETS, (), "abc",
+    )
+    with pytest.raises(Exception):
+        ctx.natal = natal  # type: ignore
+
+
+def test_time_context_uses_tuple_not_list():
+    natal = NatalStructure("甲", ("甲子",), (), (), ())
+    ctx = TimeContext(
+        natal, (), (), TimeContextKind.NATAL, TemporalRouteState.NOT_ROUTED, (), "abc"
+    )
+    assert isinstance(ctx.dayun_table, tuple)
+    assert isinstance(ctx.option_liunian, tuple)
+    assert isinstance(ctx.target_years, tuple)
+
+
+def test_time_context_canonical_json_reproducible():
+    natal = NatalStructure("甲", ("甲子",), (), (), ())
+    ctx1 = TimeContext(
+        natal, (), (), TimeContextKind.NATAL, TemporalRouteState.NOT_ROUTED, (), "abc"
+    )
+    ctx2 = TimeContext(
+        natal, (), (), TimeContextKind.NATAL, TemporalRouteState.NOT_ROUTED, (), "abc"
+    )
+    assert ctx1.canonical_json() == ctx2.canonical_json()
+    assert ctx1.sha256() == ctx2.sha256()
+
+
+def test_time_context_to_dict():
+    natal = NatalStructure("甲", ("甲子",), (), (), ())
+    ctx = TimeContext(
+        natal, (), (), TimeContextKind.NATAL, TemporalRouteState.NOT_ROUTED, (), "abc"
+    )
+    d = ctx.to_dict()
+    assert isinstance(d, dict)
+    assert "natal" in d
