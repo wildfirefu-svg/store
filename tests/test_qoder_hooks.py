@@ -109,7 +109,8 @@ def test_guard_non_dict_json_passes_open():
 
 # remind 脚本属 Task 4；当前失败原因是脚本尚未创建（解释器 exit 2），非行为回归。
 def test_remind_scripts_edit_emits_hint():
-    proc = run_hook(REMIND, write_payload("scripts/verify_smoke.py"))
+    # 路径用拼接构造，避免字面量被 affected_tests.py 反向索引误捕获。
+    proc = run_hook(REMIND, write_payload("scripts" + "/verify_smoke.py"))
     assert proc.returncode == 0
     assert "affected_tests" in proc.stdout.decode("utf-8")
 
