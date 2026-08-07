@@ -292,7 +292,7 @@
 - [ ] 8.6e RED：写 `test_6d_frozen_protocol_rejects_non_frozen_method`：method != direct_choice -> SystemExit
 - [ ] 8.6f RED：写 `test_6d_abba_group_pair_level`：按 SHA-256 `hashlib.sha256(f"{year}:{group_idx}".encode()).digest()[0] & 1` 决定整组 off/on 执行顺序（group-pair 级，不拆 slice，不用 Python `hash()`）
 - [ ] 8.6f1 RED：写 `test_6d_abba_golden_mapping_exact`：精确断言五项黄金映射：`{"2024:g0":"BA","2024:g1":"AB","2024:g2":"AB","2025:g0":"AB","2025:g1":"BA"}`，不只测试"算法可运行"
-- [ ] 8.6f1 RED：写 `test_6d_abba_actual_subprocess_sequence`：断言实际 subprocess 调用序列符合 AB/BA 分配（不只测辅助函数返回值）
+- [ ] 8.6f2 RED：写 `test_6d_abba_actual_subprocess_sequence`：断言实际 subprocess 调用序列符合 AB/BA 分配（不只测辅助函数返回值）
 - [ ] 8.6g RED：写 `test_6d_resume_protocol_drift_fail_closed`：resume 时 model/thinking/temperature/profile/method 漂移 -> fail-closed
 - [ ] 8.6h RED：写 `test_6d_slice_def_contains_routed_manifest_path`：slice definition 含 `routed_manifest_path` 和 `routed_manifest_sha256`
 - [ ] 8.6i RED：写 `test_6d_runner_command_includes_routed_manifest_file`：`_build_runner_command()` 显式传 `--temporal-routed-cases-file`
