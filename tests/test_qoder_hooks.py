@@ -91,6 +91,30 @@ def test_guard_unknown_tool_passes():
     assert proc.returncode == 0
 
 
+def test_guard_relative_traversal_from_subdir_denied():
+    payload = write_payload("../knowledge-base/blocked.json")
+    payload["cwd"] = str(PROJECT_ROOT / "scripts")
+    proc = run_hook(GUARD, payload)
+    assert proc.returncode == 2
+
+
+def test_guard_relative_traversal_dataset_denied():
+    payload = write_payload("../benchmark/datasets/x.jsonl")
+    payload["cwd"] = str(PROJECT_ROOT / "scripts")
+    proc = run_hook(GUARD, payload)
+    assert proc.returncode == 2
+
+
+def test_guard_outside_project_absolute_path_passes():
+    proc = run_hook(GUARD, write_payload("C:/elsewhere/data/x.json"))
+    assert proc.returncode == 0
+
+
+def test_guard_windows_backslash_path_denied():
+    proc = run_hook(GUARD, write_payload("knowledge-base\\blocked.json"))
+    assert proc.returncode == 2
+
+
 def test_guard_malformed_json_passes_open():
     # fail-open：stdin 不是合法 JSON 时放行（守护脚本不得阻塞会话）。
     proc = subprocess.run(
@@ -125,3 +149,12 @@ def test_remind_unrelated_edit_silent():
     proc = run_hook(REMIND, write_payload("api_server.py"))
     assert proc.returncode == 0
     assert proc.stdout == b""
+
+
+def test_remind_relative_traversal_from_subdir_emits_hint():
+    # 路径用拼接构造，避免字面量被 affected_tests.py 反向索引误捕获。
+    payload = write_payload("../" + "scripts/x.py")
+    payload["cwd"] = str(PROJECT_ROOT / "benchmark")
+    proc = run_hook(REMIND, payload)
+    assert proc.returncode == 0
+    assert "affected_tests" in proc.stdout.decode("utf-8")

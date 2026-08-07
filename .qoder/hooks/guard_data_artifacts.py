@@ -17,7 +17,6 @@ Stdlib only; never echoes prompts, env values, or suspected secrets.
 from __future__ import annotations
 
 import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -40,15 +39,22 @@ _WRITE_HINTS = re.compile(
 )
 
 
-def _normalize(path_str: str) -> str:
-    """Normalize a tool file_path to a project-root-anchored posix path."""
-    p = Path(os.path.normpath(path_str))
-    if p.is_absolute():
-        try:
-            p = p.relative_to(PROJECT_ROOT)
-        except ValueError:
-            return p.as_posix()
-    return p.as_posix()
+def _normalize(path_str: str, cwd: str) -> str:
+    """Resolve a tool file_path against the event cwd to a posix path.
+
+    Relative paths are anchored at the event cwd (not the project root) so
+    traversal like ../knowledge-base/x.json from a subdirectory resolves to
+    its real target before matching. Backslashes are normalized for
+    cross-platform consistency.
+    """
+    p = Path(path_str.replace("\\", "/"))
+    if not p.is_absolute():
+        p = (Path(cwd) if cwd else PROJECT_ROOT) / p
+    resolved = p.resolve(strict=False)
+    try:
+        return resolved.relative_to(PROJECT_ROOT.resolve()).as_posix()
+    except ValueError:
+        return resolved.as_posix()
 
 
 def _glob_to_regex(pat: str) -> re.Pattern:
@@ -113,8 +119,9 @@ def main() -> int:
     tool_input = event.get("tool_input") or {}
     if not isinstance(tool_input, dict):
         return 0
+    cwd = str(event.get("cwd") or "")
     if tool in ("Write", "Edit"):
-        path = _normalize(str(tool_input.get("file_path") or ""))
+        path = _normalize(str(tool_input.get("file_path") or ""), cwd)
         if _forbidden(path):
             return _deny(
                 f"denied: {path} is a tracked data artifact (AGENTS.md §4 禁改清单)"

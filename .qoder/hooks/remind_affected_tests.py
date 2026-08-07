@@ -7,7 +7,6 @@ Stdlib only; never echoes prompts, env values, or suspected secrets.
 from __future__ import annotations
 
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -31,14 +30,17 @@ def main() -> int:
     tool_input = event.get("tool_input") or {}
     if not isinstance(tool_input, dict):
         return 0
+    cwd = str(event.get("cwd") or "")
     path = str(tool_input.get("file_path") or "")
-    p = Path(os.path.normpath(path))
-    if p.is_absolute():
-        try:
-            p = p.relative_to(PROJECT_ROOT)
-        except ValueError:
-            return 0
-    posix = p.as_posix()
+    p = Path(path.replace("\\", "/"))
+    if not p.is_absolute():
+        p = (Path(cwd) if cwd else PROJECT_ROOT) / p
+    resolved = p.resolve(strict=False)
+    try:
+        rel = resolved.relative_to(PROJECT_ROOT.resolve())
+    except ValueError:
+        return 0
+    posix = rel.as_posix()
     if posix.startswith(WATCHED_PREFIXES):
         print(
             f"{posix} changed; consider: python scripts/affected_tests.py"
