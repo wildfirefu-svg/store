@@ -232,14 +232,16 @@ paired_delta = on_acc - off_acc = sum(case_delta) / (N × 3)
 **完整 gate**：
 
 ```text
-# 层 2 基础设施门先检查
-if call_failed_off > 0 or call_failed_on > 0:
-    verdict = BLOCKED
-elif parser_rate_off < 0.85 or parser_rate_on < 0.85:
-    verdict = BLOCKED
-    return
+# 层 2 基础设施门先检查（任一条件命中即 BLOCKED，必须早返回）
+if (
+    call_failed_off > 0
+    or call_failed_on > 0
+    or parser_rate_off < 0.85
+    or parser_rate_on < 0.85
+):
+    return BLOCKED
 
-# 层 3 准确率 gate
+# 层 3 准确率 gate（仅当基础设施门通过时执行）
 PROMOTE:           paired_delta >= +0.05 and min_case_delta >= 0
 REVIEW_REQUIRED:   paired_delta >= +0.05 and min_case_delta <  0
 NON_INFERIOR:     -0.02 <= paired_delta < +0.05
@@ -434,7 +436,7 @@ canonical JSON：`json.dumps(obj, sort_keys=True, ensure_ascii=False, separators
 | R3 选项为年龄区间 | 剥离 `A.` 后 `\d+[-–]\d+` 且含"岁" | career / annual_fortune（实测 0 命中） | 按 §3.5 转换 |
 | R4 题目含"大运/流年/岁运/年运" | 扩展关键词 | career（实测 0 命中） | `ROUTED_WITHOUT_TARGETS` |
 | R5 题目含"何时/哪年/几年后" + 选项含年份 | 关键词 + 选项年份混合 | annual_fortune（实测 0 命中） | 按 §3.5 转换 |
-| R6 问题正文含 4 位年份 | `\d{4}` 且 1900-2100 | relationship/unknown/health/career（实测分布广泛） | N/A |
+| R6 问题正文含 4 位年份 | `(?<!\d)\d{4}(?!\d)` 且 1900-2100 | relationship/unknown/health/career（实测分布广泛） | N/A |
 | R7 选项为单年龄 | 剥离 `A.` 后 `^\d+岁?$` 且 1-120 | career（实测 0 命中） | 按 §3.5 转换 |
 
 **v6 R6 实测 domain 分布**（证明 domain 不是 allowlist）：
