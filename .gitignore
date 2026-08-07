@@ -39,6 +39,9 @@ debug.log
 !.qoder/hooks/
 !.qoder/hooks/**
 !.qoder/settings.json
+# 反否定块会重新纳入 __pycache__，需再次排除
+.qoder/**/__pycache__/
+.qoder/**/*.pyc
 .vscode/
 
 # Better Harness generated verification results (keep .better-harness/core-code tracked)
