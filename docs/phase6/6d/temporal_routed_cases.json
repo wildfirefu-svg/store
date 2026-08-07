@@ -1,0 +1,440 @@
+[
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "guangdong_female_19800824_P001-Q5",
+    "domain": "relationship",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      2022
+    ]
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "chaozhou_male_19720108_P002-Q9",
+    "domain": "family",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R1",
+      "R2",
+      "R5"
+    ],
+    "target_years": [
+      1989,
+      1990,
+      2011,
+      2021
+    ]
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "male_19611230_P003-Q11",
+    "domain": "unknown",
+    "route_state": "ROUTED_WITHOUT_TARGETS",
+    "matched_rules": [
+      "R1"
+    ],
+    "target_years": []
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "male_19611230_P003-Q12",
+    "domain": "relationship",
+    "route_state": "ROUTED_WITHOUT_TARGETS",
+    "matched_rules": [
+      "R1"
+    ],
+    "target_years": []
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "male_19611230_P003-Q13",
+    "domain": "career",
+    "route_state": "ROUTED_WITHOUT_TARGETS",
+    "matched_rules": [
+      "R1"
+    ],
+    "target_years": []
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "male_19611230_P003-Q14",
+    "domain": "unknown",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R1"
+    ],
+    "target_years": [
+      1965,
+      1968,
+      1971,
+      1974
+    ]
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "female_19831028_P004-Q17",
+    "domain": "relationship",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R1",
+      "R2",
+      "R5"
+    ],
+    "target_years": [
+      2003,
+      2005,
+      2007,
+      2009
+    ]
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "male_19710412_P005-Q21",
+    "domain": "relationship",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R1",
+      "R2"
+    ],
+    "target_years": [
+      1998,
+      1999,
+      2002,
+      2003
+    ]
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "male_19710412_P005-Q22",
+    "domain": "relationship",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R1"
+    ],
+    "target_years": [
+      2010,
+      2017,
+      2018
+    ]
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "male_19710412_P005-Q25",
+    "domain": "health",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R1"
+    ],
+    "target_years": [
+      1998,
+      2010,
+      2018,
+      2022
+    ]
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "female_19830326_P006-Q26",
+    "domain": "relationship",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      1998,
+      1999
+    ]
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "female_19830326_P006-Q27",
+    "domain": "relationship",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      1999,
+      2002
+    ]
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "female_19830326_P006-Q28",
+    "domain": "relationship",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      2002,
+      2006,
+      2009
+    ]
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "female_19830326_P006-Q29",
+    "domain": "unknown",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      2012,
+      2013
+    ]
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "female_19830326_P006-Q30",
+    "domain": "unknown",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      2019,
+      2021
+    ]
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "female_19800921_P007-Q33",
+    "domain": "unknown",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      2017,
+      2019
+    ]
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "female_19800921_P007-Q34",
+    "domain": "annual_fortune",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R1"
+    ],
+    "target_years": [
+      2013,
+      2017,
+      2020
+    ]
+  },
+  {
+    "year": "2024",
+    "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "case_id": "male_20070131_P008-Q39",
+    "domain": "unknown",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      2016
+    ]
+  },
+  {
+    "year": "2025",
+    "dataset_sha256": "96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad",
+    "case_id": "guangdong_female_19511114_P001-Q4",
+    "domain": "unknown",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      1980
+    ]
+  },
+  {
+    "year": "2025",
+    "dataset_sha256": "96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad",
+    "case_id": "guangdong_female_19511114_P001-Q5",
+    "domain": "unknown",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      1993
+    ]
+  },
+  {
+    "year": "2025",
+    "dataset_sha256": "96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad",
+    "case_id": "hongkong_female_19870705_P002-Q6",
+    "domain": "health",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      2022
+    ]
+  },
+  {
+    "year": "2025",
+    "dataset_sha256": "96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad",
+    "case_id": "hongkong_female_19870705_P002-Q8",
+    "domain": "career",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      2018
+    ]
+  },
+  {
+    "year": "2025",
+    "dataset_sha256": "96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad",
+    "case_id": "miyazaki_male_19830421_P003-Q15",
+    "domain": "unknown",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      2022
+    ]
+  },
+  {
+    "year": "2025",
+    "dataset_sha256": "96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad",
+    "case_id": "singapore_male_19930408_P004-Q17",
+    "domain": "unknown",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      2001
+    ]
+  },
+  {
+    "year": "2025",
+    "dataset_sha256": "96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad",
+    "case_id": "singapore_male_19930408_P004-Q18",
+    "domain": "career",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      2022
+    ]
+  },
+  {
+    "year": "2025",
+    "dataset_sha256": "96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad",
+    "case_id": "singapore_male_19930408_P004-Q20",
+    "domain": "annual_fortune",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R1",
+      "R2"
+    ],
+    "target_years": [
+      2002,
+      2016,
+      2018,
+      2024
+    ]
+  },
+  {
+    "year": "2025",
+    "dataset_sha256": "96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad",
+    "case_id": "malaysia_male_19880110_P005-Q22",
+    "domain": "unknown",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      2004
+    ]
+  },
+  {
+    "year": "2025",
+    "dataset_sha256": "96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad",
+    "case_id": "malaysia_male_19880110_P005-Q23",
+    "domain": "relationship",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R2"
+    ],
+    "target_years": [
+      2016,
+      2017,
+      2021,
+      2022
+    ]
+  },
+  {
+    "year": "2025",
+    "dataset_sha256": "96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad",
+    "case_id": "malaysia_male_19730824_P006-Q28",
+    "domain": "annual_fortune",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R1"
+    ],
+    "target_years": [
+      2015,
+      2017,
+      2018,
+      2019
+    ]
+  },
+  {
+    "year": "2025",
+    "dataset_sha256": "96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad",
+    "case_id": "malaysia_male_19730824_P006-Q29",
+    "domain": "unknown",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      2021
+    ]
+  },
+  {
+    "year": "2025",
+    "dataset_sha256": "96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad",
+    "case_id": "malaysia_male_19730824_P006-Q30",
+    "domain": "health",
+    "route_state": "ROUTED_WITH_TARGETS",
+    "matched_rules": [
+      "R6"
+    ],
+    "target_years": [
+      2024
+    ]
+  }
+]
