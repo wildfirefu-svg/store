@@ -591,3 +591,109 @@ def test_run_dev_validates_phase1_receipt(tmp_path):
          "--phase1-receipt", "nonexistent_receipt.json"],
         capture_output=True, text=True, cwd=PROJECT_ROOT, timeout=30)
     assert r.returncode != 0
+
+
+# -- Fake-runner E2E --
+
+
+def _install_fake_runner(monkeypatch, captured=None):
+    import types as _types
+    import scripts.phase6_6d_orchestrator as _m
+
+    def _flag(cmd, name):
+        return cmd[cmd.index(name) + 1]
+
+    def fake_run(cmd, capture_output=False, text=False, timeout=None, cwd=None):
+        arm = _flag(cmd, "--arm")
+        repeat = int(_flag(cmd, "--repeat-idx"))
+        dataset = _flag(cmd, "--dataset")
+        case_ids_file = _flag(cmd, "--case-ids-file")
+        detail_path = _flag(cmd, "--case-details-jsonl")
+        output_dir = _flag(cmd, "--output-dir")
+        provider = _flag(cmd, "--provider")
+        model = _flag(cmd, "--model")
+        case_ids = json.loads(open(case_ids_file, encoding="utf-8").read())
+        ds_base = os.path.splitext(os.path.basename(dataset))[0]
+        os.makedirs(output_dir, exist_ok=True)
+        with open(detail_path, "w", encoding="utf-8") as f:
+            for cid in case_ids:
+                correct = arm == "b1a_time_on"
+                row = {
+                    "attempt_key": [ds_base, FROZEN_PROFILE, arm, "main",
+                                    provider, model, cid, repeat, 0, "p0"],
+                    "case_id": cid,
+                    "terminal_state": "parsed",
+                    "correct": correct,
+                    "predicted_answer": "A" if correct else "B",
+                    "expected_answer": "A",
+                }
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        events_path = detail_path.replace(".jsonl", ".events.jsonl")
+        with open(events_path, "w", encoding="utf-8") as f:
+            for _cid in case_ids:
+                f.write(json.dumps({"kind": "call_attempt"}) + "\n")
+            f.write(json.dumps({"kind": "call_meta",
+                                "response_model": model}) + "\n")
+        manifest_path = detail_path.replace(".jsonl", ".manifest.json")
+        open(manifest_path, "w", encoding="utf-8").write("{}")
+        if captured is not None:
+            captured.append({"arm": arm, "repeat": repeat,
+                             "n_cases": len(case_ids)})
+        return _types.SimpleNamespace(returncode=0, stderr="", stdout="")
+
+    monkeypatch.setattr(_m.subprocess, "run", fake_run)
+    return _m
+
+
+def test_fake_runner_no_network_calls(tmp_path, monkeypatch):
+    import scripts.phase6_6d_orchestrator as m
+    import claude_api
+
+    def _boom(*a, **kw):
+        raise AssertionError(
+            "network call detected: call_model_messages_sync_with_meta "
+            "must not be invoked at READY_FOR_SMOKE stage")
+
+    monkeypatch.setattr(claude_api, "call_model_messages_sync_with_meta", _boom)
+    monkeypatch.setattr(m, "ARCHIVE_ROOT", str(tmp_path / "archive"))
+    _install_fake_runner(monkeypatch)
+    result = m.run_dev(FROZEN_PROVIDER, FROZEN_MODEL,
+                       str(tmp_path / "out"), run_id="fake-no-net")
+    assert result["status"] == "ok"
+    assert result["gate"]["verdict"] != "BLOCKED"
+
+
+def test_fake_runner_paired_e2e(tmp_path, monkeypatch):
+    import scripts.phase6_6d_orchestrator as m
+    monkeypatch.setattr(m, "ARCHIVE_ROOT", str(tmp_path / "archive"))
+    captured = []
+    _install_fake_runner(monkeypatch, captured=captured)
+    run_id = "fake-paired-e2e"
+    result = m.run_dev(FROZEN_PROVIDER, FROZEN_MODEL,
+                       str(tmp_path / "out"), run_id=run_id)
+    gate = result["gate"]
+    assert gate["verdict"] in ("PROMOTE", "REVIEW_REQUIRED",
+                               "NON_INFERIOR", "ROLLBACK")
+    assert gate["verdict"] != "BLOCKED"
+    assert len(captured) == 30
+    arms = {c["arm"] for c in captured}
+    assert arms == {"b1a_time_off", "b1a_time_on"}
+    runs_root = tmp_path / "out" / "runs" / run_id
+    report_md = (runs_root / "dev" / "report.md").read_text(encoding="utf-8")
+    assert gate["verdict"] in report_md
+    receipt = result["archive"]["receipt"]
+    for f in ("temporal_context_version", "group_abba_order",
+              "experiment_conditions", "extraction_strategy_sha256",
+              "temporal_routed_cases_sha256", "condition_manifest_sha256",
+              "dataset_sha256_by_year", "dataset_set_sha256"):
+        assert f in receipt, f"receipt missing temporal field: {f}"
+    assert receipt["temporal_context_version"] == TEMPORAL_CONTEXT_VERSION
+    assert receipt["experiment_conditions"] == ["off", "on"]
+    archive_dir = result["archive"]["archive_dir"]
+    assert os.path.exists(os.path.join(archive_dir, "audit_index.json"))
+    assert os.path.exists(os.path.join(archive_dir, "merged_details.jsonl"))
+    published = runs_root / "gates" / "dev_gate.json"
+    assert published.exists()
+    pub = json.loads(published.read_text(encoding="utf-8"))
+    assert pub["verdict"] == gate["verdict"]
+    assert pub["temporal_context_version"] == TEMPORAL_CONTEXT_VERSION
