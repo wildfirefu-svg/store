@@ -60,9 +60,10 @@
   ```
   记录 passed/failed 到 `.tmp/6d-baseline.txt`
 - [ ] 1.3 GREEN：确认工作区干净（`git status --short` 仅 `docs/phase6/6b2/` untracked）
-- [ ] 1.4 COMMIT：`chore(6d): record baseline before implementation`
+- [ ] 1.4 GREEN：将基线数字写入持久化审计文件 `docs/phase6/6d/baseline-20260807.md`（含定向 + 广泛 passed/failed）
+- [ ] 1.5 COMMIT：`docs(6d): record baseline before implementation`
 
-**验证：** 基线数字记录在案；工作区干净。
+**验证：** 基线数字记录在持久化文件（非 `.tmp/`）；工作区干净。
 
 ---
 
@@ -89,7 +90,9 @@
 - [ ] 2.6 RED：写 `test_calculate_liunian_for_year_1989` -> 己巳
 - [ ] 2.7 RED：写 `test_calculate_liunian_for_year_out_of_range` -> 1899/2101 fail-closed
 - [ ] 2.8 GREEN：实现 `calculate_liunian_for_year(target_year, day_master_gan)`
-- [ ] 2.9 GREEN：实现 `compute_shishen_combo(dy_shishen, ln_shishen)`（从 two_stage_reasoning.py:743 复制）
+- [ ] 2.9 RED：写 `test_legacy_matches_new_shishen_combo`：对全部十神两两组合，旧 inline 逻辑与新 `compute_shishen_combo` 结果一致
+- [ ] 2.9a GREEN：实现 `compute_shishen_combo(dy_shishen, ln_shishen)`（从 two_stage_reasoning.py:743 迁移）
+- [ ] 2.9b GREEN：改造 `two_stage_reasoning.py` 的 `_build_dayun_evidence`，inline combo 逻辑改为调用新 `compute_shishen_combo`
 - [ ] 2.10 GREEN：改造 `two_stage_reasoning.py`，旧 `_compute_branch_relation` / `_compute_gan_relation` 改为从新模块 re-export
   ```python
   from benchmark.formatters.bazi_time_context import (
@@ -143,6 +146,10 @@
 - [ ] 4.2 RED：写 `test_extract_target_years_age_range`：选项 "25-30岁" + birth_year=1980 -> (2005, 2010)（起止年，不取中点）
 - [ ] 4.3 RED：写 `test_extract_target_years_single_age`：选项 "30岁" + birth_year=1980 -> (2010,)
 - [ ] 4.4 RED：写 `test_extract_target_years_routed_without_targets`：R4 命中无年份 -> ()
+- [ ] 4.4a RED：写 `test_extract_target_years_years_after_with_base`："2020年起3年后" + base_year=2020 -> (2023,)
+- [ ] 4.4b RED：写 `test_extract_target_years_years_after_no_base`："3年后" 无基准年份 -> () + ROUTED_WITHOUT_TARGETS
+- [ ] 4.4c RED：写 `test_extract_target_years_years_after_multiple`：多个"几年后"选项，各有 base_year
+- [ ] 4.4d RED：写 `test_extract_target_years_out_of_range_fail_closed`：计算结果 > 2100 或 < 1900 -> fail-closed
 - [ ] 4.5 RED：写 `test_classify_route_state_with_targets`：matched_rules 含 R6 + target_years 非空 -> ROUTED_WITH_TARGETS
 - [ ] 4.6 RED：写 `test_classify_route_state_without_targets`：matched_rules 含 R4 + target_years 空 -> ROUTED_WITHOUT_TARGETS
 - [ ] 4.7 RED：写 `test_classify_route_state_not_routed`：matched_rules 空 -> NOT_ROUTED
@@ -197,9 +204,15 @@
 - [ ] 6.6 RED：写 `test_visibility_on_not_routed_denies_all`：injection=on + NOT_ROUTED 时 3 个 markers 在 deny 侧
 - [ ] 6.7 RED：写 `test_visibility_on_without_targets_denies_liunian`：injection=on + WITHOUT_TARGETS 时 `【目标流年详析】` 在 deny 侧
 - [ ] 6.8 RED：写 `test_visibility_on_with_targets_requires_all`：injection=on + WITH_TARGETS 时 3 个 markers 在 required 侧
+- [ ] 6.8a RED：写 `test_visibility_requirements_accepts_injection_and_route_state`：`visibility_requirements()` 签名接受 `time_context_injection` 和 `route_state` 参数
+- [ ] 6.8b RED：写 `test_assert_visibility_injection_aware`：`assert_visibility()` 接受 injection + route_state，按三态校验
+- [ ] 6.8c RED：写 `test_visibility_gate_injection_aware`：`visibility_gate()` 接受 injection + route_state
+- [ ] 6.8d RED：写 runner preflight 端到端测试 `test_runner_preflight_visibility_injection_aware`：monkeypatch runner，验证 preflight 调用 `visibility_requirements` 时传入 `time_context_injection` 和 `route_state`
 - [ ] 6.9 GREEN：在 `chart_context.py` 定义 `_TEMPORAL_CONTEXT_MARKERS = frozenset({"【时间上下文·预计算】","【大运排布】","【目标流年详析】"})`
 - [ ] 6.10 GREEN：改造 `render_reasoned_context`：加 `time_context_injection` 参数（默认 "off"），末尾按三态追加
-- [ ] 6.11 GREEN：在 `profiles.py` 定义 `_TEMPORAL_CONTEXT_MARKERS` 并扩展 `visibility_requirements`，按 injection × route_state 分别返回 required/deny
+- [ ] 6.11 GREEN：在 `profiles.py` 定义 `_TEMPORAL_CONTEXT_MARKERS` 并扩展 `visibility_requirements`，签名加 `time_context_injection` 和 `route_state` 参数，按 injection × route_state 分别返回 required/deny
+- [ ] 6.11a GREEN：改造 `assert_visibility` 和 `visibility_gate`，签名加 `time_context_injection` 和 `route_state`，透传给 `visibility_requirements`
+- [ ] 6.11b GREEN：改造 runner preflight 调用点，从 `Phase6Context.time_context_injection` 和 case 的 `route_state` 读取并传入 visibility 检查
 - [ ] 6.12 GREEN：实现 `format_temporal_context(ctx: TimeContext) -> str`（在 `bazi_time_context.py` 或 `chart_context.py`）
 - [ ] 6.13 GREEN：运行 `python -m pytest tests/test_chart_context.py tests/test_phase6_profiles.py -q`，全部通过
 - [ ] 6.14 GREEN：运行 6B2 定向回归，确认无破坏
@@ -220,19 +233,33 @@
 - [ ] 7.5 RED：写 `test_reasoned_arm_map_includes_b1a_time_off_on`：`_REASONED_ARM_MAP` 含 `b1a_time_off` 和 `b1a_time_on`，映射到 `none`
 - [ ] 7.6 RED：写 `test_code_scope_includes_bazi_time_context`：`_CODE_SCOPE` 含 `benchmark/formatters/bazi_time_context.py`
 - [ ] 7.7 RED：写端到端测试 `test_cli_to_prompt_off_on_different`：CLI `--time-context-injection off` vs `on` 生成不同 prompt（off 无时空块，on 有时空块）
+- [ ] 7.7a RED：写 `test_prompt_diff_only_in_temporal_block`：off/on prompt 差异**仅限** temporal context 段（diff 前后非 temporal 部分逐字节一致）
 - [ ] 7.8 RED：写 `test_detail_records_time_context_sha256`：detail.jsonl 每行含 `time_context_sha256`（case 级 provenance）
+- [ ] 7.8a RED：写 `test_detail_records_temporal_route_state`：detail.jsonl 每行含 `temporal_route_state`（三态之一）
+- [ ] 7.8b RED：写 `test_detail_sha_on_routed_is_actual_context_sha`：on + ROUTED_WITH_TARGETS 时 `time_context_sha256` = 实际 TimeContext.sha256()
+- [ ] 7.8c RED：写 `test_detail_sha_on_not_routed_is_null`：on + NOT_ROUTED 时 `time_context_sha256` = null
+- [ ] 7.8d RED：写 `test_detail_sha_on_without_targets_is_actual_context_sha`：on + ROUTED_WITHOUT_TARGETS 时 `time_context_sha256` = 实际 TimeContext.sha256()（含大运排布但无目标流年）
+- [ ] 7.8e RED：写 `test_detail_sha_off_is_null`：off 时 `time_context_sha256` = null（不计算 TimeContext）
 - [ ] 7.9 GREEN：在 `Phase6Context.__init__` 加 `time_context_injection=None` 参数
 - [ ] 7.10 GREEN：在 `RESUME_MANIFEST_FIELDS` 加 `"time_context_injection"`
 - [ ] 7.11 GREEN：在 `_REASONED_ARM_MAP` 加 `"b1a_time_off": "none"` 和 `"b1a_time_on": "none"`
 - [ ] 7.12 GREEN：在 `_CODE_SCOPE` 加 `"benchmark/formatters/bazi_time_context.py"`
 - [ ] 7.13 GREEN：改造 `_prepare_prompt` / `format_reasoned_choice_prompt`：从 `Phase6Context.time_context_injection` 读取并传入 `render_reasoned_context`
 - [ ] 7.14 GREEN：加 CLI `--time-context-injection {off,on}` flag（默认 off），传入 Phase6Context
-- [ ] 7.15 GREEN：在 detail 写入时追加 `time_context_sha256`（从 TimeContext.sha256()）
+- [ ] 7.15 GREEN：在 detail 写入时追加 `time_context_sha256` 和 `temporal_route_state`；SHA 语义：on+routed=实际 SHA，on+NOT_ROUTED=null，off=null
+- [ ] 7.15a GREEN：实现 `compute_detail_provenance(case, time_context_injection) -> (route_state, sha256_or_null)`：off 时返回 (NOT_ROUTED, None)；on 时调 build_time_context 并按 route_state 返回 SHA 或 None
 - [ ] 7.16 GREEN：运行 `python -m pytest tests/test_phase6_6b2.py tests/test_phase6_profiles.py tests/test_claude_api.py -q`，确认无破坏
 - [ ] 7.17 GREEN：运行 Phase 6 广泛回归，确认无新增失败
 - [ ] 7.18 COMMIT：`feat(6d): wire time_context_injection through runner full chain`
 
-**验证：** CLI -> Phase6Context -> prompt 端到端贯通；off/on 生成不同 prompt；resume manifest fail-closed；detail 含 case 级 SHA。
+- [ ] 7.18a RED：写 `test_run_manifest_contains_all_temporal_fields`：run manifest 含 `temporal_context_version` / `experiment_conditions` / `extraction_strategy_sha256` / `temporal_routed_cases_sha256` / `condition_manifest_sha256`
+- [ ] 7.18b RED：写 `test_run_context_matches_manifest`：run_context.json 与 run manifest 同源（5 个 temporal 字段一致）
+- [ ] 7.18c RED：写 `test_audit_index_contains_temporal_fields`：audit_index.json 含 5 个 temporal run 级字段
+- [ ] 7.18d GREEN：实现 `build_run_manifest(...)`：含 5 个 temporal run 级字段
+- [ ] 7.18e GREEN：实现 run_context / audit 写入时与 manifest 同源
+- [ ] 7.18f GREEN：运行 `python -m pytest tests/test_phase6_6b2.py tests/test_phase6_profiles.py tests/test_claude_api.py -q`，确认无破坏
+
+**验证：** CLI -> Phase6Context -> prompt 端到端贯通；off/on 生成不同 prompt；resume manifest fail-closed；detail 含 case 级 SHA + route_state；run manifest / run_context / audit 同源含 5 个 temporal 字段。
 
 ---
 
@@ -243,13 +270,22 @@
 - [ ] 8.1 RED：写 `test_6d_schedule_per_year_grouping`：2024->3 groups(8,8,2)，2025->2 groups(8,5)
 - [ ] 8.2 RED：写 `test_6d_schedule_tail_group_scheduled`：尾组 scheduled=真实题数（2 或 5）
 - [ ] 8.3 RED：写 `test_6d_schedule_global_scheduled_186`：global scheduled = 31×2×3 = 186
-- [ ] 8.4 RED：写 `test_6d_schedule_global_hard_cap_486`：global hard_cap ≈ 486（2.61× 上限）
+- [ ] 8.4 RED：写 `test_6d_schedule_global_hard_cap_486`：global hard_cap = 486（精确值，2.61× 上限）
 - [ ] 8.5 RED：写 `test_6d_schedule_off_on_arms`：每 slice arm 是 `b1a_time_off` 或 `b1a_time_on`
-- [ ] 8.6 RED：写 `test_6d_runner_command_construction`：每 slice 生成正确的 `python -m benchmark.runners.run_benchmark` 命令（含 `--time-context-injection`）
+- [ ] 8.6 RED：写 `test_6d_runner_command_construction`：每 slice 生成正确的 `python -m benchmark.runners.run_benchmark` 命令（含 `--time-context-injection`、`--model deepseek-v4-flash`、`--thinking-mode disabled`、`--temperature 0.0`、`--profile baziqa_xjz_reasoned`、`--method direct_choice`、`--ziwei-arm none`）
+- [ ] 8.6a RED：写 `test_6d_frozen_protocol_rejects_non_frozen_model`：model != deepseek-v4-flash -> SystemExit
+- [ ] 8.6b RED：写 `test_6d_frozen_protocol_rejects_non_frozen_thinking`：thinking != disabled -> SystemExit
+- [ ] 8.6c RED：写 `test_6d_frozen_protocol_rejects_non_frozen_temperature`：temperature != 0.0 -> SystemExit
+- [ ] 8.6d RED：写 `test_6d_frozen_protocol_rejects_non_frozen_profile`：profile != baziqa_xjz_reasoned -> SystemExit
+- [ ] 8.6e RED：写 `test_6d_frozen_protocol_rejects_non_frozen_method`：method != direct_choice -> SystemExit
+- [ ] 8.6f RED：写 `test_6d_abba_scheduling_balanced`：按 case_id hash 分配 AB/BA 首跑顺序，off/on 交替平衡
+- [ ] 8.6g RED：写 `test_6d_resume_protocol_drift_fail_closed`：resume 时 model/thinking/temperature/profile/method 漂移 -> fail-closed
 - [ ] 8.7 RED：写 `test_6d_budget_ledger`：BudgetLedger 记录 scheduled/hard_cap/calls_attempted，恢复后剩余预算正确
 - [ ] 8.8 RED：写 `test_6d_merge_details`：off+on details 合并为 paired 结构
 - [ ] 8.9 RED：写 `test_6d_completeness_check`：每 (year,repeat,case_id) 恰一条 off/main + on/main
 - [ ] 8.10 RED：写 `test_6d_receipt_fields`：receipt 含 6B2 全部字段 + 5 个 temporal run 级字段
+- [ ] 8.10a RED：写 `test_6d_provenance_cross_validation`：run manifest == run_context == receipt == audit，5 个 temporal 字段任何缺失或漂移均拒绝
+- [ ] 8.10b RED：写 `test_6d_receipt_run_manifest_temporal_fields`：receipt 含 `temporal_context_version` / `experiment_conditions` / `extraction_strategy_sha256` / `temporal_routed_cases_sha256` / `condition_manifest_sha256`
 - [ ] 8.11 RED：写 `test_6d_resume_isolation_all_checks`：version/strategy/routed_cases/condition_manifest 不匹配均 fail-closed
 - [ ] 8.12 RED：写 `test_6d_condition_manifest_canonical_json`：canonical JSON 排序和字段
 - [ ] 8.13 RED：写 `test_6d_no_cross_orchestrator_resume`：6D run 不能 resume 6B2 run
@@ -262,7 +298,11 @@
 - [ ] 8.20 GREEN：实现 `_run_slice(slice_def, ledger)`：调用 runner，写 detail/events
 - [ ] 8.21 GREEN：实现 `_merge_details(slices)`：off+on 配对合并
 - [ ] 8.22 GREEN：实现 `_check_completeness(merged)`：single main-stage 完整性门
-- [ ] 8.23 GREEN：实现 `6D_RECEIPT_REQUIRED_FIELDS` + `check_6d_gate`（单阶段自验）
+- [ ] 8.23 GREEN：实现 `6D_RECEIPT_REQUIRED_FIELDS`（枚举完整字段：6B2 全部字段 + `temporal_context_version` + `experiment_conditions` + `extraction_strategy_sha256` + `temporal_routed_cases_sha256` + `condition_manifest_sha256`）
+- [ ] 8.23a GREEN：实现 `compute_6d_gate(details, n_cases)`（从 Task 9 前移）：基础设施门早返回 BLOCKED + 准确率五分支
+- [ ] 8.23b GREEN：实现 `check_6d_gate`（单阶段自验，field-level validation + temporal 字段一致性）
+- [ ] 8.23c GREEN：实现冻结协议校验 `_validate_frozen_protocol(args)`：拒绝非冻结 model/thinking/temperature/profile/method
+- [ ] 8.23d GREEN：实现 AB/BA 调度 `_assign_abba_order(case_ids)`：按 case_id hash 分配首跑顺序
 - [ ] 8.24 GREEN：实现 `_prepare_run_context`（含 4 项 resume 隔离检查）
 - [ ] 8.25 GREEN：实现 `condition_manifest_sha256`（canonical JSON）
 - [ ] 8.26 GREEN：实现 `_generate_report(merged, gate_result)` -> report.md
@@ -298,6 +338,7 @@
   - 验证 receipt 含 temporal 字段
   - 验证 archive 含 audit_index.json
 - [ ] 9.13 GREEN：实现 fake runner 集成测试夹具
+- [ ] 9.13a RED：写 `test_fake_runner_no_network_calls`：monkeypatch 网络调用为"调用即失败"，证明 READY_FOR_SMOKE 阶段无真实 API 请求（fake runner 不触发网络层）
 - [ ] 9.14 GREEN：运行 `python -m pytest tests/test_phase6_6d_orchestrator.py -q`，全部通过
 - [ ] 9.15 GREEN：运行全量回归：`$files = (Get-ChildItem tests -Filter 'test_phase6_*.py').FullName; python -m pytest $files tests/test_dual_system_reasoning.py tests/test_claude_api.py tests/test_bazi_time_context.py tests/test_phase6_6d_orchestrator.py tests/test_phase6_6d_offline_gate.py -q`，无新增失败
 - [ ] 9.16 GREEN：输出阶段二启动命令（不执行）：
