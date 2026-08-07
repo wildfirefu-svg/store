@@ -15,6 +15,14 @@ RESULT_DIR = PROJECT_ROOT / ".better-harness"
 RESULT_FILE = RESULT_DIR / "verify-ci.result.json"
 
 
+def _rel(path: Path) -> str:
+    """Project-relative display path; falls back to absolute outside the repo."""
+    try:
+        return str(path.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(path)
+
+
 def _job_block(text: str, job_name: str) -> str:
     lines = text.splitlines()
     for index, line in enumerate(lines):
@@ -47,7 +55,7 @@ def main() -> int:
     else:
         text = CI_FILE.read_text(encoding="utf-8")
         test_block = _job_block(text, "test")
-        details["file"] = str(CI_FILE.relative_to(PROJECT_ROOT))
+        details["file"] = _rel(CI_FILE)
         details["exists"] = True
         details["hasTestJob"] = bool(test_block)
         details["hasPythonSetup"] = "actions/setup-python" in test_block

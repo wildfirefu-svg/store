@@ -22,6 +22,14 @@ CLAIM_FILES = {
 }
 
 
+def _rel(path: Path) -> str:
+    """Project-relative display path; falls back to absolute outside the repo."""
+    try:
+        return str(path.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(path)
+
+
 def load_result(path: Path) -> dict:
     if not path.exists():
         return {"status": "missing", "error": f"result file not found: {path}"}
@@ -44,7 +52,7 @@ def main() -> int:
             "command": raw.get("command", ""),
             "exitCode": raw.get("exitCode", None),
             "details": {
-                "resultFile": str(path.relative_to(PROJECT_ROOT)),
+                "resultFile": _rel(path),
                 "finishedAt": raw.get("finishedAt", ""),
                 "error": raw.get("error") or raw.get("stderr", "")[:500],
             },

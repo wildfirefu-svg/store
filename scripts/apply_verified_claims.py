@@ -20,6 +20,14 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 VERIFIED_CLAIMS_FILE = PROJECT_ROOT / ".better-harness" / "verified-claims.json"
 
 
+def _rel(path: Path) -> str:
+    """Project-relative display path; falls back to absolute outside the repo."""
+    try:
+        return str(path.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(path)
+
+
 def find_latest_evidence_file() -> Path | None:
     base = PROJECT_ROOT / ".qoder" / "better-harness"
     if not base.exists():
@@ -103,7 +111,7 @@ def main() -> int:
             boundary_evidence["unverified"] = new_unverified
             boundary_evidence["verified"] = new_verified
             boundary_evidence["boundary"] = "static-local-git-and-file-analysis-plus-project-verification"
-            boundary_evidence["verificationResultFile"] = str(VERIFIED_CLAIMS_FILE.relative_to(PROJECT_ROOT))
+            boundary_evidence["verificationResultFile"] = _rel(VERIFIED_CLAIMS_FILE)
             row["note"] = "Local runtime, CI workflow configuration, and test claims are verified by project scripts when .better-harness/verified-claims.json is present; remote CI status remains separate."
             break
 
@@ -111,7 +119,7 @@ def main() -> int:
 
     evidence_path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({
-        "evidenceFile": str(evidence_path.relative_to(PROJECT_ROOT)),
+        "evidenceFile": _rel(evidence_path),
         "remainingUnverified": [c.get("claim") for c in unverified_claims],
         "verified": [c.get("claim") for c in verified_claims],
     }))
