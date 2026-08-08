@@ -1174,6 +1174,11 @@ def _publish_receipt_atomic(arch_result, gate_root, receipt_name):
     receipt_dst = gate_root / receipt_name
     tmp_dst = receipt_dst.with_suffix(".tmp")
     shutil.copy2(receipt_src, tmp_dst)
+    # Verify copied file SHA matches source before atomic replace
+    if _sha256_file(str(tmp_dst)) != _sha256_file(str(receipt_src)):
+        tmp_dst.unlink(missing_ok=True)
+        raise SystemExit(
+            "publish receipt reject: copied file SHA mismatch")
     os.replace(str(tmp_dst), str(receipt_dst))
 
 
@@ -1393,8 +1398,19 @@ def run_dev(provider, model, output_dir, run_id=None, resume=False,
         arch = _create_archive(
             schedule, ledger, str(stage_dir), provider, model, gate_result,
             run_manifest, code_fp, run_id=run_id)
-        check_6d_gate(arch["receipt"])
-        _validate_four_layer_provenance(runs_root, arch["receipt"])
+        # Validate the PERSISTED receipt from disk (not in-memory)
+        # to prevent corruption between archive creation and publication.
+        archive_receipt_path = Path(arch["archive_dir"]) / "dev_gate.json"
+        if not archive_receipt_path.exists():
+            raise SystemExit(
+                f"archive receipt missing on disk: {archive_receipt_path}")
+        disk_receipt = json.loads(
+            archive_receipt_path.read_text(encoding="utf-8"))
+        if disk_receipt != _json_safe(arch["receipt"]):
+            raise SystemExit(
+                "archive receipt drift: disk receipt != in-memory receipt")
+        check_6d_gate(disk_receipt)
+        _validate_four_layer_provenance(runs_root, disk_receipt)
         _publish_receipt_atomic(arch, runs_root / "gates", "dev_gate.json")
         return {"status": "ok", "gate": gate_result, "archive": arch,
                 "run_id": run_id}

@@ -11,7 +11,7 @@
 - **Reported:** -2 (raw min)
 - **Correct:** -0.666667 (min / REPEATS)
 - **Impact:** Verdict unaffected (NON_INFERIOR depends on paired_delta only)
-- **Root cause:** [phase6_6d_orchestrator.py:809](scripts/phase6_6d_orchestrator.py) omitted `/ REPEATS`
+- **Root cause:** [phase6_6d_orchestrator.py:809](../../../../../scripts/phase6_6d_orchestrator.py) omitted `/ REPEATS`
 
 ### 2. Missing independent run manifest
 

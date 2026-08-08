@@ -930,6 +930,40 @@ def test_four_layer_failure_no_published_receipt(tmp_path, monkeypatch):
         "run_failures.jsonl must record the four-layer failure reason"
 
 
+def test_corrupted_archive_receipt_not_published(tmp_path, monkeypatch):
+    """If archive receipt is corrupted after _create_archive, run_dev must
+    fail and dev_gate.json must NOT be published."""
+    import scripts.phase6_6d_orchestrator as m
+
+    monkeypatch.setattr(m, "ARCHIVE_ROOT", str(tmp_path / "archive"))
+    _install_fake_runner(monkeypatch)
+
+    _orig_create_archive = m._create_archive
+
+    def _corrupting_create_archive(*args, **kwargs):
+        result = _orig_create_archive(*args, **kwargs)
+        receipt_path = os.path.join(result["archive_dir"], "dev_gate.json")
+        with open(receipt_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps({"verdict": "CORRUPTED"}))
+        return result
+
+    monkeypatch.setattr(m, "_create_archive", _corrupting_create_archive)
+
+    run_id = "fake-corrupt-receipt"
+    with pytest.raises(SystemExit, match="archive receipt drift"):
+        m.run_dev(FROZEN_PROVIDER, FROZEN_MODEL,
+                  str(tmp_path / "out"), run_id=run_id)
+    runs_root = tmp_path / "out" / "runs" / run_id
+    published = runs_root / "gates" / "dev_gate.json"
+    assert not published.exists(), \
+        "dev_gate.json must not be published when archive receipt is corrupted"
+    failures_path = runs_root / "run_failures.jsonl"
+    assert failures_path.exists(), "run_failures.jsonl must record the failure"
+    lines = failures_path.read_text(encoding="utf-8").strip().splitlines()
+    assert any("archive receipt drift" in ln for ln in lines), \
+        "run_failures.jsonl must record the drift failure reason"
+
+
 def test_four_layer_validator_in_fingerprint():
     """_validate_four_layer_provenance must be in the fingerprint function list."""
     import inspect
