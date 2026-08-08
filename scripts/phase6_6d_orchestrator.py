@@ -366,7 +366,7 @@ def _compute_experiment_code_fingerprint():
                _check_completeness, compute_6d_gate, check_6d_gate,
                _generate_report, _create_archive, _validate_frozen_protocol,
                _prepare_run_context, run_dev, build_run_manifest,
-               _validate_phase1_receipt):
+               _validate_phase1_receipt, _validate_four_layer_provenance):
         parts.append(hashlib.sha256(inspect.getsource(fn).encode()).hexdigest())
     for fn_name in ("__init__", "record_slice_completed", "can_attempt",
                     "slice_completed", "remaining_budget"):
@@ -1345,15 +1345,34 @@ def run_dev(provider, model, output_dir, run_id=None, resume=False,
     runs_root, _context = _prepare_run_context(
         output_dir=output_dir, run_id=run_id, resume=resume,
         run_manifest=run_manifest, code_fingerprint=code_fp)
-    manifest_path = runs_root / "run_manifest.json"
-    manifest_path.write_text(
-        json.dumps(run_manifest, ensure_ascii=False, indent=2,
-                   sort_keys=True),
-        encoding="utf-8")
     lock = OutputDirLock.acquire(str(runs_root))
     try:
         if lock is None:
             raise SystemExit(f"dev run dir locked: {runs_root}")
+        manifest_path = runs_root / "run_manifest.json"
+        if resume:
+            if not manifest_path.exists():
+                raise SystemExit(
+                    f"run_manifest.json missing: refusing resume without manifest")
+            existing = json.loads(manifest_path.read_text(encoding="utf-8"))
+            for field in _FOUR_LAYER_PROVENANCE_FIELDS:
+                if existing.get(field) != run_manifest.get(field):
+                    raise SystemExit(
+                        f"run_manifest.json drift: field={field} "
+                        f"existing={existing.get(field)!r} "
+                        f"current={run_manifest.get(field)!r}")
+        else:
+            import tempfile
+            tmp_fd, tmp_path = tempfile.mkstemp(
+                dir=str(runs_root), suffix=".tmp", prefix="manifest_")
+            try:
+                with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+                    json.dump(run_manifest, f, ensure_ascii=False, indent=2,
+                              sort_keys=True)
+                os.replace(tmp_path, str(manifest_path))
+            except:
+                os.unlink(tmp_path)
+                raise
         stage_dir = runs_root / "dev"
         stage_dir.mkdir(parents=True, exist_ok=True)
         schedule = _build_schedule(str(stage_dir), routed_manifest_path)
@@ -1374,9 +1393,9 @@ def run_dev(provider, model, output_dir, run_id=None, resume=False,
         arch = _create_archive(
             schedule, ledger, str(stage_dir), provider, model, gate_result,
             run_manifest, code_fp, run_id=run_id)
-        _publish_receipt_atomic(arch, runs_root / "gates", "dev_gate.json")
         check_6d_gate(arch["receipt"])
         _validate_four_layer_provenance(runs_root, arch["receipt"])
+        _publish_receipt_atomic(arch, runs_root / "gates", "dev_gate.json")
         return {"status": "ok", "gate": gate_result, "archive": arch,
                 "run_id": run_id}
     except (Exception, SystemExit) as exc:

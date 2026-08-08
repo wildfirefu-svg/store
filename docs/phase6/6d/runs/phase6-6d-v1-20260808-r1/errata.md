@@ -18,6 +18,7 @@
 - **Issue:** run_manifest existed only in memory, not persisted as file
 - **Impact:** No four-layer provenance cross-validation (manifest/run_context/receipt/audit)
 - **Fix:** run_manifest.json now persisted alongside run_context.json
+- **Note:** r1 was run before these fixes. r1 does not have run_manifest.json. The four-layer provenance validation applies to future runs only.
 
 ### 3. Report completeness
 

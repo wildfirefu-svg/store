@@ -899,3 +899,110 @@ def test_four_layer_provenance_rejects_missing_manifest(tmp_path):
     receipt = {"archive_dir": str(tmp_path / "archive")}
     with pytest.raises(SystemExit, match="run_manifest.json missing"):
         _validate_four_layer_provenance(runs_root, receipt)
+
+
+
+# -- P0 fixes: validate-before-publish, fingerprint, atomic manifest resume --
+
+
+def test_four_layer_failure_no_published_receipt(tmp_path, monkeypatch):
+    """When four-layer validation fails, dev_gate.json must NOT be published."""
+    import scripts.phase6_6d_orchestrator as m
+    monkeypatch.setattr(m, "ARCHIVE_ROOT", str(tmp_path / "archive"))
+    _install_fake_runner(monkeypatch)
+
+    def _boom(runs_root, receipt):
+        raise SystemExit("four-layer provenance reject: forced failure")
+
+    monkeypatch.setattr(m, "_validate_four_layer_provenance", _boom)
+    run_id = "fake-4layer-fail"
+    with pytest.raises(SystemExit, match="forced failure"):
+        m.run_dev(FROZEN_PROVIDER, FROZEN_MODEL,
+                  str(tmp_path / "out"), run_id=run_id)
+    runs_root = tmp_path / "out" / "runs" / run_id
+    published = runs_root / "gates" / "dev_gate.json"
+    assert not published.exists(), \
+        "dev_gate.json must not be published on four-layer failure"
+    failures_path = runs_root / "run_failures.jsonl"
+    assert failures_path.exists(), "run_failures.jsonl must record the failure"
+    lines = failures_path.read_text(encoding="utf-8").strip().splitlines()
+    assert any("forced failure" in ln for ln in lines), \
+        "run_failures.jsonl must record the four-layer failure reason"
+
+
+def test_four_layer_validator_in_fingerprint():
+    """_validate_four_layer_provenance must be in the fingerprint function list."""
+    import inspect
+    from scripts.phase6_6d_orchestrator import _compute_experiment_code_fingerprint
+    src = inspect.getsource(_compute_experiment_code_fingerprint)
+    assert "_validate_four_layer_provenance" in src
+
+
+def test_resume_rejects_missing_manifest(tmp_path):
+    """Resume must fail-closed when run_manifest.json is missing."""
+    import scripts.phase6_6d_orchestrator as m
+    protocol = _validate_frozen_protocol(
+        FROZEN_PROVIDER, FROZEN_MODEL, FROZEN_THINKING_MODE,
+        FROZEN_TEMPERATURE, FROZEN_PROFILE, FROZEN_METHOD)
+    code_fp = _compute_experiment_code_fingerprint()
+    rm = build_run_manifest(FROZEN_PROVIDER, FROZEN_MODEL, protocol, code_fp, _MANIFEST)
+    # Create run_context.json but NOT run_manifest.json
+    _prepare_run_context(tmp_path, "no_manifest", False, rm, code_fp)
+    runs_root = tmp_path / "runs" / "no_manifest"
+    assert (runs_root / "run_context.json").exists()
+    assert not (runs_root / "run_manifest.json").exists()
+    with pytest.raises(SystemExit, match="run_manifest.json missing"):
+        m.run_dev(FROZEN_PROVIDER, FROZEN_MODEL,
+                  str(tmp_path), run_id="no_manifest", resume=True)
+
+
+def test_resume_rejects_manifest_drift(tmp_path):
+    """Resume must fail-closed when run_manifest.json fields drift."""
+    import scripts.phase6_6d_orchestrator as m
+    protocol = _validate_frozen_protocol(
+        FROZEN_PROVIDER, FROZEN_MODEL, FROZEN_THINKING_MODE,
+        FROZEN_TEMPERATURE, FROZEN_PROFILE, FROZEN_METHOD)
+    code_fp = _compute_experiment_code_fingerprint()
+    rm = build_run_manifest(FROZEN_PROVIDER, FROZEN_MODEL, protocol, code_fp, _MANIFEST)
+    _prepare_run_context(tmp_path, "drift_manifest", False, rm, code_fp)
+    runs_root = tmp_path / "runs" / "drift_manifest"
+    # Write a manifest with a drifted provenance field
+    drifted = json.loads(json.dumps(rm))
+    drifted["model"] = "different-model"
+    (runs_root / "run_manifest.json").write_text(
+        json.dumps(drifted, ensure_ascii=False, indent=2, sort_keys=True),
+        encoding="utf-8")
+    with pytest.raises(SystemExit, match="run_manifest.json drift"):
+        m.run_dev(FROZEN_PROVIDER, FROZEN_MODEL,
+                  str(tmp_path), run_id="drift_manifest", resume=True)
+
+
+def test_report_contains_accurate_numbers(tmp_path, monkeypatch):
+    """report.md must contain off/on accuracy, yearly delta, and non-zero case count."""
+    import scripts.phase6_6d_orchestrator as m
+    monkeypatch.setattr(m, "ARCHIVE_ROOT", str(tmp_path / "archive"))
+    _install_fake_runner(monkeypatch)
+    run_id = "fake-numbers"
+    result = m.run_dev(FROZEN_PROVIDER, FROZEN_MODEL,
+                       str(tmp_path / "out"), run_id=run_id)
+    runs_root = tmp_path / "out" / "runs" / run_id
+    report_md = (runs_root / "dev" / "report.md").read_text(encoding="utf-8")
+    summary = json.loads(
+        (runs_root / "dev" / "summary.json").read_text(encoding="utf-8"))
+    off = summary["accuracy"]["off"]
+    on = summary["accuracy"]["on"]
+    # Fake runner: off always wrong, on always right
+    assert off["correct"] == 0
+    assert on["correct"] == on["total"]
+    assert on["total"] > 0
+    # report.md must contain the exact accuracy rows
+    assert f"| OFF | {off['correct']} | {off['total']} | {off['rate'] * 100:.2f}% |" in report_md
+    assert f"| ON  | {on['correct']} | {on['total']} | {on['rate'] * 100:.2f}% |" in report_md
+    # Yearly breakdown rows present
+    for year in summary["yearly_breakdown"]:
+        assert f"| {year} |" in report_md
+    # Non-zero case deltas: fake runner makes every case delta positive
+    assert "## Non-zero Case Deltas" in report_md
+    assert summary["nonzero_case_deltas"], \
+        "expected non-zero case deltas from fake runner"
+    assert result["gate"]["paired_delta"] == pytest.approx(1.0, abs=1e-9)
