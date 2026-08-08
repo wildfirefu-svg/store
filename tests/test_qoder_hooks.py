@@ -70,6 +70,20 @@ def test_guard_bash_redirect_write_denied():
     assert proc.returncode == 2
 
 
+def test_guard_fd_duplication_not_treated_as_write():
+    # 2>&1 是流合并（PowerShell/bash 标准写法），不是文件写入，不应触发拦截。
+    proc = run_hook(
+        GUARD, bash_payload("git add benchmark/datasets/x.jsonl 2>&1 | more")
+    )
+    assert proc.returncode == 0
+
+
+def test_guard_ampersand_file_redirect_still_denied():
+    # bash 的 >&file（后接文件名而非数字 fd）仍是写文件，应继续拦截。
+    proc = run_hook(GUARD, bash_payload("echo x >& data/cases_real_db.json"))
+    assert proc.returncode == 2
+
+
 def test_guard_bash_copy_write_denied():
     proc = run_hook(GUARD, bash_payload("cp evil.json data/cases_real_db.json"))
     assert proc.returncode == 2

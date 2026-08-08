@@ -33,7 +33,8 @@ FORBIDDEN_PATTERNS = (
 )
 
 _WRITE_HINTS = re.compile(
-    r"(>>?|mv\b|move\b|cp\b|copy\b|tee\b|rm\b|del\b|erase\b|remove-item\b"
+    # >>?(?!&\d): 排除 2>&1 这类 fd 合并（非文件写入）；>&file 仍命中。
+    r"(>>?(?!&\d)|mv\b|move\b|cp\b|copy\b|tee\b|rm\b|del\b|erase\b|remove-item\b"
     r"|set-content\b|out-file\b|git\s+rm\b|git\s+restore\b|git\s+checkout\s+--)",
     re.IGNORECASE,
 )
