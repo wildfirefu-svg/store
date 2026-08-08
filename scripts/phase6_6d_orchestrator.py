@@ -366,7 +366,8 @@ def _compute_experiment_code_fingerprint():
                _check_completeness, compute_6d_gate, check_6d_gate,
                _generate_report, _create_archive, _validate_frozen_protocol,
                _prepare_run_context, run_dev, build_run_manifest,
-               _validate_phase1_receipt, _validate_four_layer_provenance):
+               _validate_phase1_receipt, _validate_four_layer_provenance,
+               _publish_receipt_atomic):
         parts.append(hashlib.sha256(inspect.getsource(fn).encode()).hexdigest())
     for fn_name in ("__init__", "record_slice_completed", "can_attempt",
                     "slice_completed", "remaining_budget"):
@@ -1166,19 +1167,27 @@ def _create_archive(schedule, ledger, run_dir, provider, model, gate_result,
         raise
 
 
-def _publish_receipt_atomic(arch_result, gate_root, receipt_name):
-    import shutil
+def _publish_receipt_atomic(arch_result, gate_root, receipt_name,
+                             validated_bytes=None, expected_sha256=None):
+    """Publish receipt by writing pre-validated bytes (not re-reading source).
+
+    This eliminates TOCTOU: the exact bytes validated in run_dev are the
+    bytes written to tmp and verified by SHA before atomic replace.
+    """
     gate_root = Path(gate_root)
     gate_root.mkdir(parents=True, exist_ok=True)
-    receipt_src = Path(arch_result["archive_dir"]) / receipt_name
     receipt_dst = gate_root / receipt_name
     tmp_dst = receipt_dst.with_suffix(".tmp")
-    shutil.copy2(receipt_src, tmp_dst)
-    # Verify copied file SHA matches source before atomic replace
-    if _sha256_file(str(tmp_dst)) != _sha256_file(str(receipt_src)):
+    if validated_bytes is None:
+        raise SystemExit(
+            "publish receipt reject: validated_bytes required")
+    tmp_dst.write_bytes(validated_bytes)
+    actual_sha = _sha256_file(str(tmp_dst))
+    if expected_sha256 is None or actual_sha != expected_sha256:
         tmp_dst.unlink(missing_ok=True)
         raise SystemExit(
-            "publish receipt reject: copied file SHA mismatch")
+            f"publish receipt reject: SHA mismatch "
+            f"(expected={expected_sha256!r}, actual={actual_sha!r})")
     os.replace(str(tmp_dst), str(receipt_dst))
 
 
@@ -1400,18 +1409,23 @@ def run_dev(provider, model, output_dir, run_id=None, resume=False,
             run_manifest, code_fp, run_id=run_id)
         # Validate the PERSISTED receipt from disk (not in-memory)
         # to prevent corruption between archive creation and publication.
+        # Read raw bytes once; these exact bytes are validated and published.
         archive_receipt_path = Path(arch["archive_dir"]) / "dev_gate.json"
         if not archive_receipt_path.exists():
             raise SystemExit(
                 f"archive receipt missing on disk: {archive_receipt_path}")
-        disk_receipt = json.loads(
-            archive_receipt_path.read_text(encoding="utf-8"))
+        receipt_bytes = archive_receipt_path.read_bytes()
+        validated_sha = hashlib.sha256(receipt_bytes).hexdigest()
+        disk_receipt = json.loads(receipt_bytes.decode("utf-8"))
         if disk_receipt != _json_safe(arch["receipt"]):
             raise SystemExit(
                 "archive receipt drift: disk receipt != in-memory receipt")
         check_6d_gate(disk_receipt)
         _validate_four_layer_provenance(runs_root, disk_receipt)
-        _publish_receipt_atomic(arch, runs_root / "gates", "dev_gate.json")
+        _publish_receipt_atomic(
+            arch, runs_root / "gates", "dev_gate.json",
+            validated_bytes=receipt_bytes,
+            expected_sha256=validated_sha)
         return {"status": "ok", "gate": gate_result, "archive": arch,
                 "run_id": run_id}
     except (Exception, SystemExit) as exc:

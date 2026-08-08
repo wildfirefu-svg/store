@@ -1040,3 +1040,119 @@ def test_report_contains_accurate_numbers(tmp_path, monkeypatch):
     assert summary["nonzero_case_deltas"], \
         "expected non-zero case deltas from fake runner"
     assert result["gate"]["paired_delta"] == pytest.approx(1.0, abs=1e-9)
+
+
+def test_publish_receipt_atomic_writes_validated_bytes(tmp_path):
+    """Published receipt must be the exact validated bytes, not re-read from source."""
+    import json, hashlib, os
+    from pathlib import Path
+    from scripts.phase6_6d_orchestrator import _publish_receipt_atomic, _sha256_file
+
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    gate_dir = tmp_path / "gates"
+
+    # Create a source receipt on disk
+    src_receipt = {"verdict": "NON_INFERIOR", "test": True}
+    src_bytes = json.dumps(src_receipt, ensure_ascii=False, indent=2).encode("utf-8")
+    src_path = archive_dir / "dev_gate.json"
+    src_path.write_bytes(src_bytes)
+
+    # Validate and publish
+    validated_sha = hashlib.sha256(src_bytes).hexdigest()
+    arch = {"archive_dir": str(archive_dir)}
+    _publish_receipt_atomic(
+        arch, gate_dir, "dev_gate.json",
+        validated_bytes=src_bytes,
+        expected_sha256=validated_sha)
+
+    # Published file must match validated bytes exactly
+    published = (gate_dir / "dev_gate.json").read_bytes()
+    assert published == src_bytes, "published bytes != validated bytes"
+
+    # Now corrupt the source AFTER publication
+    src_path.write_text('{"verdict": "CORRUPTED_AFTER"}')
+
+    # Published file must still be correct (source not re-read)
+    published2 = (gate_dir / "dev_gate.json").read_bytes()
+    assert published2 == src_bytes, "published changed after source corruption"
+
+
+def test_publish_receipt_rejects_sha_mismatch(tmp_path):
+    """If tmp file SHA != expected_sha256, publication must fail."""
+    import json, hashlib
+    from pathlib import Path
+    from scripts.phase6_6d_orchestrator import _publish_receipt_atomic
+    import pytest
+
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    gate_dir = tmp_path / "gates"
+
+    src_bytes = b'{"verdict": "OK"}'
+    wrong_sha = "0" * 64
+
+    arch = {"archive_dir": str(archive_dir)}
+    with pytest.raises(SystemExit, match="SHA mismatch"):
+        _publish_receipt_atomic(
+            arch, gate_dir, "dev_gate.json",
+            validated_bytes=src_bytes,
+            expected_sha256=wrong_sha)
+
+    # Published file must NOT exist
+    assert not (gate_dir / "dev_gate.json").exists()
+
+
+def test_publish_receipt_in_fingerprint():
+    """_publish_receipt_atomic must be in the fingerprint function list."""
+    import inspect
+    from scripts.phase6_6d_orchestrator import _compute_experiment_code_fingerprint
+    src = inspect.getsource(_compute_experiment_code_fingerprint)
+    assert "_publish_receipt_atomic" in src
+
+
+def test_toctou_source_corruption_during_publish(tmp_path, monkeypatch):
+    """Corrupting source during publish must not affect published receipt.
+
+    This tests the TOCTOU fix: validated_bytes are written directly,
+    source file is never re-read during publication.
+    """
+    import json, hashlib, shutil
+    from pathlib import Path
+    from unittest.mock import patch
+    from scripts.phase6_6d_orchestrator import (
+        _publish_receipt_atomic, _sha256_file)
+    import pytest
+
+    archive_dir = tmp_path / "archive"
+    archive_dir.mkdir()
+    gate_dir = tmp_path / "gates"
+
+    # Create source receipt
+    src_receipt = {"verdict": "NON_INFERIOR"}
+    src_bytes = json.dumps(src_receipt, ensure_ascii=False, indent=2).encode("utf-8")
+    src_path = archive_dir / "dev_gate.json"
+    src_path.write_bytes(src_bytes)
+    validated_sha = hashlib.sha256(src_bytes).hexdigest()
+
+    # Monkeypatch write_bytes to corrupt source right before writing
+    original_write = Path.write_bytes
+
+    def corrupting_write(self, data):
+        if self.name == "dev_gate.json.tmp":
+            # Corrupt the source file during tmp write
+            src_path.write_text('{"verdict": "CORRUPTED_DURING"}')
+        return original_write(self, data)
+
+    monkeypatch.setattr(Path, "write_bytes", corrupting_write)
+
+    arch = {"archive_dir": str(archive_dir)}
+    _publish_receipt_atomic(
+        arch, gate_dir, "dev_gate.json",
+        validated_bytes=src_bytes,
+        expected_sha256=validated_sha)
+
+    # Published file must contain the VALIDATED bytes, not corrupted source
+    published = (gate_dir / "dev_gate.json").read_bytes()
+    assert published == src_bytes, "published bytes were affected by source corruption"
+    assert json.loads(published)["verdict"] == "NON_INFERIOR"
