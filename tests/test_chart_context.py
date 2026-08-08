@@ -12,13 +12,16 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from benchmark.formatters.baziqa_prompt import format_birth_line, _assemble_reasoned_choice_prompt
+from benchmark.formatters.baziqa_prompt import (
+    _assemble_reasoned_choice_prompt,
+    format_birth_line,
+)
 from benchmark.formatters.chart_context import (
     APPROVED_BAZI_FIELDS,
     approved_field_presence,
+    extract_reasoned_choice_answer,
     render_chart_context,
     render_reasoned_context,
-    extract_reasoned_choice_answer,
 )
 
 FIXTURE_DIR = PROJECT_ROOT / "tests" / "fixtures" / "phase6"
@@ -448,7 +451,9 @@ def test_render_reasoned_context_on_routed_without_targets():
 def test_render_reasoned_context_on_routed_with_targets():
     """injection=on + ROUTED_WITH_TARGETS 时含全部 3 markers."""
     from benchmark.formatters.bazi_time_context import (
-        detect_temporal_rules, extract_target_years, classify_route_state,
+        classify_route_state,
+        detect_temporal_rules,
+        extract_target_years,
     )
     path = PROJECT_ROOT / "benchmark" / "datasets" / "baziqa_contest8_2025_holdout_enriched.jsonl"
     rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]

@@ -20,12 +20,14 @@ from scripts.run_phase6_6a1_ablation import (
     evaluate_t_switch,
     gate_verdict,
     load_dev_temperature,
-    main as vote_main,
     probe_rows_complete,
     run_vote,
     sha256_file,
     strict_rows_complete,
     validate_case_ids,
+)
+from scripts.run_phase6_6a1_ablation import (
+    main as vote_main,
 )
 from tests.phase6_helpers import RunnerSpy
 
@@ -318,7 +320,10 @@ class TestAuditRecompute:
 
     def test_recompute_differs_from_per_row(self):
         # 按行统计会把 vote5 的 3B2A 样本算成 60%，题级投票是 100%——两者必须区分
-        from scripts.build_phase6_audit_index import recompute_accuracy, recompute_vote_accuracy
+        from scripts.build_phase6_audit_index import (
+            recompute_accuracy,
+            recompute_vote_accuracy,
+        )
         rows = _full_rows([40, 40, 40], [35, 35, 35])
         vote = recompute_vote_accuracy(rows, CASE_IDS, repeats=3)
         per_row = recompute_accuracy(rows, arms=("vote5_samples", "anchor_single0"))
@@ -343,7 +348,10 @@ class TestAuditRecompute:
 
     def test_check_summary_match(self, tmp_path):
         """v3 阻断 1：审计复算与归档 summary.json 自动比对，不一致返回 False。"""
-        from scripts.build_phase6_audit_index import recompute_vote_accuracy, check_summary_match
+        from scripts.build_phase6_audit_index import (
+            check_summary_match,
+            recompute_vote_accuracy,
+        )
         rows = _full_rows([40, 40, 40], [35, 35, 35])
         recomputed = recompute_vote_accuracy(rows, CASE_IDS, repeats=3)
         bad = tmp_path / "summary.json"
@@ -546,8 +554,11 @@ class TestManifestReconciliation:
 
     def test_manifest_includes_probe(self, tmp_path):
         from scripts.run_phase6_6a1_ablation import (
-            _build_manifest, build_probe_slice, build_main_schedule,
-            VoteConfig, split_ab_ba,
+            VoteConfig,
+            _build_manifest,
+            build_main_schedule,
+            build_probe_slice,
+            split_ab_ba,
         )
         config = VoteConfig(run_id="t", year=2024, root=tmp_path,
                             enriched_path=tmp_path / "e.jsonl")
@@ -762,7 +773,6 @@ class TestAsOfDateResume:
     def _make_args(self, as_of_date, tmp_path):
         """构造带 as_of_date 属性的 args namespace + profile（最小桩）。"""
         import argparse
-        from pathlib import Path
         ns = argparse.Namespace(
             as_of_date=as_of_date, attempt_stage="main",
             dataset=str(tmp_path / "ds.jsonl"), case_ids_file=None,
@@ -785,7 +795,10 @@ class TestAsOfDateResume:
 
     def test_same_date_allows_resume(self, tmp_path):
         """相同 as_of_date -> resume 允许（check_resume_manifest 不抛 SystemExit）。"""
-        from benchmark.runners.run_benchmark import build_resume_manifest, check_resume_manifest
+        from benchmark.runners.run_benchmark import (
+            build_resume_manifest,
+            check_resume_manifest,
+        )
         args, profile = self._make_args("2024-01-01", tmp_path)
         new_manifest = build_resume_manifest(args, profile)
         old_path = tmp_path / "resume.json"
@@ -795,7 +808,11 @@ class TestAsOfDateResume:
     def test_date_change_rejects_resume(self, tmp_path):
         """as_of_date 变化 -> SystemExit(2) 拒绝 resume。"""
         import pytest
-        from benchmark.runners.run_benchmark import build_resume_manifest, check_resume_manifest
+
+        from benchmark.runners.run_benchmark import (
+            build_resume_manifest,
+            check_resume_manifest,
+        )
         args_old, profile = self._make_args("2024-01-01", tmp_path)
         old_manifest = build_resume_manifest(args_old, profile)
         old_path = tmp_path / "resume.json"
@@ -809,7 +826,11 @@ class TestAsOfDateResume:
     def test_missing_date_in_old_manifest_rejects_resume(self, tmp_path):
         """旧 manifest 缺 as_of_date 字段 -> SystemExit(2) fail-closed。"""
         import pytest
-        from benchmark.runners.run_benchmark import build_resume_manifest, check_resume_manifest
+
+        from benchmark.runners.run_benchmark import (
+            build_resume_manifest,
+            check_resume_manifest,
+        )
         args, profile = self._make_args("2024-01-01", tmp_path)
         new_manifest = build_resume_manifest(args, profile)
         old_manifest = {k: v for k, v in new_manifest.items() if k != "as_of_date"}
@@ -927,6 +948,7 @@ class TestAllowDirtyCli:
     def test_allow_dirty_with_yes_rejected(self, tmp_path):
         """--allow-dirty --yes 组合被 parser.error 拒（SystemExit 2）。"""
         import pytest
+
         import scripts.run_phase6_6a1_ablation as vote
         with pytest.raises(SystemExit) as ei:
             vote.main(["--run-id", "t", "--year", "2024", "--root", str(tmp_path),

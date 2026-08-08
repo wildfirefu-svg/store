@@ -12,17 +12,29 @@ Usage:
     python knowledge-base/liunian_calendar.py --chart chart.json --target-year 2026
 """
 
-import os, sys, json, argparse
+import argparse
+import json
+import os
+import sys
 from datetime import date as dt_date
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from bazi_calculator import (
-    TIANGAN, DIZHI, GAN_WUXING, ZHI_WUXING, GAN_YINYANG,
-    sexagenary_index, sexagenary_by_index, get_shishen, get_month_branch_idx,
-    calculate_four_pillars, calculate_dayun, calculate_liunian,
-    LIUCHONG, LIUHE, LIUHAI, SANXING, SANHE,
-    TIANYI_GUIREN, WENCHANG, TAOHUA_MAP,
+    LIUCHONG,
+    LIUHAI,
+    LIUHE,
+    SANXING,
+    TAOHUA_MAP,
+    TIANGAN,
+    TIANYI_GUIREN,
+    WENCHANG,
+    ZHI_WUXING,
+    calculate_dayun,
+    calculate_four_pillars,
+    calculate_liunian,
+    get_shishen,
+    sexagenary_by_index,
 )
 
 # =============================================================================
@@ -153,10 +165,10 @@ def analyze_month(month_gan, month_zhi, chart_data, dayun_data, current_pillar, 
             dayun_interaction = f'流月合大运({month_zhi}合{dayun_zhi})→顺遂'
             dayun_score = 15
         elif pair in LIUHAI or rpair in LIUHAI:
-            dayun_interaction = f'流月害大运→小阻'
+            dayun_interaction = '流月害大运→小阻'
             dayun_score = -10
         elif pair in SANXING or rpair in SANXING:
-            dayun_interaction = f'流月刑大运→口舌'
+            dayun_interaction = '流月刑大运→口舌'
             dayun_score = -10
         else:
             dayun_interaction = '平稳'
@@ -369,7 +381,7 @@ def _score_health(month_zhi, interactions, dm_wu, dm_state):
 
     if dm_state == '死':
         score -= 1
-        notes.append(f'日主处死地→精力不足')
+        notes.append('日主处死地→精力不足')
 
     # Month element vs DM element (克的关系)
     month_wu = ZHI_WUXING.get(month_zhi, '')

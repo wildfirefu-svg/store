@@ -9,7 +9,10 @@ Usage:
     python knowledge-base/bazi_kb.py --search "婚姻"  # Fulltext search
 """
 
-import json, os, sqlite3, argparse
+import argparse
+import json
+import os
+import sqlite3
 
 KB_DIR = os.path.dirname(os.path.abspath(__file__))
 

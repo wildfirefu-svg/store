@@ -10,14 +10,11 @@ import os
 import statistics
 import sys
 import time
-import uuid
-from pathlib import Path
 
 if __package__ in (None, ''):
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from benchmark.runners.run_benchmark import load_jsonl, run_model_benchmark
-
 
 K_VALUES = [1, 2, 3]
 

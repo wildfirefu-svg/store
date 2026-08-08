@@ -3,7 +3,9 @@
 Uses ChromaDB vector search (multilingual embeddings) with bigram fallback.
 """
 
-import json, os, sys, re
+import json
+import os
+import re
 
 # Try ChromaDB first, fall back to bigram
 _vector_search = None

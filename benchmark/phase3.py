@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import re
 from collections import Counter, defaultdict
+from collections.abc import Sequence
 from difflib import SequenceMatcher
 from itertools import combinations
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any
 
 
-def build_permutation_plan(option_ids: Sequence[str], num_perms: int = 3) -> List[Dict[str, Any]]:
+def build_permutation_plan(option_ids: Sequence[str], num_perms: int = 3) -> list[dict[str, Any]]:
     """Build a shared cyclic-shift permutation plan for one case.
 
     Does NOT read the correct answer. For 4 options and 3 cyclic shifts, each
@@ -32,7 +33,7 @@ def build_permutation_plan(option_ids: Sequence[str], num_perms: int = 3) -> Lis
     n = len(option_ids)
     if n != 4:
         raise ValueError(f"expected 4 options, got {n}")
-    plans: List[Dict[str, Any]] = []
+    plans: list[dict[str, Any]] = []
     for shift in range(num_perms):
         display_order = [option_ids[(i + shift) % n] for i in range(n)]
         label_map = {display_order[i]: chr(65 + i) for i in range(n)}
@@ -62,7 +63,7 @@ def _relabel_option(body: str, label: str) -> str:
     return f"{label}. {body}"
 
 
-def permute_case_by_plan(case: Dict[str, Any], shift: int) -> Dict[str, Any]:
+def permute_case_by_plan(case: dict[str, Any], shift: int) -> dict[str, Any]:
     """Apply a fixed cyclic-shift permutation to a case's options.
 
     Unlike random ``shuffle_options``, this uses a deterministic cyclic shift
@@ -73,7 +74,7 @@ def permute_case_by_plan(case: Dict[str, Any], shift: int) -> Dict[str, Any]:
     """
     from copy import deepcopy
 
-    original_options: List[str] = list(case.get("options") or [])
+    original_options: list[str] = list(case.get("options") or [])
     original_answer: str = str(case.get("answer") or "")
     n = len(original_options)
 
@@ -81,10 +82,10 @@ def permute_case_by_plan(case: Dict[str, Any], shift: int) -> Dict[str, Any]:
         raise ValueError(f"permute_case_by_plan expects 4 options, got {n}")
 
     # Cyclic shift: original position i → display position (i+shift) % n
-    new_order: List[int] = [(i + shift) % n for i in range(n)]
+    new_order: list[int] = [(i + shift) % n for i in range(n)]
 
-    new_options: List[str] = []
-    label_map: Dict[str, str] = {}  # old_label → new_label
+    new_options: list[str] = []
+    label_map: dict[str, str] = {}  # old_label → new_label
     for new_pos, orig_pos in enumerate(new_order):
         new_label = chr(65 + new_pos)  # A/B/C/D
         old_label = chr(65 + orig_pos)
@@ -108,7 +109,7 @@ def permute_case_by_plan(case: Dict[str, Any], shift: int) -> Dict[str, Any]:
     return result
 
 
-def to_original_option_identity(predicted_label: Optional[str], label_map: Dict[str, str]) -> Optional[str]:
+def to_original_option_identity(predicted_label: str | None, label_map: dict[str, str]) -> str | None:
     """Map a predicted A/B/C/D label back to the original option identity."""
     if predicted_label is None:
         return None
@@ -139,7 +140,7 @@ def detect_leak_candidates(
     case_id: str,
     holdout_case_ids: set,
     overlap_threshold: float = 0.85,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Auto-detect potential strict-leak candidates in evidence text.
 
     option-grounded retrieval legitimately surfaces option text, so a
@@ -151,10 +152,10 @@ def detect_leak_candidates(
       - case_id_appears: a holdout case_id appears in evidence
       - high_overlap_<ratio>: character overlap >= threshold
     """
-    candidates: List[Dict[str, Any]] = []
+    candidates: list[dict[str, Any]] = []
     norm_answer = normalize_text(answer_text) if answer_text else ""
     for i, ev in enumerate(evidence_texts):
-        reasons: List[str] = []
+        reasons: list[str] = []
         norm_ev = normalize_text(ev)
         if norm_answer and norm_answer in norm_ev:
             reasons.append("answer_text_appears")
@@ -170,12 +171,12 @@ def detect_leak_candidates(
 
 
 def classify_parser_failure(
-    raw_answer: Optional[str],
-    parsed_choice: Optional[str],
+    raw_answer: str | None,
+    parsed_choice: str | None,
     valid: bool,
-    label_map: Optional[Dict[str, str]] = None,
+    label_map: dict[str, str] | None = None,
     call_success: bool = True,
-) -> Optional[str]:
+) -> str | None:
     """Classify a parser failure reason so API failures are not mixed into
     position-bias analysis.
 
@@ -202,8 +203,8 @@ def classify_parser_failure(
     return None
 
 
-def _identity_per_prediction(predictions: Sequence[Dict[str, Any]]) -> Dict[str, List[str]]:
-    by_case: Dict[str, List[str]] = defaultdict(list)
+def _identity_per_prediction(predictions: Sequence[dict[str, Any]]) -> dict[str, list[str]]:
+    by_case: dict[str, list[str]] = defaultdict(list)
     for p in predictions:
         if not p.get("call_success"):
             continue
@@ -227,14 +228,14 @@ def _identity_per_prediction(predictions: Sequence[Dict[str, Any]]) -> Dict[str,
     return by_case
 
 
-def aggregate_by_option_identity(predictions: Sequence[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+def aggregate_by_option_identity(predictions: Sequence[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     """Aggregate multi-permutation predictions by original option identity.
 
     Only successful calls with a valid unshuffle are included. Ties are broken
     deterministically by sorted option identity.
     """
     by_case = _identity_per_prediction(predictions)
-    result: Dict[str, Dict[str, Any]] = {}
+    result: dict[str, dict[str, Any]] = {}
     for case_id, identities in by_case.items():
         counts = Counter(identities)
         if not counts:
@@ -251,13 +252,13 @@ def aggregate_by_option_identity(predictions: Sequence[Dict[str, Any]]) -> Dict[
     return result
 
 
-def mean_majority_share(predictions: Sequence[Dict[str, Any]]) -> float:
+def mean_majority_share(predictions: Sequence[dict[str, Any]]) -> float:
     """Macro-average of per-case majority option-identity share.
 
     E.g. 2/3 predictions agree -> 0.667 for that case.
     """
     by_case = _identity_per_prediction(predictions)
-    shares: List[float] = []
+    shares: list[float] = []
     for identities in by_case.values():
         if not identities:
             continue
@@ -266,7 +267,7 @@ def mean_majority_share(predictions: Sequence[Dict[str, Any]]) -> float:
     return sum(shares) / len(shares) if shares else 0.0
 
 
-def unanimous_case_rate(predictions: Sequence[Dict[str, Any]]) -> float:
+def unanimous_case_rate(predictions: Sequence[dict[str, Any]]) -> float:
     """Fraction of cases where all successful predictions agree on one identity."""
     by_case = _identity_per_prediction(predictions)
     unanimous = 0
@@ -280,7 +281,7 @@ def unanimous_case_rate(predictions: Sequence[Dict[str, Any]]) -> float:
     return unanimous / total if total else 0.0
 
 
-def pairwise_identity_agreement(predictions: Sequence[Dict[str, Any]]) -> float:
+def pairwise_identity_agreement(predictions: Sequence[dict[str, Any]]) -> float:
     """Fraction of same-case prediction pairs that agree on option identity."""
     by_case = _identity_per_prediction(predictions)
     total_pairs = 0
@@ -293,7 +294,7 @@ def pairwise_identity_agreement(predictions: Sequence[Dict[str, Any]]) -> float:
     return agree_pairs / total_pairs if total_pairs else 0.0
 
 
-def compute_ite_accuracy(predictions: Sequence[Dict[str, Any]]) -> float:
+def compute_ite_accuracy(predictions: Sequence[dict[str, Any]]) -> float:
     """Intent-to-evaluate accuracy: all cases as denominator, failures count wrong.
 
     Uses majority voting by option identity across permutations (via
@@ -308,7 +309,7 @@ def compute_ite_accuracy(predictions: Sequence[Dict[str, Any]]) -> float:
 
     # Denominator: every unique case_id that appears in predictions
     all_case_ids: set[str] = set()
-    case_correct: Dict[str, str] = {}
+    case_correct: dict[str, str] = {}
     for p in predictions:
         cid = str(p.get("case_id", ""))
         all_case_ids.add(cid)
@@ -335,7 +336,7 @@ def compute_ite_accuracy(predictions: Sequence[Dict[str, Any]]) -> float:
     return correct / total
 
 
-def compute_success_only_accuracy(predictions: Sequence[Dict[str, Any]]) -> float:
+def compute_success_only_accuracy(predictions: Sequence[dict[str, Any]]) -> float:
     """Success-only accuracy: only cases with >=1 successful call in denominator.
 
     Uses majority voting by option identity — same logic as
@@ -348,7 +349,7 @@ def compute_success_only_accuracy(predictions: Sequence[Dict[str, Any]]) -> floa
     aggregated = aggregate_by_option_identity(predictions)
 
     # Correct identity lookup (from successful calls only)
-    case_correct: Dict[str, str] = {}
+    case_correct: dict[str, str] = {}
     for p in predictions:
         if not p.get("call_success"):
             continue
@@ -371,7 +372,7 @@ def compute_success_only_accuracy(predictions: Sequence[Dict[str, Any]]) -> floa
     return correct / total
 
 
-def compute_failure_rate(predictions: Sequence[Dict[str, Any]]) -> float:
+def compute_failure_rate(predictions: Sequence[dict[str, Any]]) -> float:
     """Fraction of calls that failed."""
     if not predictions:
         return 0.0
@@ -379,7 +380,7 @@ def compute_failure_rate(predictions: Sequence[Dict[str, Any]]) -> float:
     return failed / len(predictions)
 
 
-def paired_flip_counts(off_preds: Sequence[Dict[str, Any]], on_preds: Sequence[Dict[str, Any]]) -> Dict[str, int]:
+def paired_flip_counts(off_preds: Sequence[dict[str, Any]], on_preds: Sequence[dict[str, Any]]) -> dict[str, int]:
     """Count paired flips between off-control and on-aggregation.
 
     Each pair must be eligible (both success + parser_valid + unshuffle_success).
@@ -408,9 +409,9 @@ def paired_flip_counts(off_preds: Sequence[Dict[str, Any]], on_preds: Sequence[D
     return result
 
 
-def position_selection_frequency(predictions: Sequence[Dict[str, Any]]) -> Dict[str, int]:
+def position_selection_frequency(predictions: Sequence[dict[str, Any]]) -> dict[str, int]:
     """Count how often each A/B/C/D label is selected (successful calls only)."""
-    freq: Dict[str, int] = {"A": 0, "B": 0, "C": 0, "D": 0}
+    freq: dict[str, int] = {"A": 0, "B": 0, "C": 0, "D": 0}
     for p in predictions:
         if not p.get("call_success"):
             continue
@@ -420,9 +421,9 @@ def position_selection_frequency(predictions: Sequence[Dict[str, Any]]) -> Dict[
     return freq
 
 
-def pair_analysis_eligible_rate(predictions: Sequence[Dict[str, Any]]) -> float:
+def pair_analysis_eligible_rate(predictions: Sequence[dict[str, Any]]) -> float:
     """Fraction of cases where both off and on are eligible for pair analysis."""
-    by_case: Dict[str, Dict[str, bool]] = defaultdict(dict)
+    by_case: dict[str, dict[str, bool]] = defaultdict(dict)
     for p in predictions:
         eligible = p.get("call_success") and p.get("parser_valid") and p.get("unshuffle_success")
         by_case[p.get("case_id", "")][p.get("mode", "")] = bool(eligible)
@@ -432,18 +433,18 @@ def pair_analysis_eligible_rate(predictions: Sequence[Dict[str, Any]]) -> float:
     return eligible_cases / len(by_case)
 
 
-def check_hard_cap(actual_calls: int, hard_cap: int) -> Dict[str, Any]:
+def check_hard_cap(actual_calls: int, hard_cap: int) -> dict[str, Any]:
     """Check whether actual calls have reached the hard cap."""
     return {"cap_reached": actual_calls >= hard_cap, "remaining": max(0, hard_cap - actual_calls)}
 
 
 def compute_gate_report(
-    on_preds: Sequence[Dict[str, Any]],
-    off_preds: Sequence[Dict[str, Any]],
+    on_preds: Sequence[dict[str, Any]],
+    off_preds: Sequence[dict[str, Any]],
     leak_candidate_count: int = 0,
     confirmed_leak_count: int = 0,
     stage_label: str = "",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Produce a complete Phase 3 formal-gate report dict.
 
     Parameters
@@ -572,7 +573,7 @@ def compute_gate_report(
     }
 
 
-def run_pipeline_trace(num_cases: int = 5) -> Dict[str, Any]:
+def run_pipeline_trace(num_cases: int = 5) -> dict[str, Any]:
     """Run a full offline pipeline trace with mock data (no API calls).
 
     Stages: split -> permutation_plan -> prompt_render -> mock_answer ->

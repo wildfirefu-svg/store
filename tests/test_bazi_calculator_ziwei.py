@@ -2,13 +2,17 @@
 
 快照测试由 Task 13 追加（依赖届时创建的 bazi_snapshot_helper）。
 """
-import pytest
+
+from bazi_snapshot_helper import (
+    SNAPSHOT_CASES,
+    SNAPSHOT_DIR,
+    assert_snapshot_equal,
+    compute_ziwei,
+    freeze_lunar_backend,
+    load_snapshot,
+)
 
 import bazi_calculator as bc
-from bazi_snapshot_helper import (
-    SNAPSHOT_CASES, SNAPSHOT_DIR,
-    assert_snapshot_equal, compute_ziwei, freeze_lunar_backend, load_snapshot,
-)
 
 MAIN_STARS = {'紫微', '天机', '太阳', '武曲', '天同', '廉贞', '天府',
               '太阴', '贪狼', '巨门', '天相', '天梁', '七杀', '破军'}

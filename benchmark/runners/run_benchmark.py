@@ -9,33 +9,45 @@ import uuid
 if __package__ in (None, ''):
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from benchmark.scorers.choice_accuracy import load_jsonl, score_choice_answers, extract_choice, extract_choice_with_meta
-from benchmark.runners.shuffle_options import shuffle_options as _shuffle_options_fn, unshuffle_predicted_answer
-from benchmark.runners.self_consistency import majority_vote, sample_answers
+import data_store
 from benchmark.formatters.baziqa_prompt import (
-    format_direct_choice_prompt,
     format_direct_c2_prompt,
-    format_structured_reasoning_prompt,
+    format_direct_choice_prompt,
     format_multi_turn_context,
     format_multi_turn_question,
+    format_structured_reasoning_prompt,
+)
+from benchmark.formatters.chart_context import extract_reasoned_choice_answer
+from benchmark.formatters.dual_system_reasoning import (
+    build_bazi_pipeline_prompt,
+    build_judge_prompt,
+    build_ziwei_pipeline_prompt,
+    extract_judge_answer,
+    judge_swap_seed,
 )
 from benchmark.formatters.two_stage_reasoning import (
+    build_stage2_evidence,
     format_stage1_prompt,
     format_stage2_prompt,
-    parse_stage1_result,
-    build_stage2_evidence,
     is_time_location_question,
+    parse_stage1_result,
 )
-from benchmark.formatters.dual_system_reasoning import (
-    build_bazi_pipeline_prompt, build_ziwei_pipeline_prompt,
-    build_judge_prompt, extract_judge_answer, judge_swap_seed)
-from benchmark.formatters.chart_context import extract_reasoned_choice_answer
-from benchmark.scorers.evidence_score import score_case_evidence, aggregate_evidence_score
-from benchmark.scorers.safety_score import score_safety, aggregate_safety_score
+from benchmark.phase3 import classify_parser_failure, to_original_option_identity
 from benchmark.reports.generate_report import save_report
-from benchmark.phase3 import to_original_option_identity, classify_parser_failure
-import data_store
-
+from benchmark.runners.self_consistency import majority_vote, sample_answers
+from benchmark.runners.shuffle_options import shuffle_options as _shuffle_options_fn
+from benchmark.runners.shuffle_options import unshuffle_predicted_answer
+from benchmark.scorers.choice_accuracy import (
+    extract_choice,
+    extract_choice_with_meta,
+    load_jsonl,
+    score_choice_answers,
+)
+from benchmark.scorers.evidence_score import (
+    aggregate_evidence_score,
+    score_case_evidence,
+)
+from benchmark.scorers.safety_score import aggregate_safety_score, score_safety
 
 SYSTEM_PROMPT_BENCHMARK = (
     "你是一位专业命理师，擅长根据八字命盘进行分析。回答选择题时请直接给出选项字母。"
@@ -344,7 +356,8 @@ def compute_detail_provenance(case: dict, route_state, time_context_injection: s
     if state_str is None or state_str == "NOT_ROUTED":
         return state_str, None
     from benchmark.formatters.bazi_time_context import (
-        TemporalRouteState, build_time_context,
+        TemporalRouteState,
+        build_time_context,
     )
     try:
         state_enum = TemporalRouteState(state_str)
@@ -570,8 +583,8 @@ def build_benchmark_prompt(case, method='direct_choice', phase4_exp_a=False,
     if profile_formatter == 'format_dual_system_prompt':
         return build_bazi_pipeline_prompt(case)
     if profile_formatter == 'format_reasoned_choice_prompt':
-        from benchmark.formatters.chart_context import render_reasoned_context
         from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt
+        from benchmark.formatters.chart_context import render_reasoned_context
         if ziwei_arm is None:
             print(json.dumps({"status": "BLOCKED",
                 "reason": "reasoned profile 要求显式 ziwei_arm (none/only/combined)，"
@@ -625,6 +638,7 @@ def _get_bench_case_index():
         return None
     try:
         from pathlib import Path as _Path
+
         from case_index import CaseIndex
         global _BENCH_CASE_INDEX, _BENCH_CASE_INDEX_PATH
         corpus = _Path(os.environ.get(
@@ -796,7 +810,7 @@ def _call_with_optional_ledger(messages, provider, model, case, temperature, tim
     # 执行偏离（Task 6）：计划要求两函数各抽一份 _call_once 闭包；实现合并为单一
     # 共享入口，语义等价且消除重复。ctx=None 时保留原"包装一切异常"旧行为（零变化）；
     # ctx 激活时交 _attempt_with_ledger（崩溃冒泡 / 网络失败重试记账）。
-    call_once = lambda: _call_once_messages(  # noqa: E731
+    call_once = lambda: _call_once_messages(
         messages, provider, model, case=case, temperature=temperature, timeout=timeout,
         rag_k=rag_k, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k,
         suppress_rag=suppress_rag, suppress_apb=suppress_apb)
@@ -1183,7 +1197,7 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                 stage1_cache_hit = cached is not None
                 if stage1_cache_hit:
                     raw1, hypothesis = cached.get("raw"), cached.get("hypothesis")
-                    print(f"    [Stage 1 cached]")
+                    print("    [Stage 1 cached]")
                 else:
                     raw1 = call_model_sync(
                         prompt,
@@ -1200,7 +1214,7 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
 
                 # Parse failure → fallback to structured_reasoning
                 if hypothesis is None:
-                    print(f"    [Stage 1 parse failed → fallback to structured_reasoning]")
+                    print("    [Stage 1 parse failed → fallback to structured_reasoning]")
                     fallback_prompt = format_structured_reasoning_prompt(case)
                     answer = call_model_sync(
                         fallback_prompt,
@@ -1218,14 +1232,14 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                     # Stage 2: option matching with evidence
                     if phase4_exp_b:
                         # Experiment B: skip Stage 1 hypothesis, use evidence only
-                        print(f"    [Stage 2 EXP-B: no hypothesis]")
+                        print("    [Stage 2 EXP-B: no hypothesis]")
                         is_time = is_time_location_question(case.get('question', ''), case.get('options', []))
                         evidence_mode = phase4_evidence_mode if phase4_evidence_mode in ('all', 'top2') else 'all'
                         evidence = build_stage2_evidence(case, "", mode=evidence_mode, exp_c=phase4_exp_c, exp_c2=phase4_exp_c2)
                         stage2_prompt = format_stage2_prompt(case, hypothesis=None, evidence=evidence, is_time=is_time)
                     else:
                         # Normal mode: with Stage 1 hypothesis
-                        print(f"    [Stage 2 with hypothesis]")
+                        print("    [Stage 2 with hypothesis]")
                         is_time = is_time_location_question(case.get('question', ''), case.get('options', []))
                         # evidence_mode: 'all' for smoke (default), 'top2' only for formal if hit rate >= 0.85
                         evidence_mode = phase4_evidence_mode if phase4_evidence_mode in ('all', 'top2') else 'all'
@@ -1592,7 +1606,9 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
         expected = extract_choice(case.get('answer'))
 
         if profile_formatter == 'format_reasoned_choice_prompt':
-            from benchmark.formatters.chart_context import extract_reasoned_choice_answer
+            from benchmark.formatters.chart_context import (
+                extract_reasoned_choice_answer,
+            )
             predicted = extract_reasoned_choice_answer(answer)
             meta = {
                 "choice": predicted,

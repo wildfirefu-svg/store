@@ -1,7 +1,6 @@
-from scripts import analyze_baziqa_error_attribution
-
-
 import json
+
+from scripts import analyze_baziqa_error_attribution
 
 
 def test_analyze_error_attribution_counts_domains_and_errors(tmp_path):

@@ -4,7 +4,12 @@ Automated tests for new tools: zeri v2, liunian v2, name_analysis, case_retrieva
 Tests functional correctness, output format, edge cases, and integration.
 """
 
-import json, os, sys, time, subprocess, tempfile
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -91,7 +96,7 @@ def test_zeri():
 
     # 1.3: Generic mode (no chart)
     ret, _, _ = run_tool(
-        f'python knowledge-base/zeri.py --year 2026 --month 6 --purpose 通用 --top 5'
+        'python knowledge-base/zeri.py --year 2026 --month 6 --purpose 通用 --top 5'
     )
     check('1.3 Generic mode (no chart) OK', ret == 0)
 

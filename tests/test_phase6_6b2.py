@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import tempfile
 import types
 from pathlib import Path
 
@@ -17,8 +16,7 @@ class TestTask10FrozenSchedule:
     def _make_dataset(self, tmp_path: Path, year: str, n: int = 40) -> str:
         ds_path = tmp_path / f"baziqa_{year}.jsonl"
         with open(ds_path, "w", encoding="utf-8") as f:
-            for i in range(n):
-                f.write(json.dumps({"case_id": f"{year}_{i:04d}"}) + "\n")
+            f.writelines(json.dumps({"case_id": f"{year}_{i:04d}"}) + "\n" for i in range(n))
         return str(ds_path)
 
     def test_build_schedule_dev_has_60_slices(self, tmp_path):
@@ -102,8 +100,7 @@ class TestTask10FrozenSchedule:
         from scripts.phase6_6b2_orchestrator import _build_schedule
         ds_path = tmp_path / "dup.jsonl"
         with open(ds_path, "w", encoding="utf-8") as f:
-            for i in range(40):
-                f.write(json.dumps({"case_id": "dup_0000"}) + "\n")
+            f.writelines(json.dumps({"case_id": "dup_0000"}) + "\n" for i in range(40))
         with pytest.raises(SystemExit):
             _build_schedule(str(tmp_path), years=["2024"],
                             dataset_paths={"2024": str(ds_path)})
@@ -338,8 +335,7 @@ class TestTask11EventsFilename:
         from scripts.phase6_6b2_orchestrator import _build_schedule
         ds_path = tmp_path / "ds.jsonl"
         with open(ds_path, "w", encoding="utf-8") as f:
-            for i in range(40):
-                f.write(json.dumps({"case_id": f"c{i:04d}"}) + "\n")
+            f.writelines(json.dumps({"case_id": f"c{i:04d}"}) + "\n" for i in range(40))
         sched = _build_schedule(str(tmp_path), years=["2024"], dataset_paths={"2024": str(ds_path)})
         for sl in sched["slices"]:
             assert sl["events_path"].endswith("details.events.jsonl")
@@ -367,8 +363,7 @@ class TestTask12IntegrityGate:
         ds_path = tmp_path / "ds.jsonl"
         cids = [f"c{i:04d}" for i in range(40)]
         with open(ds_path, "w", encoding="utf-8") as f:
-            for cid in cids:
-                f.write(json.dumps({"case_id": cid}) + "\n")
+            f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
         sched = _build_schedule(str(tmp_path), years=["2024"], dataset_paths={"2024": str(ds_path)})
         rows = []
         for sl in sched["slices"]:
@@ -386,8 +381,7 @@ class TestTask12IntegrityGate:
         ds_path = tmp_path / "ds.jsonl"
         cids = [f"c{i:04d}" for i in range(40)]
         with open(ds_path, "w", encoding="utf-8") as f:
-            for cid in cids:
-                f.write(json.dumps({"case_id": cid}) + "\n")
+            f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
         sched = _build_schedule(str(tmp_path), years=["2024"], dataset_paths={"2024": str(ds_path)})
         rows = []
         for sl in sched["slices"]:
@@ -407,8 +401,7 @@ class TestTask12IntegrityGate:
         ds_path = tmp_path / "ds.jsonl"
         cids = [f"c{i:04d}" for i in range(40)]
         with open(ds_path, "w", encoding="utf-8") as f:
-            for cid in cids:
-                f.write(json.dumps({"case_id": cid}) + "\n")
+            f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
         sched = _build_schedule(str(tmp_path), years=["2024"], dataset_paths={"2024": str(ds_path)})
         rows = []
         for sl in sched["slices"]:
@@ -427,8 +420,7 @@ class TestTask12IntegrityGate:
         ds_path = tmp_path / "ds.jsonl"
         cids = [f"c{i:04d}" for i in range(40)]
         with open(ds_path, "w", encoding="utf-8") as f:
-            for cid in cids:
-                f.write(json.dumps({"case_id": cid}) + "\n")
+            f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
         sched = _build_schedule(str(tmp_path), years=["2024"], dataset_paths={"2024": str(ds_path)})
         rows = []
         for sl in sched["slices"]:
@@ -447,8 +439,7 @@ class TestTask12IntegrityGate:
         ds_path = tmp_path / "ds.jsonl"
         cids = [f"c{i:04d}" for i in range(40)]
         with open(ds_path, "w", encoding="utf-8") as f:
-            for cid in cids:
-                f.write(json.dumps({"case_id": cid}) + "\n")
+            f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
         sched = _build_schedule(str(tmp_path), years=["2024"], dataset_paths={"2024": str(ds_path)})
         rows = []
         for sl in sched["slices"]:
@@ -465,8 +456,7 @@ class TestTask12IntegrityGate:
         ds_path = tmp_path / "ds.jsonl"
         cids = [f"c{i:04d}" for i in range(40)]
         with open(ds_path, "w", encoding="utf-8") as f:
-            for cid in cids:
-                f.write(json.dumps({"case_id": cid}) + "\n")
+            f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
         sched = _build_schedule(str(tmp_path), years=["2024"], dataset_paths={"2024": str(ds_path)})
         rows = []
         for sl in sched["slices"]:
@@ -486,8 +476,7 @@ class TestTask12IntegrityGate:
         ds_path = tmp_path / "ds.jsonl"
         cids = [f"c{i:04d}" for i in range(40)]
         with open(ds_path, "w", encoding="utf-8") as f:
-            for cid in cids:
-                f.write(json.dumps({"case_id": cid}) + "\n")
+            f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
         sched = _build_schedule(str(tmp_path), years=["2024"], dataset_paths={"2024": str(ds_path)})
         rows = []
         for sl in sched["slices"]:
@@ -600,7 +589,6 @@ class TestTask13ComputeGate:
 
 
 def test_report_labels_v4_flash_nonthinking(tmp_path):
-    import types
     from scripts.phase6_6b2_orchestrator import generate_report
 
     gate = {"verdict": "PROMOTE_CANDIDATE", "stage": "dev"}
@@ -626,7 +614,7 @@ def test_report_labels_v4_flash_nonthinking(tmp_path):
 
 def test_b1c_values_cannot_change_gate(tmp_path):
     import inspect
-    import types
+
     from scripts.phase6_6b2_orchestrator import compute_gate, generate_report
 
     advisory_a = {"count": 1, "sha256": "a" * 64}
@@ -674,8 +662,7 @@ class TestTask14SmokeGate:
                 rows.append({"case_id": cid, "attempt_key": ["", "", "dual", stage],
                              "terminal_state": "parsed"})
         with open(detail, "w", encoding="utf-8") as f:
-            for r in rows:
-                f.write(json.dumps(r) + "\n")
+            f.writelines(json.dumps(r) + "\n" for r in rows)
         state = determine_smoke_state(str(tmp_path), expected_case_ids=["c0001", "c0002"])
         assert state == "completed"
 
@@ -685,8 +672,7 @@ class TestTask14SmokeGate:
         rows = [{"case_id": "c0001", "attempt_key": ["", "", "dual", "bazi"],
                  "terminal_state": "parsed"}]
         with open(detail, "w", encoding="utf-8") as f:
-            for r in rows:
-                f.write(json.dumps(r) + "\n")
+            f.writelines(json.dumps(r) + "\n" for r in rows)
         state = determine_smoke_state(str(tmp_path), expected_case_ids=["c0001", "c0002"])
         assert state == "resume"
 
@@ -707,8 +693,7 @@ class TestTask14SmokeGate:
                              "predicted_answer": "A", "expected_answer": "A",
                              "terminal_state": "parsed"})
         with open(detail, "w", encoding="utf-8") as f:
-            for r in rows:
-                f.write(json.dumps(r) + "\n")
+            f.writelines(json.dumps(r) + "\n" for r in rows)
         result = verify_smoke_completed(str(tmp_path), ["c0001", "c0002"])
         assert result["status"] == "OK"
         assert result["ziwei_coverage"] == 1.0
@@ -723,8 +708,7 @@ class TestTask14SmokeGate:
                 rows.append({"case_id": cid, "attempt_key": ["", "", "dual", stage],
                              "terminal_state": "call_failed"})
         with open(detail, "w", encoding="utf-8") as f:
-            for r in rows:
-                f.write(json.dumps(r) + "\n")
+            f.writelines(json.dumps(r) + "\n" for r in rows)
         with pytest.raises(SystemExit):
             verify_smoke_completed(str(tmp_path), ["c0001", "c0002"])
 
@@ -734,7 +718,8 @@ class TestTask16GenerateArchive:
 
     def _make_complete_run(self, tmp_path, years=None):
         from scripts.phase6_6b2_orchestrator import (
-            _build_schedule, BudgetLedger6B2, _load_events,
+            BudgetLedger6B2,
+            _build_schedule,
         )
         years = years or ["2024", "2025"]
         ds_paths = {}
@@ -742,8 +727,7 @@ class TestTask16GenerateArchive:
             ds_path = tmp_path / f"ds_{year}.jsonl"
             cids = [f"c{i:04d}" for i in range(40)]
             with open(ds_path, "w", encoding="utf-8") as f:
-                for cid in cids:
-                    f.write(json.dumps({"case_id": cid}) + "\n")
+                f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
             ds_paths[year] = str(ds_path)
         run_dir = tmp_path / "run"
         run_dir.mkdir()
@@ -781,12 +765,10 @@ class TestTask16GenerateArchive:
                         "correct": True, "terminal_state": "parsed",
                     })
             with open(sl["detail_path"], "w", encoding="utf-8") as f:
-                for r in sl_rows:
-                    f.write(json.dumps(r) + "\n")
+                f.writelines(json.dumps(r) + "\n" for r in sl_rows)
             actual_calls = 8 if sl["arm"] == "b1a_prime" else 24
             with open(sl["events_path"], "w", encoding="utf-8") as f:
-                for _ in range(actual_calls):
-                    f.write(json.dumps({"kind": "call_attempt"}) + "\n")
+                f.writelines(json.dumps({"kind": "call_attempt"}) + "\n" for _ in range(actual_calls))
             (Path(sl["output_dir"]) / "details.manifest.json").write_text("{}", encoding="utf-8")
             (Path(sl["output_dir"]) / "slice_status.json").write_text(json.dumps({
                 "slice_id": sl["slice_id"], "completed": True,
@@ -797,12 +779,15 @@ class TestTask16GenerateArchive:
         return sched, ledger, str(run_dir), all_rows
 
     def test_archive_requires_complete_schedule(self, tmp_path):
-        from scripts.phase6_6b2_orchestrator import _build_schedule, BudgetLedger6B2, generate_archive
+        from scripts.phase6_6b2_orchestrator import (
+            BudgetLedger6B2,
+            _build_schedule,
+            generate_archive,
+        )
         ds_path = tmp_path / "ds.jsonl"
         cids = [f"c{i:04d}" for i in range(40)]
         with open(ds_path, "w", encoding="utf-8") as f:
-            for cid in cids:
-                f.write(json.dumps({"case_id": cid}) + "\n")
+            f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
         run_dir = tmp_path / "run"
         run_dir.mkdir()
         sched = _build_schedule(str(run_dir), years=["2024"], dataset_paths={"2024": str(ds_path)})
@@ -830,7 +815,9 @@ class TestTask16GenerateArchive:
     def test_archive_creates_audit_index(self, tmp_path):
         sched, ledger, run_dir, _ = self._make_complete_run(tmp_path)
         from scripts.phase6_6b2_orchestrator import (
-            generate_archive, compute_gate, _merge_all_details,
+            _merge_all_details,
+            compute_gate,
+            generate_archive,
         )
         merged = _merge_all_details(sched)
         gate = compute_gate(merged, stage="dev")
@@ -875,9 +862,13 @@ class TestTask15SealedWorkflow:
 
     def test_sealed_workflow_functions_exist(self):
         from scripts.phase6_6b2_sealed_workflow import (
-            check_stage_gate, acquire_2023_run_lock, enrich_year,
-            verify_2023_raw_data, record_enriched_sha_to_lock,
-            finalize_2023_run_lock, BLESSED_2023_RAW_SHA256,
+            BLESSED_2023_RAW_SHA256,
+            acquire_2023_run_lock,
+            check_stage_gate,
+            enrich_year,
+            finalize_2023_run_lock,
+            record_enriched_sha_to_lock,
+            verify_2023_raw_data,
         )
         assert callable(check_stage_gate)
         assert callable(acquire_2023_run_lock)
@@ -889,8 +880,10 @@ class TestTask15SealedWorkflow:
 
     def test_2023_lock_new_then_finalized(self, tmp_path):
         from scripts.phase6_6b2_sealed_workflow import (
-            acquire_2023_run_lock, finalize_2023_run_lock,
-            record_enriched_sha_to_lock, BLESSED_2023_RAW_SHA256,
+            BLESSED_2023_RAW_SHA256,
+            acquire_2023_run_lock,
+            finalize_2023_run_lock,
+            record_enriched_sha_to_lock,
         )
         lock_path = tmp_path / "2023.lock"
         run_id = "run1"
@@ -1155,11 +1148,13 @@ class TestManifestHomology:
     def test_runner_cmd_and_slice_args_build_identical_manifest(self, tmp_path):
         """同源契约：真实 argv 解析出的 namespace 与 _slice_runner_args 重建的 namespace
         必须产生完全一致的 resume manifest（thinking_mode 只从 slice 字段单源读取）。"""
-        from scripts.phase6_6b2_orchestrator import (
-            FROZEN_CHART_SCHEMA, _build_runner_cmd, _slice_runner_args,
-        )
-        from benchmark.runners.run_benchmark import _build_parser, build_resume_manifest
         from benchmark.runners.profiles import resolve_profile
+        from benchmark.runners.run_benchmark import _build_parser, build_resume_manifest
+        from scripts.phase6_6b2_orchestrator import (
+            FROZEN_CHART_SCHEMA,
+            _build_runner_cmd,
+            _slice_runner_args,
+        )
         ds_path = tmp_path / "ds.jsonl"
         ds_path.write_text(json.dumps({"case_id": "c1"}) + "\n", encoding="utf-8")
         sl = {
@@ -1209,6 +1204,7 @@ class TestSliceStatusResponseModel:
 
     def _run_with_meta(self, tmp_path, monkeypatch, metas):
         import types as _types
+
         import scripts.phase6_6b2_orchestrator as m
         sl = self._make_slice(tmp_path)
         ledger = m.BudgetLedger6B2(str(tmp_path / "ledger.json"),
@@ -1218,11 +1214,9 @@ class TestSliceStatusResponseModel:
             with open(sl["detail_path"], "w", encoding="utf-8") as f:
                 f.write(json.dumps({"case_id": "c1"}) + "\n")
             with open(sl["events_path"], "w", encoding="utf-8") as f:
-                for _ in range(8):
-                    f.write(json.dumps({"kind": "call_attempt"}) + "\n")
-                for meta in metas:
-                    f.write(json.dumps({"kind": "call_meta",
-                                        "response_model": meta}) + "\n")
+                f.writelines(json.dumps({"kind": "call_attempt"}) + "\n" for _ in range(8))
+                f.writelines(json.dumps({"kind": "call_meta",
+                                        "response_model": meta}) + "\n" for meta in metas)
             Path(sl["detail_path"].replace(".jsonl", ".manifest.json")).write_text(
                 "{}", encoding="utf-8")
             return _types.SimpleNamespace(returncode=0, stderr="")
@@ -1255,7 +1249,7 @@ class TestB1CAdvisory:
     """B1-c advisory loading with SHA check."""
 
     def test_b1c_advisory_rejects_missing_file(self):
-        from scripts.phase6_6b2_orchestrator import load_b1c_advisory, B1C_ARCHIVE_PATH
+        from scripts.phase6_6b2_orchestrator import B1C_ARCHIVE_PATH, load_b1c_advisory
         orig = B1C_ARCHIVE_PATH
         try:
             import scripts.phase6_6b2_orchestrator as m
@@ -1276,8 +1270,10 @@ class TestConstantsFrozen:
 
     def test_hard_caps(self):
         from scripts.phase6_6b2_orchestrator import (
-            DEV_REUSE_HARD_CAP, FINAL_2023_HARD_CAP,
-            B1A_SLICE_HARD_CAP, DUAL_SLICE_HARD_CAP,
+            B1A_SLICE_HARD_CAP,
+            DEV_REUSE_HARD_CAP,
+            DUAL_SLICE_HARD_CAP,
+            FINAL_2023_HARD_CAP,
         )
         assert DEV_REUSE_HARD_CAP == 1060
         assert FINAL_2023_HARD_CAP == 530
@@ -1297,8 +1293,7 @@ class TestSmokeSliceConstruction:
             ds_path = tmp_path / f"ds_{year}.jsonl"
             cids = [f"c{i:04d}" for i in range(40)]
             with open(ds_path, "w", encoding="utf-8") as f:
-                for cid in cids:
-                    f.write(json.dumps({"case_id": cid}) + "\n")
+                f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
             ds_paths[year] = str(ds_path)
         return _build_schedule(str(tmp_path / "run"), years=["2024", "2025"],
                                dataset_paths=ds_paths)
@@ -1341,7 +1336,8 @@ class TestSmokeSliceConstruction:
 
     def test_schedule_and_smoke_slices_carry_thinking_mode(self, tmp_path):
         from scripts.phase6_6b2_orchestrator import (
-            FROZEN_THINKING_MODE, _build_smoke_slices,
+            FROZEN_THINKING_MODE,
+            _build_smoke_slices,
         )
         sched = self._make_dev_schedule(tmp_path)
         assert all(sl["thinking_mode"] == FROZEN_THINKING_MODE
@@ -1358,8 +1354,7 @@ class TestVerifyCompletedSlice:
         ds_path = tmp_path / "ds_2024.jsonl"
         cids = [f"c{i:04d}" for i in range(40)]
         with open(ds_path, "w", encoding="utf-8") as f:
-            for cid in cids:
-                f.write(json.dumps({"case_id": cid}) + "\n")
+            f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
         sched = _build_schedule(str(tmp_path / "run"), years=["2024"],
                                 dataset_paths={"2024": str(ds_path)})
         return sched["slices"][0]
@@ -1396,7 +1391,8 @@ class TestArchiveMergedFiles:
 
     def _make_complete_run(self, tmp_path):
         from scripts.phase6_6b2_orchestrator import (
-            _build_schedule, BudgetLedger6B2,
+            BudgetLedger6B2,
+            _build_schedule,
         )
         years = ["2024", "2025"]
         ds_paths = {}
@@ -1404,8 +1400,7 @@ class TestArchiveMergedFiles:
             ds_path = tmp_path / f"ds_{year}.jsonl"
             cids = [f"c{i:04d}" for i in range(40)]
             with open(ds_path, "w", encoding="utf-8") as f:
-                for cid in cids:
-                    f.write(json.dumps({"case_id": cid}) + "\n")
+                f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
             ds_paths[year] = str(ds_path)
         run_dir = tmp_path / "run"
         run_dir.mkdir()
@@ -1434,12 +1429,10 @@ class TestArchiveMergedFiles:
                             "correct": True, "terminal_state": "parsed",
                         })
             with open(sl["detail_path"], "w", encoding="utf-8") as f:
-                for r in sl_rows:
-                    f.write(json.dumps(r) + "\n")
+                f.writelines(json.dumps(r) + "\n" for r in sl_rows)
             actual_calls = 8 if sl["arm"] == "b1a_prime" else 16
             with open(sl["events_path"], "w", encoding="utf-8") as f:
-                for _ in range(actual_calls):
-                    f.write(json.dumps({"kind": "call_attempt"}) + "\n")
+                f.writelines(json.dumps({"kind": "call_attempt"}) + "\n" for _ in range(actual_calls))
             (Path(sl["output_dir"]) / "details.manifest.json").write_text("{}", encoding="utf-8")
             (Path(sl["output_dir"]) / "slice_status.json").write_text(json.dumps({
                 "slice_id": sl["slice_id"], "completed": True,
@@ -1450,7 +1443,9 @@ class TestArchiveMergedFiles:
 
     def test_archive_produces_merged_files(self, tmp_path):
         from scripts.phase6_6b2_orchestrator import (
-            generate_archive, compute_gate, _merge_all_details,
+            _merge_all_details,
+            compute_gate,
+            generate_archive,
         )
         sched, ledger, run_dir, ds_paths = self._make_complete_run(tmp_path)
         merged = _merge_all_details(sched)
@@ -1505,7 +1500,8 @@ class TestSealedWorkflowScheduleHash:
 
     def test_update_lock_schedule_hash(self, tmp_path):
         from scripts.phase6_6b2_sealed_workflow import (
-            acquire_2023_run_lock, update_lock_schedule_hash,
+            acquire_2023_run_lock,
+            update_lock_schedule_hash,
         )
         lock_path = tmp_path / "2023.lock"
         acquire_2023_run_lock(str(lock_path), "run1", "fp1", "pending",
@@ -1517,7 +1513,8 @@ class TestSealedWorkflowScheduleHash:
 
     def test_update_lock_rejects_mismatch(self, tmp_path):
         from scripts.phase6_6b2_sealed_workflow import (
-            acquire_2023_run_lock, update_lock_schedule_hash,
+            acquire_2023_run_lock,
+            update_lock_schedule_hash,
         )
         lock_path = tmp_path / "2023.lock"
         acquire_2023_run_lock(str(lock_path), "run1", "fp1", "pending",
@@ -1529,7 +1526,8 @@ class TestSealedWorkflowScheduleHash:
     def test_finalize_rejects_pending_sched_hash(self, tmp_path):
         """finalize must fail if schedule_hash is still 'pending'."""
         from scripts.phase6_6b2_sealed_workflow import (
-            acquire_2023_run_lock, finalize_2023_run_lock,
+            acquire_2023_run_lock,
+            finalize_2023_run_lock,
             record_enriched_sha_to_lock,
         )
         lock_path = tmp_path / "2023.lock"
@@ -1632,8 +1630,7 @@ class TestRunDirIsolation:
             ds_path = tmp_path / f"ds_{year}.jsonl"
             cids = [f"c{i:04d}" for i in range(40)]
             with open(ds_path, "w", encoding="utf-8") as f:
-                for cid in cids:
-                    f.write(json.dumps({"case_id": cid}) + "\n")
+                f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
             ds_paths[year] = str(ds_path)
         out = tmp_path / "experiment"
         result = m.run_dev("deepseek", "deepseek-v4-flash", str(out),
@@ -1762,8 +1759,7 @@ class TestScheduleHashCoversSlices:
         ds_path = tmp_path / "ds.jsonl"
         cids = case_ids or [f"c{i:04d}" for i in range(40)]
         with open(ds_path, "w", encoding="utf-8") as f:
-            for cid in cids:
-                f.write(json.dumps({"case_id": cid}) + "\n")
+            f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
         run_dir = tmp_path / "run"
         run_dir.mkdir(exist_ok=True)
         return _build_schedule(str(run_dir), years=["2024"],
@@ -1797,7 +1793,8 @@ class TestScheduleHashCoversSlices:
 
     def test_hash_covers_thinking_mode(self, tmp_path):
         from scripts.phase6_6b2_orchestrator import (
-            _SCHED_HASH_SLICE_KEYS, _compute_schedule_hash,
+            _SCHED_HASH_SLICE_KEYS,
+            _compute_schedule_hash,
         )
         assert "thinking_mode" in _SCHED_HASH_SLICE_KEYS
         s = self._make_schedule(tmp_path)
@@ -1815,8 +1812,7 @@ class TestAtomicArchive:
         ds_path = tmp_path / "ds_2024.jsonl"
         cids = [f"c{i:04d}" for i in range(40)]
         with open(ds_path, "w", encoding="utf-8") as f:
-            for cid in cids:
-                f.write(json.dumps({"case_id": cid}) + "\n")
+            f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
         run_dir = tmp_path / "run"
         run_dir.mkdir()
         sched = m._build_schedule(str(run_dir), years=["2024"],
@@ -1844,8 +1840,7 @@ class TestAtomicArchive:
                             "terminal_state": "parsed", "predicted_answer": "A", "is_correct": True,
                         }) + "\n")
             with open(sl["events_path"], "w", encoding="utf-8") as ef:
-                for _ in range(sl["scheduled_calls"]):
-                    ef.write(json.dumps({"kind": "call_attempt"}) + "\n")
+                ef.writelines(json.dumps({"kind": "call_attempt"}) + "\n" for _ in range(sl["scheduled_calls"]))
             namespace = {
                 "dataset": sl["dataset_path"], "profile": sl["profile"],
                 "method": sl["method"], "max_cases": sl["max_cases"],
@@ -1910,7 +1905,8 @@ class TestCLIRunIdParam:
     """P0-1+P0-3: --run-id CLI parameter is REQUIRED."""
 
     def test_cli_shows_run_id_in_help(self, tmp_path):
-        import subprocess, sys
+        import subprocess
+        import sys
         result = subprocess.run(
             [sys.executable, "scripts/phase6_6b2_orchestrator.py", "run_dev", "--help"],
             capture_output=True, text=True, cwd="G:/project/agent",
@@ -1920,7 +1916,8 @@ class TestCLIRunIdParam:
 
     def test_cli_requires_run_id(self, tmp_path):
         """Omitting --run-id must fail argparse (required=True)."""
-        import subprocess, sys
+        import subprocess
+        import sys
         result = subprocess.run(
             [sys.executable, "scripts/phase6_6b2_orchestrator.py", "run_dev",
              "--provider", "p", "--model", "m", "--output-dir", str(tmp_path)],
@@ -2028,8 +2025,7 @@ class TestSmokeOnlyInDev:
             p = tmp_path / f"ds_{y}.jsonl"
             cids = [f"c{i:04d}" for i in range(40)]
             with open(p, "w", encoding="utf-8") as f:
-                for cid in cids:
-                    f.write(json.dumps({"case_id": cid}) + "\n")
+                f.writelines(json.dumps({"case_id": cid}) + "\n" for cid in cids)
             ds_paths[y] = str(p)
         return ds_paths
 
@@ -2076,8 +2072,7 @@ class TestSmokeOnlyInDev:
         monkeypatch.setattr(sw, "finalize_2023_run_lock", lambda *a, **kw: None)
         ds_2023 = tmp_path / "ds_2023.jsonl"
         with open(ds_2023, "w", encoding="utf-8") as f:
-            for i in range(40):
-                f.write(json.dumps({"case_id": f"c{i:04d}"}) + "\n")
+            f.writelines(json.dumps({"case_id": f"c{i:04d}"}) + "\n" for i in range(40))
         m.run_2023_final("deepseek", "deepseek-v4-flash", str(out), reuse_rpath,
                          dataset_paths={"2023": str(ds_2023)}, run_id="r1", resume=True)
         assert captured["smoke_count"] == 0, "2023 final must NOT run smoke"
@@ -2098,7 +2093,11 @@ class TestSmokeLedgerBudget:
 
     def test_smoke_ledger_constants(self):
         from scripts.phase6_6b2_orchestrator import (
-            SMOKE_GLOBAL_HARD_CAP, SMOKE_SLICE_MIN, SMOKE_SLICE_MAX, SMOKE_HARD_CAP)
+            SMOKE_GLOBAL_HARD_CAP,
+            SMOKE_HARD_CAP,
+            SMOKE_SLICE_MAX,
+            SMOKE_SLICE_MIN,
+        )
         assert SMOKE_HARD_CAP == 10
         assert SMOKE_GLOBAL_HARD_CAP == 10
         assert SMOKE_SLICE_MIN == 1
@@ -2154,6 +2153,7 @@ class TestCodeFingerprintCriticalCoverage:
         """If this fails, a newly added critical function was not added to the
         fingerprint hash — dev→reuse→final drift would be silent."""
         import inspect
+
         import scripts.phase6_6b2_orchestrator as m
         fp_src = inspect.getsource(m._compute_experiment_code_fingerprint)
         for fn_name in self.CRITICAL_FUNCTIONS:
@@ -2192,8 +2192,8 @@ class TestCodeFingerprintCriticalCoverage:
     def test_fingerprint_includes_runner_code_fingerprint(self, monkeypatch):
         """P0-2: experiment fingerprint MUST include the runner _code_fingerprint() result,
         so changes to run_benchmark.py / profiles.py / dual_system_reasoning.py are detected."""
-        import scripts.phase6_6b2_orchestrator as m
         import benchmark.runners.run_benchmark as rb
+        import scripts.phase6_6b2_orchestrator as m
         fp1 = m._compute_experiment_code_fingerprint()
 
         # Monkey-patch runner _code_fingerprint to return a different value.
@@ -2208,8 +2208,8 @@ class TestCodeFingerprintCriticalCoverage:
     def test_fingerprint_fails_closed_when_runner_fp_missing(self, monkeypatch):
         """P0: if runner _code_fingerprint() cannot be imported, _compute_experiment_code_fingerprint
         MUST raise SystemExit (fail-closed), not silently return a degraded fingerprint."""
-        import scripts.phase6_6b2_orchestrator as m
         import benchmark.runners.run_benchmark as rb
+        import scripts.phase6_6b2_orchestrator as m
         # Simulate AttributeError: _code_fingerprint was removed/renamed in runner
         monkeypatch.delattr(rb, "_code_fingerprint", raising=False)
         with pytest.raises(SystemExit, match="runner code fingerprint unavailable"):
@@ -2219,7 +2219,7 @@ class TestCodeFingerprintCriticalCoverage:
         """P0: if sealed_workflow functions cannot be imported, fingerprint MUST raise
         SystemExit (fail-closed), not silently skip the entire admission/lock layer."""
         import sys
-        import types
+
         import scripts.phase6_6b2_orchestrator as m
 
         # Replace the module in sys.modules with a stub that lacks all required
@@ -2924,8 +2924,9 @@ class TestB1cShaNewlineInsensitive:
     CRLF. Both must produce the same SHA after normalization."""
 
     def test_crlf_and_lf_produce_same_sha(self, tmp_path, monkeypatch):
-        import scripts.phase6_6b2_orchestrator as m
         import hashlib
+
+        import scripts.phase6_6b2_orchestrator as m
 
         content_lines = [
             json.dumps({"attempt_key": ["d", "p", "b1c", "main", "deepseek",

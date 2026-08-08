@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Unit tests for report_builder.py — rendering functions and report generation."""
 
-import json, os, sys, tempfile, pytest
+import json
+import os
+import sys
+import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

@@ -1,8 +1,8 @@
 from benchmark.formatters.baziqa_prompt import (
     format_birth_line,
-    format_options,
-    format_direct_choice_prompt,
     format_direct_c2_prompt,
+    format_direct_choice_prompt,
+    format_options,
     format_structured_reasoning_prompt,
 )
 

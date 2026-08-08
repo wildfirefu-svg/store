@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any
 
-
-CATEGORY_TO_DOMAIN: Dict[str, str] = {
+CATEGORY_TO_DOMAIN: dict[str, str] = {
     "事业": "career",
     "官非": "career",
     "健康": "health",
@@ -27,12 +27,12 @@ def _read_json(path: str) -> Any:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def _extract_chart_input(fortune_entry: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def _extract_chart_input(fortune_entry: dict[str, Any] | None) -> dict[str, Any]:
     if not isinstance(fortune_entry, dict):
         return {}
     bazi = fortune_entry.get("bazi")
     if isinstance(bazi, dict):
-        chart: Dict[str, Any] = {}
+        chart: dict[str, Any] = {}
         for key in ("four_pillars", "day_master", "shishen_stats", "wuxing_stats", "branch_relations", "shensha", "wuyun_liuqi"):
             if key in bazi:
                 chart[key] = bazi[key]
@@ -54,7 +54,7 @@ _CANONICAL_BAZI_KEYS = (
 )
 
 
-def to_canonical_chart_input(fortune_entry: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+def to_canonical_chart_input(fortune_entry: dict[str, Any] | None) -> dict[str, Any]:
     """mingli fortune 条目 → approved_v1 可渲染 canonical chart_input（Task 5 修订定稿）。
 
     bazi 形状：透传批准核心六字段（丢弃 wuyun_liuqi 等非批准键）。
@@ -69,7 +69,7 @@ def to_canonical_chart_input(fortune_entry: Optional[Dict[str, Any]]) -> Dict[st
         return {k: bazi[k] for k in _CANONICAL_BAZI_KEYS if k in bazi}
     api_data = (((fortune_entry.get("api_response") or {}).get("data") or {}).get("data") or {})
     if isinstance(api_data, dict) and api_data:
-        canonical: Dict[str, Any] = {}
+        canonical: dict[str, Any] = {}
         palaces = api_data.get("palaces")
         if isinstance(palaces, list) and palaces:
             canonical["ziwei"] = {
@@ -81,7 +81,7 @@ def to_canonical_chart_input(fortune_entry: Optional[Dict[str, Any]]) -> Dict[st
     return {}
 
 
-def _canon_ziwei_basic_info(api_data: Dict[str, Any], palaces: list) -> Dict[str, Any]:
+def _canon_ziwei_basic_info(api_data: dict[str, Any], palaces: list) -> dict[str, Any]:
     """定稿映射（真实数据核验）：soul→命主、body→身主、fiveElementsClass→五行局、
     earthlyBranchOfBodyPalace→身宫；命宫干支取 name=="命宫" 宫的
     heavenlyStem+earthlyBranch（api 顶层只有 earthlyBranchOfSoulPalace 作回退）。"""
@@ -98,13 +98,13 @@ def _canon_ziwei_basic_info(api_data: Dict[str, Any], palaces: list) -> Dict[str
     }
 
 
-def _canon_star(star: Any) -> Dict[str, str]:
+def _canon_star(star: Any) -> dict[str, str]:
     """星曜保留 name+brightness（用户裁决确认）。"""
     s = star if isinstance(star, dict) else {}
     return {"name": str(s.get("name") or ""), "brightness": str(s.get("brightness") or "")}
 
 
-def _canon_palace(palace: Any) -> Dict[str, Any]:
+def _canon_palace(palace: Any) -> dict[str, Any]:
     """定稿真实键映射（勘察核验）：name/heavenlyStem/earthlyBranch/majorStars/
     minorStars+adjectiveStars/decadal.range/isBodyPalace；禁止兼容猜测键名。"""
     p = palace if isinstance(palace, dict) else {}
@@ -125,10 +125,10 @@ def _canon_palace(palace: Any) -> Dict[str, Any]:
     }
 
 
-def _canon_official_astro(api_data: Dict[str, Any]) -> Dict[str, Any]:
+def _canon_official_astro(api_data: dict[str, Any]) -> dict[str, Any]:
     """官方模板注入字段（1:1 官方行为）：palace_stars 仅 major+minor 星名、
     空格连接、仅收录有星宫位；宫序由 formatter 按官方固定顺序输出。"""
-    palace_stars: Dict[str, str] = {}
+    palace_stars: dict[str, str] = {}
     for p in api_data.get("palaces") or []:
         if not isinstance(p, dict):
             continue
@@ -157,8 +157,8 @@ def _canon_official_astro(api_data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _normalise_options(options: Any) -> List[str]:
-    normalised: List[str] = []
+def _normalise_options(options: Any) -> list[str]:
+    normalised: list[str] = []
     if not isinstance(options, list):
         return normalised
     for idx, option in enumerate(options):
@@ -172,7 +172,7 @@ def _normalise_options(options: Any) -> List[str]:
     return normalised
 
 
-def _infer_year(entry: Dict[str, Any]) -> str:
+def _infer_year(entry: dict[str, Any]) -> str:
     for key in ("year", "benchmark_year", "source_year"):
         value = entry.get(key)
         if value is not None:
@@ -187,14 +187,14 @@ def _infer_year(entry: Dict[str, Any]) -> str:
     return str(2022 + ((number - 1) // 40))
 
 
-def _load_fortune_index(path: Optional[str]) -> Dict[str, Any]:
+def _load_fortune_index(path: str | None) -> dict[str, Any]:
     if not path:
         return {}
     loaded = _read_json(path)
     if isinstance(loaded, dict):
         return {str(k): v for k, v in loaded.items()}
     if isinstance(loaded, list):
-        indexed: Dict[str, Any] = {}
+        indexed: dict[str, Any] = {}
         for item in loaded:
             if isinstance(item, dict) and item.get("case_id"):
                 indexed[str(item["case_id"])] = item
@@ -204,11 +204,11 @@ def _load_fortune_index(path: Optional[str]) -> Dict[str, Any]:
 
 def load_and_normalize(
     data_json_path: str,
-    fortune_api_json_path: Optional[str] = None,
+    fortune_api_json_path: str | None = None,
     include_astro: bool = False,
-    year_filter: Optional[str] = None,
-    category_filter: Optional[Iterable[str]] = None,
-) -> List[Dict[str, Any]]:
+    year_filter: str | None = None,
+    category_filter: Iterable[str] | None = None,
+) -> list[dict[str, Any]]:
     if include_astro and not fortune_api_json_path:
         raise ValueError(
             "load_and_normalize: include_astro=True requires fortune_api_json_path"
@@ -224,15 +224,15 @@ def load_and_normalize(
 
     fortune_data = _load_fortune_index(fortune_api_json_path)
 
-    year_str: Optional[str] = None
+    year_str: str | None = None
     if year_filter is not None:
         year_str = str(year_filter)
 
-    category_set: Optional[set] = None
+    category_set: set | None = None
     if category_filter is not None:
         category_set = {str(c) for c in category_filter}
 
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for entry in raw_data:
         if not isinstance(entry, dict):
             continue
@@ -258,7 +258,7 @@ def load_and_normalize(
 
         domain = CATEGORY_TO_DOMAIN.get(category, "unknown")
 
-        row: Dict[str, Any] = {
+        row: dict[str, Any] = {
             "case_id": case_id,
             "question": question,
             "options": options,

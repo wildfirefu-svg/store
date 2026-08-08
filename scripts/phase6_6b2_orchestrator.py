@@ -473,8 +473,11 @@ def _run_slice(slice_info, ledger, provider, model, integrity="slice"):
             if status.get("completed") and status.get("slice_id") == slice_info["slice_id"]:
                 if not runner_manifest_path.exists():
                     raise SystemExit(f"slice {slice_info['slice_id']} resume 拒绝: runner manifest 缺失")
-                from benchmark.runners.run_benchmark import build_resume_manifest, check_resume_manifest
                 from benchmark.runners.profiles import resolve_profile
+                from benchmark.runners.run_benchmark import (
+                    build_resume_manifest,
+                    check_resume_manifest,
+                )
                 profile_obj = resolve_profile(slice_info["profile"], FROZEN_CHART_SCHEMA)
                 current_manifest = build_resume_manifest(
                     _slice_runner_args(slice_info, provider, model), profile_obj)
@@ -796,7 +799,7 @@ def generate_report(gate, merged_details, schedule, ledger, b1c_advisory, out_di
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     (out / "summary.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    lines = [f"# 6B2 双管线报告",
+    lines = ["# 6B2 双管线报告",
              f"- Model protocol：{report['model_protocol']}",
              f"- Provider：{report['provider']}",
              f"- Requested model：{report['requested_model']}",
@@ -924,8 +927,11 @@ def _verify_completed_slice(slice_info, provider, model):
         raise SystemExit(f"slice {slice_info['slice_id']} completed 验证拒绝: slice_id 不匹配")
     if not runner_manifest_path.exists():
         raise SystemExit(f"slice {slice_info['slice_id']} completed 验证拒绝: runner manifest 缺失")
-    from benchmark.runners.run_benchmark import build_resume_manifest, check_resume_manifest
     from benchmark.runners.profiles import resolve_profile
+    from benchmark.runners.run_benchmark import (
+        build_resume_manifest,
+        check_resume_manifest,
+    )
     profile_obj = resolve_profile(slice_info["profile"], FROZEN_CHART_SCHEMA)
     current_manifest = build_resume_manifest(
         _slice_runner_args(slice_info, provider, model), profile_obj)
@@ -988,9 +994,14 @@ def _compute_experiment_code_fingerprint():
     # silently excluding the entire admission/lock layer from the fingerprint.
     try:
         from scripts.phase6_6b2_sealed_workflow import (
-            check_stage_gate, acquire_2023_run_lock, enrich_year,
-            record_enriched_sha_to_lock, finalize_2023_run_lock,
-            update_lock_schedule_hash, verify_2023_raw_data)
+            acquire_2023_run_lock,
+            check_stage_gate,
+            enrich_year,
+            finalize_2023_run_lock,
+            record_enriched_sha_to_lock,
+            update_lock_schedule_hash,
+            verify_2023_raw_data,
+        )
     except (ImportError, AttributeError) as exc:
         raise SystemExit(
             f"sealed workflow fingerprint unavailable: {exc}"
@@ -1051,7 +1062,6 @@ def _merge_all_events(schedule):
 
 def _atomic_write_json(path, data):
     """Atomically write JSON to path via temp file + os.replace."""
-    import shutil
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(".tmp")
@@ -1128,13 +1138,11 @@ def generate_archive(schedule, ledger, run_dir, provider, model, gate_result,
                         shutil.copy2(f, sl_target / f.name)
         merged_details_path = tmp_dir / "merged_details.jsonl"
         with open(merged_details_path, "w", encoding="utf-8") as f:
-            for row in merged:
-                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+            f.writelines(json.dumps(row, ensure_ascii=False) + "\n" for row in merged)
         merged_events = _merge_all_events(schedule)
         merged_events_path = tmp_dir / "merged_events.jsonl"
         with open(merged_events_path, "w", encoding="utf-8") as f:
-            for row in merged_events:
-                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+            f.writelines(json.dumps(row, ensure_ascii=False) + "\n" for row in merged_events)
         md_sha = _sha256_file(str(merged_details_path))
         me_sha = _sha256_file(str(merged_events_path))
         ds_hashes = _compute_dataset_hashes(raw_paths=raw_dataset_paths,
@@ -1262,7 +1270,6 @@ def _run_all_slices(schedule, ledger, provider, model, smoke_slices=None):
     pass smoke_slices; only dev stage runs smoke per v18). Already-completed slices
     are verified (manifest/events/integrity) rather than blindly skipped.
     Returns smoke_attempted count (0 if no smoke)."""
-    import shutil
     smoke_attempted = 0
     if smoke_slices:
         print(f"[smoke] running {len(smoke_slices)} smoke slices first")
@@ -1544,9 +1551,15 @@ def run_2023_final(provider, model, output_dir, reuse_receipt_path, dataset_path
         if lock is None:
             raise SystemExit(f"2023_final run dir locked: {runs_root}")
         from scripts.phase6_6b2_sealed_workflow import (
-            check_stage_gate as _check, acquire_2023_run_lock,
-            verify_2023_raw_data, record_enriched_sha_to_lock, finalize_2023_run_lock,
-            enrich_year, update_lock_schedule_hash, BLESSED_2023_RAW_SHA256)
+            BLESSED_2023_RAW_SHA256,
+            acquire_2023_run_lock,
+            enrich_year,
+            finalize_2023_run_lock,
+            record_enriched_sha_to_lock,
+            update_lock_schedule_hash,
+            verify_2023_raw_data,
+        )
+        from scripts.phase6_6b2_sealed_workflow import check_stage_gate as _check
         _verify_receipt_belongs_to_run(reuse_receipt_path, output_dir, run_id, "reuse")
         gate_root = _gate_root(output_dir, run_id)
         _check("final_2023", gate_root=str(gate_root),

@@ -6,9 +6,9 @@ with 大运 (luck pillars) and 流年 (annual pillars).
 """
 
 import json
-import sys
 import os
-from collections import Counter, defaultdict
+import sys
+from collections import defaultdict
 from datetime import date
 
 # Add parent dir to path so we can import bazi_calculator

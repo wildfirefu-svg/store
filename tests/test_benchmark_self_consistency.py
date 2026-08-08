@@ -20,8 +20,6 @@ Behaviour contract covered here:
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 import pytest
 
 try:
@@ -68,7 +66,7 @@ def test_majority_vote_empty_raises():
 
 def test_sample_answers_calls_callback_n_times_with_given_temperatures():
     _require_impl()
-    call_log: List[float] = []
+    call_log: list[float] = []
 
     def fake_call(temperature: float):
         call_log.append(temperature)
@@ -92,7 +90,7 @@ def test_sample_answers_rejects_mismatched_temperature_length():
 
 def test_sample_answers_defaults_to_uniform_temperature():
     _require_impl()
-    seen: List[float] = []
+    seen: list[float] = []
 
     def fake_call(temperature: float):
         seen.append(temperature)

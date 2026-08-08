@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Tests for data_store.py — SQLite persistence layer."""
 import os
-import sys
 import sqlite3
+import sys
+
 import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

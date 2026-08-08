@@ -10,11 +10,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
-import hashlib
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -24,26 +23,23 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt
 from scripts.phase6_6b1_orchestrator import (
-    generate_schedule,
-    BudgetLedger,
-    build_expected_key,
-    integrity_check,
-    compute_gate,
-    LATIN_SQUARE,
-    SLICE_LAYOUT,
-    HARD_CAP_MAP,
+    ARM_ZIWEI_MAP,
     FROZEN_DATE,
     GLOBAL_HARD_CAP,
-    RATED_CALLS,
+    HARD_CAP_MAP,
+    LATIN_SQUARE,
     QUESTIONS_PER_CELL,
-    YEARS,
-    REPEATS,
-    ARM_ZIWEI_MAP,
+    RATED_CALLS,
+    SLICE_LAYOUT,
+    BudgetLedger,
+    build_expected_key,
+    compute_gate,
+    generate_schedule,
+    integrity_check,
     preflight_checks,
 )
-from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt
-
 
 # ---- Schedule tests ----
 
@@ -326,8 +322,7 @@ class TestPreflight:
             })
         fake_path = fake_dir / "fake.jsonl"
         with open(fake_path, "w", encoding="utf-8") as f:
-            for c in fake_cases:
-                f.write(json.dumps(c, ensure_ascii=False) + "\n")
+            f.writelines(json.dumps(c, ensure_ascii=False) + "\n" for c in fake_cases)
 
         # Monkeypatch YEAR_DATASETS
         import scripts.phase6_6b1_orchestrator as orch
@@ -642,12 +637,10 @@ class TestStandaloneSmokeEventsValidation:
                          "correct": True})
         os.makedirs(os.path.dirname(sl["detail_path"]), exist_ok=True)
         with open(sl["detail_path"], "w", encoding="utf-8") as f:
-            for r in rows:
-                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+            f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
 
     def _write_valid_manifest(self, sl):
         """Write a manifest matching current config."""
-        from scripts.phase6_6b1_orchestrator import verify_slice_manifest
         manifest = {
             "dataset_id": os.path.splitext(os.path.basename(sl["dataset"]))[0],
             "profile_id": "baziqa_xjz_reasoned",
@@ -677,9 +670,9 @@ class TestStandaloneSmokeEventsValidation:
         """P0-1: fresh path with empty events -> BLOCKED_SMOKE (not OK).
         P0-1 fix: manifest now uses full verify_slice_manifest; mock it to pass
         so we isolate the events-validation behavior."""
-        from scripts.phase6_6b1_smoke import smoke_gate
-        import scripts.phase6_6b1_smoke as smoke_mod
         import scripts.phase6_6b1_orchestrator as orch
+        import scripts.phase6_6b1_smoke as smoke_mod
+        from scripts.phase6_6b1_smoke import smoke_gate
         sl = self._make_smoke_slice(tmp_path)
 
         # Mock verify_slice_manifest in orchestrator (smoke imports from there)
@@ -706,9 +699,9 @@ class TestStandaloneSmokeEventsValidation:
     def test_resume_with_empty_events_rejected(self, tmp_path, monkeypatch):
         """P0-1: resume path with empty events -> BLOCKED_SMOKE (not OK).
         P0-1 fix: manifest now uses full verify_slice_manifest; mock it to pass."""
-        from scripts.phase6_6b1_smoke import smoke_gate
-        import scripts.phase6_6b1_smoke as smoke_mod
         import scripts.phase6_6b1_orchestrator as orch
+        import scripts.phase6_6b1_smoke as smoke_mod
+        from scripts.phase6_6b1_smoke import smoke_gate
         sl = self._make_smoke_slice(tmp_path)
 
         monkeypatch.setattr(orch, "verify_slice_manifest",
@@ -743,8 +736,10 @@ class TestFromSliceAudit:
     def test_from_slice_with_corrupted_events_exits_2(self, tmp_path):
         """Corrupted events in a skipped slice -> FROM_SLICE_EVENTS_INVALID exit 2."""
         from scripts.phase6_6b1_orchestrator import (
-            generate_schedule, BudgetLedger, build_expected_key,
+            BudgetLedger,
             _audit_skipped_slices,
+            build_expected_key,
+            generate_schedule,
         )
 
         s = generate_schedule(tmp_path)
@@ -786,10 +781,12 @@ class TestFromSliceAudit:
 
     def test_from_slice_with_valid_slices_passes(self, tmp_path, monkeypatch):
         """All skipped slices valid -> audit passes (no exit)."""
-        from scripts.phase6_6b1_orchestrator import (
-            generate_schedule, BudgetLedger, _audit_skipped_slices,
-        )
         import scripts.phase6_6b1_orchestrator as orch
+        from scripts.phase6_6b1_orchestrator import (
+            BudgetLedger,
+            _audit_skipped_slices,
+            generate_schedule,
+        )
 
         s = generate_schedule(tmp_path)
         ledger = BudgetLedger(str(tmp_path / "budget_ledger.json"))
@@ -799,8 +796,7 @@ class TestFromSliceAudit:
         os.makedirs(sl1["output_dir"], exist_ok=True)
         # Write valid events (sl1["size"] call_attempt events)
         with open(sl1["events_path"], "w", encoding="utf-8") as f:
-            for i in range(sl1["size"]):
-                f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+            f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(sl1["size"]))
         ledger.record_slice_completed(sl1["slice_id"], sl1["size"])
 
         # Mock verify_slice_manifest to pass (manifest verification has its own tests)
@@ -885,8 +881,7 @@ class TestLedgerReconcile:
         os.makedirs(sl["output_dir"], exist_ok=True)
         # Write sl["size"] call_attempt events
         with open(sl["events_path"], "w", encoding="utf-8") as f:
-            for i in range(sl["size"]):
-                f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+            f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(sl["size"]))
         # Ledger has wrong count (10)
         ledger._data["calls_attempted_by_slice"][sl["slice_id"]] = 10
         ledger._data["slices_completed"].append(sl["slice_id"])
@@ -920,7 +915,8 @@ class TestCrashResumeProtocol:
     def test_rc2_forbids_recovery(self, tmp_path):
         """Crash state with returncode=2 -> CRASH_RECOVERY_FORBIDDEN."""
         from scripts.phase6_6b1_orchestrator import (
-            _write_crash_state, run_slice,
+            _write_crash_state,
+            run_slice,
         )
         sl = self._make_slice(tmp_path)
         os.makedirs(sl["output_dir"], exist_ok=True)
@@ -935,7 +931,8 @@ class TestCrashResumeProtocol:
     def test_rc3_forbids_recovery(self, tmp_path):
         """Crash state with returncode=3 -> CRASH_RECOVERY_FORBIDDEN."""
         from scripts.phase6_6b1_orchestrator import (
-            _write_crash_state, run_slice,
+            _write_crash_state,
+            run_slice,
         )
         sl = self._make_slice(tmp_path)
         os.makedirs(sl["output_dir"], exist_ok=True)
@@ -950,7 +947,8 @@ class TestCrashResumeProtocol:
     def test_already_retried_forbids_recovery(self, tmp_path):
         """Crash state with retried=True -> CRASH_RECOVERY_EXHAUSTED."""
         from scripts.phase6_6b1_orchestrator import (
-            _write_crash_state, run_slice,
+            _write_crash_state,
+            run_slice,
         )
         sl = self._make_slice(tmp_path)
         os.makedirs(sl["output_dir"], exist_ok=True)
@@ -966,10 +964,12 @@ class TestCrashResumeProtocol:
         """rc=0 -> crash state file deleted.
         P0-2 fix: crash retry now validates artifacts; mock verify_slice_manifest
         + _validate_events to pass so recovery is allowed, then rc=0 clears state."""
-        from scripts.phase6_6b1_orchestrator import (
-            _write_crash_state, _read_crash_state, run_slice, _crash_state_path,
-        )
         import scripts.phase6_6b1_orchestrator as orch
+        from scripts.phase6_6b1_orchestrator import (
+            _crash_state_path,
+            _write_crash_state,
+            run_slice,
+        )
         sl = self._make_slice(tmp_path)
         os.makedirs(sl["output_dir"], exist_ok=True)
         _write_crash_state(sl, {
@@ -995,7 +995,9 @@ class TestCrashResumeProtocol:
     def test_crash_persists_state(self, tmp_path, monkeypatch):
         """rc=1 (crash) -> crash state persisted + v9 contract audit artifacts."""
         from scripts.phase6_6b1_orchestrator import (
-            run_slice, _read_crash_state, _crash_audit_prefix,
+            _crash_audit_prefix,
+            _read_crash_state,
+            run_slice,
         )
         sl = self._make_slice(tmp_path)
         os.makedirs(sl["output_dir"], exist_ok=True)
@@ -1057,7 +1059,8 @@ class TestLedgerSliceIdValidation:
     def test_unknown_call_key_rejected(self, tmp_path):
         """calls_attempted_by_slice with bogus key -> SystemExit(2)."""
         from scripts.phase6_6b1_orchestrator import (
-            generate_schedule, BudgetLedger, verify_slice_manifest,
+            BudgetLedger,
+            generate_schedule,
         )
         s = generate_schedule(tmp_path)
         path = str(tmp_path / "ledger.json")
@@ -1079,7 +1082,7 @@ class TestLedgerSliceIdValidation:
 
     def test_completed_without_calls_rejected(self, tmp_path):
         """slices_completed has ID not in calls_attempted_by_slice -> SystemExit(2)."""
-        from scripts.phase6_6b1_orchestrator import generate_schedule, BudgetLedger
+        from scripts.phase6_6b1_orchestrator import BudgetLedger, generate_schedule
         s = generate_schedule(tmp_path)
         path = str(tmp_path / "ledger.json")
         sl0_id = s["slices"][0]["slice_id"]
@@ -1103,7 +1106,8 @@ class TestSmokeLedgerReconcile:
         """Ledger has 14 for smoke, events has 13 -> corrected to 13 via
         validate_against_schedule (not record_slice_completed max)."""
         from scripts.phase6_6b1_orchestrator import (
-            generate_schedule, BudgetLedger,
+            BudgetLedger,
+            generate_schedule,
         )
         s = generate_schedule(tmp_path)
         ledger = BudgetLedger(str(tmp_path / "ledger.json"))
@@ -1111,8 +1115,7 @@ class TestSmokeLedgerReconcile:
         os.makedirs(smoke_sl["output_dir"], exist_ok=True)
         # Write 13 valid events (smoke size=13)
         with open(smoke_sl["events_path"], "w", encoding="utf-8") as f:
-            for i in range(smoke_sl["size"]):
-                f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+            f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(smoke_sl["size"]))
         # Ledger has inflated count (14 > 13)
         ledger._data["calls_attempted_by_slice"][smoke_sl["slice_id"]] = 14
         ledger._data["slices_completed"].append(smoke_sl["slice_id"])
@@ -1143,9 +1146,12 @@ class TestStandaloneSmokeFullManifest:
         """manifest.code_sha256 wrong -> MANIFEST_MISMATCH (not OK).
         P0-1: proves full-field verify_slice_manifest is used (old 3-field check
         would pass since profile_id/arm/ziwei_arm are correct)."""
-        from scripts.phase6_6b1_smoke import smoke_gate
         import scripts.phase6_6b1_smoke as smoke_mod
-        from scripts.phase6_6b1_orchestrator import generate_schedule, build_expected_key
+        from scripts.phase6_6b1_orchestrator import (
+            build_expected_key,
+            generate_schedule,
+        )
+        from scripts.phase6_6b1_smoke import smoke_gate
         s = generate_schedule(tmp_path)
         sl = s["slices"][0]
         dataset_id = os.path.splitext(os.path.basename(sl["dataset"]))[0]
@@ -1176,8 +1182,7 @@ class TestStandaloneSmokeFullManifest:
                                         "terminal_state": "parsed"}) + "\n")
             os.makedirs(os.path.dirname(sl["events_path"]), exist_ok=True)
             with open(sl["events_path"], "w", encoding="utf-8") as f:
-                for i in range(sl["size"]):
-                    f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+                f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(sl["size"]))
             class R:
                 returncode = 0
             return R()
@@ -1201,7 +1206,6 @@ class TestCrashRetryArtifactQualification:
     def test_crash_retry_without_manifest_rejected(self, tmp_path, monkeypatch):
         """crash state exists but manifest missing -> CRASH_RECOVERY_ARTIFACT_INVALID."""
         from scripts.phase6_6b1_orchestrator import _write_crash_state, run_slice
-        import scripts.phase6_6b1_orchestrator as orch
         sl = self._make_slice(tmp_path)
         os.makedirs(sl["output_dir"], exist_ok=True)
         _write_crash_state(sl, {
@@ -1215,10 +1219,11 @@ class TestCrashRetryArtifactQualification:
 
     def test_crash_retry_with_valid_artifacts_allowed(self, tmp_path, monkeypatch):
         """crash state exists + valid artifacts -> recovery allowed (runner starts)."""
-        from scripts.phase6_6b1_orchestrator import (
-            _write_crash_state, run_slice, build_expected_key,
-        )
         import scripts.phase6_6b1_orchestrator as orch
+        from scripts.phase6_6b1_orchestrator import (
+            _write_crash_state,
+            run_slice,
+        )
         sl = self._make_slice(tmp_path)
         os.makedirs(sl["output_dir"], exist_ok=True)
         _write_crash_state(sl, {
@@ -1313,16 +1318,17 @@ class TestPartialCrashEventsRecovery:
     def test_partial_events_allowed_for_recovery(self, tmp_path, monkeypatch):
         """5 events < scheduled 14 -> recovery allowed (not rejected).
         P0-1: _validate_partial_events uses 0 < count <= hard_cap, not >= scheduled."""
-        from scripts.phase6_6b1_orchestrator import (
-            _write_crash_state, run_slice, _validate_partial_events,
-        )
         import scripts.phase6_6b1_orchestrator as orch
+        from scripts.phase6_6b1_orchestrator import (
+            _validate_partial_events,
+            _write_crash_state,
+            run_slice,
+        )
         sl = self._make_slice(tmp_path)
         os.makedirs(sl["output_dir"], exist_ok=True)
         # Write 5 partial events (< scheduled size)
         with open(sl["events_path"], "w", encoding="utf-8") as f:
-            for i in range(5):
-                f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+            f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(5))
         # Verify partial validation passes
         ok, count, reason = _validate_partial_events(sl["events_path"], sl["hard_cap"])
         assert ok, f"partial events should be valid: {reason}"
@@ -1358,8 +1364,7 @@ class TestPartialCrashEventsRecovery:
         from scripts.phase6_6b1_orchestrator import _validate_partial_events
         path = str(tmp_path / "over.jsonl")
         with open(path, "w", encoding="utf-8") as f:
-            for i in range(15):
-                f.write(json.dumps({"kind": "call_attempt"}) + "\n")
+            f.writelines(json.dumps({"kind": "call_attempt"}) + "\n" for i in range(15))
         ok, count, reason = _validate_partial_events(path, 14)
         assert not ok
         assert count == 15
@@ -1372,8 +1377,8 @@ class TestArchiveUniqueId:
 
     def test_run_id_contains_provider_model_codehash(self):
         """run_id format: 6b1-{date}-{provider}-{model}-{8char codehash}."""
-        from scripts.phase6_6b1_orchestrator import generate_archive, FROZEN_DATE
-        import hashlib, os as _os
+
+        from scripts.phase6_6b1_orchestrator import FROZEN_DATE
         # The function reads __file__ for code hash; verify format via inspection
         src = open("scripts/phase6_6b1_orchestrator.py", "rb").read()
         expected_code_hash = hashlib.sha256(src).hexdigest()[:8]
@@ -1385,9 +1390,12 @@ class TestArchiveUniqueId:
         """Existing archive dir -> SystemExit(2), no overwrite.
         Uses a deliberately different run_id suffix to avoid collision with
         test_full_archive_success (which uses the real code_hash)."""
-        from scripts.phase6_6b1_orchestrator import generate_archive, BudgetLedger
-        from pathlib import Path
-        from scripts.phase6_6b1_orchestrator import generate_schedule
+
+        from scripts.phase6_6b1_orchestrator import (
+            BudgetLedger,
+            generate_archive,
+            generate_schedule,
+        )
         schedule = generate_schedule(tmp_path)
         gate = {"verdict": "PROMOTE", "delta_dev": 1.0, "worst_year": 2024,
                 "total_calls_attempted": 720, "budget_remaining": 72,
@@ -1423,7 +1431,7 @@ class TestArchiveIntegrityGate:
 
     def test_merge_missing_files_rejected(self, tmp_path):
         """Missing detail/events -> ARCHIVE_INTEGRITY_FAILED exit 2."""
-        from scripts.phase6_6b1_orchestrator import generate_schedule, _merge_artifacts
+        from scripts.phase6_6b1_orchestrator import _merge_artifacts, generate_schedule
         s = generate_schedule(tmp_path)
         # No slice artifacts created -> all missing
         with pytest.raises(SystemExit) as ei:
@@ -1686,8 +1694,7 @@ class TestArchiveManifestDrift:
                     f.write(json.dumps({"case_id": cid, "attempt_key": list(key),
                                         "terminal_state": "parsed"}) + "\n")
             with open(sl["events_path"], "w", encoding="utf-8") as f:
-                for i in range(sl["size"]):
-                    f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+                f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(sl["size"]))
             # Manifest with WRONG code_sha256
             manifest = {"dataset_id": dataset_id, "profile_id": "baziqa_xjz_reasoned",
                         "chart_schema_version": "legacy_v0", "arm": sl["arm"],
@@ -1706,9 +1713,10 @@ class TestArchiveManifestDrift:
         """Manifest with code_sha256=WRONG -> ARCHIVE_MANIFEST_DRIFT exit 2.
         P0-1: proves verify_slice_manifest is called (not just file existence)."""
         from scripts.phase6_6b1_orchestrator import (
-            generate_schedule, generate_archive, BudgetLedger,
+            BudgetLedger,
+            generate_archive,
+            generate_schedule,
         )
-        import scripts.phase6_6b1_orchestrator as orch
         s = generate_schedule(tmp_path)
         self._create_valid_artifacts_except_manifest(s, monkeypatch)
         ledger = BudgetLedger(str(tmp_path / "budget_ledger.json"))
@@ -1746,12 +1754,15 @@ class TestArchiveNoDeleteOnRace:
         P0-2: proves we never rmtree a competing archive.
         Strategy: patch shutil.move to fail, but first verify source code
         has no rmtree(archive_dir) call (the actual P0-2 fix)."""
-        from scripts.phase6_6b1_orchestrator import (
-            generate_schedule, generate_archive, BudgetLedger,
-        )
-        import scripts.phase6_6b1_orchestrator as orch
         # P0-2: verify source code does NOT contain rmtree(archive_dir)
         import inspect
+
+        import scripts.phase6_6b1_orchestrator as orch
+        from scripts.phase6_6b1_orchestrator import (
+            BudgetLedger,
+            generate_archive,
+            generate_schedule,
+        )
         src = inspect.getsource(generate_archive)
         assert "rmtree(str(archive_dir)" not in src, \
             "P0-2: generate_archive must not rmtree archive_dir (race safety)"
@@ -1775,8 +1786,7 @@ class TestArchiveNoDeleteOnRace:
                     f.write(json.dumps({"case_id": cid, "attempt_key": list(key),
                                         "terminal_state": "parsed"}) + "\n")
             with open(sl["events_path"], "w", encoding="utf-8") as f:
-                for i in range(sl["size"]):
-                    f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+                f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(sl["size"]))
             manifest = {"dataset_id": dataset_id, "profile_id": "baziqa_xjz_reasoned",
                         "chart_schema_version": "legacy_v0", "arm": sl["arm"],
                         "ziwei_arm": sl["ziwei_arm"], "attempt_stage": "main",
@@ -1833,10 +1843,13 @@ class TestArchiveNoDeleteOnRace:
         """P0: target appears between pre-check and os.rename -> fail-closed.
         Patches os.rename to inject a competitor dir at the exact publish moment,
         proving os.rename (not shutil.move) is used and fails atomically."""
-        from scripts.phase6_6b1_orchestrator import (
-            generate_schedule, generate_archive, BudgetLedger, build_expected_key,
-        )
         import scripts.phase6_6b1_orchestrator as orch
+        from scripts.phase6_6b1_orchestrator import (
+            BudgetLedger,
+            build_expected_key,
+            generate_archive,
+            generate_schedule,
+        )
         s = generate_schedule(tmp_path)
         for sl in s["slices"]:
             dataset_id = os.path.splitext(os.path.basename(sl["dataset"]))[0]
@@ -1849,8 +1862,7 @@ class TestArchiveNoDeleteOnRace:
                     f.write(json.dumps({"case_id": cid, "attempt_key": list(key),
                                         "terminal_state": "parsed"}) + "\n")
             with open(sl["events_path"], "w", encoding="utf-8") as f:
-                for i in range(sl["size"]):
-                    f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+                f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(sl["size"]))
             manifest = {"dataset_id": dataset_id, "profile_id": "baziqa_xjz_reasoned",
                         "chart_schema_version": "legacy_v0", "arm": sl["arm"],
                         "ziwei_arm": sl["ziwei_arm"], "attempt_stage": "main",
@@ -1920,8 +1932,7 @@ class TestMainFullChain:
                                     "terminal_state": "parsed", "answer": "A",
                                     "correct": True}) + "\n")
         with open(sl["events_path"], "w", encoding="utf-8") as f:
-            for i in range(sl["size"]):
-                f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+            f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(sl["size"]))
         manifest = {"dataset_id": dataset_id, "profile_id": "baziqa_xjz_reasoned",
                     "chart_schema_version": "legacy_v0", "arm": sl["arm"],
                     "ziwei_arm": sl["ziwei_arm"], "attempt_stage": "main",
@@ -1941,7 +1952,8 @@ class TestMainFullChain:
         Verifies main() returns 0 and archive is generated."""
         import scripts.phase6_6b1_orchestrator as orch
         from scripts.phase6_6b1_orchestrator import (
-            main, generate_schedule, build_expected_key,
+            build_expected_key,
+            main,
         )
 
         output_dir = tmp_path / "out"
@@ -1993,8 +2005,7 @@ class TestMainFullChain:
                                         "terminal_state": "parsed",
                                         "answer": "A", "correct": True}) + "\n")
             with open(events_path, "w", encoding="utf-8") as f:
-                for i in range(size):
-                    f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+                f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(size))
             manifest = {"dataset_id": dataset_id, "profile_id": "baziqa_xjz_reasoned",
                         "chart_schema_version": "legacy_v0", "arm": arm,
                         "ziwei_arm": ziwei_arm, "attempt_stage": "main",
@@ -2065,11 +2076,13 @@ class TestArchiveSystemExitCleanup:
     def test_missing_budget_cleans_temp(self, tmp_path, monkeypatch):
         """budget_ledger.json missing -> SystemExit(2) + temp dir cleaned.
         P0-3: proves BaseException catch works (not just Exception)."""
-        from scripts.phase6_6b1_orchestrator import (
-            generate_schedule, generate_archive, BudgetLedger,
-            build_expected_key,
-        )
         import scripts.phase6_6b1_orchestrator as orch
+        from scripts.phase6_6b1_orchestrator import (
+            BudgetLedger,
+            build_expected_key,
+            generate_archive,
+            generate_schedule,
+        )
         s = generate_schedule(tmp_path)
         # Create valid artifacts
         for sl in s["slices"]:
@@ -2083,8 +2096,7 @@ class TestArchiveSystemExitCleanup:
                     f.write(json.dumps({"case_id": cid, "attempt_key": list(key),
                                         "terminal_state": "parsed"}) + "\n")
             with open(sl["events_path"], "w", encoding="utf-8") as f:
-                for i in range(sl["size"]):
-                    f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+                f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(sl["size"]))
             manifest = {"dataset_id": dataset_id, "profile_id": "baziqa_xjz_reasoned",
                         "chart_schema_version": "legacy_v0", "arm": sl["arm"],
                         "ziwei_arm": sl["ziwei_arm"], "attempt_stage": "main",
@@ -2186,8 +2198,7 @@ class TestArchiveSuccessPath:
                                     "terminal_state": "parsed"}) + "\n")
         # events: sl["size"] call_attempt events
         with open(sl["events_path"], "w", encoding="utf-8") as f:
-            for i in range(sl["size"]):
-                f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+            f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(sl["size"]))
         # manifest: valid
         manifest = {"dataset_id": dataset_id, "profile_id": "baziqa_xjz_reasoned",
                     "chart_schema_version": "legacy_v0", "arm": sl["arm"],
@@ -2205,10 +2216,12 @@ class TestArchiveSuccessPath:
     def test_full_archive_success(self, tmp_path, monkeypatch):
         """Full generate_archive() success: smoke/ + slices/ + merged + audit_index.
         Verifies all v9 §12 artifacts exist with correct counts."""
-        from scripts.phase6_6b1_orchestrator import (
-            generate_schedule, generate_archive, BudgetLedger,
-        )
         import scripts.phase6_6b1_orchestrator as orch
+        from scripts.phase6_6b1_orchestrator import (
+            BudgetLedger,
+            generate_archive,
+            generate_schedule,
+        )
         s = generate_schedule(tmp_path)
         # Create valid artifacts for ALL slices (smoke + 53 main)
         for sl in s["slices"]:
@@ -2293,7 +2306,7 @@ class TestArchiveSuccessPath:
 
     def test_merge_wrong_row_count_rejected(self, tmp_path):
         """Detail rows != scheduled_calls -> ARCHIVE_INTEGRITY_FAILED exit 2."""
-        from scripts.phase6_6b1_orchestrator import generate_schedule, _merge_artifacts
+        from scripts.phase6_6b1_orchestrator import _merge_artifacts, generate_schedule
         s = generate_schedule(tmp_path)
         # Create files but with wrong row counts (fewer than scheduled)
         for sl in s["slices"]:

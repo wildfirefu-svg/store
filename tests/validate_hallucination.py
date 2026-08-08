@@ -3,7 +3,11 @@
 Usage: python validate_hallucination.py <report.md> <chart_data.json> [--strict]
 """
 
-import json, re, os, sys
+import json
+import os
+import re
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # ===== Reference Data =====
@@ -223,7 +227,7 @@ def main():
     result = validate(args.report, args.chart, args.strict)
     s = result['stats']
 
-    print(f'=== 幻觉校验报告 ===')
+    print('=== 幻觉校验报告 ===')
     print(f'报告: {args.report}')
     print(f'总检查项: {s["total_checks"]} | 通过: {s["passed"]} | 失败: {s["failed"]}')
     print(f'幻觉率: {result["hallucination_rate"]}%')

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """P5 Consistency Test — cross-validate 子平/滴天髓/盲派 pattern judgments."""
 
-import json, os, sys
+import json
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 def validate_consistency(patterns_data):
@@ -107,7 +110,7 @@ def run():
     warnings = len(results['warnings'])
     consistency = ((total * 5) - errors * 2 - warnings) / (total * 5) * 100
 
-    print(f'=== 格局一致性测试 ===')
+    print('=== 格局一致性测试 ===')
     print(f'Total cases: {total}')
     print(f'Errors: {errors}, Warnings: {warnings}')
     print(f'Consistency score: {consistency:.1f}%')

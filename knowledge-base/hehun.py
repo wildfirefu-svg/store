@@ -8,16 +8,25 @@ Usage:
     python knowledge-base/hehun.py --year1 1993 ... --year2 1995 ... -o report.json
 """
 
-import os, sys, json, argparse
+import argparse
+import json
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from bazi_calculator import (
-    calculate_four_pillars, calculate_dayun,
-    TIANGAN, DIZHI, GAN_WUXING, ZHI_WUXING, GAN_YINYANG,
-    NAYIN, LIUCHONG, LIUHE, LIUHAI, SANXING, SANHE,
+    GAN_WUXING,
+    LIUCHONG,
+    LIUHAI,
+    LIUHE,
+    NAYIN,
+    SANHE,
+    SANXING,
+    ZHI_WUXING,
     get_shishen,
 )
+
 
 def load_chart(path):
     with open(path, 'r', encoding='utf-8') as f:
@@ -213,16 +222,16 @@ def score_xishen(chart1, chart2, fp1, fp2):
 
     if supply1 > 0:
         score += 10
-        detail.append(f'乙方供给甲方喜用神→+10')
+        detail.append('乙方供给甲方喜用神→+10')
     if supply2 > 0:
         score += 10
-        detail.append(f'甲方供给乙方喜用神→+10')
+        detail.append('甲方供给乙方喜用神→+10')
 
     # Does person 2 bring what person 1 dislikes?
     bring_bad = sum(1 for u in unfav1 if u in (GAN_WUXING.get(fp2.get('day',{}).get('gan',''),''),))
     if bring_bad > 0:
         score -= 15
-        detail.append(f'乙方带来甲方忌神→-15')
+        detail.append('乙方带来甲方忌神→-15')
 
     score = max(10, min(100, score))
     return {'score': score, 'fav1': fav1, 'fav2': fav2, 'unfav1': unfav1, 'unfav2': unfav2,
@@ -339,7 +348,7 @@ def main():
             json.dump(result, f, ensure_ascii=False, indent=2)
         print(f'Saved: {args.output}')
     else:
-        print(f'══════ 合婚分析 ══════')
+        print('══════ 合婚分析 ══════')
         print(f'甲方: {result["person1"]["day_master"]}日主 '
               f'({result["person1"]["year"]}-{result["person1"]["month"]})')
         print(f'乙方: {result["person2"]["day_master"]}日主 '

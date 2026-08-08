@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Integration tests for MCP Server — test each tool via direct function calls."""
 
-import json, os, sys, pytest
+import json
+import os
+import sys
+
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

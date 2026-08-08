@@ -1,0 +1,33 @@
+{
+  "verdict": "NON_INFERIOR",
+  "stage": "dev",
+  "run_id": "phase6-6d-v1-20260808-r1-6d-dev-2026-08-07-deepseek-deepseek-v4-flash-cc36fefa94c5",
+  "user_run_id": "phase6-6d-v1-20260808-r1",
+  "archive_dir": "docs\\phase6\\6d\\phase6-6d-v1-20260808-r1-6d-dev-2026-08-07-deepseek-deepseek-v4-flash-cc36fefa94c5",
+  "audit_index_sha256": "1ef199c8df28ac74bb46166689c043119b514f64040b75c188f7c13564a719ad",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "thinking_mode": "disabled",
+  "model_label": "DeepSeek-V4-Flash non-thinking",
+  "code_fingerprint": "cc36fefa94c5334b05a77c99386745b9d57b8171bc61adf06330f8dbe27923f4",
+  "temporal_context_version": "6d-v1",
+  "experiment_conditions": [
+    "off",
+    "on"
+  ],
+  "extraction_strategy_sha256": "4a2a93b3c521bb6e3c26fb2322269992e3e2837be1d25fea034bcaddb0a7957c",
+  "temporal_routed_cases_sha256": "a80fbe7a87262dc826d9f8eb834ac958b43ad1c64f29e624aa25114c8ecfac63",
+  "condition_manifest_sha256": "b2f8fdf7b8277b270e2fbacb70a2095dab6d764625709f6ad4229ba2468b006a",
+  "dataset_sha256_by_year": {
+    "2024": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "2025": "96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad"
+  },
+  "dataset_set_sha256": "c7aa308e5f10a0e52c7cfe5af02cef057bdc204b09bf85184349c096860d434c",
+  "group_abba_order": {
+    "2024:g0": "BA",
+    "2024:g1": "AB",
+    "2024:g2": "AB",
+    "2025:g0": "AB",
+    "2025:g1": "BA"
+  }
+}

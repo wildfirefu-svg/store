@@ -1,0 +1,22 @@
+# Baseline lint gate (CI "Lint (ruff)" step).
+# Start with high-signal rules only: syntax errors (E9) and undefined names (F821).
+# Extend the ruleset gradually as the backlog is cleaned; see AGENTS.md §9.
+
+# Runtime artifacts and non-project asset dirs are out of scope.
+extend-exclude = [
+    ".tmp",
+    ".cache",
+    ".chromadb_case_index",
+    ".reasonix",
+    ".qoder",
+    ".claude",
+    ".agents",
+    ".superpowers",
+    ".better-harness",
+    ".codegraph",
+    "benchmark/outputs",
+    "reports",
+]
+
+[lint]
+select = ["E9", "F821"]

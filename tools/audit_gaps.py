@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Audit remaining gaps in the BaZi agent system."""
-import os, json
+import json
+import os
 
 issues = []
 

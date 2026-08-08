@@ -4,7 +4,6 @@ from pathlib import Path
 from case_index import CaseIndex
 from rag_prompt_builder import build_system_prompt, load_fewshot_examples
 
-
 CHART = {
     "four_pillars": {
         "year": {"gan": "庚", "zhi": "午"},

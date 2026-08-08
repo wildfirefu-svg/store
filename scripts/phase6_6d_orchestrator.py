@@ -607,9 +607,11 @@ def _run_slice(slice_info, ledger, provider, model):
             if status.get("completed") and status.get("slice_id") == slice_info["slice_id"]:
                 if not runner_manifest_path.exists():
                     raise SystemExit(f"slice {slice_info['slice_id']} resume reject: manifest missing")
-                from benchmark.runners.run_benchmark import (
-                    build_resume_manifest, check_resume_manifest)
                 from benchmark.runners.profiles import resolve_profile
+                from benchmark.runners.run_benchmark import (
+                    build_resume_manifest,
+                    check_resume_manifest,
+                )
                 profile_obj = resolve_profile(slice_info["profile"], CHART_SCHEMA)
                 current_manifest = build_resume_manifest(
                     _slice_runner_args(slice_info, provider, model), profile_obj)
@@ -700,9 +702,11 @@ def _verify_completed_slice(slice_info, provider, model):
         raise SystemExit(f"slice {slice_info['slice_id']} verify reject: slice_id mismatch")
     if not runner_manifest_path.exists():
         raise SystemExit(f"slice {slice_info['slice_id']} verify reject: manifest missing")
-    from benchmark.runners.run_benchmark import (
-        build_resume_manifest, check_resume_manifest)
     from benchmark.runners.profiles import resolve_profile
+    from benchmark.runners.run_benchmark import (
+        build_resume_manifest,
+        check_resume_manifest,
+    )
     profile_obj = resolve_profile(slice_info["profile"], CHART_SCHEMA)
     current_manifest = build_resume_manifest(
         _slice_runner_args(slice_info, provider, model), profile_obj)
@@ -1108,8 +1112,7 @@ def _create_archive(schedule, ledger, run_dir, provider, model, gate_result,
                         shutil.copy2(f, sl_target / f.name)
         merged_details_path = tmp_dir / "merged_details.jsonl"
         with open(merged_details_path, "w", encoding="utf-8") as f:
-            for row in merged:
-                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+            f.writelines(json.dumps(row, ensure_ascii=False) + "\n" for row in merged)
         md_sha = _sha256_file(str(merged_details_path))
         audit = {
             "run_id": archive_run_id,
@@ -1367,7 +1370,7 @@ def run_dev(provider, model, output_dir, run_id=None, resume=False,
         if resume:
             if not manifest_path.exists():
                 raise SystemExit(
-                    f"run_manifest.json missing: refusing resume without manifest")
+                    "run_manifest.json missing: refusing resume without manifest")
             existing = json.loads(manifest_path.read_text(encoding="utf-8"))
             for field in _FOUR_LAYER_PROVENANCE_FIELDS:
                 if existing.get(field) != run_manifest.get(field):

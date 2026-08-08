@@ -14,7 +14,6 @@ from __future__ import annotations
 import json
 import os
 import sys
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -25,57 +24,46 @@ if PROJECT_ROOT not in sys.path:
 
 import scripts.phase6_6b1d_orchestrator as orch
 from scripts.phase6_6b1d_orchestrator import (
-    BudgetLedger,
-    compute_effective_cap,
-    verify_cap_consistency_on_resume,
-    reconcile_partial_events,
-    determine_smoke_state,
-    verify_smoke_completed,
-    _verify_slice_completed,
-    _validate_partial_events,
-    _validate_events,
-    _count_call_attempts,
-    generate_schedule,
-    build_expected_key,
-    REASONED_PROFILE,
+    ARCHIVE_ROOT,
+    ARMS,
+    BOOTSTRAP_DRAWS,
+    BOOTSTRAP_SEED,
+    FINGERPRINT_SCOPE,
+    FORBIDDEN_WORDS,
     GLOBAL_LEDGER_CAP,
+    LABEL_DIMENSIONS,
+    LABEL_MIN_LAYER_SIZE,
+    LABELS_DEFAULT_PATH,
+    REASONED_PROFILE,
+    REPEATS,
     SLICE_BASE_CALLS,
     SLICE_MAX_CAP,
     SLICE_SIZE,
-    TERMINAL_STATES,
-    SMOKE_PARSER_RATE_THRESHOLD,
-    ARM_ZIWEI_MAP,
-    LATIN_SQUARE,
-    SLICE_LAYOUT,
-    ARMS,
-    YEARS,
-    REPEATS,
-    TOTAL_SLICES,
     TOTAL_SCHEDULED_CALLS,
-    GROUPS_PER_CELL,
+    TOTAL_SLICES,
+    YEARS,
+    BudgetLedger,
+    _compute_experiment_code_fingerprint,
+    _count_call_attempts,
+    _validate_partial_events,
+    _verify_slice_completed,
+    build_expected_key,
+    compute_effective_cap,
+    compute_label_distribution,
+    compute_token_stats,
+    determine_smoke_state,
+    generate_archive,
     generate_comparison_table,
     generate_report,
-    FORBIDDEN_WORDS,
-    BOOTSTRAP_SEED,
-    BOOTSTRAP_DRAWS,
-    FINGERPRINT_SCOPE,
-    _compute_experiment_code_fingerprint,
-    build_run_manifest,
-    verify_run_manifest,
-    write_run_manifest,
-    validate_labels,
-    compute_label_distribution,
+    generate_schedule,
     get_skipped_layers,
-    LABEL_DIMENSIONS,
-    LABEL_VALUES,
-    LABELS_DEFAULT_PATH,
-    LABEL_MIN_LAYER_SIZE,
-    generate_archive,
-    ARCHIVE_ROOT,
-    EXPERIMENT_ID_PREFIX,
-    compute_token_stats,
+    reconcile_partial_events,
+    validate_labels,
+    verify_cap_consistency_on_resume,
+    verify_run_manifest,
+    verify_smoke_completed,
+    write_run_manifest,
 )
-
 
 # ---- fixtures ----
 
@@ -447,8 +435,7 @@ class TestReconcilePartialEvents:
         events_path = tmp_path / "details.events.jsonl"
         # 写 3 个 call_attempt events (小于 scheduled=8)
         with open(events_path, "w", encoding="utf-8") as f:
-            for i in range(3):
-                f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+            f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(3))
         sl = make_slice(
             events_path=str(events_path),
             detail_path=str(tmp_path / "details.jsonl"),
@@ -463,8 +450,7 @@ class TestReconcilePartialEvents:
         """回算后不标记 slice 为 completed."""
         events_path = tmp_path / "details.events.jsonl"
         with open(events_path, "w", encoding="utf-8") as f:
-            for i in range(3):
-                f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+            f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(3))
         sl = make_slice(
             events_path=str(events_path),
             detail_path=str(tmp_path / "details.jsonl"),
@@ -491,8 +477,7 @@ class TestReconcilePartialEvents:
         events_path = tmp_path / "details.events.jsonl"
         # 写 11 个 call_attempt (超过 allocated_cap=10)
         with open(events_path, "w", encoding="utf-8") as f:
-            for i in range(11):
-                f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+            f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(11))
         sl = make_slice(
             events_path=str(events_path),
             detail_path=str(tmp_path / "details.jsonl"),
@@ -506,8 +491,7 @@ class TestReconcilePartialEvents:
         """回算后 total == 各 slice 之和."""
         events_path = tmp_path / "details.events.jsonl"
         with open(events_path, "w", encoding="utf-8") as f:
-            for i in range(5):
-                f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+            f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(5))
         sl = make_slice(
             events_path=str(events_path),
             detail_path=str(tmp_path / "details.jsonl"),
@@ -549,8 +533,7 @@ class TestDetermineSmokeState:
         manifest_path.write_text("{}", encoding="utf-8")
         detail_path = tmp_path / "d.jsonl"
         with open(detail_path, "w", encoding="utf-8") as f:
-            for i in range(8):
-                f.write(json.dumps({"terminal_state": "parsed"}) + "\n")
+            f.writelines(json.dumps({"terminal_state": "parsed"}) + "\n" for i in range(8))
         sl = make_slice(
             detail_path=str(detail_path),
             events_path=str(tmp_path / "e.jsonl"),
@@ -565,8 +548,7 @@ class TestDetermineSmokeState:
         manifest_path.write_text("{}", encoding="utf-8")
         detail_path = tmp_path / "d.jsonl"
         with open(detail_path, "w", encoding="utf-8") as f:
-            for i in range(3):
-                f.write(json.dumps({"terminal_state": "parsed"}) + "\n")
+            f.writelines(json.dumps({"terminal_state": "parsed"}) + "\n" for i in range(3))
         sl = make_slice(
             detail_path=str(detail_path),
             events_path=str(tmp_path / "e.jsonl"),
@@ -609,8 +591,7 @@ class TestValidateHelpers:
         """calls > allocated_cap -> (False, count, reason)."""
         p = tmp_path / "e.jsonl"
         with open(p, "w", encoding="utf-8") as f:
-            for i in range(11):
-                f.write(json.dumps({"kind": "call_attempt"}) + "\n")
+            f.writelines(json.dumps({"kind": "call_attempt"}) + "\n" for i in range(11))
         ok, count, reason = _validate_partial_events(str(p), 10)
         assert ok is False
         assert count == 11
@@ -619,8 +600,7 @@ class TestValidateHelpers:
         """calls < scheduled_calls -> 允许 (ok=True)."""
         p = tmp_path / "e.jsonl"
         with open(p, "w", encoding="utf-8") as f:
-            for i in range(3):
-                f.write(json.dumps({"kind": "call_attempt"}) + "\n")
+            f.writelines(json.dumps({"kind": "call_attempt"}) + "\n" for i in range(3))
         ok, count, reason = _validate_partial_events(str(p), 10)
         assert ok is True
         assert count == 3
@@ -872,8 +852,7 @@ def _build_completed_schedule_with_accuracy(tmp_path, arm_correct_count):
             })
         os.makedirs(os.path.dirname(sl["detail_path"]), exist_ok=True)
         with open(sl["detail_path"], "w", encoding="utf-8") as f:
-            for r in rows:
-                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+            f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
         compute_effective_cap(sl["slice_id"], ledger, 0)
         ledger.record_slice_completed(sl["slice_id"], 8)
     ledger._save()
@@ -1006,8 +985,7 @@ def _write_slice_events(sl, call_count=None):
     os.makedirs(os.path.dirname(sl["events_path"]), exist_ok=True)
     n = call_count if call_count is not None else sl["size"]
     with open(sl["events_path"], "w", encoding="utf-8") as f:
-        for _ in range(n):
-            f.write(json.dumps({"kind": "call_attempt"}, ensure_ascii=False) + "\n")
+        f.writelines(json.dumps({"kind": "call_attempt"}, ensure_ascii=False) + "\n" for _ in range(n))
 
 
 def _write_slice_manifest(sl, provider="deepseek", model="deepseek-chat"):
@@ -1107,6 +1085,7 @@ def _build_and_tamper_slice(tmp_path, field, value, slice_idx=0):
     Returns (original, tampered).
     """
     import copy
+
     from scripts.phase6_6b1d_orchestrator import _build_schedule
     schedule = _build_schedule(tmp_path)
     tampered = copy.deepcopy(schedule)
@@ -1120,6 +1099,7 @@ def _build_and_tamper_top_level(tmp_path, field, value):
     Returns (original, tampered).
     """
     import copy
+
     from scripts.phase6_6b1d_orchestrator import _build_schedule
     schedule = _build_schedule(tmp_path)
     tampered = copy.deepcopy(schedule)
@@ -1138,7 +1118,9 @@ class TestScheduleConsistencySemanticFields:
     def test_consistent_schedule_passes(self, tmp_path):
         """An unmodified schedule is consistent with itself."""
         from scripts.phase6_6b1d_orchestrator import (
-            _build_schedule, _verify_schedule_consistent)
+            _build_schedule,
+            _verify_schedule_consistent,
+        )
         schedule = _build_schedule(tmp_path)
         ok, reason = _verify_schedule_consistent(schedule, schedule)
         assert ok, f"identical schedule should be consistent: {reason}"
@@ -1246,9 +1228,10 @@ class TestScheduleConsistencySemanticFields:
         """Derived path fields (output_dir/detail_path/etc.) differ between
         schedules built in different output_dirs but must NOT cause a mismatch,
         since they carry no experiment semantics."""
-        import copy
         from scripts.phase6_6b1d_orchestrator import (
-            _build_schedule, _verify_schedule_consistent)
+            _build_schedule,
+            _verify_schedule_consistent,
+        )
         a = _build_schedule(tmp_path / "a")
         b = _build_schedule(tmp_path / "b")
         ok, reason = _verify_schedule_consistent(a, b)
@@ -1256,7 +1239,9 @@ class TestScheduleConsistencySemanticFields:
 
     def test_historical_none_fails(self, tmp_path):
         from scripts.phase6_6b1d_orchestrator import (
-            _build_schedule, _verify_schedule_consistent)
+            _build_schedule,
+            _verify_schedule_consistent,
+        )
         built = _build_schedule(tmp_path)
         ok, reason = _verify_schedule_consistent(None, built)
         assert not ok
@@ -1270,8 +1255,11 @@ class TestScheduleConsistencySemanticFields:
         be detected here.
         """
         import copy
+
         from scripts.phase6_6b1d_orchestrator import (
-            _build_schedule, _verify_schedule_consistent)
+            _build_schedule,
+            _verify_schedule_consistent,
+        )
         original = _build_schedule(tmp_path)
         swapped = copy.deepcopy(original)
         swapped["slices"][0], swapped["slices"][-1] = (
@@ -1283,8 +1271,11 @@ class TestScheduleConsistencySemanticFields:
     def test_append_duplicate_slice_caught(self, tmp_path):
         """Appending a duplicate slice (and bumping total_slices) is caught."""
         import copy
+
         from scripts.phase6_6b1d_orchestrator import (
-            _build_schedule, _verify_schedule_consistent)
+            _build_schedule,
+            _verify_schedule_consistent,
+        )
         original = _build_schedule(tmp_path)
         tampered = copy.deepcopy(original)
         tampered["slices"].append(copy.deepcopy(tampered["slices"][0]))
@@ -1301,8 +1292,11 @@ class TestScheduleConsistencySemanticFields:
         list length.
         """
         import copy
+
         from scripts.phase6_6b1d_orchestrator import (
-            _build_schedule, _verify_schedule_consistent)
+            _build_schedule,
+            _verify_schedule_consistent,
+        )
         schedule = _build_schedule(tmp_path)
         tampered = copy.deepcopy(schedule)
         tampered["slices"].append(copy.deepcopy(tampered["slices"][0]))
@@ -1317,8 +1311,11 @@ class TestScheduleConsistencySemanticFields:
         two sides are identical), since a dict-based comparison would fold them
         together."""
         import copy
+
         from scripts.phase6_6b1d_orchestrator import (
-            _build_schedule, _verify_schedule_consistent)
+            _build_schedule,
+            _verify_schedule_consistent,
+        )
         schedule = _build_schedule(tmp_path)
         tampered = copy.deepcopy(schedule)
         tampered["slices"].append(copy.deepcopy(tampered["slices"][0]))
@@ -1331,8 +1328,11 @@ class TestScheduleConsistencySemanticFields:
         """Removing a slice (and dropping total_slices) is caught by the count
         check before any position-wise comparison."""
         import copy
+
         from scripts.phase6_6b1d_orchestrator import (
-            _build_schedule, _verify_schedule_consistent)
+            _build_schedule,
+            _verify_schedule_consistent,
+        )
         original = _build_schedule(tmp_path)
         tampered = copy.deepcopy(original)
         tampered["slices"].pop()
@@ -1344,8 +1344,11 @@ class TestScheduleConsistencySemanticFields:
     def test_slice_count_mismatch_caught(self, tmp_path):
         """historical has 150 slices, built has 149 -> count mismatch caught."""
         import copy
+
         from scripts.phase6_6b1d_orchestrator import (
-            _build_schedule, _verify_schedule_consistent)
+            _build_schedule,
+            _verify_schedule_consistent,
+        )
         original = _build_schedule(tmp_path)
         shorter = copy.deepcopy(original)
         shorter["slices"].pop()
@@ -1510,8 +1513,7 @@ def _make_valid_labels(tmp_path, n_cases=80):
         })
     path = str(tmp_path / "labels.jsonl")
     with open(path, "w", encoding="utf-8") as f:
-        for l in labels:
-            f.write(json.dumps(l, ensure_ascii=False) + "\n")
+        f.writelines(json.dumps(l, ensure_ascii=False) + "\n" for l in labels)
     return path
 
 
@@ -1878,8 +1880,7 @@ def _build_full_archiveable_schedule(tmp_path, monkeypatch):
             })
         os.makedirs(os.path.dirname(sl["detail_path"]), exist_ok=True)
         with open(sl["detail_path"], "w", encoding="utf-8") as f:
-            for r in rows:
-                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+            f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
         _write_slice_events(sl)
         _write_slice_manifest(sl)
         compute_effective_cap(sl["slice_id"], ledger, 0)
@@ -2050,8 +2051,7 @@ class TestTokenStats:
                 })
             os.makedirs(os.path.dirname(sl["detail_path"]), exist_ok=True)
             with open(sl["detail_path"], "w", encoding="utf-8") as f:
-                for r in rows:
-                    f.write(json.dumps(r, ensure_ascii=False) + "\n")
+                f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
             compute_effective_cap(sl["slice_id"], ledger, 0)
             ledger.record_slice_completed(sl["slice_id"], 8)
         ledger._save()
@@ -2180,8 +2180,7 @@ class TestTokenStatsP1Fixes:
                 })
             os.makedirs(os.path.dirname(sl["detail_path"]), exist_ok=True)
             with open(sl["detail_path"], "w", encoding="utf-8") as f:
-                for r in rows:
-                    f.write(json.dumps(r, ensure_ascii=False) + "\n")
+                f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
             compute_effective_cap(sl["slice_id"], ledger, 0)
             ledger.record_slice_completed(sl["slice_id"], 8)
         ledger._save()
@@ -2216,8 +2215,7 @@ class TestTokenStatsP1Fixes:
                 })
             os.makedirs(os.path.dirname(sl["detail_path"]), exist_ok=True)
             with open(sl["detail_path"], "w", encoding="utf-8") as f:
-                for r in rows:
-                    f.write(json.dumps(r, ensure_ascii=False) + "\n")
+                f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
             compute_effective_cap(sl["slice_id"], ledger, 0)
             ledger.record_slice_completed(sl["slice_id"], 8)
         ledger._save()

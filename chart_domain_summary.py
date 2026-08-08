@@ -1,26 +1,26 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 _MARRIAGE_SHENSHA = {"红艳煞", "桃花", "红鸾", "天喜", "孤鸾煞", "阴差阳错", "咸池"}
 _RELATION_TYPES = {"冲", "六冲", "三刑", "自刑", "六害", "三合", "六合", "半合"}
 _SUPPORTED_DOMAINS = {"family", "health", "relationship"}
 
 
-def _shishen_count(counts: Dict[str, Any], name: str) -> int:
+def _shishen_count(counts: dict[str, Any], name: str) -> int:
     try:
         return int(counts.get(name, 0) or 0)
     except (TypeError, ValueError):
         return 0
 
 
-def _pillar_label(pillar: Dict[str, Any]) -> str:
+def _pillar_label(pillar: dict[str, Any]) -> str:
     gan = str(pillar.get("gan") or "")
     zhi = str(pillar.get("zhi") or "")
     return (gan + zhi).strip() or "?"
 
 
-def _branch_relations_line(branch_relations: Any) -> Optional[str]:
+def _branch_relations_line(branch_relations: Any) -> str | None:
     if not isinstance(branch_relations, list):
         return None
     items = []
@@ -43,7 +43,7 @@ def _branch_relations_line(branch_relations: Any) -> Optional[str]:
     return "地支关系: " + "、".join(items)
 
 
-def _shensha_line(shensha: Any) -> Optional[str]:
+def _shensha_line(shensha: Any) -> str | None:
     if not isinstance(shensha, list):
         return None
     hits = []
@@ -59,7 +59,7 @@ def _shensha_line(shensha: Any) -> Optional[str]:
     return "婚姻相关神煞: " + "、".join(hits)
 
 
-def _family_lines(chart: Dict[str, Any]) -> list:
+def _family_lines(chart: dict[str, Any]) -> list:
     four = chart.get("four_pillars") or {}
     year = four.get("year") or {}
     month = four.get("month") or {}
@@ -94,7 +94,7 @@ def _family_lines(chart: Dict[str, Any]) -> list:
     return lines
 
 
-def _health_lines(chart: Dict[str, Any]) -> list:
+def _health_lines(chart: dict[str, Any]) -> list:
     dm = chart.get("day_master") or {}
     wuxing = chart.get("wuxing_stats") or {}
     wyq = chart.get("wuyun_liuqi") or {}
@@ -120,7 +120,7 @@ def _health_lines(chart: Dict[str, Any]) -> list:
     return lines
 
 
-def _relationship_lines(chart: Dict[str, Any]) -> list:
+def _relationship_lines(chart: dict[str, Any]) -> list:
     four = chart.get("four_pillars") or {}
     day = four.get("day") or {}
     hour = four.get("hour") or {}
@@ -144,7 +144,7 @@ def _relationship_lines(chart: Dict[str, Any]) -> list:
     return lines
 
 
-def build_domain_summary(chart: Optional[Dict[str, Any]], domain: Optional[str]) -> Optional[str]:
+def build_domain_summary(chart: dict[str, Any] | None, domain: str | None) -> str | None:
     if not isinstance(chart, dict) or not chart:
         return None
     key = str(domain or "").strip().lower()

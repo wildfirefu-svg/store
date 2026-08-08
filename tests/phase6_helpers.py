@@ -184,6 +184,7 @@ class RunnerEnv:
             profile: str | None = None, thinking_mode: str | None = None,
             extra_argv: list[str] | None = None) -> int:
         import run_benchmark_proxy  # tests 内薄封装：转发到 benchmark.runners.run_benchmark.main(argv)
+
         import claude_api
         # 条件 patch（执行偏离，见模块 docstring）：测试已自行 patch 时保留其 fake
         if claude_api.call_model_messages_sync_with_meta is _REAL_CALL_WITH_META:

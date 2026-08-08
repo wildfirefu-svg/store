@@ -25,8 +25,6 @@ import os
 import subprocess
 import sys
 import tempfile
-import time
-from collections import defaultdict
 from pathlib import Path
 
 # ---- constants ----
@@ -236,7 +234,7 @@ def smoke_gate(sl: dict, provider: str, model: str) -> dict:
 
     if state in ("resume",):
         cmd.append("--resume")
-        print(f"      [resume] continuing from existing artifacts")
+        print("      [resume] continuing from existing artifacts")
 
     print(f"      cmd: {' '.join(cmd)}")
     clean_env = dict(os.environ)

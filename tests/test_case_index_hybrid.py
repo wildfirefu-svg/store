@@ -3,8 +3,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 
 def _tiny_corpus(tmp_path: Path) -> Path:
     path = tmp_path / "corpus.jsonl"

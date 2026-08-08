@@ -6,13 +6,11 @@ import json
 import os
 import sys
 
-import pytest
-
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from scripts.phase6_6d_offline_gate import (  # noqa: E402
+from scripts.phase6_6d_offline_gate import (
     audit_dataset,
     compute_dataset_sha256,
     generate_routed_manifest,

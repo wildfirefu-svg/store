@@ -6,8 +6,8 @@ import sys
 if __package__ in (None, ''):
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from benchmark.scorers.choice_accuracy import load_jsonl
 import data_store
+from benchmark.scorers.choice_accuracy import load_jsonl
 
 
 def import_dataset(jsonl_path):

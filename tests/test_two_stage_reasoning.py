@@ -259,6 +259,7 @@ class TestRealCases:
     def test_four_unanimous_wrong_cases_trigger(self):
         import json
         import os
+
         from benchmark.formatters.two_stage_reasoning import is_time_location_question
         path = "benchmark/datasets/baziqa_contest8_2024_holdout_enriched.jsonl"
         if not os.path.exists(path):

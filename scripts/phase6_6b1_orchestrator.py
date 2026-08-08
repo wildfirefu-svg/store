@@ -27,7 +27,6 @@ import subprocess
 import sys
 import tempfile
 import time
-from collections import defaultdict
 from pathlib import Path
 
 # Ensure project root on sys.path for benchmark.* imports (P0: real CLI entry)
@@ -837,13 +836,13 @@ def run_slice(sl: dict, provider: str, model: str, dry_run: bool) -> int:
           f"year={sl['year']} r={sl['repeat']} arm={sl['arm']} ziwei={sl['ziwei_arm']}")
 
     if dry_run:
-        print(f"      [dry-run] skip")
+        print("      [dry-run] skip")
         return 0
 
     # Check ARTIFACT_EXISTS: if detail exists, add --resume
     if os.path.exists(sl["detail_path"]) or os.path.exists(sl["manifest_path"]):
         cmd.append("--resume")
-        print(f"      [resume] existing artifacts found, resuming")
+        print("      [resume] existing artifacts found, resuming")
 
     # P1-5: mark slice as running BEFORE subprocess (system crash detection)
     is_retry = crash_state is not None
@@ -875,8 +874,8 @@ def run_slice(sl: dict, provider: str, model: str, dry_run: bool) -> int:
 def _compute_context_fingerprint(schedule: dict, provider: str, model: str) -> dict:
     """P1-4: compute SHA-256 of rendered context for 3 cases × 3 arms = 9 fingerprints.
     Records both case_id -> sha256 per arm, and the 3 selected case IDs."""
-    from benchmark.formatters.chart_context import render_reasoned_context
     from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt
+    from benchmark.formatters.chart_context import render_reasoned_context
     arms_seen = {}
     case_ids_used = []
     # Load cases once from first slice's dataset (all arms share same case set)
@@ -1189,48 +1188,48 @@ def generate_report(schedule: dict, gate: dict, integrity: dict,
                     output_dir: Path, ledger: BudgetLedger) -> str:
     """Generate Markdown gate report."""
     lines = []
-    lines.append(f"# Phase 6 6B1 Gate Report")
-    lines.append(f"")
+    lines.append("# Phase 6 6B1 Gate Report")
+    lines.append("")
     lines.append(f"**Generated**: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append(f"**Verdict**: **{gate['verdict']}**")
-    lines.append(f"")
-    lines.append(f"## Summary")
-    lines.append(f"")
+    lines.append("")
+    lines.append("## Summary")
+    lines.append("")
     lines.append(f"- Δ_dev (mean delta across years): {gate['delta_dev']:.2%}")
     lines.append(f"- Worst year delta: {gate['worst_year']:.2%}")
     lines.append(f"- Total calls attempted: {gate['total_calls_attempted']} / 792")
     lines.append(f"- Budget remaining: {gate['budget_remaining']}")
     lines.append(f"- All cells completed: {gate['all_cells_completed']}")
-    lines.append(f"")
-    lines.append(f"### Gate Criteria")
-    lines.append(f"")
-    lines.append(f"| Criterion | Threshold | Actual | Met |")
-    lines.append(f"|-----------|-----------|--------|-----|")
+    lines.append("")
+    lines.append("### Gate Criteria")
+    lines.append("")
+    lines.append("| Criterion | Threshold | Actual | Met |")
+    lines.append("|-----------|-----------|--------|-----|")
     delta_met = gate['delta_dev'] >= GATE_DELTA_DEV_PP / 100
     worst_met = gate['worst_year'] >= GATE_WORST_YEAR_PP / 100
     lines.append(f"| Δ_dev ≥ +{GATE_DELTA_DEV_PP}pp | ≥ {GATE_DELTA_DEV_PP/100:.1%} | {gate['delta_dev']:.2%} | {delta_met} |")
     lines.append(f"| worst_year ≥ {GATE_WORST_YEAR_PP}pp | ≥ {GATE_WORST_YEAR_PP/100:.1%} | {gate['worst_year']:.2%} | {worst_met} |")
-    lines.append(f"")
+    lines.append("")
 
-    lines.append(f"## Per-Cell Accuracies (correct / 40)")
-    lines.append(f"")
-    lines.append(f"| Year | Repeat | b1a_prime (none) | b1b (only) | b1c (combined) | Δ (b1c − b1a') |")
-    lines.append(f"|------|--------|-------------------|------------|-----------------|-----------------|")
+    lines.append("## Per-Cell Accuracies (correct / 40)")
+    lines.append("")
+    lines.append("| Year | Repeat | b1a_prime (none) | b1b (only) | b1c (combined) | Δ (b1c − b1a') |")
+    lines.append("|------|--------|-------------------|------------|-----------------|-----------------|")
     for d in gate["per_cell_deltas"]:
         lines.append(
             f"| {d['year']} | {d['repeat']} | {d['acc_b1a_prime']:.2%} | "
             f"{d['acc_b1b']:.2%} | {d['acc_b1c']:.2%} | "
             f"{d['delta']:+.2%} |"
         )
-    lines.append(f"")
-    lines.append(f"| Year | Mean Δ |")
-    lines.append(f"|------|--------|")
+    lines.append("")
+    lines.append("| Year | Mean Δ |")
+    lines.append("|------|--------|")
     for y, m in gate["year_means"].items():
         lines.append(f"| {y} | {m:+.2%} |")
-    lines.append(f"")
+    lines.append("")
 
-    lines.append(f"## Integrity")
-    lines.append(f"")
+    lines.append("## Integrity")
+    lines.append("")
     lines.append(f"- Expected keys: {integrity['expected_count']}")
     lines.append(f"- Actual records: {integrity['actual_count']}")
     lines.append(f"- Duplicates: {integrity['duplicates']}")
@@ -1241,10 +1240,10 @@ def generate_report(schedule: dict, gate: dict, integrity: dict,
         lines.append(f"- Detail errors: {len(integrity['detail_errors'])}")
         for e in integrity["detail_errors"][:10]:
             lines.append(f"  - {e}")
-    lines.append(f"")
+    lines.append("")
 
-    lines.append(f"## Schedule")
-    lines.append(f"")
+    lines.append("## Schedule")
+    lines.append("")
     lines.append(f"- Total slices: {schedule['total_slices']}")
     lines.append(f"- Total scheduled: {schedule['total_scheduled_calls']}")
     lines.append(f"- Slices completed: {len(ledger._data['slices_completed'])}")
@@ -1261,8 +1260,11 @@ def generate_report(schedule: dict, gate: dict, integrity: dict,
 
 def _build_current_manifest(sl: dict, provider: str, model: str) -> dict:
     """Build manifest dict matching runner's build_resume_manifest()."""
-    from benchmark.runners.run_benchmark import _sha256_file, _code_fingerprint, RESUME_MANIFEST_FIELDS
     from benchmark.runners.profiles import prompt_fingerprint, resolve_profile
+    from benchmark.runners.run_benchmark import (
+        _code_fingerprint,
+        _sha256_file,
+    )
 
     profile = resolve_profile(REASONED_PROFILE)
     case_ids_file = os.path.join(sl["output_dir"], f"case_ids_{sl['slice_id']}.json")
@@ -1843,10 +1845,10 @@ def main(argv=None):
                         ledger._save()
                         print(f"      [reconcile] {sl['slice_id']}: "
                               f"ledger {ledger_calls} -> {ev_count}")
-                    print(f"      [skip] already completed (manifest+events verified)")
+                    print("      [skip] already completed (manifest+events verified)")
                     continue
             else:
-                print(f"      [WARN] manifest drift detected — re-running slice")
+                print("      [WARN] manifest drift detected — re-running slice")
                 print(json.dumps(diff, ensure_ascii=False, indent=2))
                 # Don't skip — fall through to re-run with --resume
 
@@ -1937,7 +1939,7 @@ def main(argv=None):
                                     output_dir, args.provider, args.model)
     print(f"\n  archive: {archive_path}")
 
-    print(f"\n=== DONE ===")
+    print("\n=== DONE ===")
     return 0
 
 

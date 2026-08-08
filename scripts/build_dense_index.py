@@ -6,7 +6,6 @@ import argparse
 import os
 import sys
 from pathlib import Path
-from typing import List, Optional
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
@@ -16,7 +15,7 @@ from case_dense_index import DEFAULT_MODEL, build_or_load
 from case_index import CaseIndex
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="为语料库构建稠密 embedding 缓存。")
     parser.add_argument("--corpus", required=True, help="语料库 JSONL 路径")
     parser.add_argument(

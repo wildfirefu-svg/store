@@ -13,7 +13,6 @@
 from __future__ import annotations
 
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -162,8 +161,8 @@ class TestRunnerE2EManifest:
     def test_runner_creates_23_field_manifest_and_parsed_details(self, tmp_path, monkeypatch):
         """真实 runner: 8 cases -> 8 parsed rows + 8 call_attempt events + 21-field manifest
         （6B2 Task 4 起含 thinking_mode）。"""
-        from tests.phase6_helpers import RunnerEnv
         from benchmark.runners.run_benchmark import RESUME_MANIFEST_FIELDS
+        from tests.phase6_helpers import RunnerEnv
 
         env = RunnerEnv(tmp_path, monkeypatch, n_cases=8)
         env.model_returns("最终答案：A")

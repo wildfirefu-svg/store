@@ -10,8 +10,12 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from benchmark.formatters.bazi_time_context import (
-    extract_target_years, classify_route_state, TemporalRouteState,
-    TimeContext, NatalStructure, DayunRow, OptionLiunian, TimeContextKind,
+    NatalStructure,
+    TemporalRouteState,
+    TimeContext,
+    TimeContextKind,
+    classify_route_state,
+    extract_target_years,
 )
 
 DIZHI = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]

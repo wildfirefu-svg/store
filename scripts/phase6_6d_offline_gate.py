@@ -18,7 +18,7 @@ _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from benchmark.formatters.bazi_time_context import (  # noqa: E402
+from benchmark.formatters.bazi_time_context import (
     TemporalRouteState,
     classify_route_state,
     detect_temporal_rules,

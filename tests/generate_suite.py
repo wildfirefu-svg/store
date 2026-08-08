@@ -1,5 +1,7 @@
 """Generate comprehensive test suite: coverage matrix + calendar + real persons."""
-import json, os, random
+import json
+import os
+import random
 from datetime import date
 
 TIANGAN = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸']

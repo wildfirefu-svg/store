@@ -33,17 +33,16 @@ import shlex
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Sequence
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-from benchmark.phase3 import (  # noqa: E402
+from benchmark.phase3 import (
     build_permutation_plan,
     permute_case_by_plan,
 )
-
 
 STAGES = {
     "link8": {"cases": 8, "hard_call_cap": 174, "retry_budget": 30, "primary": 144},
@@ -56,7 +55,7 @@ STAGES = {
 ARMS = ["A1", "A3", "A4"]
 
 
-def _arm_config(arm: str, fewshot_file: str) -> Dict[str, Any]:
+def _arm_config(arm: str, fewshot_file: str) -> dict[str, Any]:
     """Return prompt/fewshot config for an arm."""
     if arm == "A1":
         return {"prompt": "base", "fewshot": False, "apb": False}
@@ -72,7 +71,7 @@ def write_permuted_datasets(
     output_dir: str,
     stage: str,
     n_perms: int = 3,
-) -> Dict[int, str]:
+) -> dict[int, str]:
     """Write per-permutation JSONL files using cyclic-shift.
 
     Returns a dict mapping ``perm_idx -> dataset_path`` so that on-3
@@ -84,7 +83,7 @@ def write_permuted_datasets(
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # Read all cases
-    cases: List[Dict[str, Any]] = []
+    cases: list[dict[str, Any]] = []
     with Path(source_dataset).open("r", encoding="utf-8") as fh:
         for line in fh:
             line = line.strip()
@@ -93,7 +92,7 @@ def write_permuted_datasets(
             cases.append(json.loads(line))
     cases = cases[:max_cases]
 
-    perm_files: Dict[int, str] = {}
+    perm_files: dict[int, str] = {}
     for shift in range(n_perms):
         out_path = out_dir / f"{stage}_perm_s{shift}.jsonl"
         with out_path.open("w", encoding="utf-8") as fh:
@@ -115,8 +114,8 @@ def build_command_list(
     n_perms: int = 3,
     method: str = "structured_reasoning",
     force_no_fewshot: bool = False,
-    arms: Optional[Sequence[str]] = None,
-) -> List[Dict[str, Any]]:
+    arms: Sequence[str] | None = None,
+) -> list[dict[str, Any]]:
     """Build the full (arm, mode, permutation) command list for a stage.
 
     For dev20/link8: 3 arms x 2 modes (off-3, on-3) x 3 perms.
@@ -126,7 +125,7 @@ def build_command_list(
     # Write pre-permuted dataset files (shared across all arms)
     perm_files = write_permuted_datasets(dataset, output_dir, stage, n_perms=n_perms)
 
-    commands: List[Dict[str, Any]] = []
+    commands: list[dict[str, Any]] = []
     for arm in (arms or ARMS):
         ac = _arm_config(arm, fewshot_file)
         if force_no_fewshot:
@@ -151,7 +150,7 @@ def build_command_list(
 
 def _build_single_command(
     arm: str,
-    ac: Dict[str, Any],
+    ac: dict[str, Any],
     mode: str,
     perm_idx: int,
     dataset: str,
@@ -160,7 +159,7 @@ def _build_single_command(
     output_dir: str,
     stage: str,
     method: str = "structured_reasoning",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Build a single run_benchmark.py invocation as a command list + metadata.
 
     on-3 runs use pre-permuted datasets --- NO ``--shuffle-options`` or
@@ -202,7 +201,7 @@ def _build_single_command(
     }
 
 
-def estimate_budget(stage: str, method: str = "structured_reasoning") -> Dict[str, int]:
+def estimate_budget(stage: str, method: str = "structured_reasoning") -> dict[str, int]:
     cfg = STAGES[stage]
     if method == "two_stage_reasoning":
         return {
@@ -224,6 +223,7 @@ def emit_permutation_plan(cases_path: str, out_path: str) -> None:
     requiring an ``id`` field.
     """
     import json as _json
+
     from benchmark.phase3 import _strip_option_prefix
 
     rows = []
@@ -240,11 +240,10 @@ def emit_permutation_plan(cases_path: str, out_path: str) -> None:
             plan = build_permutation_plan(option_ids)
             rows.append({"case_id": case.get("case_id"), "option_ids": option_ids, "permutations": plan})
     with Path(out_path).open("w", encoding="utf-8") as f:
-        for row in rows:
-            f.write(_json.dumps(row, ensure_ascii=False) + "\n")
+        f.writelines(_json.dumps(row, ensure_ascii=False) + "\n" for row in rows)
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Phase 3 multi-permutation ablation orchestrator.")
     parser.add_argument("--stage", default="dev20", choices=list(STAGES.keys()))
     parser.add_argument("--dataset", default="benchmark/datasets/baziqa_contest8_2025_holdout_enriched.jsonl")
@@ -304,7 +303,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         n_total = len(commands)
         print(f"=== Phase 3 {args.stage} EXECUTE ({n_total} commands) ===")
         success = 0
-        failures: List[Dict[str, Any]] = []
+        failures: list[dict[str, Any]] = []
         t_start = datetime.now()
         for i, c in enumerate(commands):
             label = f"[{i+1}/{n_total}] {c['arm']} {c['mode']} p{c['perm_idx']}"
@@ -352,7 +351,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     print(f"corpus: {args.corpus}")
     print(f"model: {args.model}")
     print(f"arms: {selected_arms or ARMS}")
-    print(f"modes: off-3, on-3")
+    print("modes: off-3, on-3")
     print(f"perms per case: {args.n_perms}")
     print(f"total commands: {len(commands)}")
     print(f"budget: {budget}")

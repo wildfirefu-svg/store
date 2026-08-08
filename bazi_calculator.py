@@ -11,7 +11,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import date, timedelta
+from datetime import date
 
 from lunar_calendar import solar_to_lunar
 
@@ -83,6 +83,8 @@ JIE_MONTH_BRANCH = {
 
 # Internal: approximate Julian Day for solar terms using Jean Meeus algorithm
 import math as _math
+
+
 def _solar_term_jd(year, term_index):
     """Calculate Julian Day for a solar term in a given year.
     Based on sun's ecliptic longitude reaching (315 + term_index*15) mod 360 degrees.
@@ -196,7 +198,7 @@ def get_solar_term_info(year, month, day, hour=0, minute=0):
                 ty, tm, td, _, _ = _jd_to_date(jd)
                 all_terms.append((date(ty, tm, td), -1, term_name, i, tm, td))
 
-    all_terms.sort(key=lambda x: (x[0], x[1] if x[1] >= 0 else 0))
+    all_terms.sort(key=lambda x: (x[0], max(x[1], 0)))
 
     for term_dt, term_minutes, term_name, i, tm, td in all_terms:
         before = False
@@ -448,8 +450,7 @@ def ziwei_position(wuxing_ju, lunar_day):
     Standard formula: 紫微起寅, each day moves (wuxing_ju - 1) positions counter-clockwise.
     position = -(day - 1) * (ju - 1) mod 12
     """
-    if lunar_day > 30:
-        lunar_day = 30
+    lunar_day = min(lunar_day, 30)
     ju = wuxing_ju if wuxing_ju in (2, 3, 4, 5, 6) else 2
     return (-(lunar_day - 1) * (ju - 1)) % 12
 
@@ -488,8 +489,7 @@ def get_year_pillar(year, month=1, day=1, hour=0, minute=0):
         lc_h = val[2] if len(val) > 2 and val[2] >= 0 else -1
         lc_min = val[3] if len(val) > 3 else 0
         before = False
-        if month < lc_m: before = True
-        elif month == lc_m and day < lc_d: before = True
+        if month < lc_m or month == lc_m and day < lc_d: before = True
         elif month == lc_m and day == lc_d and lc_h >= 0:
             before = (hour * 60 + minute) < (lc_h * 60 + lc_min)
         effective_year = year - 1 if before else year
@@ -832,7 +832,7 @@ def calculate_dayun(year_pillar, month_pillar, gender, birth_year, birth_month, 
     _, _, next_jie_name, next_jie_m, next_jie_d = get_solar_term_info(
         birth_year, birth_month, birth_day, birth_hour, birth_minute)
 
-    from datetime import datetime as _dt, timedelta as _td
+    from datetime import datetime as _dt
     birth_dt = _dt(birth_year, birth_month, birth_day, birth_hour, birth_minute)
 
     if direction == '顺排':

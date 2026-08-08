@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import copy
 import random
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 _LABELS = ("A", "B", "C", "D")
 
@@ -19,21 +18,21 @@ def _relabel(option_body: str, new_label: str) -> str:
     return f"{new_label}. {option_body}"
 
 
-def shuffle_options(row: Dict[str, Any], seed: Optional[int]) -> Dict[str, Any]:
+def shuffle_options(row: dict[str, Any], seed: int | None) -> dict[str, Any]:
     if seed is None:
         raise ValueError("shuffle_options requires an explicit int seed for reproducibility")
     if not isinstance(seed, int):
         raise ValueError(f"shuffle_options seed must be int, got {type(seed).__name__}")
 
-    original_options: List[str] = list(row.get("options") or [])
+    original_options: list[str] = list(row.get("options") or [])
     original_answer: str = str(row.get("answer") or "")
 
     indices = list(range(len(original_options)))
     rng = random.Random(seed)
     rng.shuffle(indices)
 
-    new_options: List[str] = []
-    label_map: Dict[str, str] = {}
+    new_options: list[str] = []
+    label_map: dict[str, str] = {}
     for new_idx, original_idx in enumerate(indices):
         new_label = _LABELS[new_idx] if new_idx < len(_LABELS) else chr(ord("A") + new_idx)
         body = _strip_prefix(original_options[original_idx])
@@ -53,9 +52,9 @@ def shuffle_options(row: Dict[str, Any], seed: Optional[int]) -> Dict[str, Any]:
 
 
 def unshuffle_predicted_answer(
-    predicted: Optional[str],
-    answer_label_map: Dict[str, str],
-) -> Optional[str]:
+    predicted: str | None,
+    answer_label_map: dict[str, str],
+) -> str | None:
     if predicted is None:
         return None
     reverse_map = {new: old for old, new in (answer_label_map or {}).items()}

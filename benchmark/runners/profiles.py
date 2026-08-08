@@ -288,8 +288,14 @@ def prompt_fingerprint(profile: EvalProfile) -> str:
         ]
     elif formatter == "format_dual_system_prompt":
         from benchmark.formatters import dual_system_reasoning as ds
-        from benchmark.formatters.chart_context import render_reasoned_context, extract_reasoned_choice_answer
-        from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt, format_options
+        from benchmark.formatters.baziqa_prompt import (
+            _assemble_reasoned_choice_prompt,
+            format_options,
+        )
+        from benchmark.formatters.chart_context import (
+            extract_reasoned_choice_answer,
+            render_reasoned_context,
+        )
         parts += [
             ds.JUDGE_TEMPLATE_VERSION,
             inspect.getsource(ds.build_bazi_pipeline_prompt),

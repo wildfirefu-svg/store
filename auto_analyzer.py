@@ -6,13 +6,17 @@ Computes 旺衰, 格局, 用神, 流年, 七维 etc. from chart data without AI.
 Extracted from api_server.py to keep the API layer focused on routing.
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from bazi_calculator import (
-    GAN_WUXING, GAN_YINYANG, ZHI_WUXING, NAYIN, get_shishen,
+    GAN_WUXING,
+    GAN_YINYANG,
+    NAYIN,
+    ZHI_WUXING,
+    get_shishen,
 )
 
 
@@ -226,7 +230,7 @@ def auto_analyze(chart):
         _judgment("排盘校验", "通过",
             "high",
             [f"年{yp_ganzhi}, 月{mp_ganzhi}, 日{day_ganzhi}, 时{hp_ganzhi}",
-             f"四柱完整，纳音/藏干/空亡齐全"],
+             "四柱完整，纳音/藏干/空亡齐全"],
             ["节气交界处月柱可能有±1天偏差，已标记precision_note"]),
         _judgment("旺衰", grade,
             "medium" if grade == "中和" else "high",

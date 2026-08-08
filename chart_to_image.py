@@ -7,7 +7,9 @@ suitable for embedding into PDF reports.
 
 import os
 import tempfile
+
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np

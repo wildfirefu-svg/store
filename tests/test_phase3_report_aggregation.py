@@ -10,13 +10,13 @@ from __future__ import annotations
 import pytest
 
 from benchmark.phase3 import (
+    check_hard_cap,
+    compute_failure_rate,
     compute_ite_accuracy,
     compute_success_only_accuracy,
-    compute_failure_rate,
+    pair_analysis_eligible_rate,
     paired_flip_counts,
     position_selection_frequency,
-    pair_analysis_eligible_rate,
-    check_hard_cap,
 )
 
 

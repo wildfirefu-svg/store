@@ -9,37 +9,58 @@ Usage:
     Open http://localhost:8000/docs for Swagger UI.
 """
 
-import json, os, sys, hashlib, importlib.util, threading, logging
-from datetime import date
+import asyncio
+import calendar
+import hashlib
+import importlib.util
+import json
+import logging
+import os
+import sys
+import threading
+import time
 from collections import defaultdict
+from contextlib import asynccontextmanager
+from datetime import date
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    PlainTextResponse,
+    Response,
+    StreamingResponse,
+)
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse, Response, PlainTextResponse, FileResponse
-import asyncio, time, calendar
 from pydantic import BaseModel, Field, field_validator
-from typing import Optional, List, Dict, Any, Literal
-from contextlib import asynccontextmanager
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'knowledge-base'))
 
-from bazi_calculator import (
-    calculate_true_solar_time, compute_chart,
-)
-from lunar_calendar import lunar_to_solar, solar_to_lunar as _s2l
-from auto_analyzer import auto_analyze as _auto_analyze
-
 import claude_api
-from claude_api import stream_chat as _stream_claude, ANTHROPIC_API_KEY
-from prompt_engine import PromptEngine
 import data_store
-from config import (
-    API_PORT, CORS_ORIGIN_LIST, CORS_ORIGINS,
-    RATE_LIMITS, RATE_LIMIT_EXEMPT, RATE_LIMIT_CLEAN_INTERVAL,
-    CHART_CACHE_SIZE, MAX_BODY_SIZE, LOG_LEVEL, LOG_FILE,
+from auto_analyzer import auto_analyze as _auto_analyze
+from bazi_calculator import (
+    calculate_true_solar_time,
+    compute_chart,
 )
+from claude_api import stream_chat as _stream_claude
+from config import (
+    API_PORT,
+    CHART_CACHE_SIZE,
+    CORS_ORIGIN_LIST,
+    LOG_FILE,
+    LOG_LEVEL,
+    MAX_BODY_SIZE,
+    RATE_LIMIT_CLEAN_INTERVAL,
+    RATE_LIMIT_EXEMPT,
+    RATE_LIMITS,
+)
+from lunar_calendar import lunar_to_solar
+from prompt_engine import PromptEngine
 
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
@@ -52,7 +73,7 @@ logger = logging.getLogger('api')
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle."""
-    logger.info(f'BaZi Analysis API starting')
+    logger.info('BaZi Analysis API starting')
     yield
     # Shutdown
     logger.info("Shutting down...")
@@ -434,7 +455,7 @@ class SaveChartRequest(BaseModel):
 class ChatMessageRequest(BaseModel):
     role: str
     text: str
-    tool: Optional[str] = None
+    tool: str | None = None
 
 class SaveReportRequest(BaseModel):
     chart_id: str
@@ -444,28 +465,28 @@ class SaveReportRequest(BaseModel):
 
 class ClientCreate(BaseModel):
     name: str
-    gender: Optional[str] = Field(None, pattern="^(male|female)$")
-    birth_year: Optional[int] = Field(None, ge=1900, le=2100)
-    birth_month: Optional[int] = Field(None, ge=1, le=12)
-    birth_day: Optional[int] = Field(None, ge=1, le=31)
-    birth_hour: Optional[int] = Field(None, ge=0, le=23)
-    birth_minute: Optional[int] = Field(0, ge=0, le=59)
-    birth_location: Optional[str] = "Beijing"
+    gender: str | None = Field(None, pattern="^(male|female)$")
+    birth_year: int | None = Field(None, ge=1900, le=2100)
+    birth_month: int | None = Field(None, ge=1, le=12)
+    birth_day: int | None = Field(None, ge=1, le=31)
+    birth_hour: int | None = Field(None, ge=0, le=23)
+    birth_minute: int | None = Field(0, ge=0, le=59)
+    birth_location: str | None = "Beijing"
     tags: list[str] = []
     notes: str = ""
 
 
 class ClientUpdate(BaseModel):
-    name: Optional[str] = None
-    gender: Optional[str] = Field(None, pattern="^(male|female)$")
-    birth_year: Optional[int] = Field(None, ge=1900, le=2100)
-    birth_month: Optional[int] = Field(None, ge=1, le=12)
-    birth_day: Optional[int] = Field(None, ge=1, le=31)
-    birth_hour: Optional[int] = Field(None, ge=0, le=23)
-    birth_minute: Optional[int] = Field(None, ge=0, le=59)
-    birth_location: Optional[str] = None
-    tags: Optional[list[str]] = None
-    notes: Optional[str] = None
+    name: str | None = None
+    gender: str | None = Field(None, pattern="^(male|female)$")
+    birth_year: int | None = Field(None, ge=1900, le=2100)
+    birth_month: int | None = Field(None, ge=1, le=12)
+    birth_day: int | None = Field(None, ge=1, le=31)
+    birth_hour: int | None = Field(None, ge=0, le=23)
+    birth_minute: int | None = Field(None, ge=0, le=59)
+    birth_location: str | None = None
+    tags: list[str] | None = None
+    notes: str | None = None
 
 
 class FeedbackCreate(BaseModel):
@@ -697,7 +718,7 @@ def api_list_chart_model_outputs(
 
 class LifeEventCreate(BaseModel):
     event_year: int = Field(..., ge=1900, le=2100)
-    event_date: Optional[str] = Field(None, max_length=32)
+    event_date: str | None = Field(None, max_length=32)
     domain: Literal['career', 'wealth', 'relationship', 'health', 'family', 'personality', 'study', 'annual_fortune'] = 'career'
     title: str = Field(..., min_length=1, max_length=100)
     description: str = Field('', max_length=2000)
@@ -707,9 +728,9 @@ class LifeEventCreate(BaseModel):
 class ConversationSummaryCreate(BaseModel):
     summary_type: Literal['general', 'trusted_advisor'] = 'general'
     summary_text: str = Field('', max_length=2000)
-    key_facts: List[str] = Field(default_factory=list, max_length=20)
-    preference: Dict[str, Any] = Field(default_factory=dict)
-    source_output_ids: List[str] = Field(default_factory=list, max_length=20)
+    key_facts: list[str] = Field(default_factory=list, max_length=20)
+    preference: dict[str, Any] = Field(default_factory=dict)
+    source_output_ids: list[str] = Field(default_factory=list, max_length=20)
 
 
 def _build_timeline_data(chart):
@@ -840,7 +861,7 @@ def _generate_future_warnings(birth_year, dayun, liunian):
                 'year': fy,
                 'domain': 'annual_fortune',
                 'warning_type': 'score_low',
-                'message': f'今年运势偏弱，宜保守观望，避免重大决策',
+                'message': '今年运势偏弱，宜保守观望，避免重大决策',
                 'urgency': 'medium',
             })
 
@@ -900,7 +921,7 @@ def _safe_conversation_summary(item):
 
 
 @app.get('/api/charts/{chart_id}/conversation-summaries')
-def api_list_conversation_summaries(chart_id: str, summary_type: Optional[Literal['general', 'trusted_advisor']] = None):
+def api_list_conversation_summaries(chart_id: str, summary_type: Literal['general', 'trusted_advisor'] | None = None):
     if not _get_chart(chart_id):
         raise HTTPException(404, 'Chart not found')
     return [_safe_conversation_summary(x) for x in data_store.list_conversation_summaries(chart_id, summary_type=summary_type)]
@@ -1199,7 +1220,8 @@ def _clean_old_pdf_jobs(now):
 
 def _run_pdf_job(job_id, chart, conclusions, mode, template):
     """Run PDF generation in a thread (blocking I/O + subprocess)."""
-    import tempfile, subprocess
+    import subprocess
+    import tempfile
     chart_tmp = concl_tmp = md_tmp = pdf_tmp = viz_tmp = None
     try:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False, encoding='utf-8') as f:

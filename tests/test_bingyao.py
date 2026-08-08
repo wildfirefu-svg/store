@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """P5 病药说自洽测试 — 30+命例，病药配对自洽率 ≥ 95%"""
 
-import json, os, sys
+import json
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from collections import Counter
 
 def load_kb():
     path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'knowledge-base', 'bingyao.json')
@@ -162,14 +164,14 @@ def run():
 
     rate = (results['consistent'] / results['total'] * 100) if results['total'] > 0 else 0
 
-    print(f'=== 病药说自洽测试 ===')
+    print('=== 病药说自洽测试 ===')
     print(f'总用例: {results["total"]}')
     print(f'自洽: {results["consistent"]} | 不自洽: {results["inconsistent"]}')
     print(f'自洽率: {rate:.1f}%')
     print()
 
     if results['inconsistent'] > 0:
-        print(f'=== 不自洽用例 ===')
+        print('=== 不自洽用例 ===')
         for d in results['details']:
             if not d['pass']:
                 print(f'  {d["id"]}: {d["disease"]}→{d["medicine"]} | {d["check"]}')

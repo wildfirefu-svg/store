@@ -21,7 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 
-import data_store  # noqa: E402
+import data_store
 
 TEST_KEYWORDS = (
     "测试", "E2E", "Test", "Web验证", "切换测试", "TestMingzhu",

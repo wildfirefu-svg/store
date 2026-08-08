@@ -25,7 +25,6 @@ from pathlib import Path
 
 import pytest
 
-
 DATA_FIXTURE = Path("tests/fixtures/mingli/data_sample.json")
 FORTUNE_FIXTURE = Path("tests/fixtures/mingli/fortune_api_results_sample.json")
 

@@ -17,9 +17,6 @@ from __future__ import annotations
 import json
 import os
 import sys
-from pathlib import Path
-
-import pytest
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
@@ -27,23 +24,16 @@ if PROJECT_ROOT not in sys.path:
 
 import scripts.phase6_6b1d_orchestrator as orch
 from scripts.phase6_6b1d_orchestrator import (
+    ARMS,
+    REASONED_PROFILE,
+    TOTAL_SLICES,
     BudgetLedger,
-    generate_schedule,
+    _integrity_gate,
+    _process_slice,
     build_expected_key,
     compute_effective_cap,
-    determine_smoke_state,
-    REASONED_PROFILE,
-    SLICE_SIZE,
-    SLICE_MAX_CAP,
-    GLOBAL_LEDGER_CAP,
-    TOTAL_SLICES,
-    TOTAL_SCHEDULED_CALLS,
-    ARMS,
-    _integrity_gate,
-    _audit_skipped_slices,
-    _process_slice,
+    generate_schedule,
 )
-
 
 # ---- helpers ----
 
@@ -60,8 +50,7 @@ def _write_valid_detail(sl, provider="deepseek", model="deepseek-v4-pro"):
                      "correct": True})
     os.makedirs(os.path.dirname(sl["detail_path"]), exist_ok=True)
     with open(sl["detail_path"], "w", encoding="utf-8") as f:
-        for r in rows:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+        f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
 
 
 def _write_valid_events(sl, n=None):
@@ -69,8 +58,7 @@ def _write_valid_events(sl, n=None):
     count = n or sl["size"]
     os.makedirs(os.path.dirname(sl["events_path"]), exist_ok=True)
     with open(sl["events_path"], "w", encoding="utf-8") as f:
-        for i in range(count):
-            f.write(json.dumps({"kind": "call_attempt", "idx": i}) + "\n")
+        f.writelines(json.dumps({"kind": "call_attempt", "idx": i}) + "\n" for i in range(count))
 
 
 def _write_valid_manifest(sl):
@@ -351,8 +339,7 @@ class TestIntegrityGate:
                              "terminal_state": "parsed", "answer": "A"})
             os.makedirs(os.path.dirname(sl["detail_path"]), exist_ok=True)
             with open(sl["detail_path"], "w", encoding="utf-8") as f:
-                for r in rows:
-                    f.write(json.dumps(r, ensure_ascii=False) + "\n")
+                f.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
             compute_effective_cap(sl["slice_id"], ledger, 0)
             ledger.record_slice_completed(sl["slice_id"], 7)
         ledger._save()

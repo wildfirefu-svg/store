@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+import importlib.util
 import os
 import sys
-import importlib.util
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

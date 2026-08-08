@@ -147,7 +147,6 @@ def test_judge_visibility_rules():
 
 
 def test_dual_fingerprint_includes_all_prompt_sources():
-    import inspect
     p = resolve_profile("baziqa_xjz_dual")
     fp = prompt_fingerprint(p)
     assert isinstance(fp, str) and len(fp) == 64

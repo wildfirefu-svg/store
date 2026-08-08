@@ -17,7 +17,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from bazi_calculator import compute_chart
-from benchmark.formatters.chart_context import APPROVED_BAZI_FIELDS, approved_field_presence
+from benchmark.formatters.chart_context import (
+    APPROVED_BAZI_FIELDS,
+    approved_field_presence,
+)
 from scripts.enrich_baziqa_chart_input import enrich_row, load_jsonl, write_jsonl
 
 DEFAULT_YEARS = (2021, 2022, 2024, 2025)

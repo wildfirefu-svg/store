@@ -2,7 +2,6 @@ import argparse
 import json
 from pathlib import Path
 
-
 DOMAIN_KEYWORDS = {
     "career": ["事业", "工作", "职业", "升职", "官"],
     "wealth": ["财富", "财运", "钱", "富", "投资"],
@@ -117,8 +116,7 @@ def write_jsonl(rows, output_path):
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8", newline="\n") as f:
-        for row in rows:
-            f.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+        f.writelines(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in rows)
 
 
 def main(argv=None):

@@ -1,4 +1,9 @@
-from benchmark.scorers.choice_accuracy import extract_choice, extract_choice_with_meta, load_jsonl, score_choice_answers
+from benchmark.scorers.choice_accuracy import (
+    extract_choice,
+    extract_choice_with_meta,
+    load_jsonl,
+    score_choice_answers,
+)
 
 
 def test_score_choice_answers_counts_accuracy():

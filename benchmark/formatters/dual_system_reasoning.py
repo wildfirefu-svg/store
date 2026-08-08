@@ -1,7 +1,15 @@
 from __future__ import annotations
+
 import hashlib
-from benchmark.formatters.chart_context import render_reasoned_context, extract_reasoned_choice_answer
-from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt, format_options
+
+from benchmark.formatters.baziqa_prompt import (
+    _assemble_reasoned_choice_prompt,
+    format_options,
+)
+from benchmark.formatters.chart_context import (
+    extract_reasoned_choice_answer,
+    render_reasoned_context,
+)
 
 JUDGE_TEMPLATE_VERSION = "dual_judge_v1"
 

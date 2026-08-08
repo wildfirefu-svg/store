@@ -4,8 +4,10 @@
 Combines the BaZi day pillar with Liu Ren's 天地盘/四课/三传 for event timing.
 """
 
-import os, sys, json
-from datetime import date, datetime
+import os
+import sys
+from datetime import datetime
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # ========== Constants ==========
@@ -266,7 +268,8 @@ def bazi_chuan_ren(birth_year=None, birth_month=None, birth_day=None, birth_hour
 
 
 def main():
-    import argparse, json as j
+    import argparse
+    import json as j
     ap = argparse.ArgumentParser(description='八字穿壬 — BaZi x Da Liu Ren')
     ap.add_argument('--chart', '-c', help='Path to BaZi chart JSON (alternative to birth params)')
     ap.add_argument('--year', type=int, help='Birth year')

@@ -16,7 +16,6 @@ if str(ROOT) not in sys.path:
 
 from benchmark.reports.accuracy_stats import summarize_accuracy
 
-
 EXACT_RE = re.compile(r"AccuracyExact:\s*(\d+)/(\d+)=(\d+(?:\.\d+)?)")
 RUN_RE = re.compile(r"id=([a-f0-9]{8})")
 

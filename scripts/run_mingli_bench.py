@@ -18,7 +18,6 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional
 
 # Allow running as `python scripts/run_mingli_bench.py` from the repo root.
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -34,7 +33,7 @@ def _write_jsonl(rows, path: Path) -> None:
     path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run benchmark against MingLi-Bench multiple-choice data.")
     parser.add_argument("--data", required=True, help="Path to MingLi-Bench data.json")
     parser.add_argument("--fortune", default=None, help="Path to MingLi-Bench fortune_api_results.json")

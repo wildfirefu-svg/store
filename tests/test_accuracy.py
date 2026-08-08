@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """P5 Accuracy Test — cross-validate BaZi calculator against known-correct charts."""
 
-import json, os, sys, time
+import json
+import os
+import sys
+import time
 from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from bazi_calculator import calculate_four_pillars, calculate_dayun
+from bazi_calculator import calculate_dayun, calculate_four_pillars
+
 
 def run_tests(suite='test_charts.json'):
     test_path = os.path.join(os.path.dirname(__file__), suite)
@@ -121,7 +125,7 @@ if __name__ == '__main__':
     args = ap.parse_args()
     report = run_tests(args.suite)
 
-    print(f"=== BaZi Calculator Accuracy Test ===")
+    print("=== BaZi Calculator Accuracy Test ===")
     print(f"Total: {report['total_cases']} | Passed: {report['passed']} | Failed: {report['failed']}")
     print(f"Accuracy: {report['accuracy_pct']}% | Time: {report['elapsed_sec']}s")
     print()

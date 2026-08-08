@@ -9,7 +9,10 @@ Usage:
     python report_builder.py --chart chart.json --mode 1 --conclusions analysis.json -o report.md
 """
 
-import json, os, sys, argparse
+import argparse
+import json
+import os
+import sys
 from datetime import date
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -334,7 +337,7 @@ def render_liunian_caution_months(months, overview):
             risks = '、'.join(m.get('interactions', [])) or '评分偏低'
             lines.append(f'1. **{mn}月（{m.get("ganzhi","")}，{m.get("shishen","")}）**')
             lines.append(f'   风险：{risks}。')
-            lines.append(f'   化解：保持低调，避免重大决策。可参考宜忌调整日常安排。')
+            lines.append('   化解：保持低调，避免重大决策。可参考宜忌调整日常安排。')
             lines.append('')
     return '\n'.join(lines)
 
@@ -348,7 +351,7 @@ def render_liunian_recommendations(recommendations):
             if isinstance(r, dict):
                 lines.append(f'{i+1}. **【{r.get("priority","建议")}】** {r.get("text","")}')
             else:
-                lines.append(f'{i+1}. {str(r)}')
+                lines.append(f'{i+1}. {r!s}')
     else:
         lines.append(str(recommendations))
     lines.append('')
@@ -405,7 +408,7 @@ def build_mode1_report(chart, conclusions):
     bdate = f'{bi.get("year","")}-{bi.get("month",""):02d}-{bi.get("day",""):02d}'
 
     sections = []
-    sections.append(f'# 【子平真诠 · 格局命理深度报告】\n')
+    sections.append('# 【子平真诠 · 格局命理深度报告】\n')
     sections.append(f'命主：{gender} | 出生：{bdate} | 真太阳时：北京时间\n')
 
     sections.append('## 一、八字排盘')

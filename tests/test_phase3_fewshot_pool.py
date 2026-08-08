@@ -16,7 +16,6 @@ from pathlib import Path
 
 import pytest
 
-
 POOL = Path("benchmark/fewshot/anti_position_bias_v1.jsonl")
 
 REQUIRED_DOMAINS = {

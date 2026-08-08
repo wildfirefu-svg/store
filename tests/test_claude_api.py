@@ -67,6 +67,7 @@ def test_anthropic_payload_uses_custom_system_prompt():
 
 def test_stream_chat_yields_error_when_retries_zero(monkeypatch):
     import urllib.error
+
     import claude_api
 
     monkeypatch.setattr(claude_api, 'ANTHROPIC_API_KEY', 'sk-fake-99999999')

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Bazi time-context relation computation.
 
 Migrated from benchmark.formatters.two_stage_reasoning to centralize

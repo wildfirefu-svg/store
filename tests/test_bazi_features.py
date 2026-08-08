@@ -1,6 +1,5 @@
 from bazi_features import extract
 
-
 CHART_1990 = {
     "four_pillars": {
         "year": {"gan": "庚", "zhi": "午"},

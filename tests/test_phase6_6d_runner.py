@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 import pytest
+
 
 def test_phase6_context_accepts_time_context_injection():
     from benchmark.runners.run_benchmark import Phase6Context
@@ -28,6 +30,7 @@ def test_code_scope_includes_bazi_time_context():
 def test_cli_to_prompt_off_on_different():
     """CLI --time-context-injection off vs on generate different prompts."""
     import json
+
     from benchmark.formatters.chart_context import render_reasoned_context
     path = "benchmark/datasets/baziqa_contest8_2025_holdout_enriched.jsonl"
     rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
@@ -39,10 +42,15 @@ def test_cli_to_prompt_off_on_different():
 def test_prompt_diff_only_in_temporal_block():
     """off/on prompt diff is ONLY in temporal context section."""
     import json
+
     from benchmark.formatters.chart_context import render_reasoned_context
     path = "benchmark/datasets/baziqa_contest8_2025_holdout_enriched.jsonl"
     rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
-    from benchmark.formatters.bazi_time_context import detect_temporal_rules, extract_target_years, classify_route_state
+    from benchmark.formatters.bazi_time_context import (
+        classify_route_state,
+        detect_temporal_rules,
+        extract_target_years,
+    )
     case = None
     for row in rows:
         rules = detect_temporal_rules(row.get("question",""), row.get("options",[]))
@@ -69,12 +77,17 @@ def test_detail_records_temporal_route_state():
 
 def test_detail_sha_on_routed_is_actual_context_sha():
     """on + ROUTED_WITH_TARGETS -> actual TimeContext SHA."""
-    from benchmark.runners.run_benchmark import compute_detail_provenance
     # This needs a real case to build TimeContext
     import json
+
+    from benchmark.runners.run_benchmark import compute_detail_provenance
     path = "benchmark/datasets/baziqa_contest8_2025_holdout_enriched.jsonl"
     rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
-    from benchmark.formatters.bazi_time_context import detect_temporal_rules, extract_target_years, classify_route_state
+    from benchmark.formatters.bazi_time_context import (
+        classify_route_state,
+        detect_temporal_rules,
+        extract_target_years,
+    )
     for row in rows:
         rules = detect_temporal_rules(row.get("question",""), row.get("options",[]))
         if "R6" in rules:
@@ -114,7 +127,11 @@ def test_load_routed_manifest_returns_full_frozen_item():
 def test_runtime_target_years_match_frozen_manifest():
     """Runtime target_years must match frozen manifest exactly."""
     import json
-    from benchmark.runners.run_benchmark import load_routed_manifest, _lookup_routed_entry
+
+    from benchmark.runners.run_benchmark import (
+        _lookup_routed_entry,
+        load_routed_manifest,
+    )
     manifest = load_routed_manifest("docs/phase6/6d/temporal_routed_cases.json")
     path = "benchmark/datasets/baziqa_contest8_2025_holdout_enriched.jsonl"
     rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
@@ -127,7 +144,10 @@ def test_runtime_target_years_match_frozen_manifest():
             frozen_years = tuple(entry.get("target_years", []))
             assert len(frozen_years) > 0
             # The manifest entry target_years should match what build_time_context would produce
-            from benchmark.formatters.bazi_time_context import build_time_context, TemporalRouteState
+            from benchmark.formatters.bazi_time_context import (
+                TemporalRouteState,
+                build_time_context,
+            )
             ctx = build_time_context(row, TemporalRouteState.ROUTED_WITH_TARGETS, frozen_target_years=frozen_years)
             if ctx is not None:
                 assert tuple(ctx.target_years) == frozen_years
@@ -138,7 +158,11 @@ def test_runtime_target_years_match_frozen_manifest():
 def test_prompt_uses_frozen_target_years_not_reextracted():
     """When manifest target_years differ from re-extracted, prompt must use manifest."""
     import json
-    from benchmark.runners.run_benchmark import build_benchmark_prompt, load_routed_manifest
+
+    from benchmark.runners.run_benchmark import (
+        build_benchmark_prompt,
+        load_routed_manifest,
+    )
 
     manifest = load_routed_manifest("docs/phase6/6d/temporal_routed_cases.json")
     path = "benchmark/datasets/baziqa_contest8_2025_holdout_enriched.jsonl"
@@ -184,7 +208,11 @@ def test_prompt_uses_frozen_target_years_not_reextracted():
 def test_prompt_uses_frozen_target_years_with_conflict():
     """Frozen target_years must override re-extracted years even when they conflict."""
     import json
-    from benchmark.runners.run_benchmark import build_benchmark_prompt, load_routed_manifest
+
+    from benchmark.runners.run_benchmark import (
+        build_benchmark_prompt,
+        load_routed_manifest,
+    )
 
     manifest = load_routed_manifest("docs/phase6/6d/temporal_routed_cases.json")
     path = "benchmark/datasets/baziqa_contest8_2025_holdout_enriched.jsonl"

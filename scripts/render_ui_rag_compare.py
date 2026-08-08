@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-
 BASE = Path(".tmp/ui-rag-compare")
 OUT = Path("docs/UI_RAG_COMPARE.md")
 

@@ -2,13 +2,12 @@ import json
 from pathlib import Path
 
 from benchmark.runners.import_baziqa_dataset import (
-    load_contest8_file,
     load_celebrity50_file,
-    normalize_contest8_questions,
+    load_contest8_file,
     normalize_celebrity_questions,
+    normalize_contest8_questions,
     write_jsonl,
 )
-
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "baziqa"
 

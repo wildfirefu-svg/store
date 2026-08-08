@@ -5,7 +5,11 @@ Supports 4 templates: dark (default), modern, scroll, night.
 Usage: python report_to_pdf.py input.md -o output.pdf [--template dark|modern|scroll|night]
 """
 
-import argparse, re, os, sys, tempfile
+import argparse
+import os
+import re
+import tempfile
+
 from fpdf import FPDF
 
 FONT_CANDIDATES_HEADER = [
@@ -435,8 +439,9 @@ def generate_pdf(md_path, pdf_path, template='dark', chart_data=None):
 
     if chart_data:
         try:
-            from chart_to_image import generate_chart_images
             import shutil
+
+            from chart_to_image import generate_chart_images
             img_dir = tempfile.mkdtemp(prefix="bazi_pdf_chart_")
             paths = generate_chart_images(chart_data, img_dir)
             chart_titles = {'wuxing': '五行分布', 'shishen': '十神分布', 'dayun': '大运趋势', 'liunian': '流年运势'}

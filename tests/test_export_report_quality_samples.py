@@ -1,4 +1,3 @@
-import json
 
 from scripts.export_report_quality_samples import build_row
 

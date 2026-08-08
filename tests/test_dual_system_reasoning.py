@@ -1,9 +1,11 @@
-from benchmark.formatters.dual_system_reasoning import (
-    build_bazi_pipeline_prompt, build_ziwei_pipeline_prompt,
-    build_judge_prompt, extract_judge_answer, judge_swap_seed, JUDGE_TEMPLATE_VERSION)
-from benchmark.formatters.chart_context import render_reasoned_context
 from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt
-
+from benchmark.formatters.chart_context import render_reasoned_context
+from benchmark.formatters.dual_system_reasoning import (
+    build_bazi_pipeline_prompt,
+    build_judge_prompt,
+    build_ziwei_pipeline_prompt,
+    judge_swap_seed,
+)
 
 _ZIWEI = {
     "basic_info": {"ming_gong_gan_zhi": "甲子", "shen_gong_position": "午",
@@ -54,5 +56,5 @@ def test_swap_reorders():
 def test_swap_seed_deterministic():
     assert judge_swap_seed("baziqa", "Q1", 0) == judge_swap_seed("baziqa", "Q1", 0)
     import hashlib
-    expected = int(hashlib.sha256("baziqa|Q1|0".encode()).hexdigest(), 16) % 2 == 1
+    expected = int(hashlib.sha256(b"baziqa|Q1|0").hexdigest(), 16) % 2 == 1
     assert judge_swap_seed("baziqa", "Q1", 0) == expected

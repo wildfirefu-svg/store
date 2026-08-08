@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Two-stage reasoning formatter for Phase 4.
 
 Stage 1: Label-blind reasoning (no A/B/C/D labels, can see option text).
@@ -8,14 +7,17 @@ Stage 2: Option matching with evidence.
 import hashlib
 import random
 import re
-from typing import List, Optional
 
 from benchmark.formatters.bazi_time_context import (
-    compute_branch_relation as _compute_branch_relation,
-    compute_gan_relation as _compute_gan_relation,
-    compute_shishen_combo,
     _KEY_SHENSHA,
     _TIME_KEYWORDS,
+    compute_shishen_combo,
+)
+from benchmark.formatters.bazi_time_context import (
+    compute_branch_relation as _compute_branch_relation,
+)
+from benchmark.formatters.bazi_time_context import (
+    compute_gan_relation as _compute_gan_relation,
 )
 
 # Stage 1 prompt template (normal mode with options)
@@ -132,7 +134,7 @@ _TIME_PHASE_INSTRUCTION = """
 - 时间定位是核心任务，不要回避具体年份。"""
 
 
-def is_time_location_question(question: str, options: List[str]) -> bool:
+def is_time_location_question(question: str, options: list[str]) -> bool:
     """Check if a question is time/location related.
 
     Returns True if:
@@ -293,7 +295,7 @@ def format_stage1_prompt(case: dict, exp_a: bool = False) -> str:
         )
 
 
-def format_stage2_prompt(case: dict, hypothesis: Optional[str] = None, evidence: List[str] = None, is_time: bool = False) -> str:
+def format_stage2_prompt(case: dict, hypothesis: str | None = None, evidence: list[str] = None, is_time: bool = False) -> str:
     """Format Stage 2 (option matching) prompt.
 
     - Includes A/B/C/D labels
@@ -327,7 +329,7 @@ def format_stage2_prompt(case: dict, hypothesis: Optional[str] = None, evidence:
     )
 
 
-def parse_stage1_result(raw: str) -> Optional[str]:
+def parse_stage1_result(raw: str) -> str | None:
     """Parse Stage 1 result to extract hypothesis.
 
     Priority:
@@ -356,7 +358,7 @@ def parse_stage1_result(raw: str) -> Optional[str]:
     return None
 
 
-def _get_liunian_for_year(chart: dict, year: int) -> Optional[dict]:
+def _get_liunian_for_year(chart: dict, year: int) -> dict | None:
     """Get liu_nian (流年) data for a specific year."""
     liu_nian = chart.get("liu_nian") or []
     for ln in liu_nian:
@@ -370,7 +372,7 @@ def _get_liunian_for_year(chart: dict, year: int) -> Optional[dict]:
 _SHISHEN_LABELS = ["比肩", "劫财", "食神", "伤官", "偏财", "正财", "七杀", "正官", "偏印", "正印"]
 
 
-def _get_question_type_hints(question: str) -> List[str]:
+def _get_question_type_hints(question: str) -> list[str]:
     """Get domain-specific hints based on question content."""
     hints = []
     q = question.lower()
@@ -406,7 +408,7 @@ def _get_question_type_hints(question: str) -> List[str]:
     return hints
 
 
-def _build_nontime_structured_evidence(case: dict) -> List[str]:
+def _build_nontime_structured_evidence(case: dict) -> list[str]:
     """Build structured命理 evidence for non-time questions (Experiment C).
 
     Unlike the default non-time path (which only lists the 4 option texts), this
@@ -468,7 +470,7 @@ def _build_nontime_structured_evidence(case: dict) -> List[str]:
     return evidence
 
 
-def _build_dayun_evidence(case: dict) -> List[str]:
+def _build_dayun_evidence(case: dict) -> list[str]:
     """Build pre-computed dayun (大运) evidence for time-location questions.
 
     Extracts da_yun from chart_input and formats as structured evidence.
@@ -735,7 +737,7 @@ def _build_dayun_evidence(case: dict) -> List[str]:
     return evidence
 
 
-def build_stage2_evidence(case: dict, hypothesis: str, mode: str = "all", exp_c: bool = False, exp_c2: bool = False) -> List[str]:
+def build_stage2_evidence(case: dict, hypothesis: str, mode: str = "all", exp_c: bool = False, exp_c2: bool = False) -> list[str]:
     """Build evidence list for Stage 2.
 
     Args:
@@ -768,7 +770,10 @@ def build_stage2_evidence(case: dict, hypothesis: str, mode: str = "all", exp_c:
         evidence.extend(_build_nontime_structured_evidence(case))
         evidence.append("")  # Separator
     elif exp_c2:
-        from benchmark.runners.per_option_scorer import format_option_scores, score_options
+        from benchmark.runners.per_option_scorer import (
+            format_option_scores,
+            score_options,
+        )
 
         evidence.extend(format_option_scores(score_options(case)))
         evidence.append("")  # Separator

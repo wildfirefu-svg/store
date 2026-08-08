@@ -8,10 +8,12 @@ from __future__ import annotations
 import json
 import re
 
-from benchmark.formatters.baziqa_prompt import format_birth_line
 from benchmark.formatters.bazi_time_context import (
-    build_time_context, TimeContext, TemporalRouteState,
+    TemporalRouteState,
+    TimeContext,
+    build_time_context,
 )
+from benchmark.formatters.baziqa_prompt import format_birth_line
 
 CHART_CONTEXT_TEMPLATE_VERSION = "approved_v1"
 SCHEMA_VERSIONS = ("legacy_v0", "approved_v1")

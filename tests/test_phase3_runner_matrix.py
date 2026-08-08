@@ -8,14 +8,13 @@ from __future__ import annotations
 import pytest
 
 from benchmark.phase3 import (
-    build_permutation_plan,
-    to_original_option_identity,
     aggregate_by_option_identity,
+    build_permutation_plan,
     mean_majority_share,
-    unanimous_case_rate,
     pairwise_identity_agreement,
+    to_original_option_identity,
+    unanimous_case_rate,
 )
-
 
 # ---------------------------------------------------------------------------
 # Task 6: shared cyclic permutation plan

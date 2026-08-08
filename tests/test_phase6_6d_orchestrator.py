@@ -12,8 +12,6 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from scripts.phase6_6d_orchestrator import (
-    ARMS,
-    CHART_SCHEMA,
     FROZEN_METHOD,
     FROZEN_MODEL,
     FROZEN_PROFILE,
@@ -21,7 +19,6 @@ from scripts.phase6_6d_orchestrator import (
     FROZEN_TEMPERATURE,
     FROZEN_THINKING_MODE,
     MODEL_LABEL,
-    PARSER_RATE_MIN,
     REPEATS,
     ROUTED_MANIFEST_PATH,
     SIXD_RECEIPT_REQUIRED_FIELDS,
@@ -32,8 +29,6 @@ from scripts.phase6_6d_orchestrator import (
     _build_schedule,
     _check_completeness,
     _compute_experiment_code_fingerprint,
-    _compute_schedule_metadata,
-    _merge_details,
     _prepare_run_context,
     _validate_frozen_protocol,
     _validate_phase1_receipt,
@@ -743,8 +738,7 @@ def _install_fake_runner(monkeypatch, captured=None):
                 f.write(json.dumps(row, ensure_ascii=False) + "\n")
         events_path = detail_path.replace(".jsonl", ".events.jsonl")
         with open(events_path, "w", encoding="utf-8") as f:
-            for _cid in case_ids:
-                f.write(json.dumps({"kind": "call_attempt"}) + "\n")
+            f.writelines(json.dumps({"kind": "call_attempt"}) + "\n" for _cid in case_ids)
             f.write(json.dumps({"kind": "call_meta",
                                 "response_model": model}) + "\n")
         manifest_path = detail_path.replace(".jsonl", ".manifest.json")

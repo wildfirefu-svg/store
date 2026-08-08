@@ -1,4 +1,3 @@
-import pytest
 
 
 def test_generate_markdown_report():

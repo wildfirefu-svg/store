@@ -2,12 +2,16 @@
 from datetime import date
 
 import pytest
+from bazi_snapshot_helper import (
+    SNAPSHOT_CASES,
+    SNAPSHOT_DIR,
+    assert_snapshot_equal,
+    compute_e2e,
+    freeze_lunar_backend,
+    load_snapshot,
+)
 
 import bazi_calculator as bc
-from bazi_snapshot_helper import (
-    SNAPSHOT_CASES, SNAPSHOT_DIR,
-    assert_snapshot_equal, compute_e2e, freeze_lunar_backend, load_snapshot,
-)
 
 EXPECTED_TOP_KEYS = {
     'status', 'four_pillars', 'dayun_summary', 'day_master', 'wuxing_stats', 'shishen_stats',

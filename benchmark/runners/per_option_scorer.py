@@ -8,9 +8,8 @@ import re
 from collections import Counter
 from typing import Any
 
-from benchmark.scorers.choice_accuracy import extract_choice, load_jsonl
 from benchmark.formatters.two_stage_reasoning import is_time_location_question
-
+from benchmark.scorers.choice_accuracy import extract_choice, load_jsonl
 
 DOMAIN_PRIORITY = ("marriage", "family", "health", "career", "wealth", "personality")
 

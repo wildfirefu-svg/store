@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Vector semantic search for entire knowledge base using ChromaDB."""
 
-import json, os, sys, time
+import json
+import os
+import time
+
 import chromadb
-from chromadb.config import Settings
 
 KB_DIR = os.path.dirname(__file__)
 COLLECTION_NAME = "bazi_knowledge_base"

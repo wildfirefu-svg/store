@@ -5,8 +5,8 @@ Tests alignment between chart calculations and verified life events.
 """
 
 import json
-import sys
 import os
+import sys
 from collections import defaultdict
 from datetime import date
 
@@ -213,13 +213,9 @@ def score_event_v2(event, dayun, liu_nian_gan, liu_nian_zhi, day_master, four_pi
 
         # Adjust weight: 用神 boosts positive events, 忌神 boosts negative events
         adjusted_weight = weight
-        if is_yong and is_positive:
+        if is_yong and is_positive or is_ji and is_negative:
             adjusted_weight *= 1.5
-        elif is_ji and is_negative:
-            adjusted_weight *= 1.5
-        elif is_yong and is_negative:
-            adjusted_weight *= 0.5
-        elif is_ji and is_positive:
+        elif is_yong and is_negative or is_ji and is_positive:
             adjusted_weight *= 0.5
 
         if ss == dayun_shishen_gan:
@@ -234,9 +230,7 @@ def score_event_v2(event, dayun, liu_nian_gan, liu_nian_zhi, day_master, four_pi
     if liunian_shishen in shishen_map:
         base_w = shishen_map[liunian_shishen] * 0.15
         ss_wx = shishen_to_wuxing(liunian_shishen, day_master)
-        if ss_wx in yongshen_info['yong_shen_wuxing'] and is_positive:
-            base_w *= 1.5
-        elif ss_wx in yongshen_info['ji_shen_wuxing'] and is_negative:
+        if ss_wx in yongshen_info['yong_shen_wuxing'] and is_positive or ss_wx in yongshen_info['ji_shen_wuxing'] and is_negative:
             base_w *= 1.5
         score += base_w
         reasons.append(f'流年{liunian_shishen}')
@@ -288,7 +282,7 @@ def score_event_v2(event, dayun, liu_nian_gan, liu_nian_zhi, day_master, four_pi
 
     # Health-specific bonuses
     if category == 'health':
-        from bazi_calculator import GAN_WUXING as GW, ZHI_WUXING as ZW
+        from bazi_calculator import ZHI_WUXING as ZW
         dm_wx = yongshen_info.get('day_master_wuxing', '')
         ln_wx = ZW.get(liu_nian_zhi, '')
         ke_cycle = {('金','木'),('木','土'),('土','水'),('水','火'),('火','金')}
@@ -359,7 +353,12 @@ def score_event_v2(event, dayun, liu_nian_gan, liu_nian_zhi, day_master, four_pi
 
     # 神煞 trigger: 天乙贵人年→吉, 羊刃年→凶, 桃花年→感情
     try:
-        from bazi_calculator import TIANYI_GUIREN, YANGREN_MAP, TAOHUA_MAP, calculate_shensha
+        from bazi_calculator import (
+            TAOHUA_MAP,
+            TIANYI_GUIREN,
+            YANGREN_MAP,
+            calculate_shensha,
+        )
         guiren_zhi = TIANYI_GUIREN.get(day_master, ())
         if liu_nian_zhi in guiren_zhi:
             if is_positive:
@@ -594,7 +593,7 @@ report['key_findings'] = [
     },
     {
         'finding': '时辰缺失严重影响准确性',
-        'detail': f'134例中仅13例有时辰(9.7%)，失去时柱意味着失去晚年大运和子女宫信息',
+        'detail': '134例中仅13例有时辰(9.7%)，失去时柱意味着失去晚年大运和子女宫信息',
         'recommendation': '建议扩充有时辰的命例库，最少需要50+有时辰案例以获得统计显著性',
     },
     {
@@ -610,6 +609,6 @@ with open(OUT_PATH, 'w', encoding='utf-8') as f:
 
 print(f"\n报告已保存: {OUT_PATH}")
 print(f"总览: {report['summary']}")
-print(f"类别: ")
+print("类别: ")
 for cat, info in report['category_analysis'].items():
     print(f"  {cat}: avg={info['avg_score']}, pos={info['positive_rate']}, n={info['count']}")

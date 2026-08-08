@@ -15,9 +15,9 @@ import json
 import os
 import subprocess
 import sys
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
-
+from typing import Any
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 _DEFAULT_CONFIGS_YAML = _PROJECT_ROOT / "benchmark" / "configs" / "baziqa_retrieval_configs.yaml"
@@ -83,7 +83,7 @@ def render_report(rows):
 
 
 # ------------------------------------------------------------- yaml-driven v2
-def _load_yaml_configs(path: Path) -> List[Dict[str, Any]]:
+def _load_yaml_configs(path: Path) -> list[dict[str, Any]]:
     import yaml
     raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     if not isinstance(raw, list):
@@ -91,9 +91,9 @@ def _load_yaml_configs(path: Path) -> List[Dict[str, Any]]:
     return raw
 
 
-def _config_envs(cfg: Dict[str, Any]) -> Dict[str, str]:
+def _config_envs(cfg: dict[str, Any]) -> dict[str, str]:
     """Translate a yaml config entry into the env vars consumed by case_index."""
-    env: Dict[str, str] = {}
+    env: dict[str, str] = {}
     env["BAZI_RAG_STRUCTURED_WEIGHT"] = "1" if cfg.get("structured") else "0"
     env["BAZI_RAG_SEMANTIC"] = "1" if cfg.get("semantic") else "0"
     if cfg.get("embedding_vector"):
@@ -109,7 +109,7 @@ def _config_envs(cfg: Dict[str, Any]) -> Dict[str, str]:
     return env
 
 
-def _resolve_configs(args: argparse.Namespace, yaml_path: Path) -> List[Dict[str, Any]]:
+def _resolve_configs(args: argparse.Namespace, yaml_path: Path) -> list[dict[str, Any]]:
     entries = _load_yaml_configs(yaml_path)
     by_id = {e.get("id"): e for e in entries}
     if args.configs:
@@ -124,7 +124,7 @@ def _resolve_configs(args: argparse.Namespace, yaml_path: Path) -> List[Dict[str
     return [by_id[i] for i in ids]
 
 
-def _run_one(cfg: Dict[str, Any], repeat: int, args: argparse.Namespace) -> "tuple[Path, bool]":
+def _run_one(cfg: dict[str, Any], repeat: int, args: argparse.Namespace) -> tuple[Path, bool]:
     """Invoke run_benchmark.py once for (config, repeat).
 
     Returns ``(details_path, skipped)``. ``skipped`` is True when --append
@@ -180,7 +180,7 @@ def _run_one(cfg: Dict[str, Any], repeat: int, args: argparse.Namespace) -> "tup
     return details, False
 
 
-def _backfill_config_id(details_path: Path, cfg_id: str, model_name: str) -> List[Dict[str, Any]]:
+def _backfill_config_id(details_path: Path, cfg_id: str, model_name: str) -> list[dict[str, Any]]:
     """Ensure every row in details_path carries config_id + model_name.
 
     Rows produced by older run_benchmark builds may not echo --config-id; this
@@ -188,7 +188,7 @@ def _backfill_config_id(details_path: Path, cfg_id: str, model_name: str) -> Lis
     """
     if not details_path.exists():
         return []
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for line in details_path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
@@ -204,17 +204,17 @@ def _backfill_config_id(details_path: Path, cfg_id: str, model_name: str) -> Lis
     return rows
 
 
-def _append_rollback(rollback_path: Path, rows: Iterable[Dict[str, Any]]) -> None:
+def _append_rollback(rollback_path: Path, rows: Iterable[dict[str, Any]]) -> None:
     rollback_path.parent.mkdir(parents=True, exist_ok=True)
     with rollback_path.open("a", encoding="utf-8") as f:
         for row in rows:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
-def _aggregate_rows(configs: List[Dict[str, Any]], args: argparse.Namespace) -> List[Dict[str, Any]]:
-    rows: List[Dict[str, Any]] = []
+def _aggregate_rows(configs: list[dict[str, Any]], args: argparse.Namespace) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     for cfg in configs:
-        accs: List[float] = []
+        accs: list[float] = []
         for repeat in range(1, args.repeats + 1):
             p = Path(args.output_dir) / f"{cfg['id']}_run{repeat}.jsonl"
             if p.exists():
@@ -231,7 +231,7 @@ def _aggregate_rows(configs: List[Dict[str, Any]], args: argparse.Namespace) -> 
     return rows
 
 
-def _render_v2_report(rows: List[Dict[str, Any]]) -> str:
+def _render_v2_report(rows: list[dict[str, Any]]) -> str:
     lines = [
         "# BaziQA Retrieval Ablation Report",
         "",

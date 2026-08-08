@@ -50,8 +50,7 @@ def score_safety(text):
                 "position": match.start(),
             })
             score -= vp["weight"]
-            if score < 0.0:
-                score = 0.0
+            score = max(score, 0.0)
 
     return {
         "score": max(0.0, min(1.0, score)),

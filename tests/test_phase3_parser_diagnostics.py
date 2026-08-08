@@ -7,8 +7,6 @@ not contaminate position-bias analysis.
 
 from __future__ import annotations
 
-import pytest
-
 from benchmark.phase3 import classify_parser_failure
 
 

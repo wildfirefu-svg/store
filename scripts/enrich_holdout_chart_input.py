@@ -19,11 +19,12 @@ if __package__ in (None, ""):
 
 from scripts.enrich_baziqa_chart_input import (
     enrich_row as _corpus_enrich_row,
+)
+from scripts.enrich_baziqa_chart_input import (
     load_jsonl,
     summarize_rows,
     write_jsonl,
 )
-from bazi_calculator import compute_chart  # re-exported so tests can monkeypatch it
 
 
 def enrich_row(row, compute_chart_fn=None):

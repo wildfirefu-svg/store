@@ -9,7 +9,6 @@
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
@@ -19,12 +18,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from benchmark.runners.profiles import (
-    visibility_requirements,
     assert_visibility,
     resolve_profile,
+    visibility_requirements,
 )
-from benchmark.runners.profiles import EvalProfile
-
 
 # ---- _REASONED_ARM_MAP 测试（通过 run_benchmark 内部映射） ----
 

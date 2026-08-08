@@ -5,11 +5,10 @@ from __future__ import annotations
 import json
 import random
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from bazi_features import extract
 from case_index import CaseIndex
-
 
 MAX_TOTAL_CHARS = 8000
 MAX_FACT_PER_CASE = 5
@@ -17,7 +16,7 @@ MAX_FEWSHOT_EXAMPLES = 5
 MAX_FEWSHOT_OPTION_CHARS = 60
 
 
-def load_fewshot_examples(path: Optional[Any]) -> List[Dict[str, Any]]:
+def load_fewshot_examples(path: Any | None) -> list[dict[str, Any]]:
     """Load few-shot examples from a JSONL file.
 
     Supports two schemas:
@@ -32,7 +31,7 @@ def load_fewshot_examples(path: Optional[Any]) -> List[Dict[str, Any]]:
     p = Path(path)
     if not p.exists():
         return []
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     with p.open("r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -56,7 +55,7 @@ def load_fewshot_examples(path: Optional[Any]) -> List[Dict[str, Any]]:
     return out
 
 
-def _format_fewshot_example(idx: int, row: Dict[str, Any]) -> str:
+def _format_fewshot_example(idx: int, row: dict[str, Any]) -> str:
     person = row.get("person") or {}
     birth = person.get("birth") or {}
     gender = person.get("gender") or "?"
@@ -64,7 +63,7 @@ def _format_fewshot_example(idx: int, row: Dict[str, Any]) -> str:
     domain = row.get("domain") or "unknown"
     question = str(row.get("question") or "").strip()
     options = row.get("options") or []
-    options_text_lines: List[str] = []
+    options_text_lines: list[str] = []
     for opt in options[:4]:
         text = str(opt).strip()
         if len(text) > MAX_FEWSHOT_OPTION_CHARS:
@@ -81,7 +80,7 @@ def _format_fewshot_example(idx: int, row: Dict[str, Any]) -> str:
     )
 
 
-def _format_case(idx: int, case: Dict[str, Any]) -> str:
+def _format_case(idx: int, case: dict[str, Any]) -> str:
     facts = case.get("facts") or []
     bullets = "\n".join(f"  - {fact}" for fact in facts[:MAX_FACT_PER_CASE])
     name = case.get("name") or case.get("person_id") or f"案例{idx}"
@@ -101,7 +100,7 @@ def _format_case(idx: int, case: Dict[str, Any]) -> str:
     )
 
 
-def _format_option_evidence_item(item: Dict[str, Any]) -> str:
+def _format_option_evidence_item(item: dict[str, Any]) -> str:
     reasons = item.get("match_reasons") or []
     reason_text = "、".join(str(r) for r in reasons) or "unknown"
     return (
@@ -114,8 +113,8 @@ def _format_option_evidence_item(item: Dict[str, Any]) -> str:
     )
 
 
-def _format_option_evidence_block(option_evidence: Dict[str, List[Dict[str, Any]]], options: List[str]) -> str:
-    lines: List[str] = [
+def _format_option_evidence_block(option_evidence: dict[str, list[dict[str, Any]]], options: list[str]) -> str:
+    lines: list[str] = [
         "<选项证据>",
         "以下证据按当前题 A/B/C/D 选项分别检索，均来自其他命例，仅供参考，非当前命主，不得直接照搬历史结论。",
         "请按以下步骤推理：",
@@ -140,7 +139,7 @@ def _format_option_evidence_block(option_evidence: Dict[str, List[Dict[str, Any]
 
 
 def _compose_prompt(base: str, fewshot_block: str, injection: str) -> str:
-    parts: List[str] = []
+    parts: list[str] = []
     if fewshot_block:
         parts.append(fewshot_block)
     parts.append(base)
@@ -154,7 +153,7 @@ def _compose_prompt(base: str, fewshot_block: str, injection: str) -> str:
         return full[:MAX_TOTAL_CHARS]
     base_keep = max(0, len(base) - overflow - 4)
     truncated_base = base[:base_keep] + "..."
-    rebuilt_parts: List[str] = []
+    rebuilt_parts: list[str] = []
     if fewshot_block:
         rebuilt_parts.append(fewshot_block)
     rebuilt_parts.append(truncated_base)
@@ -165,16 +164,16 @@ def _compose_prompt(base: str, fewshot_block: str, injection: str) -> str:
 
 def build_system_prompt(
     base_system: str,
-    chart: Dict[str, Any],
+    chart: dict[str, Any],
     case_index: CaseIndex,
     enable_rag: bool = True,
     k: int = 2,
-    few_shot_examples: Optional[List[Dict[str, Any]]] = None,
+    few_shot_examples: list[dict[str, Any]] | None = None,
     retrieval_mode: str = "legacy",
-    question: Optional[str] = None,
-    options: Optional[List[str]] = None,
+    question: str | None = None,
+    options: list[str] | None = None,
     option_evidence_k: int = 2,
-    exclude_case_id: Optional[str] = None,
+    exclude_case_id: str | None = None,
 ) -> str:
     base = str(base_system or "")
 
@@ -233,7 +232,7 @@ def build_system_prompt(
             return base
         return f"{fewshot_block}\n\n{base}".strip()[:MAX_TOTAL_CHARS]
 
-    blocks: List[str] = []
+    blocks: list[str] = []
     blocks.append(
         "<类似命例>\n以下命例**仅供参考，非当前命主**，不得直接照搬，需结合本盘自身格局。\n"
     )
@@ -278,10 +277,10 @@ def format_apb_instruction_block(has_evidence: bool = True) -> str:
 
 
 def select_fewshot_examples(
-    examples: Optional[List[Dict[str, Any]]],
-    domain: Optional[str] = None,
+    examples: list[dict[str, Any]] | None,
+    domain: str | None = None,
     limit: int = 1,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     if not examples:
         return []
     if limit is None or limit <= 0:
@@ -290,7 +289,7 @@ def select_fewshot_examples(
     return filtered[:limit]
 
 
-def render_dynamic_fewshot(example: Dict[str, Any], seed: int = 42, include_reasoning: bool = False) -> Dict[str, Any]:
+def render_dynamic_fewshot(example: dict[str, Any], seed: int = 42, include_reasoning: bool = False) -> dict[str, Any]:
     options = example.get("option_identities") or []
     if len(options) != 4:
         raise ValueError(f"expected 4 option_identities, got {len(options)}")

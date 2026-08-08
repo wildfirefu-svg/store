@@ -3,7 +3,9 @@
 Uses character bigram Jaccard similarity across all imagery dimensions.
 """
 
-import json, os, re, sys
+import json
+import os
+import re
 
 
 def load():

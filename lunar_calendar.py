@@ -6,9 +6,9 @@ import json
 import os
 import subprocess
 import sys
-from datetime import date
 
 from config import IZTRO_TIMEOUT
+
 
 def _find_python():
     """Find a Python interpreter that has iztro_py installed. Returns path or None."""
