@@ -109,3 +109,27 @@ def test_load_routed_manifest_returns_full_frozen_item():
         assert "matched_rules" in item
         assert "target_years" in item
         break
+
+
+def test_runtime_target_years_match_frozen_manifest():
+    """Runtime target_years must match frozen manifest exactly."""
+    import json
+    from benchmark.runners.run_benchmark import load_routed_manifest, _lookup_routed_entry
+    manifest = load_routed_manifest("docs/phase6/6d/temporal_routed_cases.json")
+    path = "benchmark/datasets/baziqa_contest8_2025_holdout_enriched.jsonl"
+    rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
+    for row in rows:
+        case_id = str(row.get("case_id", ""))
+        year = str(row.get("source_year", ""))
+        entry = _lookup_routed_entry(row, manifest)
+        if entry and entry.get("route_state") == "ROUTED_WITH_TARGETS":
+            # Verify the frozen target_years are used, not re-extracted
+            frozen_years = tuple(entry.get("target_years", []))
+            assert len(frozen_years) > 0
+            # The manifest entry target_years should match what build_time_context would produce
+            from benchmark.formatters.bazi_time_context import build_time_context, TemporalRouteState
+            ctx = build_time_context(row, TemporalRouteState.ROUTED_WITH_TARGETS, frozen_target_years=frozen_years)
+            if ctx is not None:
+                assert tuple(ctx.target_years) == frozen_years
+            return
+    pytest.skip("No ROUTED_WITH_TARGETS case found")

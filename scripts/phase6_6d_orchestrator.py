@@ -852,6 +852,22 @@ def check_6d_gate(receipt):
         raise SystemExit(
             f"6D receipt experiment_conditions mismatch: "
             f"{receipt.get('experiment_conditions')!r} != {expected_conditions!r}")
+    # Audit verification (3-way SHA): re-read audit_index.json from the
+    # archive and verify its SHA-256 matches the receipt audit_index_sha256.
+    # Only enforced when the archive directory actually exists, so unit tests
+    # with synthetic receipts (archive_dir placeholder) are unaffected.
+    archive_dir = receipt.get("archive_dir")
+    audit_index_sha = receipt.get("audit_index_sha256")
+    if archive_dir and audit_index_sha and os.path.isdir(archive_dir):
+        audit_path = os.path.join(archive_dir, "audit_index.json")
+        if not os.path.exists(audit_path):
+            raise SystemExit(
+                f"6D receipt audit verification: audit_index.json missing: {audit_path}")
+        actual_audit_sha = _sha256_file(audit_path)
+        if actual_audit_sha != audit_index_sha:
+            raise SystemExit(
+                f"6D receipt audit_index_sha256 mismatch: "
+                f"receipt={audit_index_sha!r} current={actual_audit_sha!r}")
     return True
 
 
@@ -1053,6 +1069,17 @@ def _validate_phase1_receipt(receipt_path, manifest_path):
                 f"phase1 receipt dataset_sha256_by_year mismatch: "
                 f"year={year} receipt={receipt_ds.get(year)!r} "
                 f"manifest={sha!r}")
+    # Re-compute dataset SHA from current files and compare with receipt
+    datasets_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "benchmark", "datasets")
+    for year, expected_sha in receipt.get("dataset_sha256_by_year", {}).items():
+        ds_path = os.path.join(datasets_dir, f"baziqa_contest8_{year}_holdout_enriched.jsonl")
+        if not os.path.exists(ds_path):
+            raise SystemExit(f"phase1 receipt validation: dataset missing: {ds_path}")
+        actual_sha = hashlib.sha256(open(ds_path, "rb").read()).hexdigest()
+        if actual_sha != expected_sha:
+            raise SystemExit(
+                f"phase1 receipt dataset_sha256 mismatch: year={year} "
+                f"receipt={expected_sha!r} current={actual_sha!r}")
     return receipt
 
 
@@ -1097,6 +1124,13 @@ def _prepare_run_context(output_dir, run_id, resume, run_manifest, code_fingerpr
         raise SystemExit(f"run context reject: missing fields {missing}")
     for field in ("temporal_context_version", "temporal_routed_cases_sha256",
                   "extraction_strategy_sha256", "condition_manifest_sha256"):
+        if context.get(field) != run_manifest.get(field):
+            raise SystemExit(
+                f"run context reject: {field} drift "
+                f"(context={context.get(field)!r}, "
+                f"current={run_manifest.get(field)!r})")
+    for field in ("dataset_sha256_by_year", "dataset_set_sha256",
+                  "experiment_conditions"):
         if context.get(field) != run_manifest.get(field):
             raise SystemExit(
                 f"run context reject: {field} drift "

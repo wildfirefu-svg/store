@@ -95,24 +95,23 @@ def generate_routed_manifest(
     all_entries: list[dict] = []
     sha_by_year: dict[str, str] = {}
     n_total = 0
-    set_hasher = hashlib.sha256()
     for y in sorted(years):
         path = os.path.join(datasets_dir, _DATASET_FILENAME.format(year=y))
         if not os.path.exists(path):
             raise SystemExit(f"dataset not found: {path}")
         sha_by_year[y] = compute_dataset_sha256(path)
-        with open(path, "rb") as f:
-            for chunk in iter(lambda: f.read(8192), b""):
-                set_hasher.update(chunk)
         all_entries.extend(audit_dataset(y, path))
         with open(path, encoding="utf-8") as f:
             n_total += sum(1 for ln in f if ln.strip())
     n_routed = len(all_entries)
     status = "PASS" if n_routed >= _BLOCK_THRESHOLD else "BLOCKED"
+    dataset_set_sha256 = hashlib.sha256(
+        json.dumps(sha_by_year, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
     receipt = {
         "status": status,
         "dataset_sha256_by_year": sha_by_year,
-        "dataset_set_sha256": set_hasher.hexdigest(),
+        "dataset_set_sha256": dataset_set_sha256,
         "temporal_routed_cases_sha256": _canonical_sha256(all_entries),
         "n_routed": n_routed,
         "n_total": n_total,

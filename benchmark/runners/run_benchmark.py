@@ -308,25 +308,35 @@ def load_routed_manifest(path: str) -> dict:
     return manifest
 
 
-def _lookup_route_state(case: dict, routed_manifest) -> str | None:
-    """Look up route_state from the frozen manifest; fail-closed (None) when the
-    case is absent or the manifest is not loaded (year/case_id mismatch -> miss)."""
+def _lookup_routed_entry(case: dict, routed_manifest) -> dict | None:
+    """Look up the full frozen entry {route_state, matched_rules, target_years}
+    from the routed manifest; fail-closed (None) when the case is absent or the
+    manifest is not loaded (year/case_id mismatch -> miss)."""
     if not routed_manifest:
         return None
     case_id = str((case or {}).get("case_id", ""))
     year = str((case or {}).get("source_year") or "")
-    entry = routed_manifest.get((year, case_id))
+    return routed_manifest.get((year, case_id))
+
+
+def _lookup_route_state(case: dict, routed_manifest) -> str | None:
+    """Look up route_state from the frozen manifest; fail-closed (None) when the
+    case is absent or the manifest is not loaded (year/case_id mismatch -> miss)."""
+    entry = _lookup_routed_entry(case, routed_manifest)
     if entry is None:
         return None
     return entry.get("route_state")
 
 
-def compute_detail_provenance(case: dict, route_state, time_context_injection: str):
+def compute_detail_provenance(case: dict, route_state, time_context_injection: str,
+                              frozen_target_years: tuple[int, ...] | None = None):
     """Return ``(route_state, sha256_or_null)`` for a detail row.
 
     ``route_state`` comes from the frozen manifest and is invariant to the
     injection switch. ``off`` -> sha=None; ``on`` + routed -> actual TimeContext
-    SHA-256; ``on`` + NOT_ROUTED (or None) -> None.
+    SHA-256; ``on`` + NOT_ROUTED (or None) -> None. ``frozen_target_years``
+    (from the frozen manifest) is forwarded to ``build_time_context`` so the
+    runtime does not re-extract target years from the question.
     """
     state_str = route_state.value if hasattr(route_state, "value") else route_state
     if time_context_injection != "on":
@@ -340,7 +350,8 @@ def compute_detail_provenance(case: dict, route_state, time_context_injection: s
         state_enum = TemporalRouteState(state_str)
     except ValueError:
         return state_str, None
-    ctx = build_time_context(case, state_enum)
+    ctx = build_time_context(case, state_enum,
+                             frozen_target_years=frozen_target_years)
     if ctx is None:
         return state_str, None
     return state_str, ctx.sha256()
@@ -1140,9 +1151,15 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
         print(f"  [{i+1}/{len(limited_cases)}] {case_id}")
 
         option_scores = None
-        route_state = _lookup_route_state(case, routed_manifest)
+        routed_entry = _lookup_routed_entry(case, routed_manifest)
+        route_state = (routed_entry or {}).get("route_state")
+        frozen_target_years = (
+            tuple(routed_entry.get("target_years", []))
+            if routed_entry else None
+        )
         detail_route_state, detail_time_sha = compute_detail_provenance(
-            case, route_state, time_context_injection)
+            case, route_state, time_context_injection,
+            frozen_target_years=frozen_target_years)
         if phase4_direct_c2:
             from benchmark.runners.per_option_scorer import score_options
 

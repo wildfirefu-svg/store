@@ -436,7 +436,8 @@ def _resolve_birth_year(case: dict) -> int | None:
 
 
 def build_time_context(
-    case: dict, route_state: TemporalRouteState | None = None
+    case: dict, route_state: TemporalRouteState | None = None,
+    frozen_target_years: tuple[int, ...] | None = None,
 ) -> TimeContext | None:
     """Build a TimeContext from a case dict.
 
@@ -444,6 +445,10 @@ def build_time_context(
     ``detect_temporal_rules`` + ``extract_target_years``. Returns None when the
     resolved state is NOT_ROUTED. ROUTED_WITHOUT_TARGETS builds the context
     with empty option_liunian; ROUTED_WITH_TARGETS builds the full context.
+
+    When ``frozen_target_years`` is provided, it is used verbatim instead of
+    re-extracting target years from the question/options (frozen-manifest
+    provenance: runtime target_years must match the frozen manifest).
     """
     question = case.get("question", "")
     options = case.get("options", [])
@@ -461,7 +466,10 @@ def build_time_context(
         return None
 
     chart = case.get("chart_input") or {}
-    target_years = extract_target_years(question, options, birth_year)
+    if frozen_target_years is not None:
+        target_years = tuple(frozen_target_years)
+    else:
+        target_years = extract_target_years(question, options, birth_year)
 
     # --- Natal structure ---
     day_master_raw = chart.get("day_master", "")
