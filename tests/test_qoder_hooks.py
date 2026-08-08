@@ -84,6 +84,18 @@ def test_guard_ampersand_file_redirect_still_denied():
     assert proc.returncode == 2
 
 
+def test_guard_word_suffixes_do_not_fire_write_hints():
+    # remove/confirm/model/guarantee 等词的尾部不应命中 move/rm/del/tee 提示。
+    proc = run_hook(
+        GUARD,
+        bash_payload(
+            "git add benchmark/datasets/x.jsonl; remove stale cache; "
+            "confirm model guarantee"
+        ),
+    )
+    assert proc.returncode == 0
+
+
 def test_guard_bash_copy_write_denied():
     proc = run_hook(GUARD, bash_payload("cp evil.json data/cases_real_db.json"))
     assert proc.returncode == 2

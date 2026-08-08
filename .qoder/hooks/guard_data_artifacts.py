@@ -34,8 +34,10 @@ FORBIDDEN_PATTERNS = (
 
 _WRITE_HINTS = re.compile(
     # >>?(?!&\d): 排除 2>&1 这类 fd 合并（非文件写入）；>&file 仍命中。
-    r"(>>?(?!&\d)|mv\b|move\b|cp\b|copy\b|tee\b|rm\b|del\b|erase\b|remove-item\b"
-    r"|set-content\b|out-file\b|git\s+rm\b|git\s+restore\b|git\s+checkout\s+--)",
+    # 词类提示均带前后 \b，避免 remove/confirm/model/guarantee 词尾误命中。
+    r"(>>?(?!&\d)|\bmv\b|\bmove\b|\bcp\b|\bcopy\b|\btee\b|\brm\b|\bdel\b"
+    r"|\berase\b|\bremove-item\b|\bset-content\b|\bout-file\b"
+    r"|git\s+rm\b|git\s+restore\b|git\s+checkout\s+--)",
     re.IGNORECASE,
 )
 
