@@ -179,3 +179,42 @@ def test_prompt_uses_frozen_target_years_not_reextracted():
         return
 
     pytest.skip("No ROUTED_WITH_TARGETS case with target_years found")
+
+
+def test_prompt_uses_frozen_target_years_with_conflict():
+    """Frozen target_years must override re-extracted years even when they conflict."""
+    import json
+    from benchmark.runners.run_benchmark import build_benchmark_prompt, load_routed_manifest
+
+    manifest = load_routed_manifest("docs/phase6/6d/temporal_routed_cases.json")
+    path = "benchmark/datasets/baziqa_contest8_2025_holdout_enriched.jsonl"
+    rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
+
+    for row in rows:
+        case_id = str(row.get("case_id", ""))
+        year = str(row.get("source_year", ""))
+        key = (year, case_id)
+        if key not in manifest:
+            continue
+        entry = manifest[key]
+        if entry.get("route_state") != "ROUTED_WITH_TARGETS":
+            continue
+        frozen_years = tuple(entry.get("target_years", []))
+        if not frozen_years:
+            continue
+
+        conflict_years = (2099,)
+        prompt = build_benchmark_prompt(
+            row, method="direct_choice", chart_schema_version="v1",
+            profile_formatter="format_reasoned_choice_prompt", ziwei_arm="none",
+            time_context_injection="on", route_state="ROUTED_WITH_TARGETS",
+            frozen_target_years=conflict_years)
+
+        assert "2099" in prompt, "conflict year 2099 not in prompt (frozen_target_years not used)"
+
+        original_year = frozen_years[0]
+        if str(original_year) != "2099":
+            assert "2099" in prompt
+        return
+
+    pytest.skip("No ROUTED_WITH_TARGETS case with target_years found")
