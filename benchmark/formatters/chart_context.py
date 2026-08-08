@@ -402,6 +402,7 @@ def render_reasoned_context(
     ziwei_arm: str,
     time_context_injection: str = "off",
     route_state=None,
+    frozen_target_years: tuple[int, ...] | None = None,
 ) -> str:
     """Render context for reasoned choice ablation arm.
 
@@ -457,7 +458,7 @@ def render_reasoned_context(
         if isinstance(state, str):
             state = TemporalRouteState(state)
         if state != TemporalRouteState.NOT_ROUTED:
-            ctx = build_time_context(case, state)
+            ctx = build_time_context(case, state, frozen_target_years=frozen_target_years)
             if ctx is not None:
                 result = result + "\n\n" + format_temporal_context(ctx)
 

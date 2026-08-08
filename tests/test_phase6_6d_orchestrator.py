@@ -244,6 +244,48 @@ def test_resume_abba_drift_fail_closed(tmp_path):
         _prepare_run_context(tmp_path, "test_run2", True, drifted, code_fp)
 
 
+def test_resume_rejects_dataset_sha256_by_year_drift(tmp_path):
+    """Resume must reject when dataset_sha256_by_year drifts."""
+    protocol = _validate_frozen_protocol(
+        FROZEN_PROVIDER, FROZEN_MODEL, FROZEN_THINKING_MODE,
+        FROZEN_TEMPERATURE, FROZEN_PROFILE, FROZEN_METHOD)
+    code_fp = _compute_experiment_code_fingerprint()
+    rm = build_run_manifest(FROZEN_PROVIDER, FROZEN_MODEL, protocol, code_fp, _MANIFEST)
+    _prepare_run_context(tmp_path, "ds_year_drift", False, rm, code_fp)
+    drifted = dict(rm)
+    drifted["dataset_sha256_by_year"] = {"9999": "0" * 64}
+    with pytest.raises(SystemExit, match="dataset_sha256_by_year drift"):
+        _prepare_run_context(tmp_path, "ds_year_drift", True, drifted, code_fp)
+
+
+def test_resume_rejects_dataset_set_sha256_drift(tmp_path):
+    """Resume must reject when dataset_set_sha256 drifts."""
+    protocol = _validate_frozen_protocol(
+        FROZEN_PROVIDER, FROZEN_MODEL, FROZEN_THINKING_MODE,
+        FROZEN_TEMPERATURE, FROZEN_PROFILE, FROZEN_METHOD)
+    code_fp = _compute_experiment_code_fingerprint()
+    rm = build_run_manifest(FROZEN_PROVIDER, FROZEN_MODEL, protocol, code_fp, _MANIFEST)
+    _prepare_run_context(tmp_path, "ds_set_drift", False, rm, code_fp)
+    drifted = dict(rm)
+    drifted["dataset_set_sha256"] = "0" * 64
+    with pytest.raises(SystemExit, match="dataset_set_sha256 drift"):
+        _prepare_run_context(tmp_path, "ds_set_drift", True, drifted, code_fp)
+
+
+def test_resume_rejects_experiment_conditions_drift(tmp_path):
+    """Resume must reject when experiment_conditions drift."""
+    protocol = _validate_frozen_protocol(
+        FROZEN_PROVIDER, FROZEN_MODEL, FROZEN_THINKING_MODE,
+        FROZEN_TEMPERATURE, FROZEN_PROFILE, FROZEN_METHOD)
+    code_fp = _compute_experiment_code_fingerprint()
+    rm = build_run_manifest(FROZEN_PROVIDER, FROZEN_MODEL, protocol, code_fp, _MANIFEST)
+    _prepare_run_context(tmp_path, "exp_cond_drift", False, rm, code_fp)
+    drifted = dict(rm)
+    drifted["experiment_conditions"] = ["on", "off"]
+    with pytest.raises(SystemExit, match="experiment_conditions drift"):
+        _prepare_run_context(tmp_path, "exp_cond_drift", True, drifted, code_fp)
+
+
 def test_no_cross_orchestrator_resume(tmp_path):
     protocol = _validate_frozen_protocol(
         FROZEN_PROVIDER, FROZEN_MODEL, FROZEN_THINKING_MODE,
@@ -288,11 +330,81 @@ def test_check_6d_gate_rejects_missing_fields():
         check_6d_gate({"verdict": "PROMOTE"})
 
 
-def test_check_6d_gate_accepts_complete():
+def _make_complete_receipt(archive_dir, audit_sha):
+    """Build a receipt with all required fields present and valid protocol
+    fields, so checks reach the audit-verification branch. archive_dir and
+    audit_index_sha256 are set explicitly (None exercises the fail-closed
+    missing-value branches)."""
     receipt = {f: "x" for f in SIXD_RECEIPT_REQUIRED_FIELDS}
     receipt["temporal_context_version"] = TEMPORAL_CONTEXT_VERSION
     receipt["experiment_conditions"] = ["off", "on"]
+    receipt["archive_dir"] = archive_dir
+    receipt["audit_index_sha256"] = audit_sha
+    return receipt
+
+
+def test_check_6d_gate_accepts_complete(tmp_path):
+    import hashlib as _hashlib
+    import json as _json
+    archive = tmp_path / "archive"
+    archive.mkdir()
+    audit_path = archive / "audit_index.json"
+    audit_path.write_text(
+        _json.dumps({"indexed": ["merged_details.jsonl"]}, ensure_ascii=False),
+        encoding="utf-8")
+    audit_sha = _hashlib.sha256(audit_path.read_bytes()).hexdigest()
+    receipt = _make_complete_receipt(
+        archive_dir=str(archive), audit_sha=audit_sha)
     assert check_6d_gate(receipt) is True
+
+
+# -- Audit gate fail-closed --
+
+
+def test_audit_gate_rejects_missing_archive_dir():
+    """archive_dir missing (None) in otherwise-complete receipt -> SystemExit."""
+    receipt = _make_complete_receipt(archive_dir=None, audit_sha="abc")
+    with pytest.raises(SystemExit, match="archive_dir missing"):
+        check_6d_gate(receipt)
+
+
+def test_audit_gate_rejects_missing_audit_index_sha():
+    """audit_index_sha256 missing (None) -> SystemExit."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        receipt = _make_complete_receipt(archive_dir=tmpdir, audit_sha=None)
+        with pytest.raises(SystemExit, match="audit_index_sha256 missing"):
+            check_6d_gate(receipt)
+
+
+def test_audit_gate_rejects_nonexistent_archive_dir():
+    """archive_dir doesn't exist -> SystemExit."""
+    receipt = _make_complete_receipt(
+        archive_dir="Z:/definitely-missing-6d-archive", audit_sha="abc")
+    with pytest.raises(SystemExit, match="archive_dir not found"):
+        check_6d_gate(receipt)
+
+
+def test_audit_gate_rejects_missing_audit_index():
+    """archive_dir exists but audit_index.json missing -> SystemExit."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        receipt = _make_complete_receipt(archive_dir=tmpdir, audit_sha="abc")
+        with pytest.raises(SystemExit, match="audit_index.json missing"):
+            check_6d_gate(receipt)
+
+
+def test_audit_gate_rejects_sha_mismatch():
+    """audit_index.json exists but SHA mismatch -> SystemExit."""
+    import json as _json
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmpdir:
+        audit_path = os.path.join(tmpdir, "audit_index.json")
+        with open(audit_path, "w", encoding="utf-8") as f:
+            _json.dump({"test": "data"}, f)
+        receipt = _make_complete_receipt(archive_dir=tmpdir, audit_sha="wrong_sha")
+        with pytest.raises(SystemExit, match="audit_index_sha256 mismatch"):
+            check_6d_gate(receipt)
 
 
 # -- Provenance cross-validation --

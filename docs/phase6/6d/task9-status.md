@@ -2,7 +2,7 @@
 
 **日期：** 2026-08-07
 **状态：** READY_FOR_SMOKE
-**HEAD：** b7ac67315249e245c553a2fd4e22ff58bfbfe137
+**HEAD：** 0d91907657d5c5fab98f6425042618c42dceecb8
 
 ## 前置条件
 

@@ -852,22 +852,28 @@ def check_6d_gate(receipt):
         raise SystemExit(
             f"6D receipt experiment_conditions mismatch: "
             f"{receipt.get('experiment_conditions')!r} != {expected_conditions!r}")
-    # Audit verification (3-way SHA): re-read audit_index.json from the
-    # archive and verify its SHA-256 matches the receipt audit_index_sha256.
-    # Only enforced when the archive directory actually exists, so unit tests
-    # with synthetic receipts (archive_dir placeholder) are unaffected.
+    # Audit verification (fail-closed): archive_dir must exist and contain
+    # audit_index.json whose SHA-256 matches the receipt.
     archive_dir = receipt.get("archive_dir")
     audit_index_sha = receipt.get("audit_index_sha256")
-    if archive_dir and audit_index_sha and os.path.isdir(archive_dir):
-        audit_path = os.path.join(archive_dir, "audit_index.json")
-        if not os.path.exists(audit_path):
-            raise SystemExit(
-                f"6D receipt audit verification: audit_index.json missing: {audit_path}")
-        actual_audit_sha = _sha256_file(audit_path)
-        if actual_audit_sha != audit_index_sha:
-            raise SystemExit(
-                f"6D receipt audit_index_sha256 mismatch: "
-                f"receipt={audit_index_sha!r} current={actual_audit_sha!r}")
+    if not archive_dir:
+        raise SystemExit(
+            "6D receipt audit verification: archive_dir missing in receipt")
+    if not audit_index_sha:
+        raise SystemExit(
+            "6D receipt audit verification: audit_index_sha256 missing in receipt")
+    if not os.path.isdir(archive_dir):
+        raise SystemExit(
+            f"6D receipt audit verification: archive_dir not found: {archive_dir}")
+    audit_path = os.path.join(archive_dir, "audit_index.json")
+    if not os.path.exists(audit_path):
+        raise SystemExit(
+            f"6D receipt audit verification: audit_index.json missing: {audit_path}")
+    actual_audit_sha = _sha256_file(audit_path)
+    if actual_audit_sha != audit_index_sha:
+        raise SystemExit(
+            f"6D receipt audit_index_sha256 mismatch: "
+            f"receipt={audit_index_sha!r} current={actual_audit_sha!r}")
     return True
 
 
@@ -1080,6 +1086,13 @@ def _validate_phase1_receipt(receipt_path, manifest_path):
             raise SystemExit(
                 f"phase1 receipt dataset_sha256 mismatch: year={year} "
                 f"receipt={expected_sha!r} current={actual_sha!r}")
+    # Verify dataset_set_sha256 = canonical(dataset_sha256_by_year)
+    expected_set_sha = _canonical_dict_sha256(receipt.get("dataset_sha256_by_year", {}))
+    if receipt.get("dataset_set_sha256") != expected_set_sha:
+        raise SystemExit(
+            f"phase1 receipt dataset_set_sha256 != canonical(dataset_sha256_by_year): "
+            f"receipt={receipt.get('dataset_set_sha256')!r} "
+            f"expected={expected_set_sha!r}")
     return receipt
 
 

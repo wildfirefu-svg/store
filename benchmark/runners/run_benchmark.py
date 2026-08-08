@@ -561,7 +561,7 @@ def run_offline_benchmark(cases, predictions):
 def build_benchmark_prompt(case, method='direct_choice', phase4_exp_a=False,
                            chart_schema_version=None, profile_formatter=None,
                            ziwei_arm=None, time_context_injection="off",
-                           route_state=None):
+                           route_state=None, frozen_target_years=None):
     if profile_formatter == 'format_official_cot_prompt':
         # 裁决 2A（执行偏离）：官方 CoT 为单参签名，astro 取自
         # case["chart_input"]["official_astro"]，不再经 render_chart_context 两参传入。
@@ -579,7 +579,8 @@ def build_benchmark_prompt(case, method='direct_choice', phase4_exp_a=False,
             raise SystemExit(2)
         context_text = render_reasoned_context(
             case, chart_schema_version, ziwei_arm,
-            time_context_injection=time_context_injection, route_state=route_state)
+            time_context_injection=time_context_injection, route_state=route_state,
+            frozen_target_years=frozen_target_years)
         return _assemble_reasoned_choice_prompt(case, context_text)
     if method == 'two_stage_reasoning':
         return format_stage1_prompt(case, exp_a=phase4_exp_a)
@@ -1171,7 +1172,8 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                                             profile_formatter=profile_formatter,
                                             ziwei_arm=ziwei_arm,
                                             time_context_injection=time_context_injection,
-                                            route_state=route_state)
+                                            route_state=route_state,
+                                            frozen_target_years=frozen_target_years)
 
         # Two-stage reasoning path
         if method == 'two_stage_reasoning':
