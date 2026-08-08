@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 
 class TestTask10FrozenSchedule:
     """Task 10: frozen 60-slice schedule matrix."""
@@ -1913,7 +1915,7 @@ class TestCLIRunIdParam:
         import subprocess, sys
         result = subprocess.run(
             [sys.executable, "scripts/phase6_6b2_orchestrator.py", "run_dev", "--help"],
-            capture_output=True, text=True, cwd="G:/project/agent",
+            capture_output=True, text=True, cwd=str(PROJECT_ROOT),
         )
         assert result.returncode == 0
         assert "--run-id" in result.stdout
@@ -1924,7 +1926,7 @@ class TestCLIRunIdParam:
         result = subprocess.run(
             [sys.executable, "scripts/phase6_6b2_orchestrator.py", "run_dev",
              "--provider", "p", "--model", "m", "--output-dir", str(tmp_path)],
-            capture_output=True, text=True, cwd="G:/project/agent",
+            capture_output=True, text=True, cwd=str(PROJECT_ROOT),
         )
         assert result.returncode != 0
         assert "--run-id" in (result.stderr + result.stdout)
