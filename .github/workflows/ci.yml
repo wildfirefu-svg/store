@@ -64,7 +64,9 @@ jobs:
 
       - name: Run tests
         run: |
-          python -m pytest tests/ -v --tb=short --timeout=120
+          # e2e needs locally-installed Playwright browsers (playwright install);
+          # CI runs the non-e2e suite, e2e stays a local opt-in (-m e2e).
+          python -m pytest tests/ -v --tb=short --timeout=120 --ignore=tests/test_e2e.py
 
       - name: LLM report quality smoke test
         run: |
@@ -120,7 +122,13 @@ jobs:
         if: steps.affected.outputs.tests != '# no test mapping needed for changed files'
         run: |
           if [ "${{ steps.affected.outputs.tests }}" = "FULL_SUITE" ]; then
-            python -m pytest tests/ -q --tb=short --timeout=120
+            python -m pytest tests/ -q --tb=short --timeout=120 --ignore=tests/test_e2e.py
           else
-            python -m pytest ${{ steps.affected.outputs.tests }} -q --tb=short --timeout=120
+            python -m pytest ${{ steps.affected.outputs.tests }} -q --tb=short --timeout=120 --ignore=tests/test_e2e.py
+            rc=$?
+            if [ $rc -eq 5 ]; then
+              echo "Only e2e tests affected; e2e is not run in CI."
+              exit 0
+            fi
+            exit $rc
           fi
