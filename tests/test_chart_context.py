@@ -278,9 +278,14 @@ def test_golden_fixture_meta_exists():
 
 
 def test_golden_fixture_audit_index_sha256_matches():
-    """fixture meta.json 中的 audit_index SHA-256 必须与实际文件一致."""
+    """fixture meta.json 中的 audit_index SHA-256 必须与实际文件一致.
+
+    哈希前先做 CRLF→LF 归一化：git 行尾规范化会使 Windows 工作树（CRLF）
+    与 CI checkout（LF）字节不同，归一化后双平台结果确定。
+    """
     source_path = PROJECT_ROOT / _GOLDEN_META_DATA["source_audit_index_path"]
-    actual_sha = hashlib.sha256(source_path.read_bytes()).hexdigest()
+    raw = source_path.read_bytes().replace(b"\r\n", b"\n")
+    actual_sha = hashlib.sha256(raw).hexdigest()
     expected_sha = _GOLDEN_META_DATA["source_audit_index_sha256"]
     assert actual_sha == expected_sha, (
         f"audit_index SHA-256 不匹配\n  actual: {actual_sha}\n  expected: {expected_sha}"
