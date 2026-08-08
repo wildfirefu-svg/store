@@ -4,14 +4,18 @@
   "source_archive_dir": "docs/phase6/6b1/6b1-2026-07-17-deepseek-deepseek-chat-78481de6",
   "source_archive_fingerprint": "78481de6",
   "source_audit_index_path": "docs/phase6/6b1/6b1-2026-07-17-deepseek-deepseek-chat-78481de6/audit_index.json",
-  "source_audit_index_sha256": "81afe841b71905245fea5334d066cb203d014b927a9b74f84fec085ab54f50f0",
+  "source_audit_index_sha256": "2b6f9098dc42c1c4926fa65880a0dd935248c9b8934f00f73c73e90d1d393c5c",
   "source_field": "context_fingerprints",
   "case_ids": [
     "guangdong_female_19800824_P001-Q1",
     "guangdong_female_19800824_P001-Q2",
     "guangdong_female_19800824_P001-Q3"
   ],
-  "arms": ["b1a_prime", "b1b", "b1c"],
+  "arms": [
+    "b1a_prime",
+    "b1b",
+    "b1c"
+  ],
   "fingerprint_count": 9,
   "fingerprint_formula": "SHA-256 of _assemble_reasoned_choice_prompt(case, render_reasoned_context(case, 'legacy_v0', ziwei_arm))",
   "dataset_source": "benchmark/datasets/baziqa_contest8_2024_holdout_enriched.jsonl (first 3 cases)",
