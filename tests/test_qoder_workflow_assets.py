@@ -86,4 +86,4 @@ def test_forbidden_patterns_single_source_of_truth():
 
 def test_agents_md_memory_operation_line():
     body = (PROJECT_ROOT / "AGENTS.md").read_text(encoding="utf-8")
-    assert "总是用 UpdateMemory 沉淀经验" in body
+    assert "总是用 UpdateMemory 沉淀已验证的经验" in body
