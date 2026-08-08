@@ -1,0 +1,10 @@
+{
+  "status": "OK",
+  "profile_id": "baziqa_xjz_dual",
+  "arm": "dual",
+  "repeat_idx": 0,
+  "scheduled_calls": 24,
+  "hard_cap": 26,
+  "calls_attempted": 21,
+  "retry_total": 0
+}

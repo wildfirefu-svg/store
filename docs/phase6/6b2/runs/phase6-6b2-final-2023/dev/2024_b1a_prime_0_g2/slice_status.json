@@ -1,0 +1,1 @@
+{"slice_id": "2024_b1a_prime_0_g2", "completed": true, "exit_code": 0, "elapsed_s": 426.2, "actual_attempts": 8, "scheduled_calls": 8, "hard_cap": 10, "remaining_reserved": 10, "runner_manifest_sha256": "b53f3ef0c1ce4bb1c3815b234202e682f67683898bbc6a868ead1adf37bcc835", "arm": "b1a_prime", "integrity": "slice", "method": "direct_choice"}

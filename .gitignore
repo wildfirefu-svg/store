@@ -58,3 +58,4 @@ tests/fixtures/baziqa/contest8_sample.jsonl
 .firecrawl/
 # MingLi-Bench external data (reproducible via scripts/fetch_mingli_bench.py, pinned commit)
 data/mingli/
+*.lock

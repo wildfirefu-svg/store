@@ -1,0 +1,8 @@
+{
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "thinking_mode": "disabled",
+  "model_label": "DeepSeek-V4-Flash non-thinking",
+  "code_fingerprint": "87e2a0b15af028b26a491ab5214f5226a688421032974361237b698b1d29b4cd",
+  "created_at": "2026-08-06T09:12:49"
+}

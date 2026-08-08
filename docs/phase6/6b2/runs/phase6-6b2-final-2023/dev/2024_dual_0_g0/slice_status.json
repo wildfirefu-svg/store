@@ -1,0 +1,1 @@
+{"slice_id": "2024_dual_0_g0", "completed": true, "exit_code": 0, "elapsed_s": 951.6, "actual_attempts": 18, "scheduled_calls": 24, "hard_cap": 26, "remaining_reserved": 26, "runner_manifest_sha256": "fb2bdf21d91f746d3a6c54837cfdfde0e481b6e60b342da6476f65cdc071724c", "arm": "dual", "integrity": "slice", "method": "dual_system"}

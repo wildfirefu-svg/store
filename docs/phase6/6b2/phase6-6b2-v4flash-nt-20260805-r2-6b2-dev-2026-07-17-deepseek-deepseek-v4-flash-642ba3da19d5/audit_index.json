@@ -1,0 +1,49 @@
+{
+  "run_id": "phase6-6b2-v4flash-nt-20260805-r2-6b2-dev-2026-07-17-deepseek-deepseek-v4-flash-642ba3da19d5",
+  "user_run_id": "phase6-6b2-v4flash-nt-20260805-r2",
+  "experiment_id": "6b2",
+  "stage": "dev",
+  "frozen_date": "2026-07-17",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "thinking_mode": "disabled",
+  "model_label": "DeepSeek-V4-Flash non-thinking",
+  "code_fingerprint": "642ba3da19d59b29e75124ae5678683bd4a1e690aebd690154c58c3332a8d389",
+  "sched_hash": "04b2e6852028075a5a024fbebd105cb1e6dfaeff98c9301a278dcd0caf46f30b",
+  "gate_verdict": "ROLLBACK",
+  "gate_detail": {
+    "verdict": "ROLLBACK",
+    "delta_dev": 0.029166666666666653,
+    "dual_merged_acc": 0.31666666666666665,
+    "min_year_delta": -1.850371707708594e-17,
+    "delta_by_year": {
+      "2024": -1.850371707708594e-17,
+      "2025": 0.05833333333333333
+    },
+    "delta_by_year_repeat": {
+      "2024_0": 0.0,
+      "2024_1": 0.04999999999999999,
+      "2024_2": -0.050000000000000044,
+      "2025_0": 0.07499999999999996,
+      "2025_1": 0.07500000000000001,
+      "2025_2": 0.025000000000000022
+    },
+    "stage": "dev"
+  },
+  "dataset_hashes": {
+    "raw": "e23477f845e873fb73c8a7f349789cb2df5235c06e497990d1e341f4713ea5f4",
+    "enriched": "e23477f845e873fb73c8a7f349789cb2df5235c06e497990d1e341f4713ea5f4"
+  },
+  "merged_details_sha256": "3c56b1774358faa921408bc7555097477dcc59c10769a889f7e280ed45fab809",
+  "merged_events_sha256": "75264eabf07d18cde6f54da1a5e8ee85022b49b5e68e93353082430f39eeb533",
+  "budget": {
+    "attempted": 837,
+    "hard_cap": 1060,
+    "slices": 60,
+    "smoke_attempted": 4
+  },
+  "budget_hard_cap": 1060,
+  "smoke_attempted": 4,
+  "integrity_result": "PASS",
+  "archived_at": "2026-08-06T16:00:13"
+}
