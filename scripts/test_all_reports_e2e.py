@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """Manual verification helper for all report generation modes."""
 
-import json, os, sys, tempfile, traceback
-from datetime import datetime
+import json
+import os
+import sys
+import tempfile
+import traceback
 
 for stream in (sys.stdout, sys.stderr):
     if hasattr(stream, 'reconfigure'):
@@ -10,10 +13,9 @@ for stream in (sys.stdout, sys.stderr):
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import bazi_calculator as bc
 import auto_analyzer as aa
+import bazi_calculator as bc
 import report_builder as rb
-
 
 # ── 命主 ──────────────────────────────────────────────────────────────
 MINGZHU = {

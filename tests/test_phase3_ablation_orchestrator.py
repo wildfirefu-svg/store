@@ -20,10 +20,9 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from scripts.run_phase3_ablation import (
+    STAGES,
     build_command_list,
     estimate_budget,
-    ARMS,
-    STAGES,
 )
 
 

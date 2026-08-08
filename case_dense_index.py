@@ -11,17 +11,16 @@ import json
 import os
 import pickle
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
-
 
 DEFAULT_MODEL = "BAAI/bge-small-zh-v1.5"
 CACHE_VERSION = 1
 
 
 def encode_cases(
-    cases: List[Dict[str, Any]],
+    cases: list[dict[str, Any]],
     model_name: str = DEFAULT_MODEL,
     batch_size: int = 32,
 ) -> np.ndarray:
@@ -39,6 +38,7 @@ def encode_cases(
 
     if model_name == "tfidf":
         import re
+
         from sklearn.feature_extraction.text import TfidfVectorizer
 
         _token_re = re.compile(r"[\u4e00-\u9fa5A-Za-z0-9]+")
@@ -74,10 +74,10 @@ def encode_cases(
 
 def save_dense_cache(
     path: Path,
-    cases: List[Dict[str, Any]],
+    cases: list[dict[str, Any]],
     embeddings: np.ndarray,
     model_name: str,
-    corpus_path: Optional[Path] = None,
+    corpus_path: Path | None = None,
 ) -> None:
     """Serialize cases, embeddings and metadata to disk."""
     path = Path(path)
@@ -103,7 +103,7 @@ def save_dense_cache(
         pickle.dump(payload, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def load_dense_cache(path: Path) -> Tuple[List[Dict[str, Any]], np.ndarray, str]:
+def load_dense_cache(path: Path) -> tuple[list[dict[str, Any]], np.ndarray, str]:
     """Load a cache; raise on version mismatch or corruption."""
     with Path(path).open("rb") as f:
         payload = pickle.load(f)
@@ -151,10 +151,10 @@ def is_cache_valid(
 
 def build_or_load(
     corpus_path: Path,
-    cache_path: Optional[Path] = None,
+    cache_path: Path | None = None,
     model_name: str = DEFAULT_MODEL,
-    cases: Optional[List[Dict[str, Any]]] = None,
-) -> Tuple[List[Dict[str, Any]], np.ndarray]:
+    cases: list[dict[str, Any]] | None = None,
+) -> tuple[list[dict[str, Any]], np.ndarray]:
     """Return (cases, embeddings), rebuilding from the corpus when needed.
 
     ``cases`` can be preloaded/aggregated externally (e.g. by ``CaseIndex``)
@@ -183,9 +183,9 @@ def build_or_load(
     return cases, embeddings
 
 
-def _load_corpus(path: Path) -> List[Dict[str, Any]]:
+def _load_corpus(path: Path) -> list[dict[str, Any]]:
     """Read a JSONL corpus into a list of dictionaries."""
-    cases: List[Dict[str, Any]] = []
+    cases: list[dict[str, Any]] = []
     with Path(path).open("r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()

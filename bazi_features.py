@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict
-
+from typing import Any
 
 GAN_WUXING = {
     "甲": "木", "乙": "木",
@@ -52,7 +51,7 @@ def _decade(year):
         return None
 
 
-def extract(chart: Dict) -> Dict[str, Any]:
+def extract(chart: dict) -> dict[str, Any]:
     pillars = chart.get("four_pillars") or {}
     dm = chart.get("day_master") if isinstance(chart.get("day_master"), dict) else {}
     birth = chart.get("birth_info") or {}

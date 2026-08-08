@@ -1,9 +1,16 @@
 """Build 1000+ real-world birth chart database."""
-import json, os, sys, random
-from datetime import date, timedelta
+import json
+import os
+import random
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from bazi_calculator import (calculate_four_pillars, calculate_dayun,
-    TIANGAN, DIZHI, GAN_WUXING, GAN_YINYANG, get_shishen)
+from bazi_calculator import (
+    GAN_WUXING,
+    GAN_YINYANG,
+    calculate_dayun,
+    calculate_four_pillars,
+)
 
 random.seed(42)
 
@@ -210,16 +217,17 @@ json.dump(db, open(path, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 
 # Summary
 from collections import Counter
+
 tags_count = Counter()
 for c in uniq:
     for t in c.get('tags',[]):
         tags_count[t] += 1
 
-print(f'=== 真实命例库 ===')
+print('=== 真实命例库 ===')
 print(f'Total cases: {len(uniq)}')
 print(f"Male: {db['stats']['male']}, Female: {db['stats']['female']}")
 print(f"Year range: {min(c['year'] for c in uniq)}-{max(c['year'] for c in uniq)}")
-print(f'Tags:')
+print('Tags:')
 for k,v in tags_count.most_common():
     print(f'  {k}: {v}')
 print(f'Saved: {path} ({os.path.getsize(path)} bytes)')

@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Manual verification helper for report generation edge cases."""
-import sys, os
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import bazi_calculator as bc, auto_analyzer as aa, report_builder as rb
+import auto_analyzer as aa
+import bazi_calculator as bc
+import report_builder as rb
 
 cases = [
     {'name': '子时女',  'year': 1990, 'month': 5,  'day': 15, 'hour': 23, 'minute': 30, 'gender': 'female'},
@@ -82,7 +86,7 @@ for c in cases:
             line.append('ERR')
             total_fail += 1
             print(f'  ERROR in {c["name"]} {name}: {e}')
-    print(' '.join('{:8}'.format(x) for x in line))
+    print(' '.join(f'{x:8}' for x in line))
 
 # 合婚
 ch1, ch2 = build(cases[0]), build(cases[1])

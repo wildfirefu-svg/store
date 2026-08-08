@@ -6,7 +6,12 @@ Layer 2 — Bigram Jaccard: precise matching within predicted category
 Layer 3 — ChromaDB Vector: cross-KB semantic exploration (fallback)
 """
 
-import json, os, re, sys, time, math
+import json
+import math
+import os
+import re
+import sys
+import time
 from collections import Counter
 
 KB_DIR = os.path.dirname(__file__)
@@ -72,14 +77,12 @@ def _load_centroid_model():
     return _centroid_model
 
 def _cosine(v1, v2):
-    import math
     dot = sum(v1.get(k,0) * v2.get(k,0) for k in set(v1)|set(v2))
     n1 = math.sqrt(sum(w*w for w in v1.values())) or 1
     n2 = math.sqrt(sum(w*w for w in v2.values())) or 1
     return dot / (n1 * n2)
 
 def _tfidf_vector(text):
-    import math
     bgs = _bigrams(text)
     tf = Counter(bgs)
     total = sum(tf.values()) or 1

@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from typing import Callable, List, Optional, Sequence, Tuple
+from collections.abc import Callable, Sequence
 
 
-def majority_vote(votes: Sequence[Optional[str]]) -> Optional[str]:
+def majority_vote(votes: Sequence[str | None]) -> str | None:
     if len(votes) == 0:
         raise ValueError("majority_vote requires at least one vote")
 
     counts: dict = {}
-    first_seen_order: List[str] = []
+    first_seen_order: list[str] = []
     for vote in votes:
         if vote is None:
             continue
@@ -30,18 +30,18 @@ def majority_vote(votes: Sequence[Optional[str]]) -> Optional[str]:
 
 
 def sample_answers(
-    call_fn: Callable[[float], Tuple[str, Optional[str]]],
+    call_fn: Callable[[float], tuple[str, str | None]],
     n: int,
-    temperatures: Optional[Sequence[float]] = None,
+    temperatures: Sequence[float] | None = None,
     default_temperature: float = 0.4,
     max_retries: int = 3,
     retry_delay: float = 2.0,
     inter_sample_delay: float = 0.5,
-) -> List[Tuple[str, Optional[str]]]:
+) -> list[tuple[str, str | None]]:
     if not isinstance(n, int) or n <= 0:
         raise ValueError(f"sample_answers n must be a positive int, got {n!r}")
     if temperatures is None:
-        temp_list: List[float] = [float(default_temperature)] * n
+        temp_list: list[float] = [float(default_temperature)] * n
     else:
         temp_list = list(temperatures)
         if len(temp_list) != n:
@@ -51,11 +51,11 @@ def sample_answers(
 
     import time
 
-    results: List[Tuple[str, Optional[str]]] = []
+    results: list[tuple[str, str | None]] = []
     for idx, temp in enumerate(temp_list):
         if idx > 0 and inter_sample_delay > 0:
             time.sleep(inter_sample_delay)
-        last_err: Optional[Exception] = None
+        last_err: Exception | None = None
         for attempt in range(max_retries):
             try:
                 raw, predicted = call_fn(temp)
@@ -72,7 +72,7 @@ def sample_answers(
     return results
 
 
-def strict_majority(votes: Sequence[Optional[str]], threshold: int = 3) -> Optional[str]:
+def strict_majority(votes: Sequence[str | None], threshold: int = 3) -> str | None:
     """严格多数投票（Phase 6 6A1，设计 §5.2.4）。
 
     与 majority_vote 的区别：majority_vote 取相对多数并按首次出现破平局

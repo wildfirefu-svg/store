@@ -3,10 +3,9 @@ from __future__ import annotations
 import argparse
 import json
 from collections import defaultdict
+from collections.abc import Iterable
 from copy import deepcopy
 from pathlib import Path
-from typing import Iterable
-
 
 DOMAINS = ["health", "annual_fortune", "relationship", "unknown"]
 DEFAULT_HOLDOUT = Path("benchmark/datasets/baziqa_contest8_2025_holdout_enriched.jsonl")

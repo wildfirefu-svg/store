@@ -17,7 +17,6 @@ import json
 
 import pytest
 
-
 _BASE_CASE = {
     "case_id": "c1",
     "domain": "career",

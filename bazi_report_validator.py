@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any
 
 try:
     import yaml as _yaml
@@ -62,7 +63,7 @@ STORAGE_BRANCH_BY_ELEMENT = {
 }
 
 
-def _chart_branches(chart: Dict) -> set:
+def _chart_branches(chart: dict) -> set:
     pillars = chart.get("four_pillars") or {}
     return {
         str(pillar.get("zhi"))
@@ -71,12 +72,12 @@ def _chart_branches(chart: Dict) -> set:
     }
 
 
-def _month_branch(chart: Dict) -> str:
+def _month_branch(chart: dict) -> str:
     month = (chart.get("four_pillars") or {}).get("month") or {}
     return str(month.get("zhi") or "")
 
 
-def _day_master_element(chart: Dict) -> str:
+def _day_master_element(chart: dict) -> str:
     dm = chart.get("day_master") or {}
     if isinstance(dm, dict):
         if dm.get("wuxing"):
@@ -87,7 +88,7 @@ def _day_master_element(chart: Dict) -> str:
     return GAN_WUXING.get(gan, "")
 
 
-def _issue(code: str, severity: str, message: str, evidence: str) -> Dict[str, str]:
+def _issue(code: str, severity: str, message: str, evidence: str) -> dict[str, str]:
     return {
         "code": code,
         "severity": severity,
@@ -96,7 +97,7 @@ def _issue(code: str, severity: str, message: str, evidence: str) -> Dict[str, s
     }
 
 
-def _validate_branch_combos(chart: Dict, text: str) -> Iterable[Dict[str, str]]:
+def _validate_branch_combos(chart: dict, text: str) -> Iterable[dict[str, str]]:
     branches = _chart_branches(chart)
     for combo, label in BRANCH_COMBOS.items():
         if combo not in text:
@@ -111,7 +112,7 @@ def _validate_branch_combos(chart: Dict, text: str) -> Iterable[Dict[str, str]]:
             )
 
 
-def _validate_storage_claims(text: str) -> Iterable[Dict[str, str]]:
+def _validate_storage_claims(text: str) -> Iterable[dict[str, str]]:
     for branch, element in re.findall(r"([子丑寅卯辰巳午未申酉戌亥])(?:土)?为([木火金水])库", text):
         expected = STORAGE_BRANCH_BY_ELEMENT[element]
         if branch != expected:
@@ -123,7 +124,7 @@ def _validate_storage_claims(text: str) -> Iterable[Dict[str, str]]:
             )
 
 
-def _validate_month_wealth_order(chart: Dict, text: str) -> Iterable[Dict[str, str]]:
+def _validate_month_wealth_order(chart: dict, text: str) -> Iterable[dict[str, str]]:
     if not any(phrase in text for phrase in ("财星当令", "月令财星", "财星得令")):
         return
     month_zhi = _month_branch(chart)
@@ -141,20 +142,20 @@ def _validate_month_wealth_order(chart: Dict, text: str) -> Iterable[Dict[str, s
 
 
 DEFAULT_YAML_RULES_PATH = Path(__file__).resolve().parent / "knowledge-base" / "baziqa_rules.yaml"
-_yaml_rules_cache: Optional[List[Dict[str, Any]]] = None
+_yaml_rules_cache: list[dict[str, Any]] | None = None
 
 
-def _default_yaml_rules() -> List[Dict[str, Any]]:
+def _default_yaml_rules() -> list[dict[str, Any]]:
     global _yaml_rules_cache
     if _yaml_rules_cache is None:
         _yaml_rules_cache = load_yaml_rules(DEFAULT_YAML_RULES_PATH)
     return _yaml_rules_cache
 
 
-def validate_report_claims(chart: Dict, report_text: str) -> List[Dict[str, str]]:
+def validate_report_claims(chart: dict, report_text: str) -> list[dict[str, str]]:
     """Return deterministic issues where report text conflicts with chart facts."""
     text = str(report_text or "")
-    issues: List[Dict[str, str]] = []
+    issues: list[dict[str, str]] = []
     issues.extend(_validate_branch_combos(chart, text))
     issues.extend(_validate_storage_claims(text))
     issues.extend(_validate_month_wealth_order(chart, text))
@@ -173,13 +174,13 @@ def strip_report_preface(report_text: str) -> str:
         r"(?:\*\*\*\s*)?(##\s*一[、.．]\s*八字排盘.*)",
     ]
     for pattern in patterns:
-        match = re.search(pattern, text, flags=re.S)
+        match = re.search(pattern, text, flags=re.DOTALL)
         if match:
             return match.group(1).strip()
     return text
 
 
-def format_validation_note(issues: List[Dict[str, str]]) -> str:
+def format_validation_note(issues: list[dict[str, str]]) -> str:
     if not issues:
         return ""
     lines = ["## 系统校验提示", ""]
@@ -194,7 +195,7 @@ def format_validation_note(issues: List[Dict[str, str]]) -> str:
 YAML_RULE_MIN_SUPPORT = 3
 
 
-def load_yaml_rules(path: Optional[Any]) -> List[Dict[str, Any]]:
+def load_yaml_rules(path: Any | None) -> list[dict[str, Any]]:
     """Load corpus-derived BaZi rules from a YAML file.
 
     Filters out rules whose ``support`` is below ``YAML_RULE_MIN_SUPPORT`` so
@@ -207,7 +208,7 @@ def load_yaml_rules(path: Optional[Any]) -> List[Dict[str, Any]]:
         return []
     raw = _yaml.safe_load(p.read_text(encoding="utf-8")) or {}
     rules = raw.get("rules") or []
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for rule in rules:
         if not isinstance(rule, dict):
             continue
@@ -221,7 +222,7 @@ def load_yaml_rules(path: Optional[Any]) -> List[Dict[str, Any]]:
     return out
 
 
-def _chart_matches_pattern(chart: Dict, pattern: Dict[str, Any]) -> bool:
+def _chart_matches_pattern(chart: dict, pattern: dict[str, Any]) -> bool:
     if not pattern:
         return False
     pillars = chart.get("four_pillars") or {}
@@ -246,12 +247,12 @@ def _chart_matches_pattern(chart: Dict, pattern: Dict[str, Any]) -> bool:
 
 
 def validate_against_yaml_rules(
-    chart: Dict,
+    chart: dict,
     report_text: str,
-    rules: List[Dict[str, Any]],
-) -> List[Dict[str, str]]:
+    rules: list[dict[str, Any]],
+) -> list[dict[str, str]]:
     text = str(report_text or "")
-    issues: List[Dict[str, str]] = []
+    issues: list[dict[str, str]] = []
     for rule in rules or []:
         rule_id = str(rule.get("id") or "unnamed")
         pattern = rule.get("pattern") or {}

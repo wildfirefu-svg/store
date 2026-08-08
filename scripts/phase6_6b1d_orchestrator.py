@@ -26,7 +26,6 @@ import subprocess
 import sys
 import tempfile
 import time
-from collections import defaultdict
 from pathlib import Path
 
 try:
@@ -147,7 +146,7 @@ class OutputDirLock:
         return pid, token
 
     @classmethod
-    def acquire(cls, output_dir: str) -> "OutputDirLock | None":
+    def acquire(cls, output_dir: str) -> OutputDirLock | None:
         """尝试获取 output-dir 独占锁。成功返回锁对象，失败（被持有）返回 None。"""
         os.makedirs(output_dir, exist_ok=True)
         lock_path = os.path.join(output_dir, cls.LOCK_FILENAME)
@@ -1198,8 +1197,11 @@ def verify_smoke_completed(smoke_sl: dict, args, ledger: BudgetLedger,
 
 def _build_current_manifest(sl: dict, provider: str, model: str) -> dict:
     """Build manifest dict matching runner's build_resume_manifest()."""
-    from benchmark.runners.run_benchmark import _sha256_file, _code_fingerprint, RESUME_MANIFEST_FIELDS
     from benchmark.runners.profiles import prompt_fingerprint, resolve_profile
+    from benchmark.runners.run_benchmark import (
+        _code_fingerprint,
+        _sha256_file,
+    )
 
     profile = resolve_profile(REASONED_PROFILE, sl.get("chart_schema_version", CHART_SCHEMA))
     case_ids_file = os.path.join(sl["output_dir"], f"case_ids_{sl['slice_id']}.json")
@@ -1787,8 +1789,8 @@ def compute_token_stats(schedule: dict, ledger: BudgetLedger,
             tiktoken_ready = False
 
     if tiktoken_ready:
-        from benchmark.formatters.chart_context import render_reasoned_context
         from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt
+        from benchmark.formatters.chart_context import render_reasoned_context
         # All 80 unique cases across both year datasets
         all_cases = []
         for year in YEARS:
@@ -1966,8 +1968,8 @@ def _compute_dataset_hashes() -> dict:
 
 def _compute_context_fingerprint(schedule: dict, provider: str, model: str) -> dict:
     """SHA-256 of rendered context for 3 cases × 5 arms = 15 fingerprints."""
-    from benchmark.formatters.chart_context import render_reasoned_context
     from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt
+    from benchmark.formatters.chart_context import render_reasoned_context
 
     arms_seen = {}
     case_ids_used = []
@@ -2427,7 +2429,7 @@ def main(argv=None):
         print(f"[dry-run] years: {YEARS}")
         print(f"[dry-run] repeats: {REPEATS}")
         print(f"[dry-run] global hard cap: {GLOBAL_LEDGER_CAP}")
-        print(f"[dry-run] smoke = schedule[0:5] (position=0, 2024, R0, G0-G4)")
+        print("[dry-run] smoke = schedule[0:5] (position=0, 2024, R0, G0-G4)")
         print("[dry-run] Exiting without API calls.")
         return 0
 

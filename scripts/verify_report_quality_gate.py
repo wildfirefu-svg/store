@@ -9,13 +9,11 @@ import argparse
 import json
 import os
 import sys
-from collections import defaultdict
 
 if __package__ in (None, ''):
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from bazi_report_validator import validate_report_claims
-
 
 SEVERITY_ORDER = {'error': 0, 'warning': 1, 'info': 2}
 IMPROVEMENT_TERMS = ('improved', 'improvement', 'outperform', 'outperformed', 'increase', 'gain', '提升', '更好', '优于')

@@ -9,11 +9,10 @@ hour with confidence level.
 Pure Python stdlib, no external dependencies.
 """
 
-import json
-import sys
-import os
 import argparse
-from collections import defaultdict
+import json
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import bazi_calculator as bc

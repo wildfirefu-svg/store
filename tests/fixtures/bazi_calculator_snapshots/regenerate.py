@@ -7,12 +7,18 @@ _REPO = os.path.dirname(os.path.dirname(os.path.dirname(_HERE)))       # 仓库�
 sys.path.insert(0, _REPO)
 sys.path.insert(0, os.path.dirname(os.path.dirname(_HERE)))            # tests/
 
-import lunar_calendar  # noqa: E402
+import lunar_calendar
+
 lunar_calendar._IZTRO_PYTHON = None  # 固定内置后端（spec §5）
 
 try:
-    from bazi_snapshot_helper import (  # noqa: E402
-        SNAPSHOT_CASES, SNAPSHOT_DIR, compute_e2e, compute_shensha, compute_ziwei, save_snapshot,
+    from bazi_snapshot_helper import (
+        SNAPSHOT_CASES,
+        SNAPSHOT_DIR,
+        compute_e2e,
+        compute_shensha,
+        compute_ziwei,
+        save_snapshot,
     )
 except ImportError as e:
     raise SystemExit(f"导入 bazi_snapshot_helper 失败：请从仓库根目录运行本脚本（{e}）")

@@ -4,13 +4,13 @@
 双击运行即可，无需手动启动服务、无需打开浏览器。
 """
 
-import sys
+import logging
 import os
+import sys
 import threading
 import time
-import logging
 
-from config import LOG_LEVEL, LOG_FILE, API_PORT
+from config import API_PORT, LOG_FILE, LOG_LEVEL
 
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
@@ -42,8 +42,9 @@ if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
         if os.path.exists(src) and not os.path.exists(dst):
             shutil.copytree(src, dst)
 
-import webview
 import uvicorn
+import webview
+
 from api_server import app
 
 HOST = "127.0.0.1"

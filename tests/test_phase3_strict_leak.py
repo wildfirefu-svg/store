@@ -7,7 +7,7 @@ NOT automatically a confirmed leak.
 
 from __future__ import annotations
 
-from benchmark.phase3 import detect_leak_candidates, normalize_text, char_overlap_ratio
+from benchmark.phase3 import char_overlap_ratio, detect_leak_candidates, normalize_text
 
 
 def test_normalize_text_strips_whitespace_and_lowercases():

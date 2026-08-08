@@ -16,16 +16,26 @@ Usage:
     python knowledge-base/zeri.py --year 2026 --month 6 --purpose 开业 --chart chart.json --xishen 木,火
 """
 
-import os, sys, json, argparse
+import argparse
+import json
+import os
+import sys
 from datetime import date, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from bazi_calculator import (
-    TIANGAN, DIZHI, GAN_WUXING, ZHI_WUXING, GAN_YINYANG,
-    sexagenary_index, sexagenary_by_index, get_shishen,
-    get_month_branch_idx, LIUCHONG, LIUHE, LIUHAI, SANXING,
-    TIANYI_GUIREN, WENCHANG,
+    GAN_WUXING,
+    LIUCHONG,
+    LIUHAI,
+    LIUHE,
+    TIANYI_GUIREN,
+    WENCHANG,
+    ZHI_WUXING,
+    get_month_branch_idx,
+    get_shishen,
+    sexagenary_by_index,
+    sexagenary_index,
 )
 
 # =============================================================================
@@ -271,12 +281,12 @@ def score_day_personal(day_gan, day_zhi, chart_data, purpose):
     guiren_branches = TIANYI_GUIREN.get(dm_gan, ())
     if day_zhi in guiren_branches:
         score += 25
-        reasons.append(f'天乙贵人日→大吉')
+        reasons.append('天乙贵人日→大吉')
 
     wenchang_zhi = WENCHANG.get(dm_gan, '')
     if day_zhi == wenchang_zhi:
         score += 15
-        reasons.append(f'文昌贵人日→利学业/签约')
+        reasons.append('文昌贵人日→利学业/签约')
 
     return score, reasons
 

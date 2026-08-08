@@ -1,12 +1,10 @@
-import pytest
 
 from bazi_report_validator import (
-    strip_report_preface,
-    validate_report_claims,
     load_yaml_rules,
+    strip_report_preface,
     validate_against_yaml_rules,
+    validate_report_claims,
 )
-
 
 CHART_1990_05_12_FEMALE = {
     "four_pillars": {

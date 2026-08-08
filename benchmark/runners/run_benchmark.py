@@ -8,33 +8,45 @@ import uuid
 if __package__ in (None, ''):
     sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from benchmark.scorers.choice_accuracy import load_jsonl, score_choice_answers, extract_choice, extract_choice_with_meta
-from benchmark.runners.shuffle_options import shuffle_options as _shuffle_options_fn, unshuffle_predicted_answer
-from benchmark.runners.self_consistency import majority_vote, sample_answers
+import data_store
 from benchmark.formatters.baziqa_prompt import (
-    format_direct_choice_prompt,
     format_direct_c2_prompt,
-    format_structured_reasoning_prompt,
+    format_direct_choice_prompt,
     format_multi_turn_context,
     format_multi_turn_question,
+    format_structured_reasoning_prompt,
+)
+from benchmark.formatters.chart_context import extract_reasoned_choice_answer
+from benchmark.formatters.dual_system_reasoning import (
+    build_bazi_pipeline_prompt,
+    build_judge_prompt,
+    build_ziwei_pipeline_prompt,
+    extract_judge_answer,
+    judge_swap_seed,
 )
 from benchmark.formatters.two_stage_reasoning import (
+    build_stage2_evidence,
     format_stage1_prompt,
     format_stage2_prompt,
-    parse_stage1_result,
-    build_stage2_evidence,
     is_time_location_question,
+    parse_stage1_result,
 )
-from benchmark.formatters.dual_system_reasoning import (
-    build_bazi_pipeline_prompt, build_ziwei_pipeline_prompt,
-    build_judge_prompt, extract_judge_answer, judge_swap_seed)
-from benchmark.formatters.chart_context import extract_reasoned_choice_answer
-from benchmark.scorers.evidence_score import score_case_evidence, aggregate_evidence_score
-from benchmark.scorers.safety_score import score_safety, aggregate_safety_score
+from benchmark.phase3 import classify_parser_failure, to_original_option_identity
 from benchmark.reports.generate_report import save_report
-from benchmark.phase3 import to_original_option_identity, classify_parser_failure
-import data_store
-
+from benchmark.runners.self_consistency import majority_vote, sample_answers
+from benchmark.runners.shuffle_options import shuffle_options as _shuffle_options_fn
+from benchmark.runners.shuffle_options import unshuffle_predicted_answer
+from benchmark.scorers.choice_accuracy import (
+    extract_choice,
+    extract_choice_with_meta,
+    load_jsonl,
+    score_choice_answers,
+)
+from benchmark.scorers.evidence_score import (
+    aggregate_evidence_score,
+    score_case_evidence,
+)
+from benchmark.scorers.safety_score import aggregate_safety_score, score_safety
 
 SYSTEM_PROMPT_BENCHMARK = (
     "你是一位专业命理师，擅长根据八字命盘进行分析。回答选择题时请直接给出选项字母。"
@@ -59,17 +71,115 @@ from benchmark.runners.resume_ledger import (  # noqa: F401  (公共重导出)
     load_call_attempt_count,
     resolve_method,
     _sha256_file,
+    _canonical_json_sha256,
     _code_fingerprint,
     _atomic_write_json,
     build_resume_manifest,
     check_resume_manifest,
 )
 
+# ---- 6D：时间上下文注入 -- 冻结路由清单 / route_state 查表 / detail 溯源 ----
+
+_REASONED_ARM_MAP: dict = {
+    "b1a_prime": "none",
+    "b1b": "only",
+    "b1c": "combined",
+    "b2b": "ziwei_mini",
+    "b2c": "sequential",
+    "b1a_time_off": "none",
+    "b1a_time_on": "none",
+}
+
+
+class _RoutedManifest(dict):
+    """dict subclass carrying the canonical SHA-256 of the routed manifest."""
+    sha256: str | None = None
+
+
+def load_routed_manifest(path: str) -> dict:
+    """Load the frozen temporal routed manifest.
+
+    Returns a ``(year, case_id) -> {route_state, matched_rules, target_years}``
+    mapping. Fail-closed on duplicate ``(year, case_id)`` keys (raise). The
+    canonical SHA-256 of the manifest is attached as ``.sha256`` for resume
+    manifest provenance.
+    """
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    manifest = _RoutedManifest()
+    manifest.sha256 = _canonical_json_sha256(path)
+    for item in data:
+        year = str(item.get("year", ""))
+        case_id = str(item.get("case_id", ""))
+        key = (year, case_id)
+        if key in manifest:
+            raise ValueError(f"duplicate routed case in manifest: {key}")
+        manifest[key] = {
+            "route_state": item.get("route_state"),
+            "matched_rules": list(item.get("matched_rules", []) or []),
+            "target_years": list(item.get("target_years", []) or []),
+        }
+    return manifest
+
+
+def _lookup_routed_entry(case: dict, routed_manifest) -> dict | None:
+    """Look up the full frozen entry {route_state, matched_rules, target_years}
+    from the routed manifest; fail-closed (None) when the case is absent or the
+    manifest is not loaded (year/case_id mismatch -> miss)."""
+    if not routed_manifest:
+        return None
+    case_id = str((case or {}).get("case_id", ""))
+    year = str((case or {}).get("source_year") or "")
+    return routed_manifest.get((year, case_id))
+
+
+def _lookup_route_state(case: dict, routed_manifest) -> str | None:
+    """Look up route_state from the frozen manifest; fail-closed (None) when the
+    case is absent or the manifest is not loaded (year/case_id mismatch -> miss)."""
+    entry = _lookup_routed_entry(case, routed_manifest)
+    if entry is None:
+        return None
+    return entry.get("route_state")
+
+
+def compute_detail_provenance(case: dict, route_state, time_context_injection: str,
+                              frozen_target_years: tuple[int, ...] | None = None):
+    """Return ``(route_state, sha256_or_null)`` for a detail row.
+
+    ``route_state`` comes from the frozen manifest and is invariant to the
+    injection switch. ``off`` -> sha=None; ``on`` + routed -> actual TimeContext
+    SHA-256; ``on`` + NOT_ROUTED (or None) -> None. ``frozen_target_years``
+    (from the frozen manifest) is forwarded to ``build_time_context`` so the
+    runtime does not re-extract target years from the question.
+    """
+    state_str = route_state.value if hasattr(route_state, "value") else route_state
+    if time_context_injection != "on":
+        return state_str, None
+    if state_str is None or state_str == "NOT_ROUTED":
+        return state_str, None
+    from benchmark.formatters.bazi_time_context import (
+        TemporalRouteState,
+        build_time_context,
+    )
+    try:
+        state_enum = TemporalRouteState(state_str)
+    except ValueError:
+        return state_str, None
+    ctx = build_time_context(case, state_enum,
+                             frozen_target_years=frozen_target_years)
+    if ctx is None:
+        return state_str, None
+    return state_str, ctx.sha256()
+
+
+
 
 class Phase6Context:
-    def __init__(self, dataset_id, profile_id, arm, attempt_stage, provider, model,
-                 repeat_idx, detail_path, events_path, scheduled_calls, hard_cap, resume,
-                 thinking_mode=None):
+    def __init__(self, dataset_id=None, profile_id=None, arm=None, attempt_stage=None,
+                 provider=None, model=None, repeat_idx=0, detail_path=None,
+                 events_path=None, scheduled_calls=None, hard_cap=None, resume=False,
+                 thinking_mode=None, time_context_injection="off",
+                 temporal_routed_cases_file=None, temporal_routed_cases_sha256=None):
         self.dataset_id = dataset_id
         self.profile_id = profile_id
         self.arm = arm or "default"
@@ -77,6 +187,9 @@ class Phase6Context:
         self.provider = provider
         self.model = model
         self.thinking_mode = thinking_mode
+        self.time_context_injection = time_context_injection
+        self.temporal_routed_cases_file = temporal_routed_cases_file
+        self.temporal_routed_cases_sha256 = temporal_routed_cases_sha256
         self.repeat_idx = int(repeat_idx or 0)
         self.detail_path = detail_path
         self.events_path = events_path
@@ -260,7 +373,8 @@ def run_offline_benchmark(cases, predictions):
 
 def build_benchmark_prompt(case, method='direct_choice', phase4_exp_a=False,
                            chart_schema_version=None, profile_formatter=None,
-                           ziwei_arm=None):
+                           ziwei_arm=None, time_context_injection="off",
+                           route_state=None, frozen_target_years=None):
     if profile_formatter == 'format_official_cot_prompt':
         # 裁决 2A（执行偏离）：官方 CoT 为单参签名，astro 取自
         # case["chart_input"]["official_astro"]，不再经 render_chart_context 两参传入。
@@ -269,14 +383,17 @@ def build_benchmark_prompt(case, method='direct_choice', phase4_exp_a=False,
     if profile_formatter == 'format_dual_system_prompt':
         return build_bazi_pipeline_prompt(case)
     if profile_formatter == 'format_reasoned_choice_prompt':
-        from benchmark.formatters.chart_context import render_reasoned_context
         from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt
+        from benchmark.formatters.chart_context import render_reasoned_context
         if ziwei_arm is None:
             print(json.dumps({"status": "BLOCKED",
                 "reason": "reasoned profile 要求显式 ziwei_arm (none/only/combined)，"
                           "程序化调用不可静默回退 none"}, ensure_ascii=False))
             raise SystemExit(2)
-        context_text = render_reasoned_context(case, chart_schema_version, ziwei_arm)
+        context_text = render_reasoned_context(
+            case, chart_schema_version, ziwei_arm,
+            time_context_injection=time_context_injection, route_state=route_state,
+            frozen_target_years=frozen_target_years)
         return _assemble_reasoned_choice_prompt(case, context_text)
     if method == 'two_stage_reasoning':
         return format_stage1_prompt(case, exp_a=phase4_exp_a)
@@ -321,6 +438,7 @@ def _get_bench_case_index():
         return None
     try:
         from pathlib import Path as _Path
+
         from case_index import CaseIndex
         global _BENCH_CASE_INDEX, _BENCH_CASE_INDEX_PATH
         corpus = _Path(os.environ.get(
@@ -492,7 +610,7 @@ def _call_with_optional_ledger(messages, provider, model, case, temperature, tim
     # 执行偏离（Task 6）：计划要求两函数各抽一份 _call_once 闭包；实现合并为单一
     # 共享入口，语义等价且消除重复。ctx=None 时保留原"包装一切异常"旧行为（零变化）；
     # ctx 激活时交 _attempt_with_ledger（崩溃冒泡 / 网络失败重试记账）。
-    call_once = lambda: _call_once_messages(  # noqa: E731
+    call_once = lambda: _call_once_messages(
         messages, provider, model, case=case, temperature=temperature, timeout=timeout,
         rag_k=rag_k, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k,
         suppress_rag=suppress_rag, suppress_apb=suppress_apb)
@@ -794,7 +912,7 @@ def run_dual_system_benchmark(cases, provider, model, prompt_version, max_cases=
     }
 
 
-def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None, n_samples=1, sample_temperature=0.4, aggregate='majority', phase4_evidence_mode='all', phase4_stage1_cache=None, phase4_exp_b=False, phase4_exp_a=False, phase4_exp_c=False, phase4_exp_c2=False, phase4_direct_c2=False, chart_schema_version=None, profile_formatter=None, ziwei_arm=None, resume_append=False, completed_keys=None):
+def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, method='direct_choice', temperature=0.0, case_details_jsonl=None, rag_k=2, config_id=None, retrieval_mode='legacy', option_evidence_k=2, shuffle_options=False, shuffle_seed=None, n_samples=1, sample_temperature=0.4, aggregate='majority', phase4_evidence_mode='all', phase4_stage1_cache=None, phase4_exp_b=False, phase4_exp_a=False, phase4_exp_c=False, phase4_exp_c2=False, phase4_direct_c2=False, chart_schema_version=None, profile_formatter=None, ziwei_arm=None, resume_append=False, completed_keys=None, time_context_injection="off", routed_manifest=None):
     if method == 'multi_turn':
         return run_multi_turn_benchmark(cases, provider, model, max_cases=max_cases, temperature=temperature, case_details_jsonl=case_details_jsonl, rag_k=rag_k, config_id=config_id, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k, chart_schema_version=chart_schema_version, resume_append=resume_append)
     if method == 'dual_system':
@@ -848,6 +966,15 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
         print(f"  [{i+1}/{len(limited_cases)}] {case_id}")
 
         option_scores = None
+        routed_entry = _lookup_routed_entry(case, routed_manifest)
+        route_state = (routed_entry or {}).get("route_state")
+        frozen_target_years = (
+            tuple(routed_entry.get("target_years", []))
+            if routed_entry else None
+        )
+        detail_route_state, detail_time_sha = compute_detail_provenance(
+            case, route_state, time_context_injection,
+            frozen_target_years=frozen_target_years)
         if phase4_direct_c2:
             from benchmark.runners.per_option_scorer import score_options
 
@@ -857,7 +984,10 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
             prompt = build_benchmark_prompt(case, method=method, phase4_exp_a=phase4_exp_a,
                                             chart_schema_version=chart_schema_version,
                                             profile_formatter=profile_formatter,
-                                            ziwei_arm=ziwei_arm)
+                                            ziwei_arm=ziwei_arm,
+                                            time_context_injection=time_context_injection,
+                                            route_state=route_state,
+                                            frozen_target_years=frozen_target_years)
 
         # Two-stage reasoning path
         if method == 'two_stage_reasoning':
@@ -867,7 +997,7 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                 stage1_cache_hit = cached is not None
                 if stage1_cache_hit:
                     raw1, hypothesis = cached.get("raw"), cached.get("hypothesis")
-                    print(f"    [Stage 1 cached]")
+                    print("    [Stage 1 cached]")
                 else:
                     raw1 = call_model_sync(
                         prompt,
@@ -884,7 +1014,7 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
 
                 # Parse failure → fallback to structured_reasoning
                 if hypothesis is None:
-                    print(f"    [Stage 1 parse failed → fallback to structured_reasoning]")
+                    print("    [Stage 1 parse failed → fallback to structured_reasoning]")
                     fallback_prompt = format_structured_reasoning_prompt(case)
                     answer = call_model_sync(
                         fallback_prompt,
@@ -902,14 +1032,14 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                     # Stage 2: option matching with evidence
                     if phase4_exp_b:
                         # Experiment B: skip Stage 1 hypothesis, use evidence only
-                        print(f"    [Stage 2 EXP-B: no hypothesis]")
+                        print("    [Stage 2 EXP-B: no hypothesis]")
                         is_time = is_time_location_question(case.get('question', ''), case.get('options', []))
                         evidence_mode = phase4_evidence_mode if phase4_evidence_mode in ('all', 'top2') else 'all'
                         evidence = build_stage2_evidence(case, "", mode=evidence_mode, exp_c=phase4_exp_c, exp_c2=phase4_exp_c2)
                         stage2_prompt = format_stage2_prompt(case, hypothesis=None, evidence=evidence, is_time=is_time)
                     else:
                         # Normal mode: with Stage 1 hypothesis
-                        print(f"    [Stage 2 with hypothesis]")
+                        print("    [Stage 2 with hypothesis]")
                         is_time = is_time_location_question(case.get('question', ''), case.get('options', []))
                         # evidence_mode: 'all' for smoke (default), 'top2' only for formal if hit rate >= 0.85
                         evidence_mode = phase4_evidence_mode if phase4_evidence_mode in ('all', 'top2') else 'all'
@@ -1142,6 +1272,8 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                             label_map=case.get("answer_label_map") or {}, call_success=True),
                         "sample_idx": sample_idx, "n_samples": n_samples,
                         "aggregate": aggregate,
+                        "temporal_route_state": detail_route_state,
+                        "time_context_sha256": detail_time_sha,
                     }
                 except RuntimeError as e:
                     if not str(e).startswith("model_call_failed"):
@@ -1166,6 +1298,8 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                         "parser_failure_reason": "model_call_failed",
                         "sample_idx": sample_idx, "n_samples": n_samples,
                         "aggregate": aggregate,
+                        "temporal_route_state": detail_route_state,
+                        "time_context_sha256": detail_time_sha,
                     }
                 case_details.append(s_detail)
                 _append_jsonl(case_details_jsonl, s_detail)
@@ -1241,6 +1375,8 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                 "correct_identity": case.get('_original_answer'),
                 "mode": "on-3" if case.get('answer_label_map') else "off-3",
                 "parser_failure_reason": "model_call_failed",
+                "temporal_route_state": detail_route_state,
+                "time_context_sha256": detail_time_sha,
             }
             if shuffle_options:
                 label_map = case.get('answer_label_map') or {}
@@ -1270,7 +1406,9 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
         expected = extract_choice(case.get('answer'))
 
         if profile_formatter == 'format_reasoned_choice_prompt':
-            from benchmark.formatters.chart_context import extract_reasoned_choice_answer
+            from benchmark.formatters.chart_context import (
+                extract_reasoned_choice_answer,
+            )
             predicted = extract_reasoned_choice_answer(answer)
             meta = {
                 "choice": predicted,
@@ -1314,6 +1452,8 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
             "predicted_identity": to_original_option_identity(predicted, case.get('answer_label_map') or {}),
             "correct_identity": case.get('_original_answer'),
             "mode": "on-3" if case.get('answer_label_map') else "off-3",
+            "temporal_route_state": detail_route_state,
+            "time_context_sha256": detail_time_sha,
         }
         if phase4_direct_c2:
             detail["phase4_direct_c2"] = True
@@ -1484,7 +1624,8 @@ def run_multi_turn_benchmark(cases, provider, model, max_cases=20, temperature=0
     }
 
 
-def _phase6_visibility_filter(cases, profile, profile_formatter, args):
+def _phase6_visibility_filter(cases, profile, profile_formatter, args,
+                              time_context_injection="off", routed_manifest=None):
     """裁决 1B（计划 Task 6 增补）：per-case 可见性门禁。违规 case 不进入模型运行，
     直接以 terminal_state=unresolved 追加 detail（经 _append_jsonl 富化 attempt_key）；
     官方臂 gate 文本取官方 prompt，reasoned 臂取 render_reasoned_context，
@@ -1495,6 +1636,7 @@ def _phase6_visibility_filter(cases, profile, profile_formatter, args):
     ziwei_arm = getattr(args, "ziwei_arm", None)
     passed = []
     for case in cases:
+        route_state = _lookup_route_state(case, routed_manifest)
         if profile_formatter == 'format_official_cot_prompt':
             from benchmark.formatters.mingli_prompt import format_official_cot_prompt
             gate_text = format_official_cot_prompt(case)
@@ -1530,9 +1672,13 @@ def _phase6_visibility_filter(cases, profile, profile_formatter, args):
                     "reason": "reasoned profile visibility gate 要求显式 ziwei_arm"},
                     ensure_ascii=False))
                 raise SystemExit(2)
-            gate_text = render_reasoned_context(case, profile.chart_schema_version, ziwei_arm)
+            gate_text = render_reasoned_context(
+                case, profile.chart_schema_version, ziwei_arm,
+                time_context_injection=time_context_injection, route_state=route_state)
             violations = assert_visibility(gate_text, profile, profile.chart_schema_version,
-                                           ziwei_arm=ziwei_arm)
+                                           ziwei_arm=ziwei_arm,
+                                           time_context_injection=time_context_injection,
+                                           route_state=route_state)
         else:
             from benchmark.formatters.chart_context import render_chart_context
             gate_text = render_chart_context(case, profile.chart_schema_version)
@@ -1631,6 +1777,10 @@ def _build_parser():
     )
     parser.add_argument('--ziwei-arm', choices=['none', 'only', 'combined', 'ziwei_mini', 'sequential'],
                         default=None, help='紫微星盘消融臂 (none/only/combined/ziwei_mini/sequential)')
+    parser.add_argument('--time-context-injection', choices=['off', 'on'], default='off',
+                        help='6D：时间上下文注入开关 (off/on)，默认 off')
+    parser.add_argument('--temporal-routed-cases-file', default=None,
+                        help='6D：冻结路由清单 JSON 路径 (temporal_routed_cases.json)')
     return parser
 
 
@@ -1640,6 +1790,11 @@ def main(argv=None):
 
     # 防跨测试/跨调用污染（执行偏离）：每次 main 启动先清空全局 ctx，profile 分支再设真值
     init_phase6_context(None)
+
+    # 6D：加载冻结路由清单（若提供），供 route_state 查表与时间上下文注入
+    routed_manifest = None
+    if getattr(args, "temporal_routed_cases_file", None):
+        routed_manifest = load_routed_manifest(args.temporal_routed_cases_file)
 
     profile = None
     profile_formatter = None
@@ -1654,13 +1809,6 @@ def main(argv=None):
         args.method = resolve_method(args.profile, args.method)
         # ---- Phase 6 6B1 reasoned arm → ziwei_arm fail-closed mapping ----
         if profile.profile_id == "baziqa_xjz_reasoned":
-            _REASONED_ARM_MAP = {
-                "b1a_prime": "none",
-                "b1b": "only",
-                "b1c": "combined",
-                "b2b": "ziwei_mini",
-                "b2c": "sequential",
-            }
             ziwei_arg = getattr(args, "ziwei_arm", None)
             if args.arm not in _REASONED_ARM_MAP:
                 print(json.dumps({
@@ -1744,6 +1892,9 @@ def main(argv=None):
             scheduled_calls=args.scheduled_calls, hard_cap=args.hard_cap,
             resume=args.resume,
             thinking_mode=args.thinking_mode,
+            time_context_injection=getattr(args, "time_context_injection", "off"),
+            temporal_routed_cases_file=getattr(args, "temporal_routed_cases_file", None),
+            temporal_routed_cases_sha256=(routed_manifest.sha256 if routed_manifest else None),
         ))
     else:
         args.method = args.method or "direct_choice"
@@ -1787,7 +1938,10 @@ def main(argv=None):
                 # resume 后无剩余 case（全部完成）→ 零调用直接完成（执行偏离：防空跑全链路）
                 _write_phase6_summary(args, "OK")
                 return 0
-            gated_cases = _phase6_visibility_filter(cases, profile, profile_formatter, args)
+            gated_cases = _phase6_visibility_filter(
+                cases, profile, profile_formatter, args,
+                time_context_injection=getattr(args, "time_context_injection", "off"),
+                routed_manifest=routed_manifest)
             if not gated_cases:
                 # 全部被可见性门禁 BLOCK：任何模型调用之前短路（裁决 1B，零调用测试锁定）
                 _write_phase6_summary(args, "BLOCKED_PRECONDITION")
@@ -1826,6 +1980,8 @@ def main(argv=None):
                 # 恒增量——门禁 BLOCK 行先于模型运行写入 detail，_prepare_jsonl 会将其抹掉。
                 resume_append=bool(profile),
                 completed_keys=completed_keys,
+                time_context_injection=getattr(args, "time_context_injection", "off"),
+                routed_manifest=routed_manifest,
             )
         except _HardCapExhausted:
             _write_phase6_summary(args, "BLOCKED_INCOMPLETE")

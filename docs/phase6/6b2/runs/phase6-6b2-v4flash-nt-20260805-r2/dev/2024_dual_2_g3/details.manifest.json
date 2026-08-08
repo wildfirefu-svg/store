@@ -1,0 +1,23 @@
+{
+  "dataset_sha256": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+  "case_ids_sha256": "5db9649be09227851fa53ec698276c912f68782b895d5ce6a347643d79428b37",
+  "profile_id": "baziqa_xjz_dual",
+  "chart_schema_version": "legacy_v0",
+  "arm": "dual",
+  "ziwei_arm": "default",
+  "attempt_stage": "dual",
+  "repeat_idx": 2,
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "temperature": 0.0,
+  "sample_temperature": 0.4,
+  "n_samples": 1,
+  "aggregate": "majority",
+  "method": "dual_system",
+  "prompt_template_sha256": "42aacf6c06d7887e985029e354385b3313851192bc3289f26e979d57f7e143e3",
+  "code_sha256": "ef0c776f57581c0b744b39a55c0360111cc731e80632e6acbf8da7d157e8c067",
+  "scheduled_calls": 24,
+  "hard_cap": 26,
+  "as_of_date": "2026-07-17",
+  "thinking_mode": "disabled"
+}

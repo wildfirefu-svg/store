@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 DEFAULT_RERANKER = "BAAI/bge-reranker-v2-m3"
 
 
-def _mock_scores(pairs: List[tuple[str, str]]) -> List[float]:
+def _mock_scores(pairs: list[tuple[str, str]]) -> list[float]:
     """测试或模型未配置时的 fallback 打分。"""
     return [0.5] * len(pairs)
 
@@ -20,10 +20,10 @@ def _load_cross_encoder(model_name: str):
 
 
 def rerank_pairs(
-    pairs: List[tuple[str, str]],
-    model_name: Optional[str] = None,
+    pairs: list[tuple[str, str]],
+    model_name: str | None = None,
     batch_size: int = 8,
-) -> List[float]:
+) -> list[float]:
     """为 (query, passage) 对返回相关性分数。
 
     如果 model_name 为 None，则返回 mock 分数，方便调用方测试管道。
@@ -45,11 +45,11 @@ def rerank_pairs(
 
 def rerank_candidates(
     query: str,
-    candidates: List[Dict[str, Any]],
-    model_name: Optional[str] = None,
+    candidates: list[dict[str, Any]],
+    model_name: str | None = None,
     top_k: int = 2,
     text_key: str = "fact_excerpt",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """按 query 相关性重排候选并返回 top-k。"""
     if not candidates:
         return []

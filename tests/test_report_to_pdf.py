@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Unit tests for report_to_pdf.py — font detection, template validation, PDF generation."""
 
-import base64, os, sys, tempfile, pytest
+import base64
+import os
+import sys
+import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

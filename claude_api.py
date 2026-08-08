@@ -8,18 +8,31 @@ Auto-detects API provider from key prefix or env var:
   - sk-* with QWEN_API_KEY → Qwen/DashScope (OpenAI-compatible) API
 """
 import json
+import logging
 import os
 import sys
 import time
-import urllib.request
 import urllib.error
-import logging
+import urllib.request
 
 from config import (
-    MAX_TOKENS, DEFAULT_TEMPERATURE, DEEPSEEK_THINKING, LOG_LEVEL, LOG_FILE, API_RETRIES,
-    DEEPSEEK_API_KEY, ANTHROPIC_API_KEY, KIMI_API_KEY, GLM_API_KEY, QWEN_API_KEY,
-    DEEPSEEK_MODEL, ANTHROPIC_MODEL, KIMI_MODEL, GLM_MODEL, QWEN_MODEL,
-    DEEPSEEK_BASE_URL, ANTHROPIC_BASE_URL, KIMI_BASE_URL, GLM_BASE_URL, QWEN_BASE_URL,
+    ANTHROPIC_API_KEY,
+    ANTHROPIC_BASE_URL,
+    ANTHROPIC_MODEL,
+    API_RETRIES,
+    DEEPSEEK_BASE_URL,
+    DEEPSEEK_MODEL,
+    DEEPSEEK_THINKING,
+    DEFAULT_TEMPERATURE,
+    GLM_BASE_URL,
+    GLM_MODEL,
+    KIMI_BASE_URL,
+    KIMI_MODEL,
+    LOG_FILE,
+    LOG_LEVEL,
+    MAX_TOKENS,
+    QWEN_BASE_URL,
+    QWEN_MODEL,
 )
 
 logging.basicConfig(
@@ -130,7 +143,6 @@ class TruncatedResponseError(RuntimeError):
     when only text was expected).  Raised as a RuntimeError with a 'truncated_response'
     prefix so retry ledgers can distinguish it from network errors.
     """
-    pass
 
 
 def call_model_messages_sync(messages, provider=None, model=None, system_prompt=None, timeout=180, temperature=None, thinking_mode=None):
@@ -519,7 +531,7 @@ def stream_chat(chart_json: dict, user_message: str, conversation_history: list 
             body = e.read().decode("utf-8", errors="replace")[:1000]
             if e.code == 429 and attempt == 0 and attempts > 1:
                 import time
-                logger.warning(f"API rate limited (429), retrying after 2s...")
+                logger.warning("API rate limited (429), retrying after 2s...")
                 time.sleep(2)
                 continue
             logger.error(f"API HTTP {e.code}: {body}")

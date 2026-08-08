@@ -27,7 +27,6 @@ import statistics
 from collections import defaultdict
 from pathlib import Path
 
-
 ARMS = ["b1a_prime", "b1b", "b1c", "b2b", "b2c"]
 LABEL_DIMS = ["question_complexity", "ziwei_info_richness", "bazi_info_richness"]
 

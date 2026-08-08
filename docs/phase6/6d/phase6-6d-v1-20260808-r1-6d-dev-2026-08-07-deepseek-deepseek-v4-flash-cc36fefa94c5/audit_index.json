@@ -1,0 +1,81 @@
+{
+  "run_id": "phase6-6d-v1-20260808-r1-6d-dev-2026-08-07-deepseek-deepseek-v4-flash-cc36fefa94c5",
+  "user_run_id": "phase6-6d-v1-20260808-r1",
+  "experiment_id": "6d",
+  "stage": "dev",
+  "frozen_date": "2026-08-07",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "thinking_mode": "disabled",
+  "model_label": "DeepSeek-V4-Flash non-thinking",
+  "code_fingerprint": "cc36fefa94c5334b05a77c99386745b9d57b8171bc61adf06330f8dbe27923f4",
+  "gate_verdict": "NON_INFERIOR",
+  "gate_detail": {
+    "verdict": "NON_INFERIOR",
+    "paired_delta": -0.010753,
+    "min_case_delta": -2,
+    "n_cases": 31,
+    "case_deltas": {
+      "guangdong_female_19800824_P001-Q5": 0,
+      "chaozhou_male_19720108_P002-Q9": -1,
+      "male_19611230_P003-Q11": 0,
+      "male_19611230_P003-Q12": 0,
+      "male_19611230_P003-Q13": 0,
+      "male_19611230_P003-Q14": 0,
+      "female_19831028_P004-Q17": 0,
+      "male_19710412_P005-Q21": -2,
+      "male_19710412_P005-Q22": 0,
+      "male_19710412_P005-Q25": 0,
+      "female_19830326_P006-Q26": 0,
+      "female_19830326_P006-Q27": 1,
+      "female_19830326_P006-Q28": -1,
+      "female_19830326_P006-Q29": 0,
+      "female_19830326_P006-Q30": 2,
+      "female_19800921_P007-Q33": 0,
+      "female_19800921_P007-Q34": 0,
+      "male_20070131_P008-Q39": 0,
+      "guangdong_female_19511114_P001-Q4": 0,
+      "guangdong_female_19511114_P001-Q5": 0,
+      "hongkong_female_19870705_P002-Q6": -2,
+      "hongkong_female_19870705_P002-Q8": 2,
+      "miyazaki_male_19830421_P003-Q15": 0,
+      "singapore_male_19930408_P004-Q17": 0,
+      "singapore_male_19930408_P004-Q18": 0,
+      "singapore_male_19930408_P004-Q20": 0,
+      "malaysia_male_19880110_P005-Q22": 0,
+      "malaysia_male_19880110_P005-Q23": 0,
+      "malaysia_male_19730824_P006-Q28": 0,
+      "malaysia_male_19730824_P006-Q29": 0,
+      "malaysia_male_19730824_P006-Q30": 0
+    },
+    "stage": "dev"
+  },
+  "merged_details_sha256": "3539a5fb0e101bff1f07d5b6490cab90ee00cc3bfbbf60bc5f6387547e49086d",
+  "budget": {
+    "attempted": 186,
+    "hard_cap": 486,
+    "slices": 30
+  },
+  "completeness_result": "PASS",
+  "archived_at": "2026-08-08T14:04:18",
+  "temporal_context_version": "6d-v1",
+  "experiment_conditions": [
+    "off",
+    "on"
+  ],
+  "extraction_strategy_sha256": "4a2a93b3c521bb6e3c26fb2322269992e3e2837be1d25fea034bcaddb0a7957c",
+  "temporal_routed_cases_sha256": "a80fbe7a87262dc826d9f8eb834ac958b43ad1c64f29e624aa25114c8ecfac63",
+  "condition_manifest_sha256": "b2f8fdf7b8277b270e2fbacb70a2095dab6d764625709f6ad4229ba2468b006a",
+  "dataset_sha256_by_year": {
+    "2024": "219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32",
+    "2025": "96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad"
+  },
+  "dataset_set_sha256": "c7aa308e5f10a0e52c7cfe5af02cef057bdc204b09bf85184349c096860d434c",
+  "group_abba_order": {
+    "2024:g0": "BA",
+    "2024:g1": "AB",
+    "2024:g2": "AB",
+    "2025:g0": "AB",
+    "2025:g1": "BA"
+  }
+}

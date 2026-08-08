@@ -547,7 +547,7 @@ def test_run_validation_uses_fake_runner_and_writes_summary(tmp_path: Path, monk
     monkeypatch.setattr(phase5, "PROJECT_ROOT", tmp_path)
     monkeypatch.setattr(phase5, "EXPERIMENT_SCOPE", ())
     monkeypatch.setattr(phase5, "git_output", lambda *args: "deadbeef")
-    monkeypatch.setattr(phase5, "experiment_scope_status", lambda: {})
+    monkeypatch.setattr(phase5, "experiment_scope_status", dict)
     monkeypatch.setattr(phase5, "enrich_row", fake_enrich)
     monkeypatch.setattr(
         phase5,
@@ -653,7 +653,7 @@ def test_final_2023_offline_failure_preserves_prior_results(tmp_path: Path, monk
     monkeypatch.setattr(phase5, "PROJECT_ROOT", tmp_path)
     monkeypatch.setattr(phase5, "EXPERIMENT_SCOPE", ())
     monkeypatch.setattr(phase5, "git_output", lambda *args: "deadbeef")
-    monkeypatch.setattr(phase5, "experiment_scope_status", lambda: {})
+    monkeypatch.setattr(phase5, "experiment_scope_status", dict)
     monkeypatch.setattr(phase5, "enrich_row", fake_enrich)
     monkeypatch.setattr(
         phase5,
@@ -705,7 +705,7 @@ def test_run_validation_persists_auditable_year_stop(tmp_path: Path, monkeypatch
     monkeypatch.setattr(phase5, "PROJECT_ROOT", tmp_path)
     monkeypatch.setattr(phase5, "EXPERIMENT_SCOPE", ())
     monkeypatch.setattr(phase5, "git_output", lambda *args: "deadbeef")
-    monkeypatch.setattr(phase5, "experiment_scope_status", lambda: {})
+    monkeypatch.setattr(phase5, "experiment_scope_status", dict)
     monkeypatch.setattr(phase5, "enrich_row", fake_enrich)
     monkeypatch.setattr(
         phase5,

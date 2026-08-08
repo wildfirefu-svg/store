@@ -8,18 +8,16 @@ so import failure is the TDD red phase.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
 
 import pytest
 
 from rag_prompt_builder import (
     format_apb_instruction_block,
-    select_fewshot_examples,
     render_dynamic_fewshot,
-    load_fewshot_examples,
+    select_fewshot_examples,
 )
-
 
 POOL = Path("benchmark/fewshot/anti_position_bias_v1.jsonl")
 

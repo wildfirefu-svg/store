@@ -7,7 +7,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
@@ -17,8 +17,8 @@ from bazi_features import extract
 from case_index import CaseIndex
 
 
-def _load_jsonl(path: Path) -> List[Dict[str, Any]]:
-    rows: List[Dict[str, Any]] = []
+def _load_jsonl(path: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     with Path(path).open("r", encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -28,7 +28,7 @@ def _load_jsonl(path: Path) -> List[Dict[str, Any]]:
     return rows
 
 
-def _case_chart(case: Dict[str, Any]) -> Dict[str, Any]:
+def _case_chart(case: dict[str, Any]) -> dict[str, Any]:
     """复现 benchmark/runners/run_benchmark.py 中的 chart 构造逻辑。"""
     chart = (case or {}).get("chart_input") or {}
     if not chart:
@@ -67,11 +67,11 @@ def evaluate(
     dataset_path: Path,
     corpus_path: Path,
     retrieval_mode: str,
-    dense_model: Optional[str],
-    reranker_model: Optional[str],
-    dense_cache_path: Optional[Path] = None,
+    dense_model: str | None,
+    reranker_model: str | None,
+    dense_cache_path: Path | None = None,
     option_evidence_k: int = 2,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     os.environ["BAZI_RAG"] = "1"
     os.environ["BAZI_RAG_CORPUS"] = str(corpus_path)
 
@@ -86,8 +86,8 @@ def evaluate(
 
     top1 = 0
     top2 = 0
-    ranks: List[int] = []
-    per_case: List[Dict[str, Any]] = []
+    ranks: list[int] = []
+    per_case: list[dict[str, Any]] = []
 
     for case in cases:
         chart = _case_chart(case)
@@ -105,7 +105,7 @@ def evaluate(
         )
 
         # 根据每个选项的 top-1 evidence source_answer_option_text 构建投票
-        option_scores: Dict[str, float] = {}
+        option_scores: dict[str, float] = {}
         for label in ["A", "B", "C", "D"]:
             items = evidence.get(label) or []
             if items:
@@ -152,7 +152,7 @@ def evaluate(
     }
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Hybrid retrieval 离线评估")
     parser.add_argument("--dataset", required=True, help="holdout JSONL 路径")
     parser.add_argument("--corpus", required=True, help="语料库 JSONL 路径")

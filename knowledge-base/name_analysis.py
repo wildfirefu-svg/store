@@ -13,22 +13,29 @@ Usage:
     python knowledge-base/name_analysis.py --chart chart.json --generate --surname 张 --gender female --top 10
 """
 
-import os, sys, json, argparse, random
-from itertools import product
+import argparse
+import json
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from name_wuxing_data import (
-    KANGXI_STROKES, _SIMPLIFIED_TO_KANGXI_MAP as SIMP_KX,
-    SURNAME_STROKES, EIGHTY_ONE_NUMBERS, SANCAI_CONFIGS, WUXING_CHARS,
-    CHAR_WUXING, ZODIAC_NAME_RULES, WUGE_CATEGORY_NAMES,
-    analyze_phonetics, POSITIVE_NAME_CHARS, NEGATIVE_CONNOTATION_CHARS,
-    BAD_HOMOPHONES, get_tone,
+    _SIMPLIFIED_TO_KANGXI_MAP as SIMP_KX,
 )
-from bazi_calculator import (
-    GAN_WUXING, ZHI_WUXING, DIZHI, sexagenary_by_index,
+from name_wuxing_data import (
+    BAD_HOMOPHONES,
+    CHAR_WUXING,
+    EIGHTY_ONE_NUMBERS,
+    KANGXI_STROKES,
+    NEGATIVE_CONNOTATION_CHARS,
+    POSITIVE_NAME_CHARS,
+    SANCAI_CONFIGS,
+    WUGE_CATEGORY_NAMES,
+    ZODIAC_NAME_RULES,
+    analyze_phonetics,
 )
 from zeri import infer_xishen_from_chart
-
 
 # =============================================================================
 # 1. 康熙笔画查询
@@ -494,7 +501,7 @@ def generate_names(surname, chart_data, gender='male', top_n=10):
 def format_name_report(evaluation):
     """Format a name evaluation as a readable text report."""
     lines = []
-    lines.append(f'══════ 姓名评测报告 ══════')
+    lines.append('══════ 姓名评测报告 ══════')
     lines.append(f'姓名: {evaluation["name"]}')
     lines.append(f'生肖: {evaluation["zodiac"]}')
     lines.append(f'喜用神: {",".join(evaluation["xishen"])} / 忌神: {",".join(evaluation["jishen"])}')
@@ -537,7 +544,7 @@ def format_generate_report(names, chart_data):
     """Format name generation results."""
     fav, _ = infer_xishen_from_chart(chart_data)
     lines = []
-    lines.append(f'══════ 取名推荐 ══════')
+    lines.append('══════ 取名推荐 ══════')
     lines.append(f'喜用神: {",".join(fav)}')
     lines.append("")
 

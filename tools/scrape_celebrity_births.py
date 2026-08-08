@@ -11,10 +11,8 @@ Pure Python stdlib (urllib, re, json).
 
 import json
 import re
-import sys
-import os
-import urllib.request
 import urllib.error
+import urllib.request
 from datetime import date
 
 # =============================================================================
@@ -218,7 +216,7 @@ def build_case_entry(name, wiki_slug, birth, time, tz, location, gender, scrape_
             'location': location,
             'hour_unknown': False,
             'timezone': tz,
-            'timezone_note': f'Verified from reliable sources',
+            'timezone_note': 'Verified from reliable sources',
         },
         'gender': gender,
         'bazi': {

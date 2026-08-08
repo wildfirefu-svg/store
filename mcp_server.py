@@ -11,12 +11,17 @@ Usage:
     python mcp_server.py --transport sse      # SSE on http://0.0.0.0:8001/sse
 """
 
-import json, os, sys, hashlib, importlib.util, argparse, logging
+import argparse
+import importlib.util
+import json
+import logging
+import os
+import sys
 from datetime import date
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from config import MCP_PORT, LOG_LEVEL, LOG_FILE
+from config import LOG_FILE, LOG_LEVEL, MCP_PORT
 
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
@@ -29,7 +34,9 @@ logger = logging.getLogger('mcp')
 from mcp.server.fastmcp import FastMCP
 
 from bazi_calculator import (
-    calculate_true_solar_time, compute_chart, compare_charts,
+    calculate_true_solar_time,
+    compare_charts,
+    compute_chart,
 )
 
 # ---------------------------------------------------------------------------

@@ -5,8 +5,6 @@ import os
 import sys
 from pathlib import Path
 
-import pytest
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -16,7 +14,10 @@ from benchmark.formatters.mingli_prompt import (
     OFFICIAL_SYSTEM_PROMPT,
     format_official_cot_prompt,
 )
-from benchmark.runners.mingli_bench_adapter import load_and_normalize, to_canonical_chart_input
+from benchmark.runners.mingli_bench_adapter import (
+    load_and_normalize,
+    to_canonical_chart_input,
+)
 from benchmark.runners.profiles import (
     assert_visibility,
     resolve_profile,

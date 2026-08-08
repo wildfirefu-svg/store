@@ -3,12 +3,16 @@
 B/C 两部分先按教科书规则写断言跑出红色证据，再按 spec §8 流程最小修复引擎转绿。
 """
 import pytest
+from bazi_snapshot_helper import (
+    SNAPSHOT_CASES,
+    SNAPSHOT_DIR,
+    assert_snapshot_equal,
+    compute_shensha,
+    freeze_lunar_backend,
+    load_snapshot,
+)
 
 import bazi_calculator as bc
-from bazi_snapshot_helper import (
-    SNAPSHOT_CASES, SNAPSHOT_DIR,
-    assert_snapshot_equal, compute_shensha, freeze_lunar_backend, load_snapshot,
-)
 
 
 def mk_fp(year, month, day, hour):

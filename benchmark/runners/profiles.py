@@ -93,6 +93,11 @@ _ZIWEI_MARKERS = frozenset({"【紫微斗数·本命】", "夫妻", "财帛", "�
 # 改用宫位标签形式（渲染为"夫妻（戌·丙）"）；仅 judge 提示词含推理散文，其余分支保持裸名
 _ZIWEI_MARKERS_PROSE_SAFE = frozenset({"【紫微斗数·本命】", "夫妻（", "财帛（", "官禄（"})
 _DENYLIST_MARKERS = frozenset({"【流年】", "空亡：", "空亡（"})
+_TEMPORAL_CONTEXT_MARKERS = frozenset({
+    "【时间上下文·预计算】",
+    "【大运排布】",
+    "【目标流年详析】",
+})
 # 裁决 1B：官方臂独立 required（结构性 astro 标记，astro 块注入即恒真，
 # 不依赖有星宫位，避免误杀）；不与 mingli_xjz_direct 共享 required。
 _OFFICIAL_ASTRO_MARKERS = frozenset({"八字命盘信息：", "紫微命盘信息：", "十二宫位星曜分布："})
@@ -104,18 +109,19 @@ _APPROVED_ONLY_MARKERS = frozenset({
 _APPROVED_BAZI_MARKERS_NO_ZIWEI = _APPROVED_BAZI_MARKERS - {"【紫微斗数·本命】"}
 
 
-def visibility_requirements(
+def _visibility_base(
     profile: EvalProfile, chart_schema_version: str,
     ziwei_arm: str | None = None,
     stage: str | None = None,
 ) -> tuple[frozenset[str], frozenset[str]]:
+    """Base visibility (profile/schema/ziwei_arm/stage) without temporal rules."""
     if ziwei_arm is not None:
         # Three-arm reasoned visibility matrix (design §6).
-        # render_reasoned_context() ignores chart_schema_version — all three arms
+        # render_reasoned_context() ignores chart_schema_version - all three arms
         # produce identical marker output regardless of legacy_v0 vs approved_v1.
         # The marker sets below are therefore version-independent.
         if ziwei_arm == "none":
-            # format_birth_line(case) only — no section markers at all.
+            # format_birth_line(case) only - no section markers at all.
             return frozenset(), _APPROVED_ONLY_MARKERS | _DENYLIST_MARKERS
         if ziwei_arm == "only":
             # identity header + 【紫微斗数·本命】only.
@@ -157,7 +163,7 @@ def visibility_requirements(
         return frozenset({"【紫微斗数·本命】"}), _APPROVED_BAZI_MARKERS_NO_ZIWEI | _DENYLIST_MARKERS
     if stage == "judge":
         # Blinded judge: no raw chart markers at all（散文安全变体：宫位名用标签形式，
-        # 避免误杀推理散文中的"夫妻/财帛/官禄"自然表述——真实缺陷证据：2025 Q9 同性婚姻题
+        # 避免误杀推理散文中的"夫妻/财帛/官禄"自然表述--真实缺陷证据：2025 Q9 同性婚姻题
         # gate_blocked 导致 BAZI_COUNT=0 切片失败）
         return frozenset(), _APPROVED_BAZI_MARKERS | _ZIWEI_MARKERS_PROSE_SAFE | _DENYLIST_MARKERS
     if chart_schema_version == "legacy_v0":
@@ -169,31 +175,80 @@ def visibility_requirements(
             return _OFFICIAL_ASTRO_MARKERS, _DENYLIST_MARKERS
         if profile.dataset == "mingli":
             # 决策记录 3 + 裁决 1B：xjz 臂维持六段标+紫微；真实数据 0 结构化
-            # bazi → 必然 BLOCKED_PRECONDITION，缺口如实入报告。
+            # bazi -> 必然 BLOCKED_PRECONDITION，缺口如实入报告。
             return _MINGLI_BAZI_CORE_MARKERS | _ZIWEI_MARKERS, _DENYLIST_MARKERS
         return _APPROVED_BAZI_MARKERS, _DENYLIST_MARKERS
     raise SystemExit(f"未知 chart_schema_version: {chart_schema_version!r}")
 
 
+def visibility_requirements(
+    profile: EvalProfile | None = None,
+    chart_schema_version: str | None = None,
+    ziwei_arm: str | None = None,
+    stage: str | None = None,
+    time_context_injection: str = "off",
+    route_state: str | None = None,
+) -> tuple[frozenset[str], frozenset[str]]:
+    """Returns (required_markers, denied_markers).
+
+    Temporal context visibility (6D v1 Task 6):
+    - ``time_context_injection="off"``: all temporal markers denied.
+    - ``time_context_injection="on"`` + ``route_state``:
+      - NOT_ROUTED (or None): all temporal markers denied.
+      - ROUTED_WITHOUT_TARGETS: 【时间上下文·预计算】 + 【大运排布】 required;
+        【目标流年详析】 denied.
+      - ROUTED_WITH_TARGETS: all 3 temporal markers required.
+    """
+    if profile is not None and chart_schema_version is not None:
+        required, forbidden = _visibility_base(
+            profile, chart_schema_version, ziwei_arm, stage)
+    else:
+        required, forbidden = frozenset(), frozenset()
+
+    if time_context_injection == "off":
+        forbidden = forbidden | _TEMPORAL_CONTEXT_MARKERS
+    elif time_context_injection == "on":
+        if route_state is None or route_state == "NOT_ROUTED":
+            forbidden = forbidden | _TEMPORAL_CONTEXT_MARKERS
+        elif route_state == "ROUTED_WITHOUT_TARGETS":
+            required = required | frozenset({
+                "【时间上下文·预计算】",
+                "【大运排布】",
+            })
+            forbidden = forbidden | frozenset({"【目标流年详析】"})
+        elif route_state == "ROUTED_WITH_TARGETS":
+            required = required | _TEMPORAL_CONTEXT_MARKERS
+
+    return required, forbidden
+
+
 def assert_visibility(
-    rendered_text: str, profile: EvalProfile, chart_schema_version: str,
+    rendered_text: str, profile: EvalProfile | None = None,
+    chart_schema_version: str | None = None,
     ziwei_arm: str | None = None, stage: str | None = None,
+    time_context_injection: str = "off",
+    route_state: str | None = None,
 ) -> list[str]:
     """渲染文本上的 required/forbidden 子串断言，返回违规列表（空表 = 通过）。"""
     required, forbidden = visibility_requirements(
-        profile, chart_schema_version, ziwei_arm, stage)
+        profile, chart_schema_version, ziwei_arm, stage,
+        time_context_injection, route_state)
     violations = [f"required 缺失: {m}" for m in sorted(required) if m not in rendered_text]
     violations += [f"forbidden 命中: {m}" for m in sorted(forbidden) if m in rendered_text]
     return violations
 
 
 def visibility_gate(
-    rendered_text: str, profile: EvalProfile, chart_schema_version: str,
+    rendered_text: str, profile: EvalProfile | None = None,
+    chart_schema_version: str | None = None,
     ziwei_arm: str | None = None, stage: str | None = None,
+    time_context_injection: str = "off",
+    route_state: str | None = None,
 ) -> str:
     """runner 短路契约（裁决 1B）：返回 "PASS" | "BLOCKED_PRECONDITION"；
     BLOCKED_PRECONDITION 时 runner 禁止任何模型调用（Task 6 接线并以零调用测试断言）。"""
-    if assert_visibility(rendered_text, profile, chart_schema_version, ziwei_arm, stage):
+    if assert_visibility(rendered_text, profile, chart_schema_version,
+                         ziwei_arm, stage, time_context_injection, route_state):
         return "BLOCKED_PRECONDITION"
     return "PASS"
 
@@ -233,8 +288,14 @@ def prompt_fingerprint(profile: EvalProfile) -> str:
         ]
     elif formatter == "format_dual_system_prompt":
         from benchmark.formatters import dual_system_reasoning as ds
-        from benchmark.formatters.chart_context import render_reasoned_context, extract_reasoned_choice_answer
-        from benchmark.formatters.baziqa_prompt import _assemble_reasoned_choice_prompt, format_options
+        from benchmark.formatters.baziqa_prompt import (
+            _assemble_reasoned_choice_prompt,
+            format_options,
+        )
+        from benchmark.formatters.chart_context import (
+            extract_reasoned_choice_answer,
+            render_reasoned_context,
+        )
         parts += [
             ds.JUDGE_TEMPLATE_VERSION,
             inspect.getsource(ds.build_bazi_pipeline_prompt),

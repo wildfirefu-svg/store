@@ -155,7 +155,7 @@ if __name__ == "__main__":
         if stars:
             print(f"   {level}: {', '.join(stars)}")
     
-    print(f"\n4. 十二宫总评分:")
+    print("\n4. 十二宫总评分:")
     for dz in DIZHI:
         score = get_palace_score(dz)
         bar = "█" * (score // 2) + "." * ((70 - score) // 2)

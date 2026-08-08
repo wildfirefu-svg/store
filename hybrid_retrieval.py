@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List
+from collections.abc import Callable
+from typing import Any
 
 
 def rrf_fuse(
-    rankings: List[List[Dict[str, Any]]],
+    rankings: list[list[dict[str, Any]]],
     k: int = 60,
     id_key: str = "person_id",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """对多个排序列表做 Reciprocal Rank Fusion。
 
     得分 = sum(1 / (k + rank))，rank 从 1 开始。
@@ -16,9 +17,9 @@ def rrf_fuse(
     if not rankings:
         return []
 
-    scores: Dict[str, float] = {}
-    first_seen: Dict[str, Dict[str, Any]] = {}
-    first_rank: Dict[str, int] = {}
+    scores: dict[str, float] = {}
+    first_seen: dict[str, dict[str, Any]] = {}
+    first_rank: dict[str, int] = {}
 
     for ranking in rankings:
         for rank, item in enumerate(ranking, start=1):
@@ -38,11 +39,11 @@ def rrf_fuse(
 
 
 def hybrid_retrieve(
-    sparse_fn: Callable[[], List[Dict[str, Any]]],
-    dense_fn: Callable[[], List[Dict[str, Any]]],
+    sparse_fn: Callable[[], list[dict[str, Any]]],
+    dense_fn: Callable[[], list[dict[str, Any]]],
     top_k: int = 20,
     k: int = 60,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """分别从稀疏源和稠密源取排序结果，RRF 融合后返回 top-K 候选池。"""
     sparse = sparse_fn()
     dense = dense_fn()

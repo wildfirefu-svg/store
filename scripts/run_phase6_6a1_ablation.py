@@ -30,8 +30,8 @@ from scripts.enrich_baziqa_chart_input import load_jsonl
 from scripts.run_phase6_6a0_ablation import (
     BudgetLedger,
     BudgetLedgerCorrupt,
-    split_ab_ba,
     _git_head,
+    split_ab_ba,
 )
 
 WORKSPACE_FILES = (
@@ -471,13 +471,13 @@ def load_dev_temperature(dev_run_id: str, archive_dir: Path, provider: str, mode
         raise ValueError("dev manifest 缺 temperature_freeze")
     # v6 高优 4：sample_temperature 必存且一致（不允许静默通过）
     if "sample_temperature" not in tfreeze:
-        raise ValueError(f"dev temperature_freeze 缺 sample_temperature 字段")
+        raise ValueError("dev temperature_freeze 缺 sample_temperature 字段")
     if abs(float(tfreeze["sample_temperature"]) - temperature) > 0.001:
         raise ValueError(f"temperature_freeze.sample_temperature({tfreeze['sample_temperature']})"
                          f" 与 sample_temperature({temperature}) 不一致")
     dataset_sha = manifest.get("dataset_sha256")
     if dataset_sha != approved_2024_dataset_sha:
-        raise ValueError(f"dataset SHA 与已批准 2024 enriched manifest 不对应")
+        raise ValueError("dataset SHA 与已批准 2024 enriched manifest 不对应")
     audit_index = d / "audit_index.json"
     if not audit_index.exists():
         raise ValueError(f"dev 归档缺失：{audit_index}")
@@ -490,15 +490,15 @@ def load_dev_temperature(dev_run_id: str, archive_dir: Path, provider: str, mode
     # v6 高优 5：summary_sha256 绑定当前 summary.json 内容（审计后修改 summary 会被发现）
     summary_sha = sha256_file(d / "summary.json")
     if sc.get("summary_sha256") != summary_sha:
-        raise ValueError(f"dev 审计 summary_sha256 与当前 summary.json 不一致")
+        raise ValueError("dev 审计 summary_sha256 与当前 summary.json 不一致")
     # v6 高优 5：recomputed 的 Δ1/Δ2 与当前 summary 一致
     recomputed = sc.get("recomputed", {})
     if abs(float(recomputed.get("delta1_pp", 0)) - float(summary.get("delta1_pp", 0))) > 0.01:
-        raise ValueError(f"dev 审计 recomputed Δ1 与 summary 不一致")
+        raise ValueError("dev 审计 recomputed Δ1 与 summary 不一致")
     if abs(float(recomputed.get("delta2_pp", 0)) - float(summary.get("delta2_pp", 0))) > 0.01:
-        raise ValueError(f"dev 审计 recomputed Δ2 与 summary 不一致")
+        raise ValueError("dev 审计 recomputed Δ2 与 summary 不一致")
     if dataset_sha is not None and ai.get("dataset_sha256") != dataset_sha:
-        raise ValueError(f"dev 审计索引 dataset_sha256 不一致")
+        raise ValueError("dev 审计索引 dataset_sha256 不一致")
     if ai.get("run_id") is not None and ai.get("run_id") != dev_run_id:
         raise ValueError(f"dev 审计索引 run_id 不一致：{ai.get('run_id')}")
     if ai.get("year") is not None and ai.get("year") != 2024:

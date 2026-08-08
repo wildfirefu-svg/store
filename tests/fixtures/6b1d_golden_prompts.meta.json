@@ -11,7 +11,11 @@
     "guangdong_female_19800824_P001-Q2",
     "guangdong_female_19800824_P001-Q3"
   ],
-  "arms": ["b1a_prime", "b1b", "b1c"],
+  "arms": [
+    "b1a_prime",
+    "b1b",
+    "b1c"
+  ],
   "fingerprint_count": 9,
   "fingerprint_formula": "SHA-256 of _assemble_reasoned_choice_prompt(case, render_reasoned_context(case, 'legacy_v0', ziwei_arm))",
   "dataset_source": "benchmark/datasets/baziqa_contest8_2024_holdout_enriched.jsonl (first 3 cases)",

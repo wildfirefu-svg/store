@@ -24,7 +24,6 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from scripts import run_baziqa_retrieval_ablation as mod
 
-
 # Each ablation config gets its own "true" accuracy on a fake 8-row holdout,
 # emulating roughly what the real flash run might look like so we can sanity
 # check report column widths and ordering.
@@ -89,8 +88,7 @@ def fake_subprocess_run(cmd, check=True, env=None):
     rows = _fake_case_details(config_id, repeat)
     Path(details_path).parent.mkdir(parents=True, exist_ok=True)
     with Path(details_path).open("w", encoding="utf-8") as f:
-        for row in rows:
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        f.writelines(json.dumps(row, ensure_ascii=False) + "\n" for row in rows)
 
     class _R:
         returncode = 0

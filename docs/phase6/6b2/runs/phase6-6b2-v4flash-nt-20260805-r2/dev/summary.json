@@ -1,0 +1,71 @@
+{
+  "model_protocol": "DeepSeek-V4-Flash non-thinking",
+  "provider": "deepseek",
+  "requested_model": "deepseek-v4-flash",
+  "thinking_mode": "disabled",
+  "run_id": "phase6-6b2-v4flash-nt-20260805-r2",
+  "primary_comparison": "concurrent b1a_prime vs dual",
+  "run": {
+    "slices": 60,
+    "scheduled": 960,
+    "attempted": 837,
+    "global_hard_cap": 1060
+  },
+  "gate": {
+    "verdict": "ROLLBACK",
+    "delta_dev": 0.029166666666666653,
+    "dual_merged_acc": 0.31666666666666665,
+    "min_year_delta": -1.850371707708594e-17,
+    "delta_by_year": {
+      "2024": -1.850371707708594e-17,
+      "2025": 0.05833333333333333
+    },
+    "delta_by_year_repeat": {
+      "2024_0": 0.0,
+      "2024_1": 0.04999999999999999,
+      "2024_2": -0.050000000000000044,
+      "2025_0": 0.07499999999999996,
+      "2025_1": 0.07500000000000001,
+      "2025_2": 0.025000000000000022
+    },
+    "stage": "dev"
+  },
+  "accuracy": {
+    "dual_final_accuracy": 0.3167,
+    "dual_cases": 240,
+    "b1a_accuracy": 0.2875,
+    "b1a_rows": 240
+  },
+  "delta": {
+    "delta_dev": 0.029166666666666653,
+    "min_year_delta": -1.850371707708594e-17,
+    "delta_by_year": {
+      "2024": -1.850371707708594e-17,
+      "2025": 0.05833333333333333
+    },
+    "delta_by_year_repeat": {
+      "2024_0": 0.0,
+      "2024_1": 0.04999999999999999,
+      "2024_2": -0.050000000000000044,
+      "2025_0": 0.07499999999999996,
+      "2025_1": 0.07500000000000001,
+      "2025_2": 0.025000000000000022
+    }
+  },
+  "judge": {
+    "trigger_rate": 0.5583,
+    "reference_disagreement_rate": 0.579,
+    "judge_calls": 134
+  },
+  "parser_rate": 0.9742,
+  "integrity": {
+    "rows": 854,
+    "call_failed": 0
+  },
+  "b1c_advisory": {
+    "count": 240,
+    "sha256": "10e6b82f92fabd02b7e621b714d330a812f16e6b7aac7ad98adf4a0dd494eafa",
+    "gate_inclusion": false,
+    "note": "historical deepseek-chat advisory only; excluded from all gates"
+  }
+}

@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Tests for BaZi Analysis API server."""
-import os, sys, json, pytest, importlib.util
+import importlib.util
+import os
+import sys
+
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

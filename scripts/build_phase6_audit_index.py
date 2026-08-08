@@ -175,10 +175,10 @@ def recompute_vote_accuracy(detail_rows: list, expected_case_ids: list, repeats:
                             and (r.get("attempt_key") or [None] * 10)[2] == "vote5_samples"
                             and (r.get("attempt_key") or [None] * 10)[7] == rep),
                            key=lambda r: (r.get("attempt_key") or [None] * 10)[8])
-            arow = next((r for r in detail_rows
+            arow = next(r for r in detail_rows
                          if r["case_id"] == cid
                          and (r.get("attempt_key") or [None] * 10)[2] == "anchor_single0"
-                         and (r.get("attempt_key") or [None] * 10)[7] == rep))
+                         and (r.get("attempt_key") or [None] * 10)[7] == rep)
             votes = [r["predicted_answer"] if r.get("terminal_state") == "parsed" else None
                      for r in srows]
             v5 = strict_majority(votes)

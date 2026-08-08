@@ -1,8 +1,9 @@
 """Verify the refactored app: JS modules load, chart renders, chat works."""
-import sys, os
+import sys
+
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
 from playwright.sync_api import sync_playwright
-import time
 
 BASE = "http://localhost:8000"
 SCREEN = "f:/project/agent/tests/_verify_screens"
@@ -142,7 +143,7 @@ def run():
             for e in errors[:10]:
                 print(f"   - {e[:120]}")
         else:
-            print(f"\n[PASS] No JS errors throughout")
+            print("\n[PASS] No JS errors throughout")
 
         page.screenshot(path=f"{SCREEN}_06_final.png", full_page=True)
 

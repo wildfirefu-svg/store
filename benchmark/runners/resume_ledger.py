@@ -131,6 +131,8 @@ RESUME_MANIFEST_FIELDS: tuple = (
     "prompt_template_sha256", "code_sha256", "scheduled_calls", "hard_cap",
     "as_of_date",                              # v6 高优 7：enrichment 锚定日期
     "thinking_mode",                           # 6B2：显式 thinking 协议（None=未声明）
+    "time_context_injection",                  # 6D：时间上下文注入开关（off/on）
+    "temporal_routed_cases_sha256",            # 6D：冻结路由清单 SHA-256（None=未启用）
 )
 
 _CODE_SCOPE: tuple = (
@@ -139,6 +141,7 @@ _CODE_SCOPE: tuple = (
     "benchmark/runners/resume_ledger.py",
     "benchmark/runners/profiles.py",
     "benchmark/formatters/chart_context.py",
+    "benchmark/formatters/bazi_time_context.py",
     "benchmark/formatters/baziqa_prompt.py",
     "benchmark/formatters/mingli_prompt.py",
     "benchmark/formatters/dual_system_reasoning.py",
@@ -156,6 +159,14 @@ def _sha256_file(path) -> str:
         for chunk in iter(lambda: f.read(1 << 20), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _canonical_json_sha256(path: str) -> str:
+    """Canonical SHA-256 of a JSON file (parse + sort_keys re-serialize)."""
+    with open(path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    canonical = json.dumps(data, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _code_fingerprint() -> str:
@@ -205,6 +216,10 @@ def build_resume_manifest(args, profile) -> dict:
         "hard_cap": args.hard_cap,
         "as_of_date": getattr(args, "as_of_date", ""),       # v6 高优 7
         "thinking_mode": getattr(args, "thinking_mode", None),
+        "time_context_injection": getattr(args, "time_context_injection", "off"),
+        "temporal_routed_cases_sha256": (
+            _canonical_json_sha256(args.temporal_routed_cases_file)
+            if getattr(args, "temporal_routed_cases_file", None) else None),
     }
 
 

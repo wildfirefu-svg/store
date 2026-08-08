@@ -1,5 +1,7 @@
 """Add forum-style practical content."""
-import json, os
+import json
+import os
+
 KB = os.path.dirname(__file__)
 d = json.load(open(os.path.join(KB, 'gejue.json'), encoding='utf-8'))
 entries = d['entries']; exist = {e['text'] for e in entries}
@@ -121,6 +123,7 @@ for i,(t,tags) in enumerate([
 d['entries'] = entries
 json.dump(d, open(os.path.join(KB, 'gejue.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=2)
 from collections import Counter
+
 cats = Counter(e['category'] for e in entries)
 print(f'Total: {len(entries)}')
 for k,v in cats.most_common():

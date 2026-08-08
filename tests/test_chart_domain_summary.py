@@ -1,7 +1,5 @@
-import pytest
 
 from chart_domain_summary import build_domain_summary
-
 
 SUMMARY_CHART = {
     "four_pillars": {

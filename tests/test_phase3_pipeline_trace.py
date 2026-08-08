@@ -7,8 +7,6 @@ Validates the full data flow without API calls:
 
 from __future__ import annotations
 
-import pytest
-
 from benchmark.phase3 import run_pipeline_trace
 
 

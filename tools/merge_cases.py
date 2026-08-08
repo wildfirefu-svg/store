@@ -5,7 +5,6 @@ Validates format, deduplicates by ID, updates metadata.
 """
 
 import json
-import sys
 import os
 from datetime import date
 
@@ -95,7 +94,7 @@ def merge_cases(existing_path, new_cases_path, output_path=None):
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(output_db, f, ensure_ascii=False, indent=2)
 
-    print(f"\nMerge complete:")
+    print("\nMerge complete:")
     print(f"  Added: {added}")
     print(f"  Skipped (duplicate): {skipped}")
     print(f"  Errors: {errors}")

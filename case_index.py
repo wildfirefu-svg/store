@@ -11,18 +11,17 @@ import json
 import math
 import os
 import re
-from collections import Counter, defaultdict
+from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 
-from bazi_features import extract as extract_bazi_features
-
 import case_dense_index
-import hybrid_retrieval
 import case_reranker
-
+import hybrid_retrieval
+from bazi_features import extract as extract_bazi_features
 
 HOLDOUT_MARKERS = ("holdout", "_holdout")
 
@@ -51,7 +50,7 @@ GENERIC_PHRASES = {
 _DEFAULT_RETRIEVAL_CONFIG_PATH = Path(__file__).resolve().parent / "benchmark" / "configs" / "baziqa_retrieval_configs.yaml"
 
 
-def load_retrieval_config(config_id: str, path: Optional[Path] = None) -> Dict[str, Any]:
+def load_retrieval_config(config_id: str, path: Path | None = None) -> dict[str, Any]:
     """Resolve a retrieval ablation config by id from baziqa_retrieval_configs.yaml.
 
     Parameters
@@ -112,10 +111,10 @@ def _env_enabled(name: str, default: bool = True) -> bool:
 _TOKEN_RE = re.compile(r"[\u4e00-\u9fa5A-Za-z0-9]+")
 
 
-def _tokenize(text: str) -> List[str]:
+def _tokenize(text: str) -> list[str]:
     if not text:
         return []
-    tokens: List[str] = []
+    tokens: list[str] = []
     for chunk in _TOKEN_RE.findall(text):
         if re.match(r"[\u4e00-\u9fa5]+", chunk):
             tokens.extend(list(chunk))
@@ -124,12 +123,12 @@ def _tokenize(text: str) -> List[str]:
     return tokens
 
 
-def _hint_matches(text: str, hints) -> List[str]:
+def _hint_matches(text: str, hints) -> list[str]:
     haystack = str(text or "")
     return [h for h in hints if h and h in haystack]
 
 
-def _semantic_phrases(text: str) -> List[str]:
+def _semantic_phrases(text: str) -> list[str]:
     text = re.sub(r"[A-D][\.、\s]*", " ", str(text or ""))
     chunks = re.split(r"[，。；、,.?？!！\s]+", text)
     phrases = set()
@@ -141,11 +140,11 @@ def _semantic_phrases(text: str) -> List[str]:
             chunk = chunk.replace(stop, "")
         if len(chunk) >= 3 and chunk not in GENERIC_PHRASES:
             phrases.add(chunk[:12])
-        for i in range(0, max(len(chunk) - 2, 0)):
+        for i in range(max(len(chunk) - 2, 0)):
             gram = chunk[i:i + 3]
             if len(gram) == 3 and gram not in GENERIC_PHRASES:
                 phrases.add(gram)
-        for i in range(0, max(len(chunk) - 3, 0)):
+        for i in range(max(len(chunk) - 3, 0)):
             gram = chunk[i:i + 4]
             if len(gram) == 4 and gram not in GENERIC_PHRASES:
                 phrases.add(gram)
@@ -159,12 +158,12 @@ class CaseIndex:
     def __init__(
         self,
         corpus_path: Path,
-        embed_fn: Optional[Callable[[str], List[float]]] = None,
-        dense_model: Optional[str] = None,
-        dense_cache_path: Optional[Path] = None,
+        embed_fn: Callable[[str], list[float]] | None = None,
+        dense_model: str | None = None,
+        dense_cache_path: Path | None = None,
         use_hybrid: bool = False,
         rrf_k: int = 60,
-        reranker_model: Optional[str] = None,
+        reranker_model: str | None = None,
     ):
         path = Path(corpus_path)
         name = path.name.lower()
@@ -178,7 +177,7 @@ class CaseIndex:
 
         self.path = path
         self._embed_fn = embed_fn
-        self._cases: List[Dict[str, Any]] = self._load(path)
+        self._cases: list[dict[str, Any]] = self._load(path)
         self._doc_tokens = [_tokenize(c["text_blob"]) for c in self._cases]
         self._idf = self._build_idf(self._doc_tokens)
         self._build_vector_index()
@@ -189,8 +188,8 @@ class CaseIndex:
         self._reranker_model = reranker_model
         self._dense_model = dense_model
         self._dense_cache_path = dense_cache_path
-        self._dense_embeddings: Optional[np.ndarray] = None
-        self._dense_case_ids: List[str] = []
+        self._dense_embeddings: np.ndarray | None = None
+        self._dense_case_ids: list[str] = []
         self._dense_model_instance: Any = None
         if self._use_hybrid and self._dense_model:
             self._load_dense_index()
@@ -226,8 +225,8 @@ class CaseIndex:
             self._dense_model_instance = None
 
     # ------------------------------------------------------------ loading
-    def _load(self, path: Path) -> List[Dict[str, Any]]:
-        people: Dict[str, Dict[str, Any]] = {}
+    def _load(self, path: Path) -> list[dict[str, Any]]:
+        people: dict[str, dict[str, Any]] = {}
         with path.open("r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
@@ -250,7 +249,7 @@ class CaseIndex:
                     except Exception:
                         pass
 
-        cases: List[Dict[str, Any]] = []
+        cases: list[dict[str, Any]] = []
         for pid, bucket in people.items():
             person = bucket["person"]
             birth = person.get("birth") or {}
@@ -274,7 +273,7 @@ class CaseIndex:
         return cases
 
     @staticmethod
-    def _row_fact(row: Dict[str, Any]) -> str:
+    def _row_fact(row: dict[str, Any]) -> str:
         answer = str(row.get("answer") or "").strip().upper()
         options = row.get("options") or []
         question = str(row.get("question") or "").strip()
@@ -287,7 +286,7 @@ class CaseIndex:
         return f"{question} -> {options[idx]}"
 
     @staticmethod
-    def _case_keywords(facts: List[str], domains: Dict[str, int]) -> List[str]:
+    def _case_keywords(facts: list[str], domains: dict[str, int]) -> list[str]:
         text = "；".join(facts)
         keywords = set()
         for hints in DOMAIN_HINTS.values():
@@ -295,7 +294,7 @@ class CaseIndex:
         return sorted(keywords)
 
     @staticmethod
-    def _make_text_blob(person: Dict[str, Any], facts: List[str], domains: Dict[str, int], chart_features: Optional[Dict[str, Any]] = None) -> str:
+    def _make_text_blob(person: dict[str, Any], facts: list[str], domains: dict[str, int], chart_features: dict[str, Any] | None = None) -> str:
         birth = person.get("birth") or {}
         domain_text = " ".join(domains.keys())
         keyword_text = " ".join(CaseIndex._case_keywords(facts, domains))
@@ -314,7 +313,7 @@ class CaseIndex:
         # month_zhi / day_zhi / hour_gan / hour_zhi / wuxing_stats。没有聚合的
         # `four_pillars` list，需要从 8 个独立字段拼出四柱字符串。
         if chart_features:
-            structured_parts: List[str] = []
+            structured_parts: list[str] = []
             day_gan = chart_features.get("day_master_gan")
             day_wuxing = chart_features.get("day_master_wuxing")
             if day_gan:
@@ -352,14 +351,14 @@ class CaseIndex:
 
     # --------------------------------------------------------------- bm25
     @staticmethod
-    def _build_idf(doc_tokens: List[List[str]]) -> Dict[str, float]:
+    def _build_idf(doc_tokens: list[list[str]]) -> dict[str, float]:
         n = max(len(doc_tokens), 1)
         df: Counter = Counter()
         for tokens in doc_tokens:
             df.update(set(tokens))
         return {term: math.log((n - f + 0.5) / (f + 0.5) + 1.0) for term, f in df.items()}
 
-    def _bm25_scores(self, query_tokens: List[str]) -> List[float]:
+    def _bm25_scores(self, query_tokens: list[str]) -> list[float]:
         if not query_tokens:
             return [0.0] * len(self._cases)
         k1 = 1.5
@@ -380,7 +379,7 @@ class CaseIndex:
             scores.append(score)
         return scores
 
-    def _score_chart_structure(self, case: Dict[str, Any], structured: Dict[str, Any]) -> tuple:
+    def _score_chart_structure(self, case: dict[str, Any], structured: dict[str, Any]) -> tuple:
         score = 0.0
         reasons = []
         chart = case.get("chart_features") or {}
@@ -409,7 +408,7 @@ class CaseIndex:
             reasons.append("shishen_overlap:" + ",".join(hits[:3]))
         return score, reasons
 
-    def _score_semantic_overlap(self, case: Dict[str, Any], query_text: str) -> tuple:
+    def _score_semantic_overlap(self, case: dict[str, Any], query_text: str) -> tuple:
         query_phrases = set(_semantic_phrases(query_text))
         case_phrases = set(case.get("semantic_phrases") or [])
         overlap = sorted(query_phrases & case_phrases, key=lambda x: (-len(x), x))
@@ -419,7 +418,7 @@ class CaseIndex:
         score = min(0.18 * len(overlap) + 0.12 * len(long_overlap), 1.2)
         return score, overlap[:6]
 
-    def _score_structured_match(self, case: Dict[str, Any], structured: Dict[str, Any]) -> tuple:
+    def _score_structured_match(self, case: dict[str, Any], structured: dict[str, Any]) -> tuple:
         score = 0.0
         reasons = []
         decade = structured.get("birth_decade")
@@ -468,7 +467,7 @@ class CaseIndex:
 
     def _build_vector_index(self) -> None:
         """Pre-compute embeddings for all corpus cases (sentence-transformers or TF-IDF fallback)."""
-        self._case_embeddings: Optional[np.ndarray] = None
+        self._case_embeddings: np.ndarray | None = None
         self._vector_model = None
         if not _env_enabled("BAZI_RAG_VECTOR", False):
             return
@@ -503,7 +502,7 @@ class CaseIndex:
             return
         n = len(self._cases)
         # Compute TF-IDF vectors using existing token/IDF infrastructure
-        self._tfidf_matrix: List[Dict[str, float]] = []
+        self._tfidf_matrix: list[dict[str, float]] = []
         for tokens in self._doc_tokens:
             tf = Counter(tokens)
             dl = len(tokens) or 1
@@ -517,7 +516,7 @@ class CaseIndex:
         # Use identity matrix placeholder so _score_vector_similarity knows TF-IDF is active
         self._case_embeddings = np.zeros((n, 1))  # sentinel
 
-    def _score_vector_similarity(self, query: str) -> List[float]:
+    def _score_vector_similarity(self, query: str) -> list[float]:
         """Return cosine similarity scores between query and all cases."""
         if self._case_embeddings is None or not query:
             return [0.0] * len(self._cases)
@@ -550,10 +549,10 @@ class CaseIndex:
     # --------------------------------------------------------------- public
     def top_k_cases(
         self,
-        features: Dict[str, Any],
+        features: dict[str, Any],
         k: int = 3,
-        filters: Optional[Dict[str, Any]] = None,
-    ) -> List[Dict[str, Any]]:
+        filters: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
         if not self._cases:
             return []
         query = str(features.get("text_blob") or "")
@@ -605,7 +604,7 @@ class CaseIndex:
             )
         )
         seen: set = set()
-        out: List[Dict[str, Any]] = []
+        out: list[dict[str, Any]] = []
         for score, reasons, case in ranked:
             if case["person_id"] in seen:
                 continue
@@ -626,7 +625,7 @@ class CaseIndex:
         return "ABCD"[index]
 
     @staticmethod
-    def _primary_domain(case: Dict[str, Any], fallback: Optional[str] = None) -> str:
+    def _primary_domain(case: dict[str, Any], fallback: str | None = None) -> str:
         domains = case.get("domains") or {}
         if fallback and domains.get(fallback):
             return str(fallback)
@@ -639,7 +638,7 @@ class CaseIndex:
         return re.sub(r"^[A-D][\.、\s]*", "", str(option_text or "").strip(), flags=re.IGNORECASE)
 
     @staticmethod
-    def _source_answer_option_text(case: Dict[str, Any]) -> str:
+    def _source_answer_option_text(case: dict[str, Any]) -> str:
         for fact in case.get("facts") or []:
             text = str(fact or "")
             if "->" in text:
@@ -647,14 +646,14 @@ class CaseIndex:
         return ""
 
     @staticmethod
-    def _fact_excerpt(case: Dict[str, Any]) -> str:
+    def _fact_excerpt(case: dict[str, Any]) -> str:
         facts = case.get("facts") or []
         if facts:
             return str(facts[0])[:240]
         return str(case.get("text_blob") or "")[:240]
 
     @staticmethod
-    def _option_overlap_terms(option_text: str) -> List[str]:
+    def _option_overlap_terms(option_text: str) -> list[str]:
         text = CaseIndex._clean_option_text(option_text)
         terms = set(_semantic_phrases(text))
         for hints in DOMAIN_HINTS.values():
@@ -662,7 +661,7 @@ class CaseIndex:
         return sorted((t for t in terms if t and t not in GENERIC_PHRASES), key=lambda t: (-len(t), t))
 
     @staticmethod
-    def _fact_excerpt_for_option(case: Dict[str, Any], option_text: str) -> tuple:
+    def _fact_excerpt_for_option(case: dict[str, Any], option_text: str) -> tuple:
         facts = case.get("facts") or []
         if not facts:
             return str(case.get("text_blob") or "")[:360], 0.0
@@ -682,8 +681,8 @@ class CaseIndex:
         return "；".join(selected)[:420], scored_facts[0][0]
 
     @staticmethod
-    def _chart_query_parts(structured: Dict[str, Any]) -> List[str]:
-        parts: List[str] = []
+    def _chart_query_parts(structured: dict[str, Any]) -> list[str]:
+        parts: list[str] = []
         day_gan = structured.get("day_master_gan")
         day_wuxing = structured.get("day_master_wuxing")
         if day_gan:
@@ -708,7 +707,7 @@ class CaseIndex:
         return parts
 
     @staticmethod
-    def _build_option_query(base_text: str, question: str, option_text: str, domain: Optional[str], structured: Dict[str, Any]) -> str:
+    def _build_option_query(base_text: str, question: str, option_text: str, domain: str | None, structured: dict[str, Any]) -> str:
         clean_option = CaseIndex._clean_option_text(option_text)
         terms = CaseIndex._option_overlap_terms(option_text)
         parts = [
@@ -722,7 +721,7 @@ class CaseIndex:
         return "。".join(part for part in parts if part)[:1400]
 
     @staticmethod
-    def _rerank_passage(case: Dict[str, Any], option_text: str, domain: Optional[str]) -> str:
+    def _rerank_passage(case: dict[str, Any], option_text: str, domain: str | None) -> str:
         facts = case.get("facts") or []
         fact_excerpt, _ = CaseIndex._fact_excerpt_for_option(case, option_text)
         source_option = CaseIndex._source_answer_option_text(case)
@@ -735,7 +734,7 @@ class CaseIndex:
         ]
         return "。".join(part for part in parts if part)[:1200]
 
-    def _score_option_evidence(self, case: Dict[str, Any], option_text: str) -> tuple:
+    def _score_option_evidence(self, case: dict[str, Any], option_text: str) -> tuple:
         haystack = str(case.get("text_blob") or "")
         option_terms = self._option_overlap_terms(option_text)
         hits = [term for term in option_terms if term in haystack]
@@ -751,7 +750,7 @@ class CaseIndex:
             reasons.append(f"fact_match:{int(fact_match_score)}")
         return total, reasons
 
-    def _evidence_item(self, case: Dict[str, Any], domain: Optional[str] = None, option_text: Optional[str] = None) -> Dict[str, Any]:
+    def _evidence_item(self, case: dict[str, Any], domain: str | None = None, option_text: str | None = None) -> dict[str, Any]:
         if option_text:
             fact_excerpt, fact_match_score = self._fact_excerpt_for_option(case, option_text)
             match_reasons = list(case.get("match_reasons") or [])
@@ -775,7 +774,7 @@ class CaseIndex:
         self,
         query: str,
         k: int = 20,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Retrieve top-k cases using the dense embedding index."""
         if self._dense_embeddings is None or not query:
             return []
@@ -813,7 +812,7 @@ class CaseIndex:
             )
         )
 
-        out: List[Dict[str, Any]] = []
+        out: list[dict[str, Any]] = []
         for idx, score in indexed_sims[:k]:
             case = dict(self._cases[idx])
             case["_score"] = round(float(score), 6)
@@ -823,10 +822,10 @@ class CaseIndex:
 
     def _option_evidence_hybrid(
         self,
-        option_features: Dict[str, Any],
+        option_features: dict[str, Any],
         option_text: str,
         k_per_option: int = 2,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Hybrid retrieval for a single option: sparse + dense RRF, optional reranker."""
         k_pool = max(k_per_option * 10, 20)
 
@@ -880,14 +879,14 @@ class CaseIndex:
 
     def option_evidence(
         self,
-        features: Dict[str, Any],
+        features: dict[str, Any],
         question: str,
-        options: List[str],
-        domain: Optional[str] = None,
+        options: list[str],
+        domain: str | None = None,
         k_per_option: int = 2,
         retrieval_mode: str = "option_grounded",
-        exclude_case_id: Optional[str] = None,
-    ) -> Dict[str, List[Dict[str, Any]]]:
+        exclude_case_id: str | None = None,
+    ) -> dict[str, list[dict[str, Any]]]:
         labels = [self._option_label(i, option) for i, option in enumerate((options or [])[:4])]
         while len(labels) < 4:
             labels.append("ABCD"[len(labels)])
@@ -897,7 +896,7 @@ class CaseIndex:
         if domain:
             base_structured["query_domain"] = domain
 
-        option_candidates: Dict[str, List[Dict[str, Any]]] = {}
+        option_candidates: dict[str, list[dict[str, Any]]] = {}
         candidate_count = max(k_per_option * 4, len(self._cases))
         for i, label in enumerate(labels[:4]):
             option_text = str(options[i]) if i < len(options or []) else ""
@@ -938,12 +937,12 @@ class CaseIndex:
                 ranked = [c for c in ranked if c.get("case_id") != exclude_case_id]
             option_candidates[label] = ranked
 
-        evidence: Dict[str, List[Dict[str, Any]]] = {}
+        evidence: dict[str, list[dict[str, Any]]] = {}
         used_top_sources: set = set()
         for i, label in enumerate(labels[:4]):
             option_text = str(options[i]) if i < len(options or []) else ""
             candidates = option_candidates.get(label, [])
-            selected: List[Dict[str, Any]] = []
+            selected: list[dict[str, Any]] = []
             for case in candidates:
                 person_id = case.get("person_id")
                 has_unused_alternative = any(candidate.get("person_id") not in used_top_sources for candidate in candidates)

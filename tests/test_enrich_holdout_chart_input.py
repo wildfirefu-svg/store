@@ -18,8 +18,6 @@ import json
 import sys
 from pathlib import Path
 
-import pytest
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -136,8 +134,8 @@ def test_holdout_summary_reports_full_coverage(monkeypatch):
     """The holdout script must reuse corpus-side summarize_rows so coverage
     metrics stay consistent (DRY acceptance).
     """
-    from scripts import enrich_holdout_chart_input as mod
     from scripts import enrich_baziqa_chart_input as corpus_mod
+    from scripts import enrich_holdout_chart_input as mod
 
     assert mod.summarize_rows is corpus_mod.summarize_rows, (
         "holdout script must reuse corpus summarize_rows; reimplementation drifts the metric"

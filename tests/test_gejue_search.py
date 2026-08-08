@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """P5 歌诀检索准确率测试 — 50+语义查询，相关度 ≥ 80%"""
 
-import json, os, sys
+import json
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'knowledge-base'))
 from search_gejue import search
+
 
 def run():
     # 50+ semantic queries with expected relevant song categories/tags
@@ -115,7 +119,7 @@ def run():
     # Practical accuracy: top-1 category match OR tag match in top-3
     practical = sum(1 for r in results if r['cat_match'] or r['got_tags_match']) / total * 100
 
-    print(f'=== 歌诀检索准确率测试 ===')
+    print('=== 歌诀检索准确率测试 ===')
     print(f'总查询: {total}')
     print(f'Top-1类别命中: {categories_ok}/{total} = {cat_acc:.1f}%')
     print(f'Top-3标签命中: {tags_ok}/{total} = {tag_acc:.1f}%')

@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 PASS = "PASS"
 FAST_TRACK = "FAST_TRACK"
 GRAY_A = "GRAY_A"

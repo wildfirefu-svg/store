@@ -16,13 +16,16 @@ Usage:
     python knowledge-base/case_retrieval.py --query "日主庚金，生于未月，身强，用神水木" --top 5
 """
 
-import os, sys, json, argparse
+import argparse
+import json
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from bazi_calculator import (
-    GAN_WUXING, ZHI_WUXING, GAN_YINYANG,
-    TIANGAN, DIZHI, sexagenary_by_index, get_shishen,
+    GAN_WUXING,
+    ZHI_WUXING,
 )
 
 # =============================================================================

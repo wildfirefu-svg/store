@@ -17,8 +17,7 @@ def main(argv=None):
     rows = data if isinstance(data, list) else data.get("cases", [])
     Path(args.output_jsonl).parent.mkdir(parents=True, exist_ok=True)
     with Path(args.output_jsonl).open("w", encoding="utf-8") as f:
-        for row in rows:
-            f.write(json.dumps(build_row(row["case_id"], row["chart"], row["report_text"]), ensure_ascii=False) + "\n")
+        f.writelines(json.dumps(build_row(row["case_id"], row["chart"], row["report_text"]), ensure_ascii=False) + "\n" for row in rows)
     print(f"Report quality samples saved to {args.output_jsonl}")
     return 0
 

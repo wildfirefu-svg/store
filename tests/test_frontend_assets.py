@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 INDEX = Path("templates/index.html")
 
 

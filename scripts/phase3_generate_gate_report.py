@@ -14,17 +14,15 @@ from __future__ import annotations
 import argparse
 import glob
 import json
-import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Sequence
+from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from benchmark.phase3 import compute_gate_report, detect_leak_candidates
-
 
 DATASET_BY_STAGE = {
     "dev20": "benchmark/datasets/baziqa_contest8_2025_holdout_enriched.jsonl",
@@ -38,7 +36,7 @@ ARMS_BY_STAGE = {
 }
 
 
-def load_dataset(path: str) -> Dict[str, Dict[str, Any]]:
+def load_dataset(path: str) -> dict[str, dict[str, Any]]:
     """Load original dataset indexed by case_id."""
     cases = {}
     with open(path, encoding="utf-8") as fh:
@@ -50,13 +48,13 @@ def load_dataset(path: str) -> Dict[str, Dict[str, Any]]:
     return cases
 
 
-def load_predictions(jsonl_pattern: str, mode_label: str, dataset: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+def load_predictions(jsonl_pattern: str, mode_label: str, dataset: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
     """Load case_details, join with dataset to补全 Phase 3 fields.
 
     Existing dev20/formal40 data was produced before batch-4 field additions,
     so we补全: label_map, correct_identity, call_success, mode, predicted_identity.
     """
-    preds: List[Dict[str, Any]] = []
+    preds: list[dict[str, Any]] = []
     for f in sorted(glob.glob(jsonl_pattern)):
         with open(f, encoding="utf-8") as fh:
             for line in fh:
@@ -135,7 +133,7 @@ def load_predictions(jsonl_pattern: str, mode_label: str, dataset: Dict[str, Dic
     return preds
 
 
-def run_leak_check(preds: List[Dict[str, Any]], holdout_case_ids: set) -> int:
+def run_leak_check(preds: list[dict[str, Any]], holdout_case_ids: set) -> int:
     """Run leak detection on predictions, return leak_candidate_count.
 
     Uses detect_leak_candidates to scan rag_trace evidence for answer text
@@ -168,7 +166,7 @@ def run_leak_check(preds: List[Dict[str, Any]], holdout_case_ids: set) -> int:
     return leak_count
 
 
-def verify_freeze_conditions(a1_report: Dict[str, Any], a4_report: Dict[str, Any], confirmed_leak_count: int) -> Dict[str, Any]:
+def verify_freeze_conditions(a1_report: dict[str, Any], a4_report: dict[str, Any], confirmed_leak_count: int) -> dict[str, Any]:
     """Verify design §3.1 freeze conditions for A4 candidate."""
     conditions = {
         "C1_candidate_in_set": True,  # A4 is in {A1, A3, A4}
@@ -235,7 +233,7 @@ def main(argv=None):
     if args.stage == "dev20" and "A1" in reports and "A4" in reports:
         a4_leak = reports["A4"].get("leak_candidate_count", 0)
         freeze = verify_freeze_conditions(reports["A1"], reports["A4"], confirmed_leak_count=0)
-        print(f"\n=== Freeze condition verification ===")
+        print("\n=== Freeze condition verification ===")
         print(json.dumps(freeze, indent=2, ensure_ascii=False))
 
     if args.output:
