@@ -1771,7 +1771,7 @@ def _build_parser():
     parser.add_argument('--hard-cap', type=int, default=None)
     parser.add_argument(
         "--thinking-mode",
-        choices=("disabled",),
+        choices=("disabled", "auto"),
         default=None,
         help="Explicit DeepSeek thinking protocol for controlled experiments",
     )

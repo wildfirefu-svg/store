@@ -168,7 +168,7 @@ def call_model_messages_sync_with_meta(messages, provider=None, model=None, syst
 
     if thinking_mode is not None and provider != "deepseek":
         raise ValueError("thinking_mode is only supported for deepseek")
-    if provider == "deepseek" and thinking_mode is not None and thinking_mode != "disabled":
+    if provider == "deepseek" and thinking_mode is not None and thinking_mode not in ("disabled", "auto"):
         raise ValueError(f"unsupported deepseek thinking_mode: {thinking_mode}")
 
     # 统一使用 ANTHROPIC_API_KEY（_load_api_key 加载的当前激活 key，非 Anthropic 专属）。
@@ -211,8 +211,12 @@ def call_model_messages_sync_with_meta(messages, provider=None, model=None, syst
             if provider == "kimi":
                 _t = 1.0
             payload["temperature"] = _t
-        if provider == "deepseek" and thinking_mode is not None:
-            payload["thinking"] = {"type": thinking_mode}
+        if provider == "deepseek" and thinking_mode == "auto":
+            payload["model"] = "deepseek-reasoner"
+            if "temperature" in payload:
+                del payload["temperature"]
+        elif provider == "deepseek" and thinking_mode == "disabled":
+            payload["thinking"] = {"type": "disabled"}
         headers = {
             "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
@@ -266,7 +270,10 @@ def call_model_messages_sync_with_meta(messages, provider=None, model=None, syst
     meta["response_id"] = data.get("id")
     if not choices:
         return "", meta
-    text = choices[0].get("message", {}).get("content", "") or ""
+    msg = choices[0].get("message", {}) or {}
+    text = msg.get("content", "") or ""
+    if msg.get("reasoning_content"):
+        meta["reasoning_content"] = msg["reasoning_content"][:2000]
     return text, meta
 
 
