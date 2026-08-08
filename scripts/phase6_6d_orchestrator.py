@@ -806,7 +806,7 @@ def compute_6d_gate(details, n_cases):
         case_deltas[cid] = v["on_correct"] - v["off_correct"]
     denominator = n_cases * REPEATS
     paired_delta = sum(case_deltas.values()) / denominator if denominator else 0.0
-    min_case_delta = min(case_deltas.values()) if case_deltas else 0.0
+    min_case_delta = min(case_deltas.values()) / REPEATS if case_deltas else 0.0
     if paired_delta >= 0.05 and min_case_delta >= 0:
         verdict = "PROMOTE"
     elif paired_delta >= 0.05 and min_case_delta < 0:
@@ -818,7 +818,7 @@ def compute_6d_gate(details, n_cases):
     return {
         "verdict": verdict,
         "paired_delta": round(paired_delta, 6),
-        "min_case_delta": min_case_delta,
+        "min_case_delta": round(min_case_delta, 6),
         "n_cases": n_cases,
         "case_deltas": case_deltas,
         "stage": "dev",
@@ -877,6 +877,56 @@ def check_6d_gate(receipt):
     return True
 
 
+# -- Four-layer provenance cross-validation --
+
+
+_FOUR_LAYER_PROVENANCE_FIELDS = (
+    "provider", "model", "thinking_mode", "model_label",
+    "code_fingerprint", "temporal_context_version",
+    "experiment_conditions", "extraction_strategy_sha256",
+    "temporal_routed_cases_sha256", "condition_manifest_sha256",
+    "dataset_sha256_by_year", "dataset_set_sha256",
+    "group_abba_order",
+)
+
+
+def _validate_four_layer_provenance(runs_root, receipt):
+    """Cross-validate provenance across manifest / run_context / receipt / audit."""
+    runs_root = Path(runs_root)
+    manifest_path = runs_root / "run_manifest.json"
+    context_path = runs_root / "run_context.json"
+    if not manifest_path.exists():
+        raise SystemExit(
+            f"four-layer provenance reject: run_manifest.json missing: "
+            f"{manifest_path}")
+    if not context_path.exists():
+        raise SystemExit(
+            f"four-layer provenance reject: run_context.json missing: "
+            f"{context_path}")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    context = json.loads(context_path.read_text(encoding="utf-8"))
+    archive_dir = receipt.get("archive_dir")
+    if not archive_dir:
+        raise SystemExit(
+            "four-layer provenance reject: receipt archive_dir missing")
+    audit_path = Path(archive_dir) / "audit_index.json"
+    if not audit_path.exists():
+        raise SystemExit(
+            f"four-layer provenance reject: audit_index.json missing: "
+            f"{audit_path}")
+    audit = json.loads(audit_path.read_text(encoding="utf-8"))
+    layers = {"manifest": manifest, "run_context": context,
+              "receipt": receipt, "audit": audit}
+    for field in _FOUR_LAYER_PROVENANCE_FIELDS:
+        ref = manifest.get(field)
+        for name, layer in layers.items():
+            if layer.get(field) != ref:
+                raise SystemExit(
+                    f"four-layer provenance reject: {field} mismatch "
+                    f"(manifest={ref!r}, {name}={layer.get(field)!r})")
+    return True
+
+
 # -- Report --
 
 
@@ -886,6 +936,51 @@ def _generate_report(merged, gate_result, schedule, ledger, out_dir, run_id=None
     total = max(len(merged), 1)
     parsed = sum(1 for r in merged if r.get("terminal_state") == "parsed")
     parser_rate = round(parsed / total, 4)
+    off_rows = [r for r in merged
+                if (r.get("attempt_key") or [None] * 10)[2] == "b1a_time_off"]
+    on_rows = [r for r in merged
+               if (r.get("attempt_key") or [None] * 10)[2] == "b1a_time_on"]
+    off_correct = sum(1 for r in off_rows if r.get("correct"))
+    on_correct = sum(1 for r in on_rows if r.get("correct"))
+    off_total = len(off_rows)
+    on_total = len(on_rows)
+    off_rate = off_correct / off_total if off_total else 0.0
+    on_rate = on_correct / on_total if on_total else 0.0
+    by_year = defaultdict(
+        lambda: {"off_correct": 0, "off_total": 0, "on_correct": 0, "on_total": 0})
+    for r in off_rows + on_rows:
+        year = _year_from_dataset_id((r.get("attempt_key") or [""])[0])
+        if year is None:
+            continue
+        arm = (r.get("attempt_key") or [None] * 10)[2]
+        bucket = by_year[year]
+        if arm == "b1a_time_off":
+            bucket["off_total"] += 1
+            bucket["off_correct"] += 1 if r.get("correct") else 0
+        elif arm == "b1a_time_on":
+            bucket["on_total"] += 1
+            bucket["on_correct"] += 1 if r.get("correct") else 0
+    case_deltas = gate_result.get("case_deltas") or {}
+    nonzero = sorted([(cid, d) for cid, d in case_deltas.items() if d != 0],
+                     key=lambda x: x[0])
+    by_case = {}
+    for r in off_rows:
+        cid = (r.get("attempt_key") or [None] * 10)[6] or r.get("case_id")
+        by_case.setdefault(cid, {"off": 0, "on": 0})
+        by_case[cid]["off"] += 1 if r.get("correct") else 0
+    for r in on_rows:
+        cid = (r.get("attempt_key") or [None] * 10)[6] or r.get("case_id")
+        by_case.setdefault(cid, {"off": 0, "on": 0})
+        by_case[cid]["on"] += 1 if r.get("correct") else 0
+    yearly_breakdown = {}
+    for year in sorted(by_year.keys()):
+        s = by_year[year]
+        yearly_breakdown[year] = {
+            "off_correct": s["off_correct"], "off_total": s["off_total"],
+            "on_correct": s["on_correct"], "on_total": s["on_total"],
+            "off_rate": round(s["off_correct"] / s["off_total"], 6) if s["off_total"] else 0.0,
+            "on_rate": round(s["on_correct"] / s["on_total"], 6) if s["on_total"] else 0.0,
+        }
     report = {
         "model_protocol": MODEL_LABEL,
         "provider": FROZEN_PROVIDER,
@@ -896,6 +991,14 @@ def _generate_report(merged, gate_result, schedule, ledger, out_dir, run_id=None
         "paired_delta": gate_result.get("paired_delta"),
         "min_case_delta": gate_result.get("min_case_delta"),
         "parser_rate": parser_rate,
+        "accuracy": {
+            "off": {"correct": off_correct, "total": off_total,
+                    "rate": round(off_rate, 6)},
+            "on": {"correct": on_correct, "total": on_total,
+                   "rate": round(on_rate, 6)},
+        },
+        "yearly_breakdown": yearly_breakdown,
+        "nonzero_case_deltas": nonzero,
         "gate": _json_safe(gate_result),
         "run": {
             "slices": len(schedule["slices"]),
@@ -920,6 +1023,39 @@ def _generate_report(merged, gate_result, schedule, ledger, out_dir, run_id=None
         f"- budget: scheduled {report['run']['scheduled']} "
         f"/ attempted {report['run']['attempted']} "
         f"/ cap {report['run']['global_hard_cap']}",
+        "",
+        "## Accuracy",
+        "",
+        "| Condition | Correct | Total | Rate |",
+        "|---|---|---|---|",
+        f"| OFF | {off_correct} | {off_total} | {off_rate * 100:.2f}% |",
+        f"| ON  | {on_correct} | {on_total} | {on_rate * 100:.2f}% |",
+        "",
+        "## Yearly Breakdown",
+        "",
+        "| Year | OFF | ON | Delta |",
+        "|---|---|---|---|",
+    ]
+    for year in sorted(by_year.keys()):
+        s = by_year[year]
+        y_off_rate = s["off_correct"] / s["off_total"] if s["off_total"] else 0.0
+        y_on_rate = s["on_correct"] / s["on_total"] if s["on_total"] else 0.0
+        delta_pp = (y_on_rate - y_off_rate) * 100
+        lines.append(
+            f"| {year} | {s['off_correct']}/{s['off_total']} | "
+            f"{s['on_correct']}/{s['on_total']} | {delta_pp:+.2f}pp |")
+    lines += [
+        "",
+        "## Non-zero Case Deltas",
+        "",
+        "| Case ID | OFF | ON | Delta |",
+        "|---|---|---|---|",
+    ]
+    for cid, d in nonzero:
+        c = by_case.get(cid, {"off": 0, "on": 0})
+        lines.append(
+            f"| {cid} | {c['off']}/{REPEATS} | {c['on']}/{REPEATS} | {d:+d} |")
+    lines += [
         "",
         "off/on paired ablation; 31 temporal-routed cases x 3 repeats; "
         "group-pair AB/BA scheduling.",
@@ -1209,6 +1345,11 @@ def run_dev(provider, model, output_dir, run_id=None, resume=False,
     runs_root, _context = _prepare_run_context(
         output_dir=output_dir, run_id=run_id, resume=resume,
         run_manifest=run_manifest, code_fingerprint=code_fp)
+    manifest_path = runs_root / "run_manifest.json"
+    manifest_path.write_text(
+        json.dumps(run_manifest, ensure_ascii=False, indent=2,
+                   sort_keys=True),
+        encoding="utf-8")
     lock = OutputDirLock.acquire(str(runs_root))
     try:
         if lock is None:
@@ -1235,6 +1376,7 @@ def run_dev(provider, model, output_dir, run_id=None, resume=False,
             run_manifest, code_fp, run_id=run_id)
         _publish_receipt_atomic(arch, runs_root / "gates", "dev_gate.json")
         check_6d_gate(arch["receipt"])
+        _validate_four_layer_provenance(runs_root, arch["receipt"])
         return {"status": "ok", "gate": gate_result, "archive": arch,
                 "run_id": run_id}
     except (Exception, SystemExit) as exc:

@@ -809,3 +809,93 @@ def test_fake_runner_paired_e2e(tmp_path, monkeypatch):
     pub = json.loads(published.read_text(encoding="utf-8"))
     assert pub["verdict"] == gate["verdict"]
     assert pub["temporal_context_version"] == TEMPORAL_CONTEXT_VERSION
+
+
+# -- Issue fixes: min_case_delta normalization, manifest persistence, report --
+
+
+def test_min_case_delta_normalized_by_repeats():
+    """min_case_delta must be min(case_delta) / REPEATS per spec."""
+    # Case A: off 0/3 correct, on 3/3 correct -> delta = +3
+    # Case B: off 2/3 correct, on 0/3 correct -> delta = -2
+    # min delta = -2, normalized = -2/3
+    rows = []
+    for rep in range(REPEATS):
+        rows.append(_make_detail_row("2024", "b1a_time_off", "A", rep, correct=False))
+        rows.append(_make_detail_row("2024", "b1a_time_on", "A", rep, correct=True))
+    for rep in range(REPEATS):
+        rows.append(_make_detail_row("2024", "b1a_time_off", "B", rep, correct=rep < 2))
+        rows.append(_make_detail_row("2024", "b1a_time_on", "B", rep, correct=False))
+    result = compute_6d_gate(rows, 2)
+    assert result["min_case_delta"] == pytest.approx(-2 / 3, abs=1e-6)
+
+
+def test_run_manifest_persisted(tmp_path, monkeypatch):
+    """run_manifest.json must be persisted and pass four-layer provenance."""
+    import scripts.phase6_6d_orchestrator as m
+    monkeypatch.setattr(m, "ARCHIVE_ROOT", str(tmp_path / "archive"))
+    _install_fake_runner(monkeypatch)
+    run_id = "fake-manifest"
+    result = m.run_dev(FROZEN_PROVIDER, FROZEN_MODEL,
+                       str(tmp_path / "out"), run_id=run_id)
+    runs_root = tmp_path / "out" / "runs" / run_id
+    manifest_path = runs_root / "run_manifest.json"
+    context_path = runs_root / "run_context.json"
+    assert manifest_path.exists(), "run_manifest.json not persisted"
+    assert context_path.exists()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    context = json.loads(context_path.read_text(encoding="utf-8"))
+    for f in ("temporal_context_version", "group_abba_order",
+              "experiment_conditions", "extraction_strategy_sha256",
+              "temporal_routed_cases_sha256", "condition_manifest_sha256",
+              "dataset_sha256_by_year", "dataset_set_sha256",
+              "provider", "model", "thinking_mode", "model_label",
+              "code_fingerprint"):
+        assert manifest[f] == context[f], f"manifest/context {f} mismatch"
+    archive_dir = result["archive"]["archive_dir"]
+    audit = json.loads(
+        open(os.path.join(archive_dir, "audit_index.json"), encoding="utf-8").read())
+    receipt = result["archive"]["receipt"]
+    for f in ("temporal_context_version", "group_abba_order",
+              "experiment_conditions", "dataset_set_sha256",
+              "condition_manifest_sha256"):
+        assert manifest[f] == audit[f], f"manifest/audit {f} mismatch"
+        assert manifest[f] == receipt[f], f"manifest/receipt {f} mismatch"
+
+
+def test_report_includes_accuracy_and_yearly_breakdown(tmp_path, monkeypatch):
+    """report.md must include off/on accuracy, yearly breakdown, non-zero deltas."""
+    import scripts.phase6_6d_orchestrator as m
+    monkeypatch.setattr(m, "ARCHIVE_ROOT", str(tmp_path / "archive"))
+    _install_fake_runner(monkeypatch)
+    run_id = "fake-report"
+    result = m.run_dev(FROZEN_PROVIDER, FROZEN_MODEL,
+                       str(tmp_path / "out"), run_id=run_id)
+    runs_root = tmp_path / "out" / "runs" / run_id
+    report_md = (runs_root / "dev" / "report.md").read_text(encoding="utf-8")
+    assert "## Accuracy" in report_md
+    assert "| OFF |" in report_md
+    assert "| ON  |" in report_md
+    assert "## Yearly Breakdown" in report_md
+    assert "| 2024 |" in report_md
+    assert "| 2025 |" in report_md
+    assert "## Non-zero Case Deltas" in report_md
+    summary = json.loads(
+        (runs_root / "dev" / "summary.json").read_text(encoding="utf-8"))
+    assert "accuracy" in summary
+    assert summary["accuracy"]["off"]["total"] == 93
+    assert summary["accuracy"]["on"]["total"] == 93
+    assert "yearly_breakdown" in summary
+    assert "nonzero_case_deltas" in summary
+    assert result["gate"]["min_case_delta"] == pytest.approx(1.0, abs=1e-9)
+
+
+def test_four_layer_provenance_rejects_missing_manifest(tmp_path):
+    """_validate_four_layer_provenance rejects when run_manifest.json missing."""
+    from scripts.phase6_6d_orchestrator import _validate_four_layer_provenance
+    runs_root = tmp_path / "runs" / "x"
+    runs_root.mkdir(parents=True)
+    (runs_root / "run_context.json").write_text("{}", encoding="utf-8")
+    receipt = {"archive_dir": str(tmp_path / "archive")}
+    with pytest.raises(SystemExit, match="run_manifest.json missing"):
+        _validate_four_layer_provenance(runs_root, receipt)
