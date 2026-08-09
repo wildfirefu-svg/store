@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
-> **修订历史：** v1（概要 08-09 初版）→ v2（详尽扩充）→ v3（独立核验修订：3 P0 + 4 P1 + 4 P2）→ v3.1（复审修订：1 P1 + 2 P2，已放行）
+> **修订历史：** v1（概要 08-09 初版）→ v2（详尽扩充）→ v3（独立核验修订：3 P0 + 4 P1 + 4 P2）→ v3.1（复审修订：1 P1 + 2 P2，已放行）→ v3.2（再审修订：2 P1 + 4 P2；on_limited 地基已提交 `00f43c6`）
 
 **Goal:** 实现 6D-v2「限制性注入」对照实验链：`off vs on_limited`（off 复用 6D v1 归档数据，仅新跑 `b1a_time_on_limited` 臂 93 calls），通过零 API 离线门验证工程契约，为真实 paired dev（需用户批准 API）准备完备基础设施。
 
@@ -22,7 +22,17 @@
 
 6D v1 已归档冻结（verdict=`NON_INFERIOR`）。6D-v2 独立，不 resume 6D v1 run，不共享 6D v1 schedule/gate/receipt。
 
-只修改以下生产文件：
+### on_limited 地基（前置依赖，已入库）
+
+**on_limited 地基（`chart_context.py` 的 `include_relations` 参数 + `run_benchmark.py` 的 on_limited 分支/CLI + 测试）已作为独立 commit 入库：`00f43c6`（`feat(6d): add on_limited limited temporal injection (6D scheme A)`，2026-08-09）。**
+
+- 这三个文件在 6D-v2 实施中**只复用不改**（地基已提交，无脏树依赖）
+- `test_bazi_time_context.py` 已含修复后的 `test_detail_provenance_on_limited_computes_sha`（真实 case 对照：on_limited 时 sha 非 None、off 时 sha 为 None）
+- 一次性调试脚本 `.tmp_check_thinking.py` 已删除，不混入任何 commit
+
+**验证**：`git log --oneline` 应显示 `00f43c6`；`git status` 中三个文件无未提交改动。
+
+只修改以下生产文件（除 on_limited 地基外）：
 
 - `benchmark/runners/run_benchmark.py`（仅 `_REASONED_ARM_MAP` 新增 1 项）
 - `scripts/phase6_6d_v2_orchestrator.py`（新建，复制 6D v1 架构改造）
@@ -51,6 +61,14 @@
 
 **目标：** 确认起始状态干净，记录基线数字，确认 6D v1 off 数据可用。
 
+- [ ] 0.0 GREEN：确认 on_limited 地基已入库（P1-1）：
+  ```powershell
+  git log --oneline -1
+  # 应显示 00f43c6 feat(6d): add on_limited limited temporal injection (6D scheme A)
+  git status --short benchmark/formatters/chart_context.py benchmark/runners/run_benchmark.py tests/test_bazi_time_context.py
+  # 应无输出（三文件无未提交改动）
+  ```
+  若地基未入库（HEAD 不含 on_limited），**先提交地基再继续**（不能带脏树进 Task 1 的 RED）。此步骤确保 Task 1 RED 在干净树上执行、Task 8 的 code_fingerprint 可对应 commit。
 - [ ] 0.1 RED：运行 Phase 6 定向基线并记录数字
   ```powershell
   python -m pytest tests/test_phase6_6b2.py tests/test_phase6_profiles.py tests/test_dual_system_reasoning.py tests/test_claude_api.py tests/test_phase6_6d_orchestrator.py -q --basetemp .tmp/pytest-6d-v2-plan-baseline
@@ -253,17 +271,25 @@ if profile.profile_id == "baziqa_xjz_reasoned":
 
 ### 3.4 生成 v2 temporal_routed_cases.json + phase1_receipt.json（P0-3，必须先于 Task 4）
 
-- [ ] 3.10 GREEN：运行离线门生成 v2 的 manifest + receipt：
+> **receipt 双生成者与权威性（P1-2）**：`phase1_receipt.json` 有两个生成者——
+> - Task 3.10 用 **v1 离线门**（`phase6_6d_offline_gate.py`）生成（中间产物）
+> - Task 7.2 用 **v2 离线门**（`phase6_6d_v2_offline_gate.py`，新建）生成（权威）
+>
+> **决策**：Task 7.2 的 v2 receipt 为**权威**，覆盖写。但必须**保留 `_validate_phase1_receipt` 强校验的全部 6 个字段**，否则 `run_dev` 拒启：
+> `status`（必须 PASS）、`n_routed`（≥20）、`temporal_routed_cases_sha256`（== manifest canonical SHA）、`dataset_sha256_by_year`（含逐字节重算）、`dataset_set_sha256`（== canonical(dataset_sha256_by_year)）。
+> v2 离线门在保留这些字段基础上，**追加 v2 检查项**：`on_limited` 注入无关系、`b1a_time_on_limited` arm fail-closed、off 复用预检。Task 3.10 产物仅为 Task 4 off 复用校验的中间依据。
+
+- [ ] 3.10 GREEN：用 v1 离线门生成**中间** manifest + receipt（Task 4 off 复用校验的 SHA 依据）：
   ```powershell
   python scripts/phase6_6d_offline_gate.py --datasets 2024,2025 --output docs/phase6/6d-v2/temporal_routed_cases.json
   ```
-  该脚本会自动写 `phase1_receipt.json` 到同目录（`phase6_6d_offline_gate.py:166-167`）。
+  该脚本会自动写 `phase1_receipt.json` 到同目录（`phase6_6d_offline_gate.py:166-167`），其 schema 满足 `_validate_phase1_receipt`（中间 receipt，Task 7 会用 v2 权威 receipt 覆盖）。
 - [ ] 3.11 GREEN：断言 v2 manifest 的 canonical SHA == v1 的 `a80fbe7a…`（`temporal_routed_cases_sha256`）：
   ```powershell
   python -c "import json; s=json.load(open('docs/phase6/6d-v2/temporal_routed_cases.json',encoding='utf-8')); import hashlib; sha=hashlib.sha256(json.dumps(s,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest(); print(sha); assert sha=='a80fbe7a87262dc826d9f8eb834ac958b43ad1c64f29e624aa25114c8ecfac63', 'manifest drift - off reuse precondition broken'"
   ```
   若 SHA 漂移 → off 复用前提不成立，停止。
-- [ ] 3.12 GREEN：确认 `docs/phase6/6d-v2/phase1_receipt.json` 存在且 `status=PASS`、`n_routed=31`
+- [ ] 3.12 GREEN：确认中间 receipt 存在且 `status=PASS`、`n_routed=31`（Task 7 会用 v2 权威 receipt 覆盖）
 
 ### 3.5 测试
 
@@ -466,21 +492,36 @@ arch = _create_archive(...)
   ledger = BudgetLedger(str(stage_dir / "budget_ledger.json"), global_hard_cap=run_cap)
   ```
 - [ ] 6.6 GREEN：report/audit 标注 off 来源 `6d-v1:<archive_id>`。**P2 强化**：把 `off_source`（值为 `6d-v1:<archive_id>`）和 `off_merged_details_sha256`（实际 off 数据的 SHA）补入 `SIXD_RECEIPT_REQUIRED_FIELDS`，使 `check_6d_gate` 强制校验 off provenance 存在——否则归档缺该证据也能过 gate。
-- [ ] 6.7 RED：`test_run_dev_skips_off_reuse_slices`：**不 mock `_run_all_slices` 整体**（否则跳过逻辑在被 mock 函数内无法断言）。改为 mock `_run_slice`（单 slice 执行），让真实 `_run_all_slices` 跑跳过逻辑，然后断言：`_run_slice` 只被 on_limited slice 调用，off（v1_reuse）slice 未触发。
+- [ ] 6.7 RED：`test_run_dev_skips_off_reuse_slices`（P2-4，修法 b）：
+  > **P2-4 修正**：不能只 mock `_run_slice` 返回 dict 而不写 detail/events——fake 不写 detail 也不记账会导致 merge 缺 on_limited main → `_check_completeness` SystemExit，即便过了也挂在 `_create_archive` 的 completed 检查。**修法 (b)**：fake_run_slice **真实写 detail/events + 调 `ledger.record_slice_completed`**，使完整 `run_dev` 链可跑通，同时断言 off（v1_reuse）slice 未被调用。
   ```python
   def test_run_dev_skips_off_reuse_slices(monkeypatch, tmp_path):
       calls = []
-      def fake_run_slice(slice_info, *a, **k):
+      def fake_run_slice(slice_info, ledger, provider, model, resume=False):
           calls.append(slice_info["slice_id"])
+          # 真实写 detail 行（on_limited 臂），使 _check_completeness 能通过
+          os.makedirs(slice_info["output_dir"], exist_ok=True)
+          with open(slice_info["detail_path"], "w", encoding="utf-8") as f:
+              for cid in slice_info["case_ids"]:
+                  f.write(json.dumps(_mk_on_limited_row(cid, slice_info)) + "\n")
+          with open(slice_info["events_path"], "w", encoding="utf-8") as f:
+              for _ in range(slice_info["scheduled_calls"]):
+                  f.write(json.dumps({"kind": "call_attempt"}) + "\n")
+          ledger.record_slice_completed(slice_info["slice_id"],
+                                        slice_info["scheduled_calls"])
           return {"exit_code": 0, "actual_attempts": slice_info["scheduled_calls"]}
       monkeypatch.setattr(orch, "_run_slice", fake_run_slice)
       monkeypatch.setattr(orch, "_verify_off_reuse", lambda *a, **k: [_mk_off_row("c1")])
-      # ... 构造 schedule + 调 run_dev（mock _validate_frozen_protocol 等）
+      monkeypatch.setattr(orch, "_validate_frozen_protocol", lambda *a, **k: {})
+      monkeypatch.setattr(orch, "_validate_phase1_receipt", lambda *a, **k: {})
+      monkeypatch.setattr(orch, "_prepare_run_context", lambda *a, **k: (tmp_path / "runs", {}))
+      orch.run_dev("deepseek", "deepseek-v4-flash", str(tmp_path), run_id="r1",
+                   v1_archive_dir=".", v1_runs_dir=".", resume=False)
       off_ids = [c for c in calls if "b1a_time_off" in c]
       assert len(off_ids) == 0, "off (v1_reuse) slices must not be executed"
   ```
-- [ ] 6.8 RED：`test_run_dev_merged_includes_off`：mock `_run_slice` 后，`_merge_details` 返回的 merged 含 off 数据（来自 `_verify_off_reuse` 返回值）
-- [ ] 6.9 RED：`test_run_dev_off_reuse_fail_blocks`：`_verify_off_reuse` 抛异常 → `run_dev` 不发起任何 slice
+- [ ] 6.8 RED：`test_run_dev_merged_includes_off`：fake_run_slice（同 6.7）+ `_verify_off_reuse` 返回 off 行，断言 `_merge_details` 的 merged 同时含 off 行（来自复用）与 on_limited 行（来自 fake 写入）
+- [ ] 6.9 RED：`test_run_dev_off_reuse_fail_blocks`：`_verify_off_reuse` 抛异常 → `run_dev` 不发起任何 slice（`_run_slice` 未被调用）
 - [ ] 6.10 GREEN：运行相关测试通过
 - [ ] 6.11 COMMIT：`feat(6d-v2): wire off reuse into run_dev flow`
 
@@ -492,9 +533,23 @@ arch = _create_archive(...)
 
 **目标：** 零 API 验证工程契约，确认无回归，orchestrator 可 dry-run。
 
-- [ ] 7.1 GREEN：`phase6_6d_v2_offline_gate.py`：验证 `temporal_routed_cases.json`（N=31, n_routed ≥ 20）+ `on_limited` 无关系 + arm fail-closed + off 复用校验
-- [ ] 7.2 GREEN：生成 `docs/phase6/6d-v2/phase1_receipt.json`（PASS/BLOCKED）
-- [ ] 7.3 RED：`test_phase6_6d_v2_offline_gate.py`：receipt PASS、N=31、BLOCKED 分支（N<20 不覆盖）
+> **v2 离线门是权威 receipt 生成者（P1-2）**：`phase6_6d_v2_offline_gate.py` 生成的 `phase1_receipt.json` **覆盖写** Task 3.10 的中间产物。其 schema 必须**保留 `_validate_phase1_receipt` 强校验的全部 6 字段**，否则 `run_dev`（v1 :1200-1249）拒启：
+> 1. `status` = `PASS`
+> 2. `n_routed` ≥ `PHASE1_N_ROUTED_MIN`（20）
+> 3. `temporal_routed_cases_sha256` == manifest 的 canonical SHA
+> 4. `n_routed` == manifest entries 数
+> 5. `dataset_sha256_by_year` == manifest 各年 `dataset_sha256`（且对当前数据集文件逐字节重算一致）
+> 6. `dataset_set_sha256` == `canonical(dataset_sha256_by_year)`
+>
+> 在此基础上**追加 v2 检查项**结果字段：`on_limited_no_relations`（注入无地支/天干关系）、`arm_fail_closed_ok`（`b1a_time_on_limited`+`ziwei_arm=none` 通过）、`off_reuse_precheck_ok`（off 复用预检通过）。
+
+- [ ] 7.1 GREEN：实现 `phase6_6d_v2_offline_gate.py`：生成权威 receipt（保留 §3.4 列出的全部 6 字段 + 追加 v2 检查项字段）
+- [ ] 7.2 GREEN：运行 `phase6_6d_v2_offline_gate.py --datasets 2024,2025 --output docs/phase6/6d-v2/temporal_routed_cases.json`，覆盖写 `docs/phase6/6d-v2/phase1_receipt.json`（PASS/BLOCKED）
+- [ ] 7.2a GREEN：用 v1 orchestrator 的 `_validate_phase1_receipt` 校验 v2 receipt（确认 6 字段全保留，`run_dev` 不拒启）：
+  ```powershell
+  python -c "from scripts.phase6_6d_orchestrator import _validate_phase1_receipt; _validate_phase1_receipt('docs/phase6/6d-v2/phase1_receipt.json','docs/phase6/6d-v2/temporal_routed_cases.json'); print('v2 receipt passes v1 validation')"
+  ```
+- [ ] 7.3 RED：`test_phase6_6d_v2_offline_gate.py`：receipt PASS、N=31、6 字段全保留、追加字段存在、BLOCKED 分支（N<20 不覆盖）
 - [ ] 7.4 GREEN：运行 Phase 6 广泛基线（同 Task 0.2），确认无新增失败
 - [ ] 7.5 GREEN：dry-run 验证 schedule：
   ```powershell
@@ -555,7 +610,7 @@ arch = _create_archive(...)
 | v1 `run_context.json` 无 temperature/profile/method 字段 | 已实证：这些是冻结常量，Task 4 直接用 `FROZEN_TEMPERATURE`/`FROZEN_PROFILE`/`FROZEN_METHOD` 比对，不从 run_context 读取 |
 | **6D v1 归档 `merged_details_sha256` 与实际文件不匹配**（audit 记 `3539a5`，实际 `c4537d`） | **已实证**：Task 4 不硬性校验 merged SHA 与 audit 一致（否则永远 fail-closed）；改用 `_load_v1_off_data` 从 off slice 源头 `details.jsonl` 重建 off 数据；report 标注此 mismatch 为 6D v1 已知警示 |
 | `experiment_id` 第三处字面量（:1284 resume 校验）漏改 | Task 2.3 引入 `EXPERIMENT_ID` 常量统一替换三处（:1120/:1276/:1284）；Task 2.4a 测试 v2 可 resume 自己 |
-| 正向 subprocess 测试触发真实 API | Task 1.1 改为进程内 `main(argv)` + monkeypatch `run_model_benchmark` + `--max-cases 0` |
+| 正向 subprocess 测试触发真实 API | Task 1.1 改为进程内 `main(argv)`（无 `--model-runner` → 走离线分支，不调模型）+ `--case-details-jsonl` 用 `tmp_path`（非 `NUL` 设备名）+ 断言 `rc != 2` 且 stdout 不含 `要求 arm`；无 monkeypatch（离线分支根本不调 `run_model_benchmark`） |
 | v2 `temporal_routed_cases.json` 无 Task 生成 | Task 3.10-3.12 新增离线门生成步骤，先于 Task 4 |
 | off provenance 未进 receipt | Task 6.6 把 `off_source`/`off_merged_details_sha256` 补入 `SIXD_RECEIPT_REQUIRED_FIELDS` |
 
