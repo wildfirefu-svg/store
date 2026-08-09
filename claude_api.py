@@ -213,6 +213,7 @@ def call_model_messages_sync_with_meta(messages, provider=None, model=None, syst
             payload["temperature"] = _t
         if provider == "deepseek" and thinking_mode == "auto":
             payload["model"] = "deepseek-reasoner"
+            payload["max_tokens"] = 65536
             if "temperature" in payload:
                 del payload["temperature"]
         elif provider == "deepseek" and thinking_mode == "disabled":
@@ -272,8 +273,11 @@ def call_model_messages_sync_with_meta(messages, provider=None, model=None, syst
         return "", meta
     msg = choices[0].get("message", {}) or {}
     text = msg.get("content", "") or ""
-    if msg.get("reasoning_content"):
-        meta["reasoning_content"] = msg["reasoning_content"][:2000]
+    reasoning = msg.get("reasoning_content", "") or ""
+    if reasoning:
+        meta["reasoning_content"] = reasoning[:2000]
+    if not text and reasoning:
+        text = reasoning[-2000:]
     return text, meta
 
 
