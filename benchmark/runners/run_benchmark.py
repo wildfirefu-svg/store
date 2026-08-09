@@ -153,7 +153,7 @@ def compute_detail_provenance(case: dict, route_state, time_context_injection: s
     runtime does not re-extract target years from the question.
     """
     state_str = route_state.value if hasattr(route_state, "value") else route_state
-    if time_context_injection != "on":
+    if time_context_injection not in ("on", "on_limited"):
         return state_str, None
     if state_str is None or state_str == "NOT_ROUTED":
         return state_str, None
@@ -374,7 +374,8 @@ def run_offline_benchmark(cases, predictions):
 def build_benchmark_prompt(case, method='direct_choice', phase4_exp_a=False,
                            chart_schema_version=None, profile_formatter=None,
                            ziwei_arm=None, time_context_injection="off",
-                           route_state=None, frozen_target_years=None):
+                           route_state=None, frozen_target_years=None,
+                           include_relations=True):
     if profile_formatter == 'format_official_cot_prompt':
         # 裁决 2A（执行偏离）：官方 CoT 为单参签名，astro 取自
         # case["chart_input"]["official_astro"]，不再经 render_chart_context 两参传入。
@@ -393,7 +394,8 @@ def build_benchmark_prompt(case, method='direct_choice', phase4_exp_a=False,
         context_text = render_reasoned_context(
             case, chart_schema_version, ziwei_arm,
             time_context_injection=time_context_injection, route_state=route_state,
-            frozen_target_years=frozen_target_years)
+            frozen_target_years=frozen_target_years,
+            include_relations=include_relations)
         return _assemble_reasoned_choice_prompt(case, context_text)
     if method == 'two_stage_reasoning':
         return format_stage1_prompt(case, exp_a=phase4_exp_a)
@@ -1777,8 +1779,9 @@ def _build_parser():
     )
     parser.add_argument('--ziwei-arm', choices=['none', 'only', 'combined', 'ziwei_mini', 'sequential'],
                         default=None, help='紫微星盘消融臂 (none/only/combined/ziwei_mini/sequential)')
-    parser.add_argument('--time-context-injection', choices=['off', 'on'], default='off',
-                        help='6D：时间上下文注入开关 (off/on)，默认 off')
+    parser.add_argument('--time-context-injection', choices=['off', 'on', 'on_limited'], default='off',
+                        help='6D：时间上下文注入开关 (off/on/on_limited)，默认 off；'
+                             'on_limited 注入命局+大运+年份干支但省略刑冲合害/生克关系（6D 方案 A）')
     parser.add_argument('--temporal-routed-cases-file', default=None,
                         help='6D：冻结路由清单 JSON 路径 (temporal_routed_cases.json)')
     return parser

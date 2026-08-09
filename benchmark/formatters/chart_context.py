@@ -376,8 +376,17 @@ def extract_reasoned_choice_answer(raw: str) -> str | None:
     return None
 
 
-def format_temporal_context(ctx: TimeContext) -> str:
-    """Format TimeContext as a prompt section string."""
+def format_temporal_context(ctx: TimeContext, include_relations: bool = True) -> str:
+    """Format TimeContext as a prompt section string.
+
+    Args:
+        ctx: The TimeContext to format.
+        include_relations: When True (default), the 目标流年详析 section includes
+            the precomputed 地支关系 (六冲/六合/三合/害/刑) and 天干关系 (生克).
+            When False (limited injection, 6D 方案 A), only the year + gan/zhi +
+            十神 are emitted — the branch/gan relation hints are omitted to avoid
+            steering the model toward a single year's 刑冲合害.
+    """
     lines = ["【时间上下文·预计算】"]
     if ctx.dayun_table:
         lines.append("【大运排布】")
@@ -389,12 +398,17 @@ def format_temporal_context(ctx: TimeContext) -> str:
     if ctx.option_liunian:
         lines.append("【目标流年详析】")
         for opt in ctx.option_liunian:
-            rels = "、".join(opt.branch_relation) if opt.branch_relation else "无"
-            gan_rel = opt.gan_relation or "无"
-            lines.append(
-                f"{opt.target_year}年：{opt.gan}{opt.zhi} 十神：{opt.shishen}"
-                f" 地支关系：{rels} 天干关系：{gan_rel}"
-            )
+            if include_relations:
+                rels = "、".join(opt.branch_relation) if opt.branch_relation else "无"
+                gan_rel = opt.gan_relation or "无"
+                lines.append(
+                    f"{opt.target_year}年：{opt.gan}{opt.zhi} 十神：{opt.shishen}"
+                    f" 地支关系：{rels} 天干关系：{gan_rel}"
+                )
+            else:
+                lines.append(
+                    f"{opt.target_year}年：{opt.gan}{opt.zhi} 十神：{opt.shishen}"
+                )
     return "\n".join(lines)
 
 
@@ -405,6 +419,7 @@ def render_reasoned_context(
     time_context_injection: str = "off",
     route_state=None,
     frozen_target_years: tuple[int, ...] | None = None,
+    include_relations: bool = True,
 ) -> str:
     """Render context for reasoned choice ablation arm.
 
@@ -455,13 +470,20 @@ def render_reasoned_context(
                 "Expected one of: none, only, combined, ziwei_mini, sequential."
             )
 
-    if time_context_injection == "on" and route_state is not None:
+    # time_context_injection "on" (full) or "on_limited" (方案 A: no relations)
+    if time_context_injection in ("on", "on_limited") and route_state is not None:
         state = route_state
         if isinstance(state, str):
             state = TemporalRouteState(state)
         if state != TemporalRouteState.NOT_ROUTED:
             ctx = build_time_context(case, state, frozen_target_years=frozen_target_years)
             if ctx is not None:
-                result = result + "\n\n" + format_temporal_context(ctx)
+                effective_include = (
+                    include_relations if time_context_injection == "on"
+                    else False
+                )
+                result = result + "\n\n" + format_temporal_context(
+                    ctx, include_relations=effective_include
+                )
 
     return result

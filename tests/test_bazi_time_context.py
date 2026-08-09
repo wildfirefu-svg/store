@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -233,6 +234,149 @@ def test_time_context_is_frozen():
     )
     with pytest.raises(Exception):
         ctx.natal = natal  # type: ignore
+
+
+# -- 6D 方案 A: limited injection (no branch/gan relations) --
+
+def _build_liunian_context():
+    """Build a TimeContext with option_liunian for a routed-with-targets case."""
+    from benchmark.formatters.bazi_time_context import (
+        OptionLiunian,
+        build_time_context,
+        classify_route_state,
+        detect_temporal_rules,
+        extract_target_years,
+    )
+    import json as _json
+    path = "benchmark/datasets/baziqa_contest8_2024_holdout_enriched.jsonl"
+    case = None
+    for line in open(path, encoding="utf-8"):
+        if not line.strip():
+            continue
+        row = _json.loads(line)
+        if row.get("case_id") == "female_19831028_P004-Q17":  # marriage-year regressed case
+            case = row
+            break
+    assert case is not None, "test case not found"
+    q = case["question"]
+    opts = case.get("options", [])
+    birth = case.get("birth_year") or case.get("person", {}).get("birth", {}).get("year")
+    rules = detect_temporal_rules(q, opts)
+    tys = extract_target_years(q, opts, birth)
+    state = classify_route_state(rules, tys)
+    ctx = build_time_context(case, state, frozen_target_years=tys)
+    assert ctx is not None and ctx.option_liunian, "case must route with liunian targets"
+    return ctx
+
+
+def test_format_temporal_context_full_includes_relations():
+    from benchmark.formatters.chart_context import format_temporal_context
+    ctx = _build_liunian_context()
+    text = format_temporal_context(ctx, include_relations=True)
+    assert "地支关系" in text
+    assert "天干关系" in text
+    assert "目标流年详析" in text
+
+
+def test_format_temporal_context_limited_omits_relations():
+    from benchmark.formatters.chart_context import format_temporal_context
+    ctx = _build_liunian_context()
+    text = format_temporal_context(ctx, include_relations=False)
+    assert "地支关系" not in text
+    assert "天干关系" not in text
+    assert "目标流年详析" in text
+    # year + gan/zhi + 十神 must be preserved
+    assert "年：" in text
+    assert "十神：" in text
+
+
+def test_render_on_limited_omits_relations_but_keeps_context():
+    """6D 方案 A: on_limited injects natal+dayun+year pillar but NO relations."""
+    import json as _json
+    from benchmark.formatters.chart_context import render_reasoned_context
+    from benchmark.formatters.bazi_time_context import (
+        classify_route_state,
+        detect_temporal_rules,
+        extract_target_years,
+    )
+    path = "benchmark/datasets/baziqa_contest8_2024_holdout_enriched.jsonl"
+    case = None
+    for line in open(path, encoding="utf-8"):
+        if not line.strip():
+            continue
+        row = _json.loads(line)
+        if row.get("case_id") == "female_19831028_P004-Q17":
+            case = row
+            break
+    q = case["question"]
+    opts = case.get("options", [])
+    birth = case.get("birth_year") or case.get("person", {}).get("birth", {}).get("year")
+    state = classify_route_state(
+        detect_temporal_rules(q, opts),
+        extract_target_years(q, opts, birth),
+    )
+    full = render_reasoned_context(case, "legacy_v0", "none",
+                                   time_context_injection="on", route_state=state)
+    limited = render_reasoned_context(case, "legacy_v0", "none",
+                                      time_context_injection="on_limited", route_state=state)
+    assert "地支关系" in full
+    assert "地支关系" not in limited
+    assert "天干关系" not in limited
+    # 命局 + 大运 + 目标流年详析 均保留
+    assert "时间上下文·预计算" in limited
+    assert "大运排布" in limited
+    assert "目标流年详析" in limited
+
+
+def test_detail_provenance_on_limited_computes_sha():
+    """on_limited is a real injection: compute_detail_provenance must compute SHA.
+
+    真实对照：用 female_19831028_P004-Q17（ROUTED_WITH_TARGETS）验证
+    on_limited 时 sha 非 None、off 时 sha 为 None。
+    """
+    import json as _json
+    from benchmark.runners.run_benchmark import compute_detail_provenance
+    from benchmark.formatters.bazi_time_context import (
+        classify_route_state, detect_temporal_rules, extract_target_years,
+    )
+    path = "benchmark/datasets/baziqa_contest8_2024_holdout_enriched.jsonl"
+    case = None
+    for line in open(path, encoding="utf-8"):
+        if not line.strip():
+            continue
+        row = _json.loads(line)
+        if row.get("case_id") == "female_19831028_P004-Q17":
+            case = row
+            break
+    assert case is not None, "test case not found"
+    q = case["question"]
+    opts = case.get("options", [])
+    birth = case.get("birth_year") or case.get("person", {}).get("birth", {}).get("year")
+    state = classify_route_state(
+        detect_temporal_rules(q, opts), extract_target_years(q, opts, birth))
+    assert state.value == "ROUTED_WITH_TARGETS"
+
+    # on_limited → 真实注入，sha 必须非 None
+    s_on, sha_on = compute_detail_provenance(case, state, "on_limited")
+    assert s_on == "ROUTED_WITH_TARGETS"
+    assert sha_on is not None, "on_limited must compute a real context SHA"
+
+    # off → 非注入，sha 必须为 None
+    s_off, sha_off = compute_detail_provenance(case, state, "off")
+    assert s_off == "ROUTED_WITH_TARGETS"
+    assert sha_off is None, "off must NOT compute a context SHA"
+
+
+def test_cli_accepts_on_limited():
+    """--time-context-injection accepts on_limited as a valid choice."""
+    import subprocess
+    import sys
+    r = subprocess.run(
+        [sys.executable, "benchmark/runners/run_benchmark.py", "--help"],
+        capture_output=True, text=True, cwd=os.getcwd(),
+    )
+    assert "--time-context-injection" in r.stdout
+    assert "on_limited" in r.stdout
 
 
 def test_time_context_uses_tuple_not_list():
