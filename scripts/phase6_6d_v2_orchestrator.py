@@ -811,11 +811,13 @@ def _run_all_slices(schedule, ledger, provider, model):
 # -- Merge + completeness --
 
 
-def _merge_details(slices):
+def _merge_details(slices, v1_off_data=None):
     merged = []
     for sl in slices:
         if os.path.exists(sl["detail_path"]):
             merged.extend(_load_events(sl["detail_path"]))
+    if v1_off_data:
+        merged.extend(v1_off_data)
     return merged
 
 
@@ -830,6 +832,14 @@ def _detail_identity(row):
 
 
 def _check_completeness(merged, schedule):
+    # fail-closed：merged 中出现非本实验臂（含 v1 遗留 b1a_time_on）→ 拒绝
+    allowed_arms = set(ARMS)
+    for r in merged:
+        arm = (r.get("attempt_key") or [None] * 10)[2]
+        if arm == "b1a_time_on":
+            return "V1_ON_LEAK: b1a_time_on (v1 legacy) in merged details"
+        if arm not in allowed_arms:
+            return f"UNKNOWN_ARM: {arm!r} in merged details"
     by_cell = defaultdict(lambda: defaultdict(list))
     for r in merged:
         year, rep, cid, arm, stage = _detail_identity(r)
@@ -843,7 +853,7 @@ def _check_completeness(merged, schedule):
     for cell in expected_cells:
         arms = by_cell.get(cell, {})
         off_stages = arms.get("b1a_time_off", [])
-        on_stages = arms.get("b1a_time_on", [])
+        on_stages = arms.get("b1a_time_on_limited", [])
         off_mains = [s for s in off_stages if s == "main"]
         on_mains = [s for s in on_stages if s == "main"]
         if len(off_mains) != 1:
@@ -863,8 +873,9 @@ def compute_6d_gate(details, n_cases):
     off_rows = [r for r in details
                 if (r.get("attempt_key") or [None] * 10)[2] == "b1a_time_off"]
     on_rows = [r for r in details
-               if (r.get("attempt_key") or [None] * 10)[2] == "b1a_time_on"]
-    for arm_name, rows in (("b1a_time_off", off_rows), ("b1a_time_on", on_rows)):
+               if (r.get("attempt_key") or [None] * 10)[2] == "b1a_time_on_limited"]
+    for arm_name, rows in (("b1a_time_off", off_rows),
+                           ("b1a_time_on_limited", on_rows)):
         call_failed = sum(1 for r in rows if r.get("terminal_state") == "call_failed")
         if call_failed > 0:
             return {"verdict": "BLOCKED", "reason": f"{arm_name}_call_failed",
@@ -1022,7 +1033,7 @@ def _generate_report(merged, gate_result, schedule, ledger, out_dir, run_id=None
     off_rows = [r for r in merged
                 if (r.get("attempt_key") or [None] * 10)[2] == "b1a_time_off"]
     on_rows = [r for r in merged
-               if (r.get("attempt_key") or [None] * 10)[2] == "b1a_time_on"]
+               if (r.get("attempt_key") or [None] * 10)[2] == "b1a_time_on_limited"]
     off_correct = sum(1 for r in off_rows if r.get("correct"))
     on_correct = sum(1 for r in on_rows if r.get("correct"))
     off_total = len(off_rows)
@@ -1040,7 +1051,7 @@ def _generate_report(merged, gate_result, schedule, ledger, out_dir, run_id=None
         if arm == "b1a_time_off":
             bucket["off_total"] += 1
             bucket["off_correct"] += 1 if r.get("correct") else 0
-        elif arm == "b1a_time_on":
+        elif arm == "b1a_time_on_limited":
             bucket["on_total"] += 1
             bucket["on_correct"] += 1 if r.get("correct") else 0
     case_deltas = gate_result.get("case_deltas") or {}

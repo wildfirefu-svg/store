@@ -22,12 +22,14 @@ from scripts.phase6_6d_v2_orchestrator import (
     TEMPORAL_CONTEXT_VERSION,
     BudgetLedger,
     _build_schedule,
+    _check_completeness,
     _compute_experiment_code_fingerprint,
     _prepare_run_context,
     _run_all_slices,
     _validate_frozen_protocol,
     build_run_manifest,
     check_6d_gate,
+    compute_6d_gate,
 )
 
 # v1 manifest exists in the repo and is SHA-identical to the v2 manifest
@@ -155,3 +157,41 @@ def test_off_reuse_skip_precedes_ledger(monkeypatch, tmp_path):
     assert not any("b1a_time_off" in sid for sid in ledger_checks)
     # 方案 A: off slices are not recorded in the ledger
     assert not any("b1a_time_off" in sid for sid in ledger._completed)
+
+
+# -- Task 5.5: gate / completeness use on_limited arm --
+
+
+def _mk(arm, cid, rep, correct):
+    return {"attempt_key": ["baziqa_contest8_2024_holdout_enriched",
+                            "baziqa_xjz_reasoned", arm, "main", "deepseek",
+                            "deepseek-v4-flash", cid, rep, 0, "p0"],
+            "case_id": cid, "terminal_state": "parsed", "correct": correct}
+
+
+def test_gate_uses_on_limited_and_denominator_n3():
+    # N=1, REPEATS=3：c1 在 3 个 repeat 中 on_limited 净增 1 题
+    # off 只在 rep==0 对（off_correct=1），on_limited 在 rep!=1 对（on_correct=2）
+    # case_delta = on_correct - off_correct = 2 - 1 = +1
+    # paired_delta = +1 / (N × REPEATS) = +1/3（分母不含条件数 2）
+    details = []
+    for rep in range(3):
+        details.append(_mk("b1a_time_off", "c1", rep, rep == 0))
+        details.append(_mk("b1a_time_on_limited", "c1", rep, rep != 1))
+    g = compute_6d_gate(details, 1)  # N=1
+    # 容忍度 1e-6：compute_6d_gate 对结果 round(..., 6)（v1 继承行为）
+    assert abs(g["paired_delta"] - (1 / 3)) < 1e-6   # 分母 N×3，非 N×3×2
+    assert abs(g["min_case_delta"] - (1 / 3)) < 1e-6  # min(+1)/3 = +1/3
+
+
+def test_completeness_rejects_v1_on():
+    merged = [_mk("b1a_time_off", "c1", 0, True),
+              _mk("b1a_time_on", "c1", 0, True),   # v1 遗留
+              _mk("b1a_time_on_limited", "c1", 0, True)]
+    # 构造 schedule 期望 c1 有 off+on_limited
+    schedule = {"slices": [{"year": "2024", "repeat": 0,
+                            "arm": "b1a_time_on_limited", "case_ids": ["c1"]},
+                           {"year": "2024", "repeat": 0,
+                            "arm": "b1a_time_off", "case_ids": ["c1"]}]}
+    r = _check_completeness(merged, schedule)
+    assert r != "PASS"
