@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
-> **修订历史：** v1（概要 08-09 初版）→ v2（详尽扩充）→ v3（独立核验修订：3 P0 + 4 P1 + 4 P2）→ v3.1（复审修订：1 P1 + 2 P2，已放行）→ v3.2（再审修订：2 P1 + 4 P2；on_limited 地基已提交 `00f43c6`）
+> **修订历史：** v1（概要 08-09 初版）→ v2（详尽扩充）→ v3（独立核验修订：3 P0 + 4 P1 + 4 P2）→ v3.1（复审修订：1 P1 + 2 P2，已放行）→ v3.2（再审修订：2 P1 + 4 P2；on_limited 地基已提交 `00f43c6`）→ v3.3（终审修订：Task 6.7 夹具 4 处执行缺口，已放行）
 
 **Goal:** 实现 6D-v2「限制性注入」对照实验链：`off vs on_limited`（off 复用 6D v1 归档数据，仅新跑 `b1a_time_on_limited` 臂 93 calls），通过零 API 离线门验证工程契约，为真实 paired dev（需用户批准 API）准备完备基础设施。
 
@@ -492,14 +492,21 @@ arch = _create_archive(...)
   ledger = BudgetLedger(str(stage_dir / "budget_ledger.json"), global_hard_cap=run_cap)
   ```
 - [ ] 6.6 GREEN：report/audit 标注 off 来源 `6d-v1:<archive_id>`。**P2 强化**：把 `off_source`（值为 `6d-v1:<archive_id>`）和 `off_merged_details_sha256`（实际 off 数据的 SHA）补入 `SIXD_RECEIPT_REQUIRED_FIELDS`，使 `check_6d_gate` 强制校验 off provenance 存在——否则归档缺该证据也能过 gate。
-- [ ] 6.7 RED：`test_run_dev_skips_off_reuse_slices`（P2-4，修法 b）：
-  > **P2-4 修正**：不能只 mock `_run_slice` 返回 dict 而不写 detail/events——fake 不写 detail 也不记账会导致 merge 缺 on_limited main → `_check_completeness` SystemExit，即便过了也挂在 `_create_archive` 的 completed 检查。**修法 (b)**：fake_run_slice **真实写 detail/events + 调 `ledger.record_slice_completed`**，使完整 `run_dev` 链可跑通，同时断言 off（v1_reuse）slice 未被调用。
+- [ ] 6.7 RED：`test_run_dev_skips_off_reuse_slices`（P2-4 修法 b + 4 处夹具修正）：
+  > **P2-4 修正**：不能只 mock `_run_slice` 返回 dict 而不写 detail/events——fake 不写 detail 也不记账会导致 merge 缺 on_limited main → `_check_completeness` SystemExit。**修法 (b)**：fake_run_slice **真实写 detail/events + 调 `ledger.record_slice_completed`**。
+  >
+  > **4 处夹具执行缺口（复审确认，必须并入）**：
+  > 1. `record_slice_completed` 真实签名是 **三参** `(slice_id, actual_attempts, scheduled_calls)`（orchestrator :315），夹具只传两参 → TypeError。改为 `ledger.record_slice_completed(sid, scheduled, scheduled)`。
+  > 2. `_prepare_run_context` mock **需建目录**：run_dev 非 resume 路径用 `tempfile.mkstemp(dir=str(runs_root))` 写 manifest，`tmp_path/"runs"` 不存在 → FileNotFoundError。mock 里需 `mkdir(parents=True)`。
+  > 3. off mock **只造 c1 一行不够**：completeness 要求 31 题 × 3 repeats 每 cell 都有 off main。`_verify_off_reuse` 的 mock 返回必须覆盖 schedule 里的全部 case_ids，否则 `_check_completeness` SystemExit。
+  > 4. archive/receipt 会**写真仓库**：`_create_archive` 默认落 `docs/phase6/6d-v2/`（`ARCHIVE_ROOT`），`_publish_receipt_atomic` 写 `runs_root/"gates"`。测试必须 monkeypatch `ARCHIVE_ROOT` 到 tmp_path（或 mock 这两个函数），否则污染真实产物目录 + `run_id exists` 二次运行失败。
   ```python
   def test_run_dev_skips_off_reuse_slices(monkeypatch, tmp_path):
+      # 4. monkeypatch ARCHIVE_ROOT 到 tmp_path，避免写真仓库
+      monkeypatch.setattr(orch, "ARCHIVE_ROOT", str(tmp_path / "archive"))
       calls = []
       def fake_run_slice(slice_info, ledger, provider, model, resume=False):
           calls.append(slice_info["slice_id"])
-          # 真实写 detail 行（on_limited 臂），使 _check_completeness 能通过
           os.makedirs(slice_info["output_dir"], exist_ok=True)
           with open(slice_info["detail_path"], "w", encoding="utf-8") as f:
               for cid in slice_info["case_ids"]:
@@ -507,21 +514,30 @@ arch = _create_archive(...)
           with open(slice_info["events_path"], "w", encoding="utf-8") as f:
               for _ in range(slice_info["scheduled_calls"]):
                   f.write(json.dumps({"kind": "call_attempt"}) + "\n")
+          # 1. record_slice_completed 三参
           ledger.record_slice_completed(slice_info["slice_id"],
+                                        slice_info["scheduled_calls"],
                                         slice_info["scheduled_calls"])
           return {"exit_code": 0, "actual_attempts": slice_info["scheduled_calls"]}
       monkeypatch.setattr(orch, "_run_slice", fake_run_slice)
-      monkeypatch.setattr(orch, "_verify_off_reuse", lambda *a, **k: [_mk_off_row("c1")])
+      # 3. off mock 必须覆盖 schedule 全部 case_ids（31 题 × 3 repeats 每 cell 有 off main）
+      monkeypatch.setattr(orch, "_verify_off_reuse",
+                          lambda *a, **k: _all_off_rows_from_schedule(schedule))
       monkeypatch.setattr(orch, "_validate_frozen_protocol", lambda *a, **k: {})
       monkeypatch.setattr(orch, "_validate_phase1_receipt", lambda *a, **k: {})
-      monkeypatch.setattr(orch, "_prepare_run_context", lambda *a, **k: (tmp_path / "runs", {}))
+      # 2. _prepare_run_context mock 需建目录
+      def fake_prepare_run_context(output_dir, run_id, resume, run_manifest, code_fingerprint):
+          runs_root = Path(output_dir) / "runs" / run_id
+          runs_root.mkdir(parents=True, exist_ok=True)
+          return runs_root, {}
+      monkeypatch.setattr(orch, "_prepare_run_context", fake_prepare_run_context)
       orch.run_dev("deepseek", "deepseek-v4-flash", str(tmp_path), run_id="r1",
                    v1_archive_dir=".", v1_runs_dir=".", resume=False)
       off_ids = [c for c in calls if "b1a_time_off" in c]
       assert len(off_ids) == 0, "off (v1_reuse) slices must not be executed"
   ```
-- [ ] 6.8 RED：`test_run_dev_merged_includes_off`：fake_run_slice（同 6.7）+ `_verify_off_reuse` 返回 off 行，断言 `_merge_details` 的 merged 同时含 off 行（来自复用）与 on_limited 行（来自 fake 写入）
-- [ ] 6.9 RED：`test_run_dev_off_reuse_fail_blocks`：`_verify_off_reuse` 抛异常 → `run_dev` 不发起任何 slice（`_run_slice` 未被调用）
+- [ ] 6.8 RED：`test_run_dev_merged_includes_off`：fake_run_slice（同 6.7，含 4 处夹具修正）+ `_verify_off_reuse` 返回覆盖全部 case_ids 的 off 行，断言 `_merge_details` 的 merged 同时含 off 行（来自复用）与 on_limited 行（来自 fake 写入）
+- [ ] 6.9 RED：`test_run_dev_off_reuse_fail_blocks`：`_verify_off_reuse` 抛异常 → `run_dev` 不发起任何 slice（`_run_slice` 未被调用）。此测试无需 4 处夹具修正（off 校验在 `_run_all_slices` 之前短路）
 - [ ] 6.10 GREEN：运行相关测试通过
 - [ ] 6.11 COMMIT：`feat(6d-v2): wire off reuse into run_dev flow`
 
