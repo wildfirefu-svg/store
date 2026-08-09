@@ -11,6 +11,7 @@ profile baziqa_xjz_reasoned / method direct_choice.
 from __future__ import annotations
 
 import argparse
+import glob
 import hashlib
 import inspect
 import json
@@ -43,14 +44,14 @@ TEMPORAL_CONTEXT_VERSION = "6d-v2"
 EXPERIMENT_ID = "6d-v2"
 CHART_SCHEMA = "legacy_v0"
 
-ROUTED_MANIFEST_PATH = "docs/phase6/6d/temporal_routed_cases.json"
-PHASE1_RECEIPT_PATH = "docs/phase6/6d/phase1_receipt.json"
-ARCHIVE_ROOT = "docs/phase6/6d"
+ROUTED_MANIFEST_PATH = "docs/phase6/6d-v2/temporal_routed_cases.json"
+PHASE1_RECEIPT_PATH = "docs/phase6/6d-v2/phase1_receipt.json"
+ARCHIVE_ROOT = "docs/phase6/6d-v2"
 
 PER_GROUP = 8
 REPEATS = 3
-ARMS = ("b1a_time_off", "b1a_time_on")
-EXPERIMENT_CONDITIONS = ("off", "on")
+ARMS = ("b1a_time_off", "b1a_time_on_limited")
+EXPERIMENT_CONDITIONS = ("off", "on_limited")
 PARSER_RATE_MIN = 0.85
 PHASE1_N_ROUTED_MIN = 20
 
@@ -120,6 +121,23 @@ def _load_events(path):
     if not os.path.exists(path):
         return []
     return [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
+
+
+def _load_v1_off_data(v1_archive_dir):
+    """从 v1 归档的 off slice 源头 details.jsonl 重建 off 数据。
+
+    不读 merged_details.jsonl——6D v1 归档的 audit_index 中
+    merged_details_sha256 与磁盘实际文件不一致（v1 已知问题），
+    slice 源头的 details.jsonl 更可靠。
+    """
+    off = []
+    for sl_dir in glob.glob(os.path.join(v1_archive_dir, "*_b1a_time_off_*")):
+        p = os.path.join(sl_dir, "details.jsonl")
+        if os.path.exists(p):
+            off.extend(_load_events(p))
+    # 只保留 off 臂行（防御性）
+    return [r for r in off if (r.get("attempt_key") or [None] * 10)[2]
+            == "b1a_time_off"]
 
 
 def _load_routed_entries(path):
@@ -237,12 +255,14 @@ def _build_schedule(output_dir, routed_manifest_path=ROUTED_MANIFEST_PATH):
             for rep in range(REPEATS):
                 arm_order = ARMS if order == "AB" else tuple(reversed(ARMS))
                 for arm in arm_order:
-                    injection = "off" if arm == "b1a_time_off" else "on"
+                    injection = "off" if arm == "b1a_time_off" else "on_limited"
+                    source = "v1_reuse" if arm == "b1a_time_off" else "run"
                     slice_id = f"{year}_{arm}_r{rep}_g{g}"
                     out_dir = os.path.join(output_dir, slice_id)
                     slices.append({
                         "year": year, "repeat": rep, "arm": arm, "group": g,
                         "slice_id": slice_id, "output_dir": out_dir,
+                        "source": source,
                         "detail_path": os.path.join(out_dir, "details.jsonl"),
                         "events_path": os.path.join(out_dir, "details.events.jsonl"),
                         "case_ids_file": os.path.join(out_dir, "case_ids.json"),
@@ -725,6 +745,12 @@ def _verify_completed_slice(slice_info, provider, model):
 
 def _run_all_slices(schedule, ledger, provider, model):
     for idx, sl in enumerate(schedule["slices"]):
+        if sl.get("source") == "v1_reuse":
+            # off 臂复用 6D v1 归档数据：跳过判断必须先于 ledger.slice_completed，
+            # 避免 resume 时因 off slice 未记账而走入 _verify_completed_slice。
+            print(f"[slice] {idx+1}/{len(schedule['slices'])} "
+                  f"{sl['slice_id']}: skipped (v1_reuse)")
+            continue
         if ledger.slice_completed(sl["slice_id"]):
             print(f"[slice] {idx+1}/{len(schedule['slices'])} {sl['slice_id']}: verifying completed")
             _verify_completed_slice(sl, provider, model)
@@ -761,6 +787,8 @@ def _check_completeness(merged, schedule):
         by_cell[(year, rep, cid)][arm].append(stage)
     expected_cells = set()
     for sl in schedule["slices"]:
+        if sl.get("source") == "v1_reuse":
+            continue  # off 臂数据来自 v1 复用，不计入本 run 的完整性期望
         for cid in sl["case_ids"]:
             expected_cells.add((sl["year"], sl["repeat"], cid))
     for cell in expected_cells:
@@ -1082,8 +1110,10 @@ def _create_archive(schedule, ledger, run_dir, provider, model, gate_result,
     if gate_result.get("verdict") == "BLOCKED":
         raise SystemExit("archive reject: BLOCKED verdict cannot be archived")
     completed = {sl["slice_id"] for sl in schedule["slices"]
-                 if ledger.slice_completed(sl["slice_id"])}
-    expected_ids = {sl["slice_id"] for sl in schedule["slices"]}
+                 if sl.get("source") == "run"
+                 and ledger.slice_completed(sl["slice_id"])}
+    expected_ids = {sl["slice_id"] for sl in schedule["slices"]
+                    if sl.get("source") == "run"}
     if completed != expected_ids:
         raise SystemExit(
             f"archive reject: schedule incomplete ({len(completed)}/{len(expected_ids)})")
