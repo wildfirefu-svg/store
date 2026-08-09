@@ -88,6 +88,7 @@ _REASONED_ARM_MAP: dict = {
     "b2c": "sequential",
     "b1a_time_off": "none",
     "b1a_time_on": "none",
+    "b1a_time_on_limited": "none",
 }
 
 
