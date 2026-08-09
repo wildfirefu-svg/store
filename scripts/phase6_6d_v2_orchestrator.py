@@ -140,6 +140,55 @@ def _load_v1_off_data(v1_archive_dir):
             == "b1a_time_off"]
 
 
+def _verify_off_reuse(v1_archive_dir, v1_runs_dir, v2_frozen):
+    """校验 6D v1 off 数据可复用。任一漂移 → SystemExit，失败一律 fail-closed。
+
+    v1_archive_dir 含 dev_gate.json；v1_runs_dir 含 run_context.json。
+    不硬性校验 merged_details.jsonl 的 SHA——6D v1 归档 audit_index 中的
+    merged_details_sha256（3539a5...）与磁盘实际文件（c4537d...）不一致，
+    是 v1 已知问题（P1-5）；off 数据改从 slice 源头 details.jsonl 重建。
+    """
+    dev_gate_path = os.path.join(v1_archive_dir, "dev_gate.json")
+    if not os.path.exists(dev_gate_path):
+        raise SystemExit("off reuse reject: dev_gate.json missing")
+    with open(dev_gate_path, encoding="utf-8") as f:
+        dev_gate = json.load(f)
+    # 1. temporal_context_version 必须为 6d-v1（证明 off 数据确属 v1）
+    if dev_gate.get("temporal_context_version") != "6d-v1":
+        raise SystemExit("off reuse reject: temporal_context_version != 6d-v1")
+    # 2. SHA 比对（从 dev_gate.json）
+    for k in ("dataset_sha256_by_year", "temporal_routed_cases_sha256",
+              "dataset_set_sha256"):
+        if dev_gate.get(k) != v2_frozen.get(k):
+            raise SystemExit(f"off reuse reject: {k} drift")
+    # 3. frozen 参数比对：provider/model/thinking_mode 从 dev_gate；
+    #    temperature/profile/method 用冻结常量
+    for k in ("provider", "model", "thinking_mode"):
+        if dev_gate.get(k) != v2_frozen.get(k):
+            raise SystemExit(f"off reuse reject: {k} drift")
+    for k, expected in (("temperature", FROZEN_TEMPERATURE),
+                        ("profile", FROZEN_PROFILE),
+                        ("method", FROZEN_METHOD)):
+        if v2_frozen.get(k) != expected:
+            raise SystemExit(f"off reuse reject: {k} mismatch")
+    # 4. experiment_id 校验（从 run_context.json，runs/ 工作区）
+    run_ctx_path = os.path.join(v1_runs_dir, "run_context.json")
+    if not os.path.exists(run_ctx_path):
+        raise SystemExit("off reuse reject: run_context.json missing")
+    with open(run_ctx_path, encoding="utf-8") as f:
+        run_ctx = json.load(f)
+    if run_ctx.get("experiment_id") != "6d":
+        raise SystemExit("off reuse reject: experiment_id != '6d'")
+    # 5. off 数据从 slice 源头重建并校验覆盖完整（见 _load_v1_off_data）
+    off = _load_v1_off_data(v1_archive_dir)
+    if len(off) != 93:
+        raise SystemExit(f"off reuse reject: off count {len(off)} != 93")
+    parsed = sum(1 for r in off if r.get("terminal_state") == "parsed")
+    if parsed / len(off) < PARSER_RATE_MIN:
+        raise SystemExit(f"off reuse reject: parsed rate {parsed / len(off)}")
+    return off  # 返回复用的 off 数据
+
+
 def _load_routed_entries(path):
     with open(path, encoding="utf-8") as f:
         return json.load(f)
