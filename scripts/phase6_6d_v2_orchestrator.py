@@ -48,6 +48,11 @@ ROUTED_MANIFEST_PATH = "docs/phase6/6d-v2/temporal_routed_cases.json"
 PHASE1_RECEIPT_PATH = "docs/phase6/6d-v2/phase1_receipt.json"
 ARCHIVE_ROOT = "docs/phase6/6d-v2"
 
+# 6D v1 真实归档 / runs 工作区（off 臂数据复用来源）
+V1_ARCHIVE_DIR = ("docs/phase6/6d/phase6-6d-v1-20260808-r1-6d-dev-2026-08-07"
+                  "-deepseek-deepseek-v4-flash-cc36fefa94c5")
+V1_RUNS_DIR = "docs/phase6/6d/runs/phase6-6d-v1-20260808-r1"
+
 PER_GROUP = 8
 REPEATS = 3
 ARMS = ("b1a_time_off", "b1a_time_on_limited")
@@ -930,6 +935,7 @@ SIXD_RECEIPT_REQUIRED_FIELDS = (
     "extraction_strategy_sha256", "temporal_routed_cases_sha256",
     "condition_manifest_sha256", "dataset_sha256_by_year",
     "group_abba_order",
+    "off_source", "off_merged_details_sha256",
 )
 
 
@@ -1024,7 +1030,8 @@ def _validate_four_layer_provenance(runs_root, receipt):
 # -- Report --
 
 
-def _generate_report(merged, gate_result, schedule, ledger, out_dir, run_id=None):
+def _generate_report(merged, gate_result, schedule, ledger, out_dir,
+                     run_id=None, off_source=None):
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     total = max(len(merged), 1)
@@ -1081,6 +1088,7 @@ def _generate_report(merged, gate_result, schedule, ledger, out_dir, run_id=None
         "model": FROZEN_MODEL,
         "thinking_mode": FROZEN_THINKING_MODE,
         "run_id": run_id,
+        "off_source": off_source,
         "verdict": gate_result.get("verdict"),
         "paired_delta": gate_result.get("paired_delta"),
         "min_case_delta": gate_result.get("min_case_delta"),
@@ -1110,6 +1118,7 @@ def _generate_report(merged, gate_result, schedule, ledger, out_dir, run_id=None
         f"- Model: {report['model']}",
         f"- Thinking mode: {report['thinking_mode']}",
         f"- Run ID: {run_id}",
+        f"- OFF data source: {off_source} (reused from 6D v1 archive)",
         f"- gate: **{gate_result.get('verdict')}**",
         f"- paired_delta: {gate_result.get('paired_delta')}",
         f"- min_case_delta: {gate_result.get('min_case_delta')}",
@@ -1163,7 +1172,7 @@ def _generate_report(merged, gate_result, schedule, ledger, out_dir, run_id=None
 
 def _create_archive(schedule, ledger, run_dir, provider, model, gate_result,
                     run_manifest, code_fingerprint, run_id=None,
-                    archive_root=None):
+                    archive_root=None, v1_off_data=None, off_source=None):
     import shutil
     archive_root = Path(archive_root or ARCHIVE_ROOT)
     run_dir = Path(run_dir)
@@ -1179,7 +1188,10 @@ def _create_archive(schedule, ledger, run_dir, provider, model, gate_result,
             f"archive reject: schedule incomplete ({len(completed)}/{len(expected_ids)})")
     if ledger.total_attempted > ledger.hard_cap:
         raise SystemExit("archive reject: ledger exceeds hard_cap")
-    merged = _merge_details(schedule["slices"])
+    merged = _merge_details(schedule["slices"], v1_off_data=v1_off_data)
+    # 复用 off 数据行的 canonical SHA（off_merged_details_sha256 锁定此计算方式）
+    off_sha = (_canonical_dict_sha256(v1_off_data)
+               if v1_off_data is not None else None)
     completeness = _check_completeness(merged, schedule)
     if completeness != "PASS":
         raise SystemExit(f"archive reject: completeness failed ({completeness})")
@@ -1219,6 +1231,8 @@ def _create_archive(schedule, ledger, run_dir, provider, model, gate_result,
             "gate_verdict": gate_result.get("verdict"),
             "gate_detail": _json_safe(gate_result),
             "merged_details_sha256": md_sha,
+            "off_source": off_source,
+            "off_merged_details_sha256": off_sha,
             "budget": {
                 "attempted": ledger.total_attempted,
                 "hard_cap": ledger.hard_cap,
@@ -1246,6 +1260,8 @@ def _create_archive(schedule, ledger, run_dir, provider, model, gate_result,
             "thinking_mode": FROZEN_THINKING_MODE,
             "model_label": MODEL_LABEL,
             "code_fingerprint": code_fingerprint,
+            "off_source": off_source,
+            "off_merged_details_sha256": off_sha,
         }
         receipt.update(run_manifest)
         receipt_path = tmp_dir / "dev_gate.json"
@@ -1439,7 +1455,8 @@ def _validate_run_id(run_id):
 
 def run_dev(provider, model, output_dir, run_id=None, resume=False,
             routed_manifest_path=ROUTED_MANIFEST_PATH,
-            phase1_receipt_path=PHASE1_RECEIPT_PATH):
+            phase1_receipt_path=PHASE1_RECEIPT_PATH,
+            v1_archive_dir=V1_ARCHIVE_DIR, v1_runs_dir=V1_RUNS_DIR):
     protocol = _validate_frozen_protocol(
         provider, model, FROZEN_THINKING_MODE, FROZEN_TEMPERATURE,
         FROZEN_PROFILE, FROZEN_METHOD)
@@ -1450,6 +1467,27 @@ def run_dev(provider, model, output_dir, run_id=None, resume=False,
     code_fp = _compute_experiment_code_fingerprint()
     run_manifest = build_run_manifest(
         provider, model, protocol, code_fp, routed_manifest_path)
+    # off 复用预检：必须先于 _prepare_run_context / _run_all_slices，
+    # 失败 → SystemExit(2)，零 API、零 run 目录
+    v2_frozen = {
+        "dataset_sha256_by_year": run_manifest["dataset_sha256_by_year"],
+        "temporal_routed_cases_sha256":
+            run_manifest["temporal_routed_cases_sha256"],
+        "dataset_set_sha256": run_manifest["dataset_set_sha256"],
+        "provider": run_manifest["provider"],
+        "model": run_manifest["model"],
+        "thinking_mode": run_manifest["thinking_mode"],
+        "temperature": FROZEN_TEMPERATURE,
+        "profile": FROZEN_PROFILE,
+        "method": FROZEN_METHOD,
+    }
+    try:
+        v1_off = _verify_off_reuse(v1_archive_dir, v1_runs_dir, v2_frozen)
+    except SystemExit as exc:
+        print(f"[off reuse] precheck failed: {exc}", file=sys.stderr)
+        raise SystemExit(2) from exc
+    off_source = ("6d-v1:" + os.path.basename(
+        os.path.normpath(str(v1_archive_dir))))
     runs_root, _context = _prepare_run_context(
         output_dir=output_dir, run_id=run_id, resume=resume,
         run_manifest=run_manifest, code_fingerprint=code_fp)
@@ -1486,21 +1524,26 @@ def run_dev(provider, model, output_dir, run_id=None, resume=False,
         schedule = _build_schedule(str(stage_dir), routed_manifest_path)
         if schedule["group_abba_order"] != run_manifest["group_abba_order"]:
             raise SystemExit("run reject: schedule group_abba_order != run_manifest")
+        # 6.5：ledger cap 只算 source=="run" 的 slice（on_limited 臂 243），
+        # off（v1_reuse）不跑、不计入消耗，不能用 schedule["global_hard_cap"]（486）
+        run_cap = sum(s["hard_cap"] for s in schedule["slices"]
+                      if s["source"] == "run")
         ledger = BudgetLedger(
             str(stage_dir / "budget_ledger.json"),
-            global_hard_cap=schedule["global_hard_cap"])
+            global_hard_cap=run_cap)
         _run_all_slices(schedule, ledger, provider, model)
-        merged = _merge_details(schedule["slices"])
+        merged = _merge_details(schedule["slices"], v1_off_data=v1_off)
         completeness = _check_completeness(merged, schedule)
         if completeness != "PASS":
             raise SystemExit(f"dev completeness failed: {completeness}")
         n_cases = sum(schedule["n_cases_per_year"].values())
         gate_result = compute_6d_gate(merged, n_cases)
         _generate_report(merged, gate_result, schedule, ledger,
-                         str(stage_dir), run_id=run_id)
+                         str(stage_dir), run_id=run_id, off_source=off_source)
         arch = _create_archive(
             schedule, ledger, str(stage_dir), provider, model, gate_result,
-            run_manifest, code_fp, run_id=run_id)
+            run_manifest, code_fp, run_id=run_id,
+            v1_off_data=v1_off, off_source=off_source)
         # Validate the PERSISTED receipt from disk (not in-memory)
         # to prevent corruption between archive creation and publication.
         # Read raw bytes once; these exact bytes are validated and published.
@@ -1548,13 +1591,19 @@ def main():
                    help="frozen routed manifest JSON path")
     p.add_argument("--phase1-receipt", default=PHASE1_RECEIPT_PATH,
                    help="phase1 receipt JSON path")
+    p.add_argument("--v1-archive-dir", default=V1_ARCHIVE_DIR,
+                   help="6D v1 archive dir (contains dev_gate.json) for off reuse")
+    p.add_argument("--v1-runs-dir", default=V1_RUNS_DIR,
+                   help="6D v1 runs workspace dir (contains run_context.json)")
     args = parser.parse_args()
     if args.cmd == "run_dev":
         result = run_dev(
             args.provider, args.model, args.output_dir,
             run_id=args.run_id, resume=args.resume,
             routed_manifest_path=args.routed_manifest,
-            phase1_receipt_path=args.phase1_receipt)
+            phase1_receipt_path=args.phase1_receipt,
+            v1_archive_dir=args.v1_archive_dir,
+            v1_runs_dir=args.v1_runs_dir)
         print(json.dumps(_json_safe(result), ensure_ascii=False, indent=2,
                          default=str))
 

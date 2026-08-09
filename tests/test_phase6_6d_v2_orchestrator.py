@@ -2,6 +2,8 @@
 import json
 import os
 import sys
+from collections import defaultdict
+from pathlib import Path
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
@@ -195,3 +197,160 @@ def test_completeness_rejects_v1_on():
                             "arm": "b1a_time_off", "case_ids": ["c1"]}]}
     r = _check_completeness(merged, schedule)
     assert r != "PASS"
+
+
+# -- Task 6.7-6.9: run_dev off 复用接线 --
+
+_V1_ARCHIVE = os.path.join(
+    PROJECT_ROOT,
+    "docs/phase6/6d/phase6-6d-v1-20260808-r1-6d-dev-2026-08-07"
+    "-deepseek-deepseek-v4-flash-cc36fefa94c5")
+_V1_RUNS = os.path.join(
+    PROJECT_ROOT, "docs/phase6/6d/runs/phase6-6d-v1-20260808-r1")
+
+
+def _mk_row(arm, cid, rep, dataset_id, correct=True):
+    # attempt_key 布局：[dataset, profile, arm, stage, provider, model,
+    #                    case_id, repeat_idx, sample_idx, permutation]
+    return {"attempt_key": [dataset_id, FROZEN_PROFILE, arm, "main",
+                            FROZEN_PROVIDER, FROZEN_MODEL, cid, rep, 0, "p0"],
+            "case_id": cid, "terminal_state": "parsed", "correct": correct,
+            "predicted_answer": "A" if correct else "B",
+            "expected_answer": "A"}
+
+
+def _mk_on_limited_row(cid, slice_info):
+    ds = os.path.splitext(os.path.basename(slice_info["dataset_path"]))[0]
+    return _mk_row("b1a_time_on_limited", cid, slice_info["repeat"], ds)
+
+
+def _all_off_rows_from_schedule(schedule):
+    # off mock 必须覆盖 schedule 全部 case_ids：每 (case_id, repeat) 一条 off main 行
+    rows = []
+    for sl in schedule["slices"]:
+        if sl.get("source") != "v1_reuse":
+            continue
+        ds = os.path.splitext(os.path.basename(sl["dataset_path"]))[0]
+        for cid in sl["case_ids"]:
+            rows.append(_mk_row("b1a_time_off", cid, sl["repeat"], ds))
+    return rows
+
+
+def _install_run_dev_mocks(monkeypatch, tmp_path, off_rows):
+    # 4. monkeypatch ARCHIVE_ROOT 到 tmp_path，避免写真仓库
+    monkeypatch.setattr(orch, "ARCHIVE_ROOT", str(tmp_path / "archive"))
+    calls = []
+
+    def fake_run_slice(slice_info, ledger, provider, model, resume=False):
+        # 修法 (b)：真实写 detail/events + 记账，否则 merge 缺 on_limited main
+        calls.append(slice_info["slice_id"])
+        os.makedirs(slice_info["output_dir"], exist_ok=True)
+        with open(slice_info["detail_path"], "w", encoding="utf-8") as f:
+            for cid in slice_info["case_ids"]:
+                f.write(json.dumps(_mk_on_limited_row(cid, slice_info)) + "\n")
+        with open(slice_info["events_path"], "w", encoding="utf-8") as f:
+            for _ in range(slice_info["scheduled_calls"]):
+                f.write(json.dumps({"kind": "call_attempt"}) + "\n")
+        # 1. record_slice_completed 真实签名为三参 (slice_id, actual, scheduled)
+        ledger.record_slice_completed(slice_info["slice_id"],
+                                      slice_info["scheduled_calls"],
+                                      slice_info["scheduled_calls"])
+        return {"exit_code": 0,
+                "actual_attempts": slice_info["scheduled_calls"]}
+
+    monkeypatch.setattr(orch, "_run_slice", fake_run_slice)
+    # 3. off mock 覆盖 schedule 全部 case_ids（31 题 × 3 repeats 每 cell 有 off main）
+    monkeypatch.setattr(orch, "_verify_off_reuse", lambda *a, **k: off_rows)
+    monkeypatch.setattr(orch, "_validate_frozen_protocol",
+                        lambda *a, **k: {"thinking_mode": FROZEN_THINKING_MODE,
+                                         "model_label": orch.MODEL_LABEL})
+    monkeypatch.setattr(orch, "_validate_phase1_receipt", lambda *a, **k: {})
+
+    def fake_prepare_run_context(output_dir, run_id, resume, run_manifest,
+                                 code_fingerprint):
+        # 2. mock 需建目录（run_dev 非 resume 路径用 mkstemp(dir=runs_root) 写 manifest）；
+        #    另需写 run_context.json，否则 _validate_four_layer_provenance 拒绝
+        runs_root = Path(output_dir) / "runs" / run_id
+        runs_root.mkdir(parents=True, exist_ok=True)
+        context = dict(run_manifest)
+        context["experiment_id"] = EXPERIMENT_ID
+        context["created_at"] = "2026-08-09T00:00:00"
+        (runs_root / "run_context.json").write_text(
+            json.dumps(context, ensure_ascii=False), encoding="utf-8")
+        return runs_root, context
+
+    monkeypatch.setattr(orch, "_prepare_run_context", fake_prepare_run_context)
+    return calls
+
+
+def test_run_dev_skips_off_reuse_slices(monkeypatch, tmp_path):
+    schedule = orch._build_schedule(str(tmp_path / "sched_probe"))
+    off_rows = _all_off_rows_from_schedule(schedule)
+    calls = _install_run_dev_mocks(monkeypatch, tmp_path, off_rows)
+    orch.run_dev(FROZEN_PROVIDER, FROZEN_MODEL, str(tmp_path), run_id="r1",
+                 v1_archive_dir=_V1_ARCHIVE, v1_runs_dir=_V1_RUNS,
+                 resume=False)
+    off_ids = [c for c in calls if "b1a_time_off" in c]
+    assert len(off_ids) == 0, "off (v1_reuse) slices must not be executed"
+    assert len(calls) == 15
+    assert all("b1a_time_on_limited" in c for c in calls)
+
+
+def test_run_dev_merged_includes_off(monkeypatch, tmp_path):
+    schedule = orch._build_schedule(str(tmp_path / "sched_probe"))
+    off_rows = _all_off_rows_from_schedule(schedule)
+    _install_run_dev_mocks(monkeypatch, tmp_path, off_rows)
+    result = orch.run_dev(FROZEN_PROVIDER, FROZEN_MODEL, str(tmp_path),
+                          run_id="r2", v1_archive_dir=_V1_ARCHIVE,
+                          v1_runs_dir=_V1_RUNS, resume=False)
+    merged_path = Path(result["archive"]["archive_dir"]) / "merged_details.jsonl"
+    rows = [json.loads(l) for l in
+            merged_path.read_text(encoding="utf-8").splitlines() if l.strip()]
+    arms = defaultdict(int)
+    for r in rows:
+        arms[(r.get("attempt_key") or [None] * 10)[2]] += 1
+    assert arms["b1a_time_off"] == 93       # 来自 v1 复用
+    assert arms["b1a_time_on_limited"] == 93  # 来自 fake_run_slice 写入
+    # 6.6：receipt/audit 携带 off provenance
+    receipt = result["archive"]["receipt"]
+    expected_source = f"6d-v1:{os.path.basename(_V1_ARCHIVE)}"
+    assert receipt["off_source"] == expected_source
+    # off_merged_details_sha256 计算方式锁定：_canonical_dict_sha256(off 行列表)
+    assert receipt["off_merged_details_sha256"] == \
+        orch._canonical_dict_sha256(off_rows)
+    audit = result["archive"]["audit"]
+    assert audit["off_source"] == expected_source
+    assert audit["off_merged_details_sha256"] == \
+        receipt["off_merged_details_sha256"]
+    report_md = (tmp_path / "runs" / "r2" / "dev" / "report.md").read_text(
+        encoding="utf-8")
+    assert expected_source in report_md
+    # 6.5：ledger cap = on_limited 臂 hard_cap 合计（243），非双臂 486
+    summary = json.loads(
+        (tmp_path / "runs" / "r2" / "dev" / "summary.json").read_text(
+            encoding="utf-8"))
+    assert summary["run"]["global_hard_cap"] == 243
+
+
+def test_run_dev_off_reuse_fail_blocks(monkeypatch, tmp_path):
+    # off 校验在 _run_all_slices 之前短路：无需 4 处夹具修正
+    calls = []
+    monkeypatch.setattr(
+        orch, "_run_slice",
+        lambda slice_info, *a, **k: calls.append(slice_info["slice_id"]))
+    monkeypatch.setattr(orch, "_validate_frozen_protocol",
+                        lambda *a, **k: {"thinking_mode": FROZEN_THINKING_MODE,
+                                         "model_label": orch.MODEL_LABEL})
+    monkeypatch.setattr(orch, "_validate_phase1_receipt", lambda *a, **k: {})
+
+    def boom(*a, **k):
+        raise SystemExit("off reuse reject: simulated drift")
+
+    monkeypatch.setattr(orch, "_verify_off_reuse", boom)
+    with pytest.raises(SystemExit) as exc:
+        orch.run_dev(FROZEN_PROVIDER, FROZEN_MODEL, str(tmp_path), run_id="r3",
+                     v1_archive_dir=_V1_ARCHIVE, v1_runs_dir=_V1_RUNS,
+                     resume=False)
+    assert exc.value.code == 2
+    assert calls == [], "off reuse precheck failure must not consume any API"
+    assert not (tmp_path / "runs").exists(), "precheck fails before run setup"
