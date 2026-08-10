@@ -1,0 +1,17 @@
+{
+  "book": "三命通会",
+  "dir": "sanmingtonghui",
+  "prefix": "smth",
+  "actions": {
+    "R1_reID_rules": {
+      "before": 1542,
+      "clean": 1542,
+      "quarantine": 0
+    },
+    "R4_mcq_remap": {
+      "needs_regen": true,
+      "reason": "colliding rule IDs + no MCQ chapter field"
+    }
+  },
+  "needs_mcq_regen": true
+}

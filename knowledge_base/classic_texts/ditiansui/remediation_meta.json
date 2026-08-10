@@ -1,0 +1,25 @@
+{
+  "book": "滴天髓",
+  "dir": "ditiansui",
+  "prefix": "dts",
+  "actions": {
+    "R1_reID_rules": {
+      "before": 799,
+      "clean": 799,
+      "quarantine": 0
+    },
+    "R3_reID_mcq": {
+      "kept": 646,
+      "quarantined": 88
+    },
+    "R5_answer_balance": {
+      "dist": {
+        "B": 162,
+        "C": 162,
+        "D": 161,
+        "A": 161
+      }
+    }
+  },
+  "needs_mcq_regen": false
+}

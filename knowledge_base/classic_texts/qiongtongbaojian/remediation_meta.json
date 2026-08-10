@@ -1,0 +1,25 @@
+{
+  "book": "穷通宝鉴",
+  "dir": "qiongtongbaojian",
+  "prefix": "qtbj",
+  "actions": {
+    "R1_reID_rules": {
+      "before": 1154,
+      "clean": 1154,
+      "quarantine": 0
+    },
+    "R3_reID_mcq": {
+      "kept": 1167,
+      "quarantined": 5
+    },
+    "R5_answer_balance": {
+      "dist": {
+        "B": 292,
+        "C": 292,
+        "D": 292,
+        "A": 291
+      }
+    }
+  },
+  "needs_mcq_regen": false
+}

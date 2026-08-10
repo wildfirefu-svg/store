@@ -1,0 +1,17 @@
+{
+  "book": "子平真诠",
+  "dir": "zipingzhenquan",
+  "prefix": "zpzq",
+  "actions": {
+    "R1_reID_rules": {
+      "before": 156,
+      "clean": 156,
+      "quarantine": 0
+    },
+    "R4_mcq_remap": {
+      "needs_regen": true,
+      "reason": "colliding rule IDs + no MCQ chapter field"
+    }
+  },
+  "needs_mcq_regen": true
+}

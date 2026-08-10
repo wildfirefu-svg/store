@@ -1,56 +1,6 @@
 [
   {
-    "id": "zpzq_001",
-    "category": "五行",
-    "subject": "五行",
-    "condition": "五行之气",
-    "rule": "五行之气，有生长也有消亡，其运行规律是循环往复、周而复始的。",
-    "original_text": "五行之气，有生有死，其行之序，循环不已",
-    "source_book": "子平真诠",
-    "source_chapter": "二、论阴阳生死"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "五行",
-    "subject": "五行生克",
-    "condition": "四时之运，相生相克",
-    "rule": "五行相生相克是天地自然运行的规律，生克循环不息，构成命理基础。",
-    "original_text": "四时之运，相生相克",
-    "source_book": "子平真诠",
-    "source_chapter": "三、论阴阳生克"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "五行",
-    "subject": "五行生克",
-    "condition": "生者，如父母之生子女；克者，如君臣之制下",
-    "rule": "生为滋养、扶持，如父母养育子女；克为制约、管束，如君臣治理下属，生克各有其义。",
-    "original_text": "生者，如父母之生子女；克者，如君臣之制下",
-    "source_book": "子平真诠",
-    "source_chapter": "三、论阴阳生克"
-  },
-  {
-    "id": "zpzq_003",
-    "category": "五行",
-    "subject": "五行生克",
-    "condition": "相生相克，皆天地自然之妙用",
-    "rule": "生与克都是天地自然的巧妙作用，不可偏废，共同维持五行平衡。",
-    "original_text": "相生相克，皆天地自然之妙用",
-    "source_book": "子平真诠",
-    "source_chapter": "三、论阴阳生克"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "十神",
-    "subject": "十干配合",
-    "condition": "十干配合，即十神之性情",
-    "rule": "十干配合产生的十神关系，决定命局的性情表现，是分析命主性格与命运的基础。",
-    "original_text": "十干配合，即十神之性情",
-    "source_book": "子平真诠",
-    "source_chapter": "四、论十干配合性情"
-  },
-  {
-    "id": "zpzq_001",
+    "id": "zpzq_000_000",
     "category": "天干",
     "subject": "十干",
     "condition": "十干相合",
@@ -60,7 +10,7 @@
     "source_chapter": "五、论十干合而不合"
   },
   {
-    "id": "zpzq_001",
+    "id": "zpzq_001_000",
     "category": "其他",
     "subject": "十干",
     "condition": "论十干得时与失时",
@@ -70,7 +20,7 @@
     "source_chapter": "六、论十干得时不旺失时不弱"
   },
   {
-    "id": "zpzq_001",
+    "id": "zpzq_002_000",
     "category": "其他",
     "subject": "刑冲会合",
     "condition": "命局中存在刑、冲、会、合时",
@@ -80,237 +30,7 @@
     "source_chapter": "七、论刑冲会合解法"
   },
   {
-    "id": "zpzq_001",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神为财星，且透出天干，但被比劫克制",
-    "rule": "用神为财星，若财星透干却被比劫克制，则用神受损，格局破败，需官杀或食伤来救应。",
-    "original_text": "财用劫印，官杀制劫，食伤生财",
-    "source_book": "子平真诠",
-    "source_chapter": "九、论用神成败救应"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神为印星，且透出天干，但被财星克制",
-    "rule": "用神为印星，若印星透干却被财星克制，则用神受损，格局破败，需比劫或官杀来救应。",
-    "original_text": "印用财破，比劫护印，官杀生印",
-    "source_book": "子平真诠",
-    "source_chapter": "九、论用神成败救应"
-  },
-  {
-    "id": "zpzq_003",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神为食神，且透出天干，但被偏印克制",
-    "rule": "用神为食神，若食神透干却被偏印克制，则用神受损，格局破败，需财星或比劫来救应。",
-    "original_text": "食用枭夺，财星制枭，比劫助食",
-    "source_book": "子平真诠",
-    "source_chapter": "九、论用神成败救应"
-  },
-  {
-    "id": "zpzq_004",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神为官星，且透出天干，但被伤官克制",
-    "rule": "用神为官星，若官星透干却被伤官克制，则用神受损，格局破败，需财星或印星来救应。",
-    "original_text": "官用伤破，财星制伤，印星护官",
-    "source_book": "子平真诠",
-    "source_chapter": "九、论用神成败救应"
-  },
-  {
-    "id": "zpzq_005",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神为七杀，且透出天干，但被食神克制",
-    "rule": "用神为七杀，若七杀透干却被食神克制，则用神受损，格局破败，需印星或比劫来救应。",
-    "original_text": "杀用食制，印星护杀，比劫助杀",
-    "source_book": "子平真诠",
-    "source_chapter": "九、论用神成败救应"
-  },
-  {
-    "id": "zpzq_006",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神为比劫，且透出天干，但被官杀克制",
-    "rule": "用神为比劫，若比劫透干却被官杀克制，则用神受损，格局破败，需印星或食伤来救应。",
-    "original_text": "比用官破，印星化官，食伤制官",
-    "source_book": "子平真诠",
-    "source_chapter": "九、论用神成败救应"
-  },
-  {
-    "id": "zpzq_007",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神为财星，且透出天干，但被劫财合去",
-    "rule": "用神为财星，若财星透干却被劫财合去，则用神被合绊，格局受损，需官杀或食伤来救应。",
-    "original_text": "财用劫合，官杀制劫，食伤生财",
-    "source_book": "子平真诠",
-    "source_chapter": "九、论用神成败救应"
-  },
-  {
-    "id": "zpzq_008",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神为印星，且透出天干，但被财星合去",
-    "rule": "用神为印星，若印星透干却被财星合去，则用神被合绊，格局受损，需比劫或官杀来救应。",
-    "original_text": "印用财合，比劫制财，官杀生印",
-    "source_book": "子平真诠",
-    "source_chapter": "九、论用神成败救应"
-  },
-  {
-    "id": "zpzq_009",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神为食神，且透出天干，但被偏印合去",
-    "rule": "用神为食神，若食神透干却被偏印合去，则用神被合绊，格局受损，需财星或比劫来救应。",
-    "original_text": "食用枭合，财星制枭，比劫助食",
-    "source_book": "子平真诠",
-    "source_chapter": "九、论用神成败救应"
-  },
-  {
-    "id": "zpzq_010",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神为官星，且透出天干，但被伤官合去",
-    "rule": "用神为官星，若官星透干却被伤官合去，则用神被合绊，格局受损，需财星或印星来救应。",
-    "original_text": "官用伤合，财星制伤，印星护官",
-    "source_book": "子平真诠",
-    "source_chapter": "九、论用神成败救应"
-  },
-  {
-    "id": "zpzq_011",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神为七杀，且透出天干，但被食神合去",
-    "rule": "用神为七杀，若七杀透干却被食神合去，则用神被合绊，格局受损，需印星或比劫来救应。",
-    "original_text": "杀用食合，印星护杀，比劫助杀",
-    "source_book": "子平真诠",
-    "source_chapter": "九、论用神成败救应"
-  },
-  {
-    "id": "zpzq_012",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神为比劫，且透出天干，但被官杀合去",
-    "rule": "用神为比劫，若比劫透干却被官杀合去，则用神被合绊，格局受损，需印星或食伤来救应。",
-    "original_text": "比用官合，印星化官，食伤制官",
-    "source_book": "子平真诠",
-    "source_chapter": "九、论用神成败救应"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神变化时",
-    "rule": "用神会随月令藏干透出情况而变化，变化后以实际透出的天干为用神，原局用神随之改变。",
-    "original_text": "用神变化，如甲木生于寅月，寅中藏甲丙戊，透甲则用甲，透丙则用丙，透戊则用戊。",
-    "source_book": "子平真诠",
-    "source_chapter": "十、论用神变化"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "月令藏干透出多个时",
-    "rule": "月令藏干透出多个天干时，以其中有力且能成格者为用神，其余为辅助，不可混杂取用。",
-    "original_text": "若透出两干，则择其有力者用之，不可杂乱。",
-    "source_book": "子平真诠",
-    "source_chapter": "十、论用神变化"
-  },
-  {
-    "id": "zpzq_003",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神变化后",
-    "rule": "用神变化后，原局格局随之改变，需重新审视十神关系与喜忌，以新用神为核心论命。",
-    "original_text": "用神既变，格局亦变，喜忌随之。",
-    "source_book": "子平真诠",
-    "source_chapter": "十、论用神变化"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "格局",
-    "subject": "用神格局",
-    "condition": "用神有情有力",
-    "rule": "用神有情且有力，则格局高；有情无力或有力无情，则格局低。",
-    "original_text": "用神有情有力，则格局高；有情无力，则格局低。",
-    "source_book": "子平真诠",
-    "source_chapter": "十二、论用神格局高低"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神既成，但有相克或破坏之神",
-    "rule": "用神已经成立，但若有其他干支来克破或干扰用神，则原本的成功格局会转为失败。",
-    "original_text": "用神既成，而有克之者",
-    "source_book": "子平真诠",
-    "source_chapter": "十三、论用神因成得败因败得成"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "用神",
-    "subject": "用神",
-    "condition": "用神原本失败，但有救应之神",
-    "rule": "用神原本被破坏或不成格，但若有其他干支来制克或化解破坏之神，则失败的格局可以转为成功。",
-    "original_text": "用神既败，而有救之者",
-    "source_book": "子平真诠",
-    "source_chapter": "十三、论用神因成得败因败得成"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "格局",
-    "subject": "相神",
-    "condition": "月令用神已成格局，但需他神辅助时",
-    "rule": "相神是辅助用神成格的关键之神，相神得力则格局成立，相神受损则格局破败，相神的重要性甚至超过用神。",
-    "original_text": "月令既得用神，则别寻相神，相神者，辅用神而成格者也。",
-    "source_book": "子平真诠",
-    "source_chapter": "十五、论相神紧要"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "格局",
-    "subject": "相神",
-    "condition": "相神受损时",
-    "rule": "相神一旦被克破或损伤，格局即遭破坏，即使有好的用神也无法成立，因此相神是格局成败的关键。",
-    "original_text": "伤用神甚于伤相神，相神被伤，则格破而用神无所依。",
-    "source_book": "子平真诠",
-    "source_chapter": "十五、论相神紧要"
-  },
-  {
-    "id": "zpzq_003",
-    "category": "格局",
-    "subject": "相神",
-    "condition": "相神与用神配合时",
-    "rule": "相神必须与用神相配合，如财格配食神、官格配财印等，相神得位且有力，则格局高贵。",
-    "original_text": "如财格，透食神以生财，食神即相神也；官格，透财印以护官，财印即相神也。",
-    "source_book": "子平真诠",
-    "source_chapter": "十五、论相神紧要"
-  },
-  {
-    "id": "zpzq_004",
-    "category": "格局",
-    "subject": "相神",
-    "condition": "相神被合或被冲时",
-    "rule": "相神若被合住或冲克，则失去辅助用神的作用，格局随之受损，需看是否有救应之神。",
-    "original_text": "相神被合，则格破；相神被冲，则用神失辅。",
-    "source_book": "子平真诠",
-    "source_chapter": "十五、论相神紧要"
-  },
-  {
-    "id": "zpzq_005",
-    "category": "大运",
-    "subject": "相神",
-    "condition": "行运至相神旺地时",
-    "rule": "大运若扶助相神，则格局得以成全，主吉；若大运克损相神，则格局破败，主凶。",
-    "original_text": "行运扶相神则吉，伤相神则凶。",
-    "source_book": "子平真诠",
-    "source_chapter": "十五、论相神紧要"
-  },
-  {
-    "id": "zpzq_001",
+    "id": "zpzq_003_000",
     "category": "格局",
     "subject": "四凶神",
     "condition": "四凶神（杀伤枭刃）在命局中配合得当，能成格",
@@ -320,167 +40,7 @@
     "source_chapter": "十九、论四凶神能成格"
   },
   {
-    "id": "zpzq_001",
-    "category": "六亲",
-    "subject": "六亲",
-    "condition": "以年柱为祖上，月柱为父母，日柱为自身，时柱为子女",
-    "rule": "年柱代表祖上，月柱代表父母，日柱代表自身，时柱代表子女，通过宫位判断六亲吉凶。",
-    "original_text": "年柱为祖上，月柱为父母，日柱为自身，时柱为子女",
-    "source_book": "子平真诠",
-    "source_chapter": "二十三、论宫分用神配六亲"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "六亲",
-    "subject": "六亲",
-    "condition": "以十神配六亲，如正印为母，偏财为父，正官为夫等",
-    "rule": "十神与六亲对应：正印为母，偏财为父，正官为夫（女命），正财为妻（男命），食神伤官为子女等。",
-    "original_text": "以十神配六亲，如正印为母，偏财为父",
-    "source_book": "子平真诠",
-    "source_chapter": "二十三、论宫分用神配六亲"
-  },
-  {
-    "id": "zpzq_003",
-    "category": "六亲",
-    "subject": "用神",
-    "condition": "用神与宫位相配合判断六亲",
-    "rule": "用神所临的宫位，对应六亲的吉凶；用神得力则对应六亲有助，用神受损则对应六亲有灾。",
-    "original_text": "用神配六亲，以宫分定其吉凶",
-    "source_book": "子平真诠",
-    "source_chapter": "二十三、论宫分用神配六亲"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "六亲",
-    "subject": "妻星",
-    "condition": "以财为妻，日支为妻宫",
-    "rule": "男命以财星为妻子，日支为妻宫。看妻子情况需结合财星与日支的关系。",
-    "original_text": "论妻子，以财为妻，日支为妻宫",
-    "source_book": "子平真诠",
-    "source_chapter": "二十四、论妻子"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "六亲",
-    "subject": "子星",
-    "condition": "以官杀为子，时支为子息宫",
-    "rule": "男命以官杀为子女，时支为子女宫。看子女情况需结合官杀与时辰的关系。",
-    "original_text": "以官杀为子，时支为子息宫",
-    "source_book": "子平真诠",
-    "source_chapter": "二十四、论妻子"
-  },
-  {
-    "id": "zpzq_003",
-    "category": "六亲",
-    "subject": "妻星",
-    "condition": "财星清透有根，日支得地",
-    "rule": "若财星清透且有强根，日支又得地，则妻子贤惠，婚姻美满。",
-    "original_text": "财星清透有根，日支得地，妻贤",
-    "source_book": "子平真诠",
-    "source_chapter": "二十四、论妻子"
-  },
-  {
-    "id": "zpzq_004",
-    "category": "六亲",
-    "subject": "妻星",
-    "condition": "财星浑浊或被克破，日支逢冲",
-    "rule": "若财星浑浊或被克破，日支逢冲，则妻子不贤或婚姻不顺。",
-    "original_text": "财星浑浊被克，日支逢冲，妻不贤",
-    "source_book": "子平真诠",
-    "source_chapter": "二十四、论妻子"
-  },
-  {
-    "id": "zpzq_005",
-    "category": "六亲",
-    "subject": "子星",
-    "condition": "官杀清透有根，时支得地",
-    "rule": "若官杀清透且有强根，时支得地，则子女有出息，晚年有靠。",
-    "original_text": "官杀清透有根，时支得地，子贵",
-    "source_book": "子平真诠",
-    "source_chapter": "二十四、论妻子"
-  },
-  {
-    "id": "zpzq_006",
-    "category": "六亲",
-    "subject": "子星",
-    "condition": "官杀混杂或被克破，时支逢冲",
-    "rule": "若官杀混杂或被克破，时支逢冲，则子女不肖或子女缘薄。",
-    "original_text": "官杀混杂被克，时支逢冲，子不肖",
-    "source_book": "子平真诠",
-    "source_chapter": "二十四、论妻子"
-  },
-  {
-    "id": "zpzq_007",
-    "category": "六亲",
-    "subject": "妻星",
-    "condition": "日支为喜用神，且不受冲克",
-    "rule": "日支为喜用神且不受冲克，则妻子能助夫，婚姻幸福。",
-    "original_text": "日支为喜用，不受冲克，妻助夫",
-    "source_book": "子平真诠",
-    "source_chapter": "二十四、论妻子"
-  },
-  {
-    "id": "zpzq_008",
-    "category": "六亲",
-    "subject": "子星",
-    "condition": "时支为喜用神，且不受冲克",
-    "rule": "时支为喜用神且不受冲克，则子女孝顺，晚年安康。",
-    "original_text": "时支为喜用，不受冲克，子孝",
-    "source_book": "子平真诠",
-    "source_chapter": "二十四、论妻子"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "大运",
-    "subject": "命局格局",
-    "condition": "命局有格局但未成，行运遇可用之神",
-    "rule": "命局中格局未成，行运遇到能成格的十神，则格局成立，称为成格。",
-    "original_text": "命之格局，有成有败，有变有化。",
-    "source_book": "子平真诠",
-    "source_chapter": "二十六、论行运成格变格"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "大运",
-    "subject": "命局格局",
-    "condition": "命局格局已成，行运遇破坏格局之神",
-    "rule": "命局中格局已成，行运遇到破坏格局的十神，则格局被破坏，称为变格。",
-    "original_text": "成中有败，必是带忌；败中有成，全凭救应。",
-    "source_book": "子平真诠",
-    "source_chapter": "二十六、论行运成格变格"
-  },
-  {
-    "id": "zpzq_003",
-    "category": "大运",
-    "subject": "格局成败",
-    "condition": "格局成中有败，且带忌神",
-    "rule": "格局成立过程中出现败象，必然是因为命局中带有忌神，需要仔细辨别。",
-    "original_text": "成中有败，必是带忌。",
-    "source_book": "子平真诠",
-    "source_chapter": "二十六、论行运成格变格"
-  },
-  {
-    "id": "zpzq_004",
-    "category": "大运",
-    "subject": "格局成败",
-    "condition": "格局败中有成，且有救应",
-    "rule": "格局败象中出现转机，全凭运中有救应之神，方能转败为成。",
-    "original_text": "败中有成，全凭救应。",
-    "source_book": "子平真诠",
-    "source_chapter": "二十六、论行运成格变格"
-  },
-  {
-    "id": "zpzq_005",
-    "category": "大运",
-    "subject": "格局变化",
-    "condition": "行运改变原局格局",
-    "rule": "行运可以使原本的格局发生变化，或成或败，或变格，需结合运干与运支综合判断。",
-    "original_text": "何谓成？如官印相生，而财食并透，何以为成？",
-    "source_book": "子平真诠",
-    "source_chapter": "二十六、论行运成格变格"
-  },
-  {
-    "id": "zpzq_001",
+    "id": "zpzq_004_000",
     "category": "其他",
     "subject": "喜忌干支",
     "condition": "论喜忌时，天干与地支作用不同",
@@ -490,547 +50,7 @@
     "source_chapter": "二十七、论喜忌干支有别"
   },
   {
-    "id": "zpzq_001",
-    "category": "大运",
-    "subject": "地支所藏天干",
-    "condition": "地支中的喜忌之神不透于天干，逢大运透出",
-    "rule": "地支中藏有喜用神或忌神，但未在天干透出时，若大运中该神透出天干，则其作用得以显现，喜忌随之应验。",
-    "original_text": "支中喜忌，逢运透清",
-    "source_book": "子平真诠",
-    "source_chapter": "二十八、论支中喜忌逢运透清"
-  },
-  {
-    "id": "zpzq_031",
-    "category": "格局",
-    "subject": "正官",
-    "condition": "正官为格，忌见伤官",
-    "rule": "正官格最忌伤官来破坏，伤官见官为祸百端，主破格、官非、灾祸。",
-    "original_text": "正官为格，忌见伤官",
-    "source_book": "子平真诠",
-    "source_chapter": "三十一、论正官"
-  },
-  {
-    "id": "zpzq_032",
-    "category": "格局",
-    "subject": "正官",
-    "condition": "正官为格，忌见七杀混杂",
-    "rule": "正官格忌七杀来混杂，官杀混杂则格局不清，主贫贱、多灾。",
-    "original_text": "正官为格，忌见七杀",
-    "source_book": "子平真诠",
-    "source_chapter": "三十一、论正官"
-  },
-  {
-    "id": "zpzq_033",
-    "category": "格局",
-    "subject": "正官",
-    "condition": "正官为格，忌见刑冲破害",
-    "rule": "正官格忌刑冲破害，官星被冲克则贵气受损，主官非、破败。",
-    "original_text": "正官为格，忌刑冲破害",
-    "source_book": "子平真诠",
-    "source_chapter": "三十一、论正官"
-  },
-  {
-    "id": "zpzq_034",
-    "category": "格局",
-    "subject": "正官",
-    "condition": "正官为格，忌见食神合官",
-    "rule": "正官格忌食神合官，食神合官则官星被合去，主贵气不显。",
-    "original_text": "正官为格，忌食神合官",
-    "source_book": "子平真诠",
-    "source_chapter": "三十一、论正官"
-  },
-  {
-    "id": "zpzq_035",
-    "category": "格局",
-    "subject": "正官",
-    "condition": "正官为格，忌见财星生杀",
-    "rule": "正官格忌财星生杀，财生杀则杀旺攻身，主灾祸。",
-    "original_text": "正官为格，忌财生杀",
-    "source_book": "子平真诠",
-    "source_chapter": "三十一、论正官"
-  },
-  {
-    "id": "zpzq_036",
-    "category": "格局",
-    "subject": "正官",
-    "condition": "正官为格，忌见印星泄官",
-    "rule": "正官格忌印星泄官，印泄官则官星无力，主贵气减损。",
-    "original_text": "正官为格，忌印泄官",
-    "source_book": "子平真诠",
-    "source_chapter": "三十一、论正官"
-  },
-  {
-    "id": "zpzq_037",
-    "category": "格局",
-    "subject": "正官",
-    "condition": "正官为格，忌见比劫争官",
-    "rule": "正官格忌比劫争官，比劫争官则官星被夺，主官非、破败。",
-    "original_text": "正官为格，忌比劫争官",
-    "source_book": "子平真诠",
-    "source_chapter": "三十一、论正官"
-  },
-  {
-    "id": "zpzq_038",
-    "category": "格局",
-    "subject": "正官",
-    "condition": "正官为格，忌见禄刃帮身",
-    "rule": "正官格忌禄刃帮身，禄刃帮身则官星被制，主贵气不显。",
-    "original_text": "正官为格，忌禄刃帮身",
-    "source_book": "子平真诠",
-    "source_chapter": "三十一、论正官"
-  },
-  {
-    "id": "zpzq_039",
-    "category": "格局",
-    "subject": "正官",
-    "condition": "正官为格，忌见空亡",
-    "rule": "正官格忌空亡，官星落空则贵气全无，主虚名虚利。",
-    "original_text": "正官为格，忌空亡",
-    "source_book": "子平真诠",
-    "source_chapter": "三十一、论正官"
-  },
-  {
-    "id": "zpzq_040",
-    "category": "格局",
-    "subject": "正官",
-    "condition": "正官为格，忌见墓库",
-    "rule": "正官格忌墓库，官星入墓则贵气被埋，主怀才不遇。",
-    "original_text": "正官为格，忌墓库",
-    "source_book": "子平真诠",
-    "source_chapter": "三十一、论正官"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且身强",
-    "rule": "财格身强，以食神生财为用，行运喜食神、财星旺地，忌比劫、印绶夺食破格。",
-    "original_text": "财格用食神生财，身强，运喜食神财地，忌比劫印绶。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且身弱",
-    "rule": "财格身弱，以食神生财为用，行运喜比劫帮身、印绶生身，忌食神、财星再泄克身。",
-    "original_text": "身弱，运喜比劫印绶，忌食神财地。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_003",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主强旺",
-    "rule": "财格日主强旺，以食神泄秀生财为用，行运喜食神、财星，忌比劫、印绶。",
-    "original_text": "日主强旺，运喜食神财地，忌比劫印绶。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_004",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主衰弱",
-    "rule": "财格日主衰弱，以食神生财为用，行运喜比劫、印绶，忌食神、财星。",
-    "original_text": "日主衰弱，运喜比劫印绶，忌食神财地。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_005",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主中和",
-    "rule": "财格日主中和，以食神生财为用，行运喜财星、食神，忌比劫、印绶。",
-    "original_text": "日主中和，运喜财食，忌比劫印绶。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_006",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主偏强",
-    "rule": "财格日主偏强，以食神生财为用，行运喜食神、财星，忌比劫、印绶。",
-    "original_text": "日主偏强，运喜食神财地，忌比劫印绶。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_007",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主偏弱",
-    "rule": "财格日主偏弱，以食神生财为用，行运喜比劫、印绶，忌食神、财星。",
-    "original_text": "日主偏弱，运喜比劫印绶，忌食神财地。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_008",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主极强",
-    "rule": "财格日主极强，以食神泄秀生财为用，行运喜食神、财星，忌比劫、印绶。",
-    "original_text": "日主极强，运喜食神财地，忌比劫印绶。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_009",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主极弱",
-    "rule": "财格日主极弱，以食神生财为用，行运喜比劫、印绶，忌食神、财星。",
-    "original_text": "日主极弱，运喜比劫印绶，忌食神财地。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_010",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主旺相",
-    "rule": "财格日主旺相，以食神生财为用，行运喜食神、财星，忌比劫、印绶。",
-    "original_text": "日主旺相，运喜食神财地，忌比劫印绶。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_011",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主衰弱",
-    "rule": "财格日主衰弱，以食神生财为用，行运喜比劫、印绶，忌食神、财星。",
-    "original_text": "日主衰弱，运喜比劫印绶，忌食神财地。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_012",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主强旺",
-    "rule": "财格日主强旺，以食神泄秀生财为用，行运喜食神、财星，忌比劫、印绶。",
-    "original_text": "日主强旺，运喜食神财地，忌比劫印绶。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_013",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主衰弱",
-    "rule": "财格日主衰弱，以食神生财为用，行运喜比劫、印绶，忌食神、财星。",
-    "original_text": "日主衰弱，运喜比劫印绶，忌食神财地。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_014",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主中和",
-    "rule": "财格日主中和，以食神生财为用，行运喜财星、食神，忌比劫、印绶。",
-    "original_text": "日主中和，运喜财食，忌比劫印绶。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_015",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主偏强",
-    "rule": "财格日主偏强，以食神生财为用，行运喜食神、财星，忌比劫、印绶。",
-    "original_text": "日主偏强，运喜食神财地，忌比劫印绶。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_016",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主偏弱",
-    "rule": "财格日主偏弱，以食神生财为用，行运喜比劫、印绶，忌食神、财星。",
-    "original_text": "日主偏弱，运喜比劫印绶，忌食神财地。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_017",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主极强",
-    "rule": "财格日主极强，以食神泄秀生财为用，行运喜食神、财星，忌比劫、印绶。",
-    "original_text": "日主极强，运喜食神财地，忌比劫印绶。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_018",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主极弱",
-    "rule": "财格日主极弱，以食神生财为用，行运喜比劫、印绶，忌食神、财星。",
-    "original_text": "日主极弱，运喜比劫印绶，忌食神财地。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_019",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主旺相",
-    "rule": "财格日主旺相，以食神生财为用，行运喜食神、财星，忌比劫、印绶。",
-    "original_text": "日主旺相，运喜食神财地，忌比劫印绶。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_020",
-    "category": "大运",
-    "subject": "财格",
-    "condition": "财格用食神生财，且日主衰弱",
-    "rule": "财格日主衰弱，以食神生财为用，行运喜比劫、印绶，忌食神、财星。",
-    "original_text": "日主衰弱，运喜比劫印绶，忌食神财地。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十四、论财取运"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "格局",
-    "subject": "印绶格",
-    "condition": "月令为印绶，且印绶得令当权",
-    "rule": "印绶格以月令印绶为体，印绶得令当权者，为真印绶格，主贵。",
-    "original_text": "印绶格，月令印绶，得令当权",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "用神",
-    "subject": "印绶格",
-    "condition": "印绶格，官星透出",
-    "rule": "印绶格以官星为用，官印相生，主贵显。",
-    "original_text": "印绶格，以官为用",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶"
-  },
-  {
-    "id": "zpzq_003",
-    "category": "用神",
-    "subject": "印绶格",
-    "condition": "印绶格，无官星，有财星",
-    "rule": "印绶格无官星，则用财星，但财能坏印，需财印不相碍方吉。",
-    "original_text": "无官，则用财",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶"
-  },
-  {
-    "id": "zpzq_004",
-    "category": "格局",
-    "subject": "印绶格",
-    "condition": "印绶格，印重身强",
-    "rule": "印绶格印重身强，喜财星制印，或食伤泄秀，忌再行印运。",
-    "original_text": "印重身强，喜财制印",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶"
-  },
-  {
-    "id": "zpzq_005",
-    "category": "格局",
-    "subject": "印绶格",
-    "condition": "印绶格，印轻身弱",
-    "rule": "印绶格印轻身弱，喜比劫帮身，或官杀生印，忌财星坏印。",
-    "original_text": "印轻身弱，喜比劫帮身",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶"
-  },
-  {
-    "id": "zpzq_006",
-    "category": "十神",
-    "subject": "印绶",
-    "condition": "印绶为用，逢财星克破",
-    "rule": "印绶为用神，最忌财星克破，主学业受阻、事业不顺。",
-    "original_text": "印绶为用，忌财破印",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶"
-  },
-  {
-    "id": "zpzq_007",
-    "category": "大运",
-    "subject": "印绶格",
-    "condition": "印绶格，行官运",
-    "rule": "印绶格行官运，官印相生，主升迁得贵。",
-    "original_text": "印绶格，行官运，主贵",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶"
-  },
-  {
-    "id": "zpzq_008",
-    "category": "大运",
-    "subject": "印绶格",
-    "condition": "印绶格，行财运",
-    "rule": "印绶格行财运，财能坏印，主破财、失业、学业中断。",
-    "original_text": "印绶格，行财运，主破财",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶"
-  },
-  {
-    "id": "zpzq_009",
-    "category": "六亲",
-    "subject": "印绶",
-    "condition": "印绶为母，逢财星克破",
-    "rule": "印绶代表母亲，财星克印，主母亲身体不佳或与母亲缘分薄。",
-    "original_text": "印绶为母，财破印，母有灾",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶"
-  },
-  {
-    "id": "zpzq_010",
-    "category": "性情",
-    "subject": "印绶",
-    "condition": "印绶旺相",
-    "rule": "印绶旺相之人，仁慈善良，重名誉，有学识，但易依赖心强。",
-    "original_text": "印绶旺，主仁慈",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "大运",
-    "subject": "印格",
-    "condition": "印格用官，运喜食伤身旺之方",
-    "rule": "印格用官时，大运喜食伤运和身旺之地，忌官杀运和财运。",
-    "original_text": "印格用官，运喜食伤身旺之方",
-    "source_book": "子平真诠",
-    "source_chapter": "三十六、论绶印取运"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "大运",
-    "subject": "印格",
-    "condition": "印格用官，忌官杀财运",
-    "rule": "印格用官时，大运忌行官杀运和财运，因官杀会克身，财会坏印。",
-    "original_text": "忌官杀财运",
-    "source_book": "子平真诠",
-    "source_chapter": "三十六、论绶印取运"
-  },
-  {
-    "id": "zpzq_003",
-    "category": "大运",
-    "subject": "印格",
-    "condition": "印格用煞，运喜食伤身旺之方",
-    "rule": "印格用七杀时，大运喜食伤运和身旺之地，忌官杀运和财运。",
-    "original_text": "印格用煞，运喜食伤身旺之方",
-    "source_book": "子平真诠",
-    "source_chapter": "三十六、论绶印取运"
-  },
-  {
-    "id": "zpzq_004",
-    "category": "大运",
-    "subject": "印格",
-    "condition": "印格用煞，忌官杀财运",
-    "rule": "印格用七杀时，大运忌行官杀运和财运，因官杀会加重克身，财会坏印。",
-    "original_text": "忌官杀财运",
-    "source_book": "子平真诠",
-    "source_chapter": "三十六、论绶印取运"
-  },
-  {
-    "id": "zpzq_005",
-    "category": "大运",
-    "subject": "印格",
-    "condition": "印格用食伤，运喜财地",
-    "rule": "印格用食伤泄秀时，大运喜行财运，因食伤生财，财为吉神。",
-    "original_text": "印格用食伤，运喜财地",
-    "source_book": "子平真诠",
-    "source_chapter": "三十六、论绶印取运"
-  },
-  {
-    "id": "zpzq_006",
-    "category": "大运",
-    "subject": "印格",
-    "condition": "印格用食伤，忌印运",
-    "rule": "印格用食伤时，大运忌行印运，因印会克制食伤，破坏格局。",
-    "original_text": "忌印运",
-    "source_book": "子平真诠",
-    "source_chapter": "三十六、论绶印取运"
-  },
-  {
-    "id": "zpzq_007",
-    "category": "大运",
-    "subject": "印格",
-    "condition": "印格用财，运喜劫财运",
-    "rule": "印格用财时，大运喜行劫财运，因劫财能分财护印。",
-    "original_text": "印格用财，运喜劫财运",
-    "source_book": "子平真诠",
-    "source_chapter": "三十六、论绶印取运"
-  },
-  {
-    "id": "zpzq_008",
-    "category": "大运",
-    "subject": "印格",
-    "condition": "印格用财，忌食伤运",
-    "rule": "印格用财时，大运忌行食伤运，因食伤会生财耗印。",
-    "original_text": "忌食伤运",
-    "source_book": "子平真诠",
-    "source_chapter": "三十六、论绶印取运"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "格局",
-    "subject": "食神",
-    "condition": "食神为用神时，不宜被破坏",
-    "rule": "食神是日主所生之物，代表福气与享受。若食神为用神，则不宜被偏印（枭神）克制或合绊，否则福气受损，格局降低。",
-    "original_text": "食神本为泄秀，而最忌枭神夺食。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十七、论食神"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "格局",
-    "subject": "食神",
-    "condition": "食神生财，需身强",
-    "rule": "食神生财格，需要日主身强，才能担财。若身弱，则食神泄气太过，财星亦无法承载，反为贫贱之局。",
-    "original_text": "食神生财，须身强方任。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十七、论食神"
-  },
-  {
-    "id": "zpzq_003",
-    "category": "格局",
-    "subject": "食神",
-    "condition": "食神制杀，需杀重身强",
-    "rule": "食神制杀格，需要七杀强旺而日主有根气，食神方能制杀为权。若身弱杀重，食神无力制杀，反为灾祸。",
-    "original_text": "食神制杀，杀重身强则贵。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十七、论食神"
-  },
-  {
-    "id": "zpzq_004",
-    "category": "十神",
-    "subject": "食神",
-    "condition": "食神与偏印同柱或紧邻",
-    "rule": "食神最忌偏印（枭神）夺食，若偏印与食神同柱或紧邻，则食神被克，主福薄、多病、或子女缘薄。",
-    "original_text": "枭神夺食，祸患频生。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十七、论食神"
-  },
-  {
-    "id": "zpzq_005",
-    "category": "性情",
-    "subject": "食神",
-    "condition": "食神为用神且旺相",
-    "rule": "食神旺相且为用神者，性格温和、宽厚、有口福，善于享受生活，且多才多艺，乐观豁达。",
-    "original_text": "食神者，饮食之神，主享福。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十七、论食神"
-  },
-  {
-    "id": "zpzq_001",
+    "id": "zpzq_005_000",
     "category": "格局",
     "subject": "偏官格",
     "condition": "偏官为格，无食伤制化，或制化不力",
@@ -1040,227 +60,7 @@
     "source_chapter": "三十九、论偏官"
   },
   {
-    "id": "zpzq_041",
-    "category": "格局",
-    "subject": "伤官",
-    "condition": "伤官为用神时",
-    "rule": "伤官为用神时，最喜身旺，且财星要透干，方能发挥伤官生财的作用。",
-    "original_text": "伤官用财，只要财星透干，身旺者必贵。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十一、论伤官"
-  },
-  {
-    "id": "zpzq_042",
-    "category": "格局",
-    "subject": "伤官",
-    "condition": "伤官为用神，身弱时",
-    "rule": "伤官为用神而身弱者，需配印星制伤官生身，方能成格。",
-    "original_text": "伤官用印，须印星有力，身弱喜印生扶。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十一、论伤官"
-  },
-  {
-    "id": "zpzq_043",
-    "category": "格局",
-    "subject": "伤官",
-    "condition": "伤官为用神，无财无印时",
-    "rule": "伤官为用神而无财无印，则需配食神或比劫，以泄伤官之气或助身，否则格局不成立。",
-    "original_text": "伤官无财无印，须配食神比劫，方成格局。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十一、论伤官"
-  },
-  {
-    "id": "zpzq_044",
-    "category": "格局",
-    "subject": "伤官",
-    "condition": "伤官为用神，见官杀时",
-    "rule": "伤官为用神时，最忌见官杀，因伤官与官相战，主有灾祸。",
-    "original_text": "伤官见官，为祸百端。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十一、论伤官"
-  },
-  {
-    "id": "zpzq_045",
-    "category": "格局",
-    "subject": "伤官",
-    "condition": "伤官为用神，身旺财旺时",
-    "rule": "伤官为用神，身旺且财旺，则主富贵双全，但需财星透干且无破。",
-    "original_text": "伤官用财，身旺财旺，富贵双全。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十一、论伤官"
-  },
-  {
-    "id": "zpzq_046",
-    "category": "格局",
-    "subject": "伤官",
-    "condition": "伤官为用神，身弱印旺时",
-    "rule": "伤官为用神，身弱而印旺，则主贵，但需印星得地。",
-    "original_text": "伤官用印，身弱印旺，主贵。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十一、论伤官"
-  },
-  {
-    "id": "zpzq_047",
-    "category": "格局",
-    "subject": "伤官",
-    "condition": "伤官为用神，见比劫时",
-    "rule": "伤官为用神，见比劫则主兄弟朋友助力，但需比劫不夺财。",
-    "original_text": "伤官用财，见比劫则分财，主有争夺。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十一、论伤官"
-  },
-  {
-    "id": "zpzq_048",
-    "category": "格局",
-    "subject": "伤官",
-    "condition": "伤官为用神，见食神时",
-    "rule": "伤官为用神，见食神则主泄气太过，需身旺方能任。",
-    "original_text": "伤官见食神，泄气太重，身旺方可。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十一、论伤官"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "大运",
-    "subject": "伤官格",
-    "condition": "伤官用财",
-    "rule": "伤官格以财为用者，大运喜财旺之乡，或行食伤生财之地，忌比劫夺财及印星制伤官。",
-    "original_text": "伤官用财，喜财旺运",
-    "source_book": "子平真诠",
-    "source_chapter": "四十二、论伤官取运"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "大运",
-    "subject": "伤官格",
-    "condition": "伤官用印",
-    "rule": "伤官格以印为用者，大运喜印绶比劫之地，忌财星坏印及食伤再泄气。",
-    "original_text": "伤官用印，喜印运",
-    "source_book": "子平真诠",
-    "source_chapter": "四十二、论伤官取运"
-  },
-  {
-    "id": "zpzq_003",
-    "category": "大运",
-    "subject": "伤官格",
-    "condition": "伤官用劫",
-    "rule": "伤官格以劫财为用者，大运喜比劫帮扶，忌官杀制劫及财星泄劫。",
-    "original_text": "伤官用劫，喜比劫运",
-    "source_book": "子平真诠",
-    "source_chapter": "四十二、论伤官取运"
-  },
-  {
-    "id": "zpzq_004",
-    "category": "大运",
-    "subject": "伤官格",
-    "condition": "伤官用伤官",
-    "rule": "伤官格以伤官为用者，大运喜食伤生财，忌官杀混杂及印星制伤。",
-    "original_text": "伤官用伤，喜食伤运",
-    "source_book": "子平真诠",
-    "source_chapter": "四十二、论伤官取运"
-  },
-  {
-    "id": "zpzq_005",
-    "category": "大运",
-    "subject": "伤官格",
-    "condition": "伤官用官",
-    "rule": "伤官格以官星为用者，大运喜财官之地，忌伤官见官及印星泄官。",
-    "original_text": "伤官用官，喜财官运",
-    "source_book": "子平真诠",
-    "source_chapter": "四十二、论伤官取运"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "格局",
-    "subject": "阳刃",
-    "condition": "阳刃为月令之旺气，非日主之旺气",
-    "rule": "阳刃是指月令中的旺气，而非日主自身的旺气，取格时需以月令旺气为准。",
-    "original_text": "阳刃者，月令之旺气也，非日主之旺气也",
-    "source_book": "子平真诠",
-    "source_chapter": "四十三、论阳刃"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "格局",
-    "subject": "阳刃",
-    "condition": "阳刃格成立时",
-    "rule": "阳刃格成立时，需要以官杀为用神，以制伏阳刃的旺气，否则刃旺无制则凶。",
-    "original_text": "阳刃格，须官杀制之，方为贵格",
-    "source_book": "子平真诠",
-    "source_chapter": "四十三、论阳刃"
-  },
-  {
-    "id": "zpzq_003",
-    "category": "用神",
-    "subject": "阳刃",
-    "condition": "阳刃格无官杀时",
-    "rule": "阳刃格若无官杀制刃，则需用食伤泄其旺气，或财星耗其力，否则刃旺无制主凶。",
-    "original_text": "无官杀，则用食伤泄之，或财星耗之",
-    "source_book": "子平真诠",
-    "source_chapter": "四十三、论阳刃"
-  },
-  {
-    "id": "zpzq_004",
-    "category": "十神",
-    "subject": "阳刃",
-    "condition": "阳刃与七杀相配时",
-    "rule": "阳刃驾杀，为极贵之格，但需杀刃两停，力量相当，方能成贵。",
-    "original_text": "阳刃驾杀，杀刃两停，位至将相",
-    "source_book": "子平真诠",
-    "source_chapter": "四十三、论阳刃"
-  },
-  {
-    "id": "zpzq_005",
-    "category": "大运",
-    "subject": "阳刃",
-    "condition": "阳刃格行运时",
-    "rule": "阳刃格行运喜官杀运以制刃，忌行刃旺或比劫运，再助刃势则主凶灾。",
-    "original_text": "阳刃格，行运喜官杀，忌刃乡",
-    "source_book": "子平真诠",
-    "source_chapter": "四十三、论阳刃"
-  },
-  {
-    "id": "zpzq_006",
-    "category": "六亲",
-    "subject": "阳刃",
-    "condition": "阳刃为忌神时",
-    "rule": "阳刃为忌神且无制时，主克父克妻，或伤及六亲，尤其对父星和妻星不利。",
-    "original_text": "阳刃无制，克父克妻",
-    "source_book": "子平真诠",
-    "source_chapter": "四十三、论阳刃"
-  },
-  {
-    "id": "zpzq_007",
-    "category": "疾病",
-    "subject": "阳刃",
-    "condition": "阳刃过旺无制时",
-    "rule": "阳刃过旺无制，主血光之灾或意外伤害，易有手术、外伤等事。",
-    "original_text": "阳刃旺而无制，主血光之灾",
-    "source_book": "子平真诠",
-    "source_chapter": "四十三、论阳刃"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "大运",
-    "subject": "阳刃格",
-    "condition": "阳刃格行运，忌见财官",
-    "rule": "阳刃格取运，最忌行运见财星和官星，因刃旺会劫财，且官星被刃所伤，主凶。",
-    "original_text": "阳刃格，忌见财官",
-    "source_book": "子平真诠",
-    "source_chapter": "四十四、论阳刃取运"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "大运",
-    "subject": "阳刃格",
-    "condition": "阳刃格行运，喜见食伤或印绶",
-    "rule": "阳刃格行运，喜见食神伤官以泄刃之旺气，或见印绶以化刃生身，主吉。",
-    "original_text": "喜食伤印绶",
-    "source_book": "子平真诠",
-    "source_chapter": "四十四、论阳刃取运"
-  },
-  {
-    "id": "zpzq_003",
+    "id": "zpzq_006_000",
     "category": "大运",
     "subject": "阳刃格",
     "condition": "阳刃格行运，忌见比劫",
@@ -1270,237 +70,7 @@
     "source_chapter": "四十四、论阳刃取运"
   },
   {
-    "id": "zpzq_001",
-    "category": "格局",
-    "subject": "建禄月劫格",
-    "condition": "月令为建禄或月劫，无官杀可取",
-    "rule": "月令为建禄或月劫时，不能直接以月令为用神，需另寻他处透干会支的财官食伤等为用神。",
-    "original_text": "建禄月劫，不能取月令为用，须另取用神。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十五、论建禄月劫"
-  },
-  {
-    "id": "zpzq_002",
-    "category": "用神",
-    "subject": "建禄月劫格",
-    "condition": "建禄月劫格中，天干透出财官食伤",
-    "rule": "建禄月劫格中，若天干透出财官食伤，则以透出者取作用神，并配合地支会合情况综合判断。",
-    "original_text": "建禄月劫，须以透干会支取用。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十五、论建禄月劫"
-  },
-  {
-    "id": "zpzq_003",
-    "category": "格局",
-    "subject": "建禄月劫格",
-    "condition": "建禄月劫格中，天干透出官杀",
-    "rule": "建禄月劫格中，若天干透出官杀，则以官杀为用神，但需注意官杀与禄劫的配合关系。",
-    "original_text": "建禄月劫，透官杀则以官杀为用。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十五、论建禄月劫"
-  },
-  {
-    "id": "zpzq_004",
-    "category": "格局",
-    "subject": "建禄月劫格",
-    "condition": "建禄月劫格中，天干透出财星",
-    "rule": "建禄月劫格中，若天干透出财星，则以财星为用神，但需财星有根且不被劫夺。",
-    "original_text": "建禄月劫，透财则以财为用。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十五、论建禄月劫"
-  },
-  {
-    "id": "zpzq_005",
-    "category": "格局",
-    "subject": "建禄月劫格",
-    "condition": "建禄月劫格中，天干透出食伤",
-    "rule": "建禄月劫格中，若天干透出食伤，则以食伤为用神，食伤可生财或制官杀。",
-    "original_text": "建禄月劫，透食伤则以食伤为用。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十五、论建禄月劫"
-  },
-  {
-    "id": "zpzq_006",
-    "category": "用神",
-    "subject": "建禄月劫格",
-    "condition": "建禄月劫格中，天干无透，地支有会合",
-    "rule": "建禄月劫格中，若天干无透出之物，则看地支会合之局，取会合而成的财官食伤为用神。",
-    "original_text": "建禄月劫，无透则取支会。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十五、论建禄月劫"
-  },
-  {
-    "id": "zpzq_007",
-    "category": "格局",
-    "subject": "建禄月劫格",
-    "condition": "建禄月劫格中，天干透出比劫",
-    "rule": "建禄月劫格中，若天干透出比劫，则比劫不能为用神，需另寻财官食伤等。",
-    "original_text": "建禄月劫，比劫不可为用。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十五、论建禄月劫"
-  },
-  {
-    "id": "zpzq_008",
-    "category": "用神",
-    "subject": "建禄月劫格",
-    "condition": "建禄月劫格中，用神与禄劫相冲克",
-    "rule": "建禄月劫格中，所取用神若与月令禄劫相冲克，则用神不真，需重新审视格局。",
-    "original_text": "建禄月劫，用神忌与禄劫冲克。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十五、论建禄月劫"
-  },
-  {
-    "id": "zpzq_009",
-    "category": "大运",
-    "subject": "建禄月劫格",
-    "condition": "建禄月劫格行运",
-    "rule": "建禄月劫格行运，喜行财官食伤旺地，忌行比劫禄刃之地，否则易破格。",
-    "original_text": "建禄月劫，行运喜财官食伤，忌比劫禄刃。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十五、论建禄月劫"
-  },
-  {
-    "id": "zpzq_010",
-    "category": "其他",
-    "subject": "建禄月劫格",
-    "condition": "建禄月劫格成格",
-    "rule": "建禄月劫格，需财官食伤透干会支且有力，方能成格，否则格局不高。",
-    "original_text": "建禄月劫，须财官食伤有力方成格。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十五、论建禄月劫"
-  },
-  {
-    "id": "zpzq_046_001",
-    "category": "大运",
-    "subject": "建禄格",
-    "condition": "建禄格，月令为禄，无官杀透干，或官杀不旺",
-    "rule": "建禄格取运，以官杀为用神时，行运喜财生官杀，或行官杀旺运，忌食伤制官杀，亦忌比劫争官。",
-    "original_text": "建禄格，取运以官杀为用，喜财生官杀，忌食伤制之，亦忌比劫争官。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十六、论建禄月劫取运"
-  },
-  {
-    "id": "zpzq_046_002",
-    "category": "大运",
-    "subject": "建禄格",
-    "condition": "建禄格，月令为禄，无官杀，用食神生财",
-    "rule": "建禄格用食神生财，行运喜财旺之地，或食神旺运，忌比劫夺财，亦忌印星夺食。",
-    "original_text": "建禄格，用食神生财，喜财旺，忌比劫夺财，亦忌印夺食。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十六、论建禄月劫取运"
-  },
-  {
-    "id": "zpzq_046_003",
-    "category": "大运",
-    "subject": "建禄格",
-    "condition": "建禄格，月令为禄，用偏财或正财，无食伤生财",
-    "rule": "建禄格用财，行运喜食伤生财，或财旺之地，忌比劫夺财，亦忌官杀泄财。",
-    "original_text": "建禄格，用财，喜食伤生财，忌比劫夺财，亦忌官杀泄财。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十六、论建禄月劫取运"
-  },
-  {
-    "id": "zpzq_046_004",
-    "category": "大运",
-    "subject": "建禄格",
-    "condition": "建禄格，月令为禄，用七杀，有食神制杀",
-    "rule": "建禄格用七杀，有食神制杀，行运喜食神旺运，或制杀之地，忌财星生杀，亦忌印星夺食。",
-    "original_text": "建禄格，用七杀，有食神制，喜食神旺，忌财生杀，亦忌印夺食。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十六、论建禄月劫取运"
-  },
-  {
-    "id": "zpzq_046_005",
-    "category": "大运",
-    "subject": "建禄格",
-    "condition": "建禄格，月令为禄，用七杀，无食神制，用印化杀",
-    "rule": "建禄格用七杀，无食神制，用印化杀，行运喜印旺之地，或杀印相生，忌财星坏印，亦忌食伤制杀。",
-    "original_text": "建禄格，用七杀，无食制，用印化，喜印旺，忌财坏印，亦忌食伤制杀。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十六、论建禄月劫取运"
-  },
-  {
-    "id": "zpzq_046_006",
-    "category": "大运",
-    "subject": "建禄格",
-    "condition": "建禄格，月令为禄，用官星，有财生官",
-    "rule": "建禄格用官星，有财生官，行运喜财旺生官，或官星旺运，忌食伤制官，亦忌比劫争官。",
-    "original_text": "建禄格，用官，有财生，喜财旺，忌食伤制官，亦忌比劫争官。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十六、论建禄月劫取运"
-  },
-  {
-    "id": "zpzq_046_007",
-    "category": "大运",
-    "subject": "建禄格",
-    "condition": "建禄格，月令为禄，用官星，无财生官，用印护官",
-    "rule": "建禄格用官星，无财生官，用印护官，行运喜印旺之地，或官印相生，忌财坏印，亦忌食伤制官。",
-    "original_text": "建禄格，用官，无财生，用印护，喜印旺，忌财坏印，亦忌食伤制官。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十六、论建禄月劫取运"
-  },
-  {
-    "id": "zpzq_046_008",
-    "category": "大运",
-    "subject": "建禄格",
-    "condition": "建禄格，月令为禄，用食神制杀，或食神生财，或食神泄秀",
-    "rule": "建禄格用食神，行运喜食神旺运，或财星透出，忌印星夺食，亦忌比劫争食。",
-    "original_text": "建禄格，用食神，喜食神旺，忌印夺食，亦忌比劫争食。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十六、论建禄月劫取运"
-  },
-  {
-    "id": "zpzq_046_009",
-    "category": "大运",
-    "subject": "建禄格",
-    "condition": "建禄格，月令为禄，用印星，有官杀生印",
-    "rule": "建禄格用印星，有官杀生印，行运喜官杀旺运，或印旺之地，忌财星坏印，亦忌食伤泄印。",
-    "original_text": "建禄格，用印，有官杀生，喜官杀旺，忌财坏印，亦忌食伤泄印。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十六、论建禄月劫取运"
-  },
-  {
-    "id": "zpzq_046_010",
-    "category": "大运",
-    "subject": "建禄格",
-    "condition": "建禄格，月令为禄，用印星，无官杀生印",
-    "rule": "建禄格用印星，无官杀生印，行运喜比劫帮身，或印旺之地，忌财星坏印，亦忌食伤泄印。",
-    "original_text": "建禄格，用印，无官杀生，喜比劫，忌财坏印，亦忌食伤泄印。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十六、论建禄月劫取运"
-  },
-  {
-    "id": "zpzq_046_011",
-    "category": "大运",
-    "subject": "建禄格",
-    "condition": "建禄格，月令为禄，用比劫，有食伤泄秀",
-    "rule": "建禄格用比劫，有食伤泄秀，行运喜食伤旺运，或财星透出，忌印星夺食，亦忌官杀克比劫。",
-    "original_text": "建禄格，用比劫，有食伤泄，喜食伤旺，忌印夺食，亦忌官杀克比劫。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十六、论建禄月劫取运"
-  },
-  {
-    "id": "zpzq_046_012",
-    "category": "大运",
-    "subject": "建禄格",
-    "condition": "建禄格，月令为禄，用比劫，无食伤泄秀",
-    "rule": "建禄格用比劫，无食伤泄秀，行运喜官杀制比劫，或财星耗比劫，忌比劫旺而无制，亦忌印星生比劫。",
-    "original_text": "建禄格，用比劫，无食伤泄，喜官杀制，忌比劫旺，亦忌印生比劫。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十六、论建禄月劫取运"
-  },
-  {
-    "id": "zpzq_001",
-    "category": "大运",
-    "subject": "杂格",
-    "condition": "杂格行运",
-    "rule": "杂格行运，以原局格局为核心，顺其气势取运，不可逆其性。",
-    "original_text": "杂格取运，亦以格局为主，顺其性而已。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十八、论杂格取运"
-  },
-  {
-    "id": "zpzq_001",
+    "id": "zpzq_007_000",
     "category": "五行",
     "subject": "五行",
     "condition": "阴阳四象分化",
@@ -1510,7 +80,7 @@
     "source_chapter": "一、论干支"
   },
   {
-    "id": "zpzq_002",
+    "id": "zpzq_007_001",
     "category": "天干",
     "subject": "甲乙",
     "condition": "以木论阴阳",
@@ -1520,7 +90,7 @@
     "source_chapter": "一、论干支"
   },
   {
-    "id": "zpzq_003",
+    "id": "zpzq_007_002",
     "category": "天干",
     "subject": "甲乙",
     "condition": "天干与地支对应",
@@ -1530,7 +100,7 @@
     "source_chapter": "一、论干支"
   },
   {
-    "id": "zpzq_004",
+    "id": "zpzq_007_003",
     "category": "天干",
     "subject": "甲",
     "condition": "甲禄于寅",
@@ -1540,7 +110,7 @@
     "source_chapter": "一、论干支"
   },
   {
-    "id": "zpzq_005",
+    "id": "zpzq_007_004",
     "category": "天干",
     "subject": "甲乙",
     "condition": "天干地支动静",
@@ -1550,7 +120,7 @@
     "source_chapter": "一、论干支"
   },
   {
-    "id": "zpzq_006",
+    "id": "zpzq_007_005",
     "category": "天干",
     "subject": "甲乙",
     "condition": "气与质比较",
@@ -1560,7 +130,7 @@
     "source_chapter": "一、论干支"
   },
   {
-    "id": "zpzq_007",
+    "id": "zpzq_007_006",
     "category": "五行",
     "subject": "土",
     "condition": "土为冲气",
@@ -1570,7 +140,7 @@
     "source_chapter": "一、论干支"
   },
   {
-    "id": "zpzq_001",
+    "id": "zpzq_008_000",
     "category": "其他",
     "subject": "命理原则",
     "condition": "论命时",
@@ -1580,7 +150,7 @@
     "source_chapter": "三十、论时说以讹传讹"
   },
   {
-    "id": "zpzq_002",
+    "id": "zpzq_008_001",
     "category": "天干",
     "subject": "干支阴阳",
     "condition": "论干支时",
@@ -1590,7 +160,7 @@
     "source_chapter": "三十、论时说以讹传讹"
   },
   {
-    "id": "zpzq_003",
+    "id": "zpzq_008_002",
     "category": "格局",
     "subject": "月令格局",
     "condition": "论格局时",
@@ -1600,7 +170,7 @@
     "source_chapter": "三十、论时说以讹传讹"
   },
   {
-    "id": "zpzq_004",
+    "id": "zpzq_008_003",
     "category": "十神",
     "subject": "生克喜忌",
     "condition": "论生克时",
@@ -1610,7 +180,7 @@
     "source_chapter": "三十、论时说以讹传讹"
   },
   {
-    "id": "zpzq_005",
+    "id": "zpzq_008_004",
     "category": "大运",
     "subject": "行运同异",
     "condition": "论行运时",
@@ -1620,7 +190,7 @@
     "source_chapter": "三十、论时说以讹传讹"
   },
   {
-    "id": "zpzq_006",
+    "id": "zpzq_008_005",
     "category": "格局",
     "subject": "杂气财旺生官",
     "condition": "壬申 癸丑 己丑 甲戌 四柱",
@@ -1630,7 +200,7 @@
     "source_chapter": "三十、论时说以讹传讹"
   },
   {
-    "id": "zpzq_007",
+    "id": "zpzq_008_006",
     "category": "格局",
     "subject": "食神生财",
     "condition": "己未 壬申 戊子 庚申 四柱",
@@ -1640,7 +210,7 @@
     "source_chapter": "三十、论时说以讹传讹"
   },
   {
-    "id": "zpzq_008",
+    "id": "zpzq_008_007",
     "category": "其他",
     "subject": "命理求真",
     "condition": "看命者遇贵格不可解时",
@@ -1650,7 +220,7 @@
     "source_chapter": "三十、论时说以讹传讹"
   },
   {
-    "id": "zpzq_001",
+    "id": "zpzq_009_000",
     "category": "格局",
     "subject": "正官格",
     "condition": "正官为用神时",
@@ -1660,7 +230,7 @@
     "source_chapter": "三十一、论正官格"
   },
   {
-    "id": "zpzq_002",
+    "id": "zpzq_009_001",
     "category": "格局",
     "subject": "正官格",
     "condition": "正官格有财印相透且两不相碍时",
@@ -1670,7 +240,7 @@
     "source_chapter": "三十一、论正官格"
   },
   {
-    "id": "zpzq_003",
+    "id": "zpzq_009_002",
     "category": "格局",
     "subject": "正官格",
     "condition": "杂气正官，透干会支时",
@@ -1680,7 +250,7 @@
     "source_chapter": "三十一、论正官格"
   },
   {
-    "id": "zpzq_004",
+    "id": "zpzq_009_003",
     "category": "格局",
     "subject": "正官格",
     "condition": "财印相合时",
@@ -1690,7 +260,7 @@
     "source_chapter": "三十一、论正官格"
   },
   {
-    "id": "zpzq_005",
+    "id": "zpzq_009_004",
     "category": "格局",
     "subject": "正官格",
     "condition": "财印不能两用时",
@@ -1700,7 +270,7 @@
     "source_chapter": "三十一、论正官格"
   },
   {
-    "id": "zpzq_006",
+    "id": "zpzq_009_005",
     "category": "格局",
     "subject": "正官格",
     "condition": "化官为印而透财时",
@@ -1710,7 +280,7 @@
     "source_chapter": "三十一、论正官格"
   },
   {
-    "id": "zpzq_007",
+    "id": "zpzq_009_006",
     "category": "格局",
     "subject": "正官格",
     "condition": "遇伤官或七煞混杂时",
@@ -1720,7 +290,7 @@
     "source_chapter": "三十一、论正官格"
   },
   {
-    "id": "zpzq_008",
+    "id": "zpzq_009_007",
     "category": "格局",
     "subject": "正官格",
     "condition": "遇伤官时",
@@ -1730,7 +300,7 @@
     "source_chapter": "三十一、论正官格"
   },
   {
-    "id": "zpzq_009",
+    "id": "zpzq_009_008",
     "category": "格局",
     "subject": "正官格",
     "condition": "混煞时",
@@ -1740,7 +310,7 @@
     "source_chapter": "三十一、论正官格"
   },
   {
-    "id": "zpzq_010",
+    "id": "zpzq_009_009",
     "category": "格局",
     "subject": "正官格",
     "condition": "官格透清用印时",
@@ -1750,27 +320,7 @@
     "source_chapter": "三十一、论正官格"
   },
   {
-    "id": "zpzq_011",
-    "category": "格局",
-    "subject": "正官格",
-    "condition": "逢财反大贵时",
-    "rule": "正官格用印时虽忌见财，但若财星被合去或制去，反而能成大贵之格，此为造化之妙。",
-    "original_text": "然亦有逢财反大贵者...以丁合壬而财去，以丙制伤官而官清。无情而愈有情，此正造化之妙",
-    "source_book": "子平真诠",
-    "source_chapter": "三十一、论正官格"
-  },
-  {
-    "id": "zpzq_033_001",
-    "category": "其他",
-    "subject": "财星",
-    "condition": "财为日主所克之物",
-    "rule": "财星是日主所克制的对象，是命局中可使用的资源，代表财帛、妻妾、才能、驿马等。",
-    "original_text": "财为我克，使用之物也。为财帛，为妻妾，为才能，为驿马，皆才类也。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十三、论财格"
-  },
-  {
-    "id": "zpzq_033_002",
+    "id": "zpzq_010_000",
     "category": "格局",
     "subject": "财格",
     "condition": "财星为月令用神",
@@ -1780,7 +330,7 @@
     "source_chapter": "三十三、论财格"
   },
   {
-    "id": "zpzq_033_003",
+    "id": "zpzq_010_001",
     "category": "格局",
     "subject": "财格",
     "condition": "财星非月令用神，但透出",
@@ -1790,7 +340,7 @@
     "source_chapter": "三十三、论财格"
   },
   {
-    "id": "zpzq_033_004",
+    "id": "zpzq_010_002",
     "category": "格局",
     "subject": "财旺生官",
     "condition": "财旺生官时",
@@ -1800,7 +350,7 @@
     "source_chapter": "三十三、论财格"
   },
   {
-    "id": "zpzq_033_005",
+    "id": "zpzq_010_003",
     "category": "格局",
     "subject": "财旺生官格",
     "condition": "身强且不透伤官、不混七煞",
@@ -1810,7 +360,7 @@
     "source_chapter": "三十三、论财格"
   },
   {
-    "id": "zpzq_033_006",
+    "id": "zpzq_010_004",
     "category": "格局",
     "subject": "财用食生格",
     "condition": "身强、不露官、略带一位比肩",
@@ -1820,7 +370,7 @@
     "source_chapter": "三十三、论财格"
   },
   {
-    "id": "zpzq_033_007",
+    "id": "zpzq_010_005",
     "category": "格局",
     "subject": "财用食生格",
     "condition": "透官且身弱",
@@ -1830,7 +380,7 @@
     "source_chapter": "三十三、论财格"
   },
   {
-    "id": "zpzq_033_008",
+    "id": "zpzq_010_006",
     "category": "格局",
     "subject": "财格佩印",
     "condition": "孤财不贵，佩印帮身",
@@ -1840,17 +390,7 @@
     "source_chapter": "三十三、论财格"
   },
   {
-    "id": "zpzq_033_009",
-    "category": "格局",
-    "subject": "财格佩印",
-    "condition": "财印相并",
-    "rule": "财格佩印时，财星与印星不宜并立相克，若财印两不相能，则只有小富而已。",
-    "original_text": "然财印不宜相并，如乙未己卯庚寅辛巳，乙与己两不相能，即有好处，小富而已。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十三、论财格"
-  },
-  {
-    "id": "zpzq_033_010",
+    "id": "zpzq_010_007",
     "category": "格局",
     "subject": "财用食兼用印",
     "condition": "食与印两不相碍，或有暗官而去食护官",
@@ -1860,7 +400,7 @@
     "source_chapter": "三十三、论财格"
   },
   {
-    "id": "zpzq_033_011",
+    "id": "zpzq_010_008",
     "category": "格局",
     "subject": "财用伤官",
     "condition": "财不甚旺而比劫强",
@@ -1870,7 +410,7 @@
     "source_chapter": "三十三、论财格"
   },
   {
-    "id": "zpzq_033_012",
+    "id": "zpzq_010_009",
     "category": "格局",
     "subject": "财用伤官",
     "condition": "财旺无劫而透伤官",
@@ -1880,7 +420,7 @@
     "source_chapter": "三十三、论财格"
   },
   {
-    "id": "zpzq_033_013",
+    "id": "zpzq_010_010",
     "category": "格局",
     "subject": "财带七煞",
     "condition": "合煞存财或制煞生财",
@@ -1890,7 +430,7 @@
     "source_chapter": "三十三、论财格"
   },
   {
-    "id": "zpzq_033_014",
+    "id": "zpzq_010_011",
     "category": "格局",
     "subject": "财用印煞",
     "condition": "党煞为忌，印以化之",
@@ -1900,7 +440,7 @@
     "source_chapter": "三十三、论财格"
   },
   {
-    "id": "zpzq_033_015",
+    "id": "zpzq_010_012",
     "category": "格局",
     "subject": "财用煞印",
     "condition": "财与煞印并透",
@@ -1910,7 +450,7 @@
     "source_chapter": "三十三、论财格"
   },
   {
-    "id": "zpzq_033_016",
+    "id": "zpzq_010_013",
     "category": "格局",
     "subject": "单透财而贵",
     "condition": "壬生午月、癸生巳月，月暗藏官星",
@@ -1920,7 +460,7 @@
     "source_chapter": "三十三、论财格"
   },
   {
-    "id": "zpzq_033_017",
+    "id": "zpzq_010_014",
     "category": "格局",
     "subject": "弃煞就财",
     "condition": "透财藏煞，美者存而憎者弃",
@@ -1930,17 +470,7 @@
     "source_chapter": "三十三、论财格"
   },
   {
-    "id": "zpzq_033_018",
-    "category": "格局",
-    "subject": "弃财就煞",
-    "condition": "劫刃太重",
-    "rule": "劫刃太重时，弃财就煞，是格局的变格，亦能取贵。",
-    "original_text": "至于劫刃太重，弃财就煞，如某一尚书命，此又变之又变者也。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十三、论财格"
-  },
-  {
-    "id": "zpzq_001",
+    "id": "zpzq_011_000",
     "category": "大运",
     "subject": "财旺生官格",
     "condition": "财旺生官，行运",
@@ -1950,7 +480,7 @@
     "source_chapter": "三十四、论财格取运"
   },
   {
-    "id": "zpzq_002",
+    "id": "zpzq_011_001",
     "category": "大运",
     "subject": "财旺生官格",
     "condition": "财旺生官且透印，行运",
@@ -1960,7 +490,7 @@
     "source_chapter": "三十四、论财格取运"
   },
   {
-    "id": "zpzq_003",
+    "id": "zpzq_011_002",
     "category": "大运",
     "subject": "财旺生官带食破局",
     "condition": "生官带食破局，行运",
@@ -1970,7 +500,7 @@
     "source_chapter": "三十四、论财格取运"
   },
   {
-    "id": "zpzq_004",
+    "id": "zpzq_011_003",
     "category": "大运",
     "subject": "财用食生财",
     "condition": "食重身轻，行运",
@@ -1980,7 +510,7 @@
     "source_chapter": "三十四、论财格取运"
   },
   {
-    "id": "zpzq_005",
+    "id": "zpzq_011_004",
     "category": "大运",
     "subject": "财用食生财",
     "condition": "财食轻而身重，行运",
@@ -1990,7 +520,7 @@
     "source_chapter": "三十四、论财格取运"
   },
   {
-    "id": "zpzq_006",
+    "id": "zpzq_011_005",
     "category": "大运",
     "subject": "财格佩印",
     "condition": "财格佩印，行运",
@@ -2000,7 +530,7 @@
     "source_chapter": "三十四、论财格取运"
   },
   {
-    "id": "zpzq_007",
+    "id": "zpzq_011_006",
     "category": "大运",
     "subject": "财用食印",
     "condition": "财轻，行运",
@@ -2010,7 +540,7 @@
     "source_chapter": "三十四、论财格取运"
   },
   {
-    "id": "zpzq_008",
+    "id": "zpzq_011_007",
     "category": "大运",
     "subject": "财用食印",
     "condition": "身轻，行运",
@@ -2020,7 +550,7 @@
     "source_chapter": "三十四、论财格取运"
   },
   {
-    "id": "zpzq_009",
+    "id": "zpzq_011_008",
     "category": "大运",
     "subject": "财带伤官",
     "condition": "财带伤官，行运",
@@ -2030,7 +560,7 @@
     "source_chapter": "三十四、论财格取运"
   },
   {
-    "id": "zpzq_010",
+    "id": "zpzq_011_009",
     "category": "大运",
     "subject": "财带七煞",
     "condition": "财带七煞，不论合煞制煞，行运",
@@ -2040,7 +570,7 @@
     "source_chapter": "三十四、论财格取运"
   },
   {
-    "id": "zpzq_011",
+    "id": "zpzq_011_010",
     "category": "大运",
     "subject": "财用煞印",
     "condition": "财用煞印，行运",
@@ -2050,7 +580,7 @@
     "source_chapter": "三十四、论财格取运"
   },
   {
-    "id": "zpzq_035_001",
+    "id": "zpzq_012_000",
     "category": "格局",
     "subject": "印绶格",
     "condition": "印绶生身，正偏印同论",
@@ -2060,7 +590,7 @@
     "source_chapter": "三十五、论印绶格"
   },
   {
-    "id": "zpzq_035_002",
+    "id": "zpzq_012_001",
     "category": "格局",
     "subject": "印绶格",
     "condition": "印绶透官星",
@@ -2070,37 +600,7 @@
     "source_chapter": "三十五、论印绶格"
   },
   {
-    "id": "zpzq_035_003",
-    "category": "格局",
-    "subject": "印绶格",
-    "condition": "印绶带伤官食神而贵",
-    "rule": "印绶格带伤官食神也能贵，但需伤食被制，不伤官星。如伤官被印克制，或食神被合而不碍官。",
-    "original_text": "然亦有带伤食而贵者……壬为戊制，不伤官也……己为乙制，己不碍官也。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶格"
-  },
-  {
-    "id": "zpzq_035_004",
-    "category": "格局",
-    "subject": "印绶格",
-    "condition": "印绶用伤官食神",
-    "rule": "身强印旺时，用伤官食神泄身秀气为佳。若印浅身轻而层层伤食，则为寒贫之局。",
-    "original_text": "有印而用伤食者，身强印旺，泄身以为秀气……若印浅身轻，而用层层伤食，则寒贫之局矣。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶格"
-  },
-  {
-    "id": "zpzq_035_005",
-    "category": "格局",
-    "subject": "印绶格",
-    "condition": "印绶用偏官（七煞）",
-    "rule": "偏官本非美物，借其生印，不得已而用之。必须身重印轻或身轻印重，有所不足，才为有情。若身印并重而用七煞，非孤即贫。",
-    "original_text": "有用偏官者，偏官本非美物，藉其生印，不得已而用之。故必身重印轻，或身轻印重，有所不足，始为有情……若身印并重，而用七煞，非孤则贫矣。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶格"
-  },
-  {
-    "id": "zpzq_035_006",
+    "id": "zpzq_012_002",
     "category": "格局",
     "subject": "印绶格",
     "condition": "用七煞兼带伤官食神",
@@ -2110,17 +610,7 @@
     "source_chapter": "三十五、论印绶格"
   },
   {
-    "id": "zpzq_035_007",
-    "category": "格局",
-    "subject": "印绶格",
-    "condition": "印多用财",
-    "rule": "印重身强，透财以抑太过，权宜而用，只要财根深，无妨财破印。若印轻财重，又无劫财救护，则为贪财破印，贫贱之局。",
-    "original_text": "有印多而用财者，印重身强，透财以抑太过，权而用之，只要根深，无妨财破……若印轻财重，又无劫财以救，则为贪财破印，贫贱之局也。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶格"
-  },
-  {
-    "id": "zpzq_035_008",
+    "id": "zpzq_012_003",
     "category": "格局",
     "subject": "印绶格",
     "condition": "印重财轻兼露伤食",
@@ -2130,17 +620,7 @@
     "source_chapter": "三十五、论印绶格"
   },
   {
-    "id": "zpzq_035_009",
-    "category": "格局",
-    "subject": "印绶格",
-    "condition": "带食神而贵（食神合印）",
-    "rule": "印绶格带食神而贵，因食神合住印星，使印不生日主，反而存食，故贵。若合财存食，亦可类推为贵。",
-    "original_text": "然亦有带食而贵者，何也？……乙合庚而不生癸，所以为贵。若合财存食，又可类推矣。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶格"
-  },
-  {
-    "id": "zpzq_035_010",
+    "id": "zpzq_012_004",
     "category": "格局",
     "subject": "印绶格",
     "condition": "印绶兼透官煞",
@@ -2150,27 +630,7 @@
     "source_chapter": "三十五、论印绶格"
   },
   {
-    "id": "zpzq_035_011",
-    "category": "格局",
-    "subject": "印绶格",
-    "condition": "化印为劫，弃印就财官",
-    "rule": "印绶化为劫财，弃印而用财官，是格局变化之一种，亦为贵格。",
-    "original_text": "至于化印为劫，弃之以就财官……则变之又变者矣。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶格"
-  },
-  {
-    "id": "zpzq_035_012",
-    "category": "格局",
-    "subject": "印绶格",
-    "condition": "印透七煞，劫财存煞印",
-    "rule": "印绶透出七煞，又有劫财以存煞印，亦有贵格，但此格难辨，需仔细详察。",
-    "original_text": "更有印透七煞，而劫财以存煞印，亦有贵格……然此格毕竟难看，宜细详之。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十五、论印绶格"
-  },
-  {
-    "id": "zpzq_001",
+    "id": "zpzq_013_000",
     "category": "大运",
     "subject": "印格用官",
     "condition": "官露印重",
@@ -2180,7 +640,7 @@
     "source_chapter": "三十六、论印绶取运"
   },
   {
-    "id": "zpzq_002",
+    "id": "zpzq_013_001",
     "category": "大运",
     "subject": "印格用官兼带伤食",
     "condition": "用官而兼带伤食",
@@ -2190,7 +650,7 @@
     "source_chapter": "三十六、论印绶取运"
   },
   {
-    "id": "zpzq_003",
+    "id": "zpzq_013_002",
     "category": "大运",
     "subject": "印格用伤食",
     "condition": "印绶而用伤食",
@@ -2200,7 +660,7 @@
     "source_chapter": "三十六、论印绶取运"
   },
   {
-    "id": "zpzq_004",
+    "id": "zpzq_013_003",
     "category": "大运",
     "subject": "印格用七杀",
     "condition": "印用七煞",
@@ -2210,7 +670,7 @@
     "source_chapter": "三十六、论印绶取运"
   },
   {
-    "id": "zpzq_005",
+    "id": "zpzq_013_004",
     "category": "大运",
     "subject": "印格用杀兼带伤食",
     "condition": "用煞而兼带伤食",
@@ -2220,7 +680,7 @@
     "source_chapter": "三十六、论印绶取运"
   },
   {
-    "id": "zpzq_006",
+    "id": "zpzq_013_005",
     "category": "大运",
     "subject": "印格遇财",
     "condition": "印绶遇财",
@@ -2230,7 +690,7 @@
     "source_chapter": "三十六、论印绶取运"
   },
   {
-    "id": "zpzq_007",
+    "id": "zpzq_013_006",
     "category": "大运",
     "subject": "印格官杀竞透",
     "condition": "官煞竞透",
@@ -2240,7 +700,7 @@
     "source_chapter": "三十六、论印绶取运"
   },
   {
-    "id": "zpzq_008",
+    "id": "zpzq_013_007",
     "category": "大运",
     "subject": "印格用食伤印轻",
     "condition": "印用食伤，印轻者",
@@ -2250,7 +710,7 @@
     "source_chapter": "三十六、论印绶取运"
   },
   {
-    "id": "zpzq_001",
+    "id": "zpzq_014_000",
     "category": "格局",
     "subject": "食神",
     "condition": "食神生财，财有根，身强食旺而财透",
@@ -2260,7 +720,7 @@
     "source_chapter": "三十七、论食神格"
   },
   {
-    "id": "zpzq_002",
+    "id": "zpzq_014_001",
     "category": "性情",
     "subject": "食神",
     "condition": "藏食露伤",
@@ -2270,7 +730,7 @@
     "source_chapter": "三十七、论食神格"
   },
   {
-    "id": "zpzq_003",
+    "id": "zpzq_014_002",
     "category": "格局",
     "subject": "食神",
     "condition": "食神偏正叠出",
@@ -2280,7 +740,7 @@
     "source_chapter": "三十七、论食神格"
   },
   {
-    "id": "zpzq_004",
+    "id": "zpzq_014_003",
     "category": "格局",
     "subject": "食神",
     "condition": "夏木用财，火炎土燥",
@@ -2290,7 +750,7 @@
     "source_chapter": "三十七、论食神格"
   },
   {
-    "id": "zpzq_005",
+    "id": "zpzq_014_004",
     "category": "格局",
     "subject": "食神",
     "condition": "不用财，而就煞印",
@@ -2300,7 +760,7 @@
     "source_chapter": "三十七、论食神格"
   },
   {
-    "id": "zpzq_006",
+    "id": "zpzq_014_005",
     "category": "格局",
     "subject": "食神",
     "condition": "无印绶，单露偏官，无财",
@@ -2310,7 +770,7 @@
     "source_chapter": "三十七、论食神格"
   },
   {
-    "id": "zpzq_007",
+    "id": "zpzq_014_006",
     "category": "格局",
     "subject": "食神",
     "condition": "金水食神而用煞",
@@ -2320,7 +780,7 @@
     "source_chapter": "三十七、论食神格"
   },
   {
-    "id": "zpzq_008",
+    "id": "zpzq_014_007",
     "category": "用神",
     "subject": "食神",
     "condition": "夏火太炎而木焦，透印",
@@ -2330,7 +790,7 @@
     "source_chapter": "三十七、论食神格"
   },
   {
-    "id": "zpzq_009",
+    "id": "zpzq_014_008",
     "category": "用神",
     "subject": "食神",
     "condition": "食神忌官，金水不忌",
@@ -2340,7 +800,7 @@
     "source_chapter": "三十七、论食神格"
   },
   {
-    "id": "zpzq_010",
+    "id": "zpzq_014_009",
     "category": "格局",
     "subject": "食神",
     "condition": "单用食神，食神有气",
@@ -2350,7 +810,7 @@
     "source_chapter": "三十七、论食神格"
   },
   {
-    "id": "zpzq_011",
+    "id": "zpzq_014_010",
     "category": "用神",
     "subject": "食神",
     "condition": "印来夺食，透财以解",
@@ -2360,7 +820,7 @@
     "source_chapter": "三十七、论食神格"
   },
   {
-    "id": "zpzq_012",
+    "id": "zpzq_014_011",
     "category": "格局",
     "subject": "食神",
     "condition": "食神而官煞兢出",
@@ -2370,7 +830,7 @@
     "source_chapter": "三十七、论食神格"
   },
   {
-    "id": "zpzq_013",
+    "id": "zpzq_014_012",
     "category": "格局",
     "subject": "食神",
     "condition": "食神合煞存财",
@@ -2380,7 +840,7 @@
     "source_chapter": "三十七、论食神格"
   },
   {
-    "id": "zpzq_014",
+    "id": "zpzq_014_013",
     "category": "格局",
     "subject": "食神",
     "condition": "食神透煞，财先煞后，食以间之",
@@ -2390,7 +850,7 @@
     "source_chapter": "三十七、论食神格"
   },
   {
-    "id": "zpzq_001",
+    "id": "zpzq_015_000",
     "category": "格局",
     "subject": "七煞格",
     "condition": "七煞旺、食神强、日主身健",
@@ -2400,7 +860,7 @@
     "source_chapter": "三十九、论偏官格"
   },
   {
-    "id": "zpzq_002",
+    "id": "zpzq_015_001",
     "category": "格局",
     "subject": "七煞格",
     "condition": "煞用食制，且天干不透财星和印星",
@@ -2410,7 +870,7 @@
     "source_chapter": "三十九、论偏官格"
   },
   {
-    "id": "zpzq_003",
+    "id": "zpzq_015_002",
     "category": "格局",
     "subject": "七煞格",
     "condition": "财星在前、食神在后，财生煞而食神制煞",
@@ -2420,7 +880,7 @@
     "source_chapter": "三十九、论偏官格"
   },
   {
-    "id": "zpzq_004",
+    "id": "zpzq_015_003",
     "category": "格局",
     "subject": "七煞格",
     "condition": "七煞强、食神浅、印星透出",
@@ -2430,7 +890,7 @@
     "source_chapter": "三十九、论偏官格"
   },
   {
-    "id": "zpzq_005",
+    "id": "zpzq_015_004",
     "category": "格局",
     "subject": "七煞格",
     "condition": "七煞用印，煞印同通月令，有情",
@@ -2440,7 +900,7 @@
     "source_chapter": "三十九、论偏官格"
   },
   {
-    "id": "zpzq_006",
+    "id": "zpzq_015_005",
     "category": "格局",
     "subject": "七煞格",
     "condition": "煞重身轻，用食则身不能当",
@@ -2450,7 +910,7 @@
     "source_chapter": "三十九、论偏官格"
   },
   {
-    "id": "zpzq_007",
+    "id": "zpzq_015_006",
     "category": "格局",
     "subject": "七煞格",
     "condition": "食被印制，不能制煞，而财能去印存食",
@@ -2460,7 +920,7 @@
     "source_chapter": "三十九、论偏官格"
   },
   {
-    "id": "zpzq_008",
+    "id": "zpzq_015_007",
     "category": "格局",
     "subject": "七煞格",
     "condition": "身重煞轻，煞又化印，用神不清",
@@ -2470,7 +930,7 @@
     "source_chapter": "三十九、论偏官格"
   },
   {
-    "id": "zpzq_009",
+    "id": "zpzq_015_008",
     "category": "格局",
     "subject": "七煞格",
     "condition": "杂气七煞，干头不透财以清用",
@@ -2480,7 +940,7 @@
     "source_chapter": "三十九、论偏官格"
   },
   {
-    "id": "zpzq_010",
+    "id": "zpzq_015_009",
     "category": "格局",
     "subject": "七煞格",
     "condition": "七煞格中杂有正官，去官留煞或去煞留官",
@@ -2490,17 +950,7 @@
     "source_chapter": "三十九、论偏官格"
   },
   {
-    "id": "zpzq_011",
-    "category": "格局",
-    "subject": "七煞格",
-    "condition": "有煞无食制，而用印当者",
-    "rule": "七煞无食神制伏，而用印星当之，也能成格，如赵员外命例。",
-    "original_text": "有煞无食制，而用印当者。",
-    "source_book": "子平真诠",
-    "source_chapter": "三十九、论偏官格"
-  },
-  {
-    "id": "zpzq_012",
+    "id": "zpzq_015_010",
     "category": "大运",
     "subject": "七煞格",
     "condition": "制煞太过，运行财印",
@@ -2510,7 +960,7 @@
     "source_chapter": "三十九、论偏官格"
   },
   {
-    "id": "zpzq_001",
+    "id": "zpzq_016_000",
     "category": "格局",
     "subject": "偏官格",
     "condition": "煞用食制，煞重食轻",
@@ -2520,7 +970,7 @@
     "source_chapter": "四十、论偏官取运"
   },
   {
-    "id": "zpzq_002",
+    "id": "zpzq_016_001",
     "category": "格局",
     "subject": "偏官格",
     "condition": "煞用食制，煞轻食重",
@@ -2530,7 +980,7 @@
     "source_chapter": "四十、论偏官取运"
   },
   {
-    "id": "zpzq_003",
+    "id": "zpzq_016_002",
     "category": "格局",
     "subject": "偏官格",
     "condition": "煞用食制，煞食均而日主根轻",
@@ -2540,7 +990,7 @@
     "source_chapter": "四十、论偏官取运"
   },
   {
-    "id": "zpzq_004",
+    "id": "zpzq_016_003",
     "category": "格局",
     "subject": "偏官格",
     "condition": "煞用食制",
@@ -2550,7 +1000,7 @@
     "source_chapter": "四十、论偏官取运"
   },
   {
-    "id": "zpzq_005",
+    "id": "zpzq_016_004",
     "category": "大运",
     "subject": "偏官格",
     "condition": "煞用印绶",
@@ -2560,7 +1010,7 @@
     "source_chapter": "四十、论偏官取运"
   },
   {
-    "id": "zpzq_006",
+    "id": "zpzq_016_005",
     "category": "大运",
     "subject": "偏官格",
     "condition": "七煞用财，以财而去印存食者",
@@ -2570,7 +1020,7 @@
     "source_chapter": "四十、论偏官取运"
   },
   {
-    "id": "zpzq_007",
+    "id": "zpzq_016_006",
     "category": "大运",
     "subject": "偏官格",
     "condition": "七煞用财，以财而助煞不及者，财已足",
@@ -2580,7 +1030,7 @@
     "source_chapter": "四十、论偏官取运"
   },
   {
-    "id": "zpzq_008",
+    "id": "zpzq_016_007",
     "category": "大运",
     "subject": "偏官格",
     "condition": "七煞用财，以财而助煞不及者，财未足",
@@ -2590,7 +1040,7 @@
     "source_chapter": "四十、论偏官取运"
   },
   {
-    "id": "zpzq_009",
+    "id": "zpzq_016_008",
     "category": "格局",
     "subject": "偏官格",
     "condition": "煞带正官，不论去官留煞或去煞留官",
@@ -2600,7 +1050,7 @@
     "source_chapter": "四十、论偏官取运"
   },
   {
-    "id": "zpzq_010",
+    "id": "zpzq_016_009",
     "category": "大运",
     "subject": "偏官格",
     "condition": "煞带正官",
@@ -2610,7 +1060,7 @@
     "source_chapter": "四十、论偏官取运"
   },
   {
-    "id": "zpzq_011",
+    "id": "zpzq_016_010",
     "category": "格局",
     "subject": "偏官格",
     "condition": "煞无食制，而用刃当煞，煞轻刃重",
@@ -2620,7 +1070,7 @@
     "source_chapter": "四十、论偏官取运"
   },
   {
-    "id": "zpzq_012",
+    "id": "zpzq_016_011",
     "category": "格局",
     "subject": "偏官格",
     "condition": "煞无食制，而用刃当煞，刃轻煞重",
@@ -2630,7 +1080,7 @@
     "source_chapter": "四十、论偏官取运"
   },
   {
-    "id": "zpzq_013",
+    "id": "zpzq_016_012",
     "category": "大运",
     "subject": "偏官格",
     "condition": "煞无食制，而用刃当煞",
@@ -2640,7 +1090,7 @@
     "source_chapter": "四十、论偏官取运"
   },
   {
-    "id": "zpzq_014",
+    "id": "zpzq_016_013",
     "category": "格局",
     "subject": "偏官格",
     "condition": "七煞既纯",
@@ -2650,7 +1100,7 @@
     "source_chapter": "四十、论偏官取运"
   },
   {
-    "id": "zpzq_001",
+    "id": "zpzq_017_000",
     "category": "格局",
     "subject": "伤官格",
     "condition": "伤官格总体",
@@ -2660,7 +1110,7 @@
     "source_chapter": "四十一、论伤官格"
   },
   {
-    "id": "zpzq_002",
+    "id": "zpzq_017_001",
     "category": "格局",
     "subject": "伤官格",
     "condition": "夏木见水、冬金见火",
@@ -2670,27 +1120,7 @@
     "source_chapter": "四十一、论伤官格"
   },
   {
-    "id": "zpzq_003",
-    "category": "格局",
-    "subject": "伤官生财格",
-    "condition": "伤官生财，身强财有根",
-    "rule": "伤官生财，以伤官为生财之具，转凶为吉，最利。只要日主身强，财星有根，即为贵格。",
-    "original_text": "伤官生财，则以伤官者为生官之具，转凶为吉，故最利。只要身强，而财有根，便为贵格。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十一、论伤官格"
-  },
-  {
-    "id": "zpzq_004",
-    "category": "格局",
-    "subject": "化伤为财格",
-    "condition": "伤官化财，冬金连水化木",
-    "rule": "伤官化财，大为秀气。冬金用伤官，若冻水不能生木则不贵；若能连水化木，不待于生，则极贵。",
-    "original_text": "化伤为财，大为秀气……冬金不贵，以冻水不能生木。若乃连水化木，不待于生，安得不为殿元乎？",
-    "source_book": "子平真诠",
-    "source_chapter": "四十一、论伤官格"
-  },
-  {
-    "id": "zpzq_005",
+    "id": "zpzq_017_002",
     "category": "格局",
     "subject": "伤官佩印格",
     "condition": "伤官旺、身稍弱、印根深",
@@ -2700,7 +1130,7 @@
     "source_chapter": "四十一、论伤官格"
   },
   {
-    "id": "zpzq_006",
+    "id": "zpzq_017_003",
     "category": "格局",
     "subject": "伤官佩印格",
     "condition": "印旺根深、偏正叠出、伤轻身重",
@@ -2710,37 +1140,7 @@
     "source_chapter": "四十一、论伤官格"
   },
   {
-    "id": "zpzq_007",
-    "category": "格局",
-    "subject": "伤官兼用财印格",
-    "condition": "财印两清不碍，调停中和",
-    "rule": "伤官兼用财印，财印本相克，只要干头两清不相碍，且财太旺带印、印太重带财，调停中和，即为贵格。",
-    "original_text": "有伤官兼用财印者，财印相克，本不并用，只要干头两清而不碍……调停中和，遂为贵格。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十一、论伤官格"
-  },
-  {
-    "id": "zpzq_008",
-    "category": "格局",
-    "subject": "伤官用煞印格",
-    "condition": "伤多身弱，赖煞生印",
-    "rule": "伤官格中伤官多而日主弱，依赖七煞生印，印帮身而制伤，煞因伤而有制，两得其宜，只要无财，便为贵格。",
-    "original_text": "有伤官用煞印者，伤多身弱，赖煞生印，以帮身而制伤……只要无财，便为贵格。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十一、论伤官格"
-  },
-  {
-    "id": "zpzq_009",
-    "category": "格局",
-    "subject": "伤官用官格",
-    "condition": "金水命，财印为辅，官伤不透",
-    "rule": "伤官用官，他格不用，金水独宜。然要财印为辅，不可官伤并透。若孤官无辅，或官伤并透，则发福不大。",
-    "original_text": "有伤官用官者，他格不用，金水独宜。然要财印为辅，不可官伤并透……若孤官无辅，或官伤并透，则发福不大矣。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十一、论伤官格"
-  },
-  {
-    "id": "zpzq_010",
+    "id": "zpzq_017_004",
     "category": "格局",
     "subject": "伤官用官格",
     "condition": "冬金用官，化伤为财",
@@ -2750,7 +1150,7 @@
     "source_chapter": "四十一、论伤官格"
   },
   {
-    "id": "zpzq_011",
+    "id": "zpzq_017_005",
     "category": "格局",
     "subject": "伤官格",
     "condition": "非金水见官，化伤为财",
@@ -2760,7 +1160,7 @@
     "source_chapter": "四十一、论伤官格"
   },
   {
-    "id": "zpzq_012",
+    "id": "zpzq_017_006",
     "category": "格局",
     "subject": "伤官格",
     "condition": "官煞并透",
@@ -2770,17 +1170,7 @@
     "source_chapter": "四十一、论伤官格"
   },
   {
-    "id": "zpzq_001",
-    "category": "十神",
-    "subject": "阳刃",
-    "condition": "阳刃格成立时",
-    "rule": "阳刃是劫夺正财之神，即正财的七煞。刃比劫更凶，需要制伏。",
-    "original_text": "阳刃者，劫我正财之神，乃正财之七煞也。不曰劫而曰刃，劫之甚也。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十三、论阳刃格"
-  },
-  {
-    "id": "zpzq_002",
+    "id": "zpzq_018_000",
     "category": "格局",
     "subject": "阳刃格",
     "condition": "阳刃格用官或煞制刃时",
@@ -2790,7 +1180,7 @@
     "source_chapter": "四十三、论阳刃格"
   },
   {
-    "id": "zpzq_003",
+    "id": "zpzq_018_001",
     "category": "格局",
     "subject": "阳刃格",
     "condition": "阳刃格用七煞制刃时",
@@ -2800,27 +1190,7 @@
     "source_chapter": "四十三、论阳刃格"
   },
   {
-    "id": "zpzq_004",
-    "category": "格局",
-    "subject": "阳刃格",
-    "condition": "阳刃格用官制刃时",
-    "rule": "阳刃格用官制刃，即使透出阳刃也无害，因为官能制刃。",
-    "original_text": "阳刃用官，透刃不虑。盖官能制刃，透不为害。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十三、论阳刃格"
-  },
-  {
-    "id": "zpzq_005",
-    "category": "格局",
-    "subject": "阳刃格",
-    "condition": "阳刃格用七煞制刃时",
-    "rule": "阳刃格用七煞制刃，若透出阳刃则无成，因刃能合煞，使煞贪合忘克。",
-    "original_text": "阳刃露煞，透刃无成。刃能合煞，透则何功？",
-    "source_book": "子平真诠",
-    "source_chapter": "四十三、论阳刃格"
-  },
-  {
-    "id": "zpzq_006",
+    "id": "zpzq_018_002",
     "category": "格局",
     "subject": "阳刃格",
     "condition": "阳刃格用官煞制刃时",
@@ -2830,17 +1200,7 @@
     "source_chapter": "四十三、论阳刃格"
   },
   {
-    "id": "zpzq_007",
-    "category": "格局",
-    "subject": "阳刃格",
-    "condition": "阳刃格带伤官食神而贵时",
-    "rule": "阳刃格带伤官食神而贵，或因印护，或因煞太重而裁损，或因官煞轻而取清。",
-    "original_text": "然亦有官煞制刃，带伤食而贵者，何也？或是印护，或是煞太重而裁损之，官煞轻而取清之。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十三、论阳刃格"
-  },
-  {
-    "id": "zpzq_008",
+    "id": "zpzq_018_003",
     "category": "格局",
     "subject": "阳刃格",
     "condition": "阳刃格官煞竞出时",
@@ -2850,7 +1210,7 @@
     "source_chapter": "四十三、论阳刃格"
   },
   {
-    "id": "zpzq_009",
+    "id": "zpzq_018_004",
     "category": "格局",
     "subject": "阳刃格",
     "condition": "丙生午月，内藏己土时",
@@ -2860,7 +1220,7 @@
     "source_chapter": "四十三、论阳刃格"
   },
   {
-    "id": "zpzq_010",
+    "id": "zpzq_018_005",
     "category": "格局",
     "subject": "阳刃格",
     "condition": "戊生午月，干透丙丁，支会火局时",
@@ -2870,7 +1230,7 @@
     "source_chapter": "四十三、论阳刃格"
   },
   {
-    "id": "zpzq_011",
+    "id": "zpzq_018_006",
     "category": "格局",
     "subject": "阳刃格",
     "condition": "阳刃格财煞并透露时",
@@ -2880,7 +1240,7 @@
     "source_chapter": "四十三、论阳刃格"
   },
   {
-    "id": "zpzq_012",
+    "id": "zpzq_018_007",
     "category": "格局",
     "subject": "阳刃格",
     "condition": "阳刃格用财时",
@@ -2890,17 +1250,7 @@
     "source_chapter": "四十三、论阳刃格"
   },
   {
-    "id": "zpzq_001",
-    "category": "格局",
-    "subject": "建禄格",
-    "condition": "月建逢禄堂",
-    "rule": "建禄格即月令为禄堂，与月劫格同格，不必另分，皆以透干会支别取财官煞食为用。",
-    "original_text": "建禄者，月建而逢禄堂也。故建禄与月劫，可同一格，不必另分。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十五、论建禄月劫格"
-  },
-  {
-    "id": "zpzq_002",
+    "id": "zpzq_019_000",
     "category": "格局",
     "subject": "建禄格",
     "condition": "禄堂透出",
@@ -2910,7 +1260,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_003",
+    "id": "zpzq_019_001",
     "category": "用神",
     "subject": "建禄格用官",
     "condition": "禄劫格用官",
@@ -2920,7 +1270,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_004",
+    "id": "zpzq_019_002",
     "category": "用神",
     "subject": "建禄格用官",
     "condition": "用官而印护",
@@ -2930,7 +1280,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_005",
+    "id": "zpzq_019_003",
     "category": "用神",
     "subject": "建禄格用官",
     "condition": "用官而财助",
@@ -2940,17 +1290,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_006",
-    "category": "用神",
-    "subject": "建禄格用官",
-    "condition": "用官兼带财印",
-    "rule": "建禄格用官，兼带财印，为身强值三奇（财官印），尤为贵气，但须以官隔之，使财印两不相伤。",
-    "original_text": "有用官而兼带财印者，所谓身强值三奇，尤为贵气。只要以官隔之，使财印两不相伤，其格便大。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十五、论建禄月劫格"
-  },
-  {
-    "id": "zpzq_007",
+    "id": "zpzq_019_004",
     "category": "用神",
     "subject": "建禄格用财",
     "condition": "禄劫用财",
@@ -2960,7 +1300,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_008",
+    "id": "zpzq_019_005",
     "category": "用神",
     "subject": "建禄格化劫为财",
     "condition": "劫财会支成财局",
@@ -2970,7 +1310,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_009",
+    "id": "zpzq_019_006",
     "category": "用神",
     "subject": "建禄格化劫为生",
     "condition": "劫财化食伤生财",
@@ -2980,7 +1320,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_010",
+    "id": "zpzq_019_007",
     "category": "用神",
     "subject": "建禄格用煞",
     "condition": "禄劫用煞",
@@ -2990,7 +1330,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_011",
+    "id": "zpzq_019_008",
     "category": "用神",
     "subject": "建禄格用煞带财",
     "condition": "用煞而带财",
@@ -3000,7 +1340,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_012",
+    "id": "zpzq_019_009",
     "category": "用神",
     "subject": "建禄格用伤食",
     "condition": "无财官而用伤食",
@@ -3010,7 +1350,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_013",
+    "id": "zpzq_019_010",
     "category": "格局",
     "subject": "建禄格官煞竞出",
     "condition": "官煞竞出",
@@ -3020,7 +1360,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_014",
+    "id": "zpzq_019_011",
     "category": "格局",
     "subject": "建禄格两官竞出",
     "condition": "两官竞出",
@@ -3030,7 +1370,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_015",
+    "id": "zpzq_019_012",
     "category": "格局",
     "subject": "建禄格用官",
     "condition": "孤官无辅",
@@ -3040,7 +1380,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_016",
+    "id": "zpzq_019_013",
     "category": "格局",
     "subject": "建禄格用官",
     "condition": "透伤食",
@@ -3050,17 +1390,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_017",
-    "category": "格局",
-    "subject": "建禄格官伤并透",
-    "condition": "官伤并透",
-    "rule": "建禄格官伤并透，若有合伤存官者，亦可为贵。",
-    "original_text": "然亦有官伤并透而贵者，何也？如庚合乙而去伤存官，王总兵命也。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十五、论建禄月劫格"
-  },
-  {
-    "id": "zpzq_018",
+    "id": "zpzq_019_014",
     "category": "用神",
     "subject": "建禄格用财",
     "condition": "不透伤食",
@@ -3070,7 +1400,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_019",
+    "id": "zpzq_019_015",
     "category": "大运",
     "subject": "建禄格用官煞",
     "condition": "官煞重而无制伏",
@@ -3080,7 +1410,7 @@
     "source_chapter": "四十五、论建禄月劫格"
   },
   {
-    "id": "zpzq_001",
+    "id": "zpzq_020_000",
     "category": "格局",
     "subject": "曲直仁寿格",
     "condition": "甲乙日主，支全亥卯未或寅卯辰",
@@ -3090,7 +1420,7 @@
     "source_chapter": "四十八、论杂格取用"
   },
   {
-    "id": "zpzq_002",
+    "id": "zpzq_020_001",
     "category": "格局",
     "subject": "炎上格",
     "condition": "丙丁日主，支全寅午戌或巳午未",
@@ -3100,7 +1430,7 @@
     "source_chapter": "四十八、论杂格取用"
   },
   {
-    "id": "zpzq_003",
+    "id": "zpzq_020_002",
     "category": "格局",
     "subject": "稼穑格",
     "condition": "戊己日主，支全辰戌丑未",
@@ -3110,7 +1440,7 @@
     "source_chapter": "四十八、论杂格取用"
   },
   {
-    "id": "zpzq_004",
+    "id": "zpzq_020_003",
     "category": "格局",
     "subject": "从革格",
     "condition": "庚辛日主，支全巳酉丑或申酉戌",
@@ -3120,7 +1450,7 @@
     "source_chapter": "四十八、论杂格取用"
   },
   {
-    "id": "zpzq_005",
+    "id": "zpzq_020_004",
     "category": "格局",
     "subject": "润下格",
     "condition": "壬癸日主，支全申子辰或亥子丑",
@@ -3130,17 +1460,7 @@
     "source_chapter": "四十八、论杂格取用"
   },
   {
-    "id": "zpzq_006",
-    "category": "格局",
-    "subject": "化木格",
-    "condition": "丁壬化木，生于春月，木之元神透出",
-    "rule": "丁壬化木，生于春月，木之元神透出，为化木格。气势偏于木，化神喜行旺地，最宜东方寅卯辰比劫乡，忌官煞，日主还原之地亦忌。",
-    "original_text": "丁壬化木，生于春月，时逢甲辰，木之元神透出，乃化木格。气势偏于木也。化神喜行旺地，最宜东方寅卯辰比劫乡，而忌官煞，日主还原之地亦忌。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十八、论杂格取用"
-  },
-  {
-    "id": "zpzq_007",
+    "id": "zpzq_020_005",
     "category": "格局",
     "subject": "化气格",
     "condition": "甲己化土、乙庚化金、丙辛化水、丁壬化木、戊癸化火",
@@ -3150,7 +1470,7 @@
     "source_chapter": "四十八、论杂格取用"
   },
   {
-    "id": "zpzq_008",
+    "id": "zpzq_020_006",
     "category": "格局",
     "subject": "从旺格",
     "condition": "两神成象，气势偏于火土",
@@ -3160,7 +1480,7 @@
     "source_chapter": "四十八、论杂格取用"
   },
   {
-    "id": "zpzq_009",
+    "id": "zpzq_020_007",
     "category": "格局",
     "subject": "炎上格（偏旺）",
     "condition": "庚金无根，气偏木火",
@@ -3170,7 +1490,7 @@
     "source_chapter": "四十八、论杂格取用"
   },
   {
-    "id": "zpzq_010",
+    "id": "zpzq_020_008",
     "category": "格局",
     "subject": "朝阳格",
     "condition": "金水伤官，原无官星，气势偏于金水",
@@ -3180,7 +1500,7 @@
     "source_chapter": "四十八、论杂格取用"
   },
   {
-    "id": "zpzq_011",
+    "id": "zpzq_020_009",
     "category": "格局",
     "subject": "合禄格",
     "condition": "土金食神，比劫重重，气势偏于土金",
@@ -3190,7 +1510,7 @@
     "source_chapter": "四十八、论杂格取用"
   },
   {
-    "id": "zpzq_012",
+    "id": "zpzq_020_010",
     "category": "格局",
     "subject": "合禄格（偏官）",
     "condition": "月令偏官，年上透出，时上庚印化煞为用",
@@ -3200,7 +1520,7 @@
     "source_chapter": "四十八、论杂格取用"
   },
   {
-    "id": "zpzq_013",
+    "id": "zpzq_020_011",
     "category": "格局",
     "subject": "从财格",
     "condition": "乙从庚化，不作印论，丙火临申，坐于病地，四柱无根，时上己丑生金，气势偏于金旺",
@@ -3210,7 +1530,7 @@
     "source_chapter": "四十八、论杂格取用"
   },
   {
-    "id": "zpzq_014",
+    "id": "zpzq_020_012",
     "category": "格局",
     "subject": "从煞格",
     "condition": "乙木无根，气势偏于金",
@@ -3220,7 +1540,7 @@
     "source_chapter": "四十八、论杂格取用"
   },
   {
-    "id": "zpzq_015",
+    "id": "zpzq_020_013",
     "category": "格局",
     "subject": "井栏叉格",
     "condition": "庚金乘旺泄秀，支全申子辰水局，气势偏于金水",
@@ -3230,32 +1550,12 @@
     "source_chapter": "四十八、论杂格取用"
   },
   {
-    "id": "zpzq_016",
+    "id": "zpzq_020_014",
     "category": "格局",
     "subject": "遥合格",
     "condition": "土金成局，生于十二月，时上寅木无气，不能为用，势象偏于土金",
     "rule": "土金成局，生于十二月，时上寅木无气，不能为用。势象偏于土金，宜土金水运，木火逆其旺势为不宜。",
     "original_text": "土金成局，生于十二月，时上寅木无气，不能为用。势象偏于土金，宜土金水运，木火逆其旺势为不宜。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十八、论杂格取用"
-  },
-  {
-    "id": "zpzq_017",
-    "category": "格局",
-    "subject": "从儿格",
-    "condition": "癸日逢寅位，以寅刑出巳中戊土为格，其实乃从儿格，气势偏于木",
-    "rule": "癸日逢寅位，以寅刑出巳中戊土为格，其实乃从儿格。气势偏于木，行运最喜木火。从格忌见比劫，而从儿有食伤引化，不忌比劫。官煞大忌，印运亦忌。",
-    "original_text": "《喜忌篇》云，'癸日进逢寅位，岁月怕戊已二方'，以寅刑出巳中戊土为格，其实乃从儿格也。气势偏于木，行运最喜木火。从格忌见比劫，而从儿有食伤引化，不忌比劫，此为不同之点。官煞大忌，印运亦忌。",
-    "source_book": "子平真诠",
-    "source_chapter": "四十八、论杂格取用"
-  },
-  {
-    "id": "zpzq_018",
-    "category": "格局",
-    "subject": "子遥巳禄格",
-    "condition": "甲子日再遇子时，以子遥合巳为格，月令偏财，用财损印",
-    "rule": "甲子日再遇子时，以子遥合巳为格，其实月令偏财，用财损印，何必另取格局？戌藏丁火生起财星，遇运透清为美，庚辛申酉官煞生印为忌，午冲子、丑刑戌均为忌。",
-    "original_text": "《喜忌篇》云，'甲子日再遇子时，畏庚辛申酉丑午，以子遥合巳为格'，其实月令偏财，用财损印，何必另取格局？戌藏丁火，生起财星，遇运透清为美，庚辛申酉官煞生印为忌，午冲子、丑刑戌均为忌也。",
     "source_book": "子平真诠",
     "source_chapter": "四十八、论杂格取用"
   }
