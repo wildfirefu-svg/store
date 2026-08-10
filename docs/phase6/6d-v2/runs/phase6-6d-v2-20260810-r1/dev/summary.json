@@ -1,0 +1,150 @@
+{
+  "model_protocol": "DeepSeek-V4-Flash non-thinking",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "thinking_mode": "disabled",
+  "run_id": "phase6-6d-v2-20260810-r1",
+  "off_source": "6d-v1:phase6-6d-v1-20260808-r1-6d-dev-2026-08-07-deepseek-deepseek-v4-flash-cc36fefa94c5",
+  "verdict": "NON_INFERIOR",
+  "paired_delta": 0.032258,
+  "min_case_delta": -0.333333,
+  "parser_rate": 1.0,
+  "accuracy": {
+    "off": {
+      "correct": 19,
+      "total": 93,
+      "rate": 0.204301
+    },
+    "on": {
+      "correct": 22,
+      "total": 93,
+      "rate": 0.236559
+    }
+  },
+  "yearly_breakdown": {
+    "2024": {
+      "off_correct": 11,
+      "off_total": 54,
+      "on_correct": 14,
+      "on_total": 54,
+      "off_rate": 0.203704,
+      "on_rate": 0.259259
+    },
+    "2025": {
+      "off_correct": 8,
+      "off_total": 39,
+      "on_correct": 8,
+      "on_total": 39,
+      "off_rate": 0.205128,
+      "on_rate": 0.205128
+    }
+  },
+  "nonzero_case_deltas": [
+    [
+      "chaozhou_male_19720108_P002-Q9",
+      -1
+    ],
+    [
+      "female_19800921_P007-Q33",
+      -1
+    ],
+    [
+      "female_19800921_P007-Q34",
+      2
+    ],
+    [
+      "female_19830326_P006-Q26",
+      1
+    ],
+    [
+      "female_19830326_P006-Q27",
+      1
+    ],
+    [
+      "female_19830326_P006-Q28",
+      1
+    ],
+    [
+      "female_19830326_P006-Q30",
+      2
+    ],
+    [
+      "female_19831028_P004-Q17",
+      -1
+    ],
+    [
+      "guangdong_female_19511114_P001-Q5",
+      -1
+    ],
+    [
+      "hongkong_female_19870705_P002-Q6",
+      1
+    ],
+    [
+      "hongkong_female_19870705_P002-Q8",
+      1
+    ],
+    [
+      "male_19611230_P003-Q12",
+      1
+    ],
+    [
+      "male_19710412_P005-Q21",
+      -1
+    ],
+    [
+      "male_19710412_P005-Q25",
+      -1
+    ],
+    [
+      "miyazaki_male_19830421_P003-Q15",
+      -1
+    ]
+  ],
+  "gate": {
+    "verdict": "NON_INFERIOR",
+    "paired_delta": 0.032258,
+    "min_case_delta": -0.333333,
+    "n_cases": 31,
+    "case_deltas": {
+      "guangdong_female_19800824_P001-Q5": 0,
+      "chaozhou_male_19720108_P002-Q9": -1,
+      "male_19611230_P003-Q11": 0,
+      "male_19611230_P003-Q12": 1,
+      "male_19611230_P003-Q13": 0,
+      "male_19611230_P003-Q14": 0,
+      "female_19831028_P004-Q17": -1,
+      "male_19710412_P005-Q21": -1,
+      "male_19710412_P005-Q22": 0,
+      "male_19710412_P005-Q25": -1,
+      "female_19830326_P006-Q26": 1,
+      "female_19830326_P006-Q27": 1,
+      "female_19830326_P006-Q28": 1,
+      "female_19830326_P006-Q29": 0,
+      "female_19830326_P006-Q30": 2,
+      "female_19800921_P007-Q33": -1,
+      "female_19800921_P007-Q34": 2,
+      "male_20070131_P008-Q39": 0,
+      "guangdong_female_19511114_P001-Q4": 0,
+      "guangdong_female_19511114_P001-Q5": -1,
+      "hongkong_female_19870705_P002-Q6": 1,
+      "hongkong_female_19870705_P002-Q8": 1,
+      "miyazaki_male_19830421_P003-Q15": -1,
+      "singapore_male_19930408_P004-Q17": 0,
+      "singapore_male_19930408_P004-Q18": 0,
+      "singapore_male_19930408_P004-Q20": 0,
+      "malaysia_male_19880110_P005-Q22": 0,
+      "malaysia_male_19880110_P005-Q23": 0,
+      "malaysia_male_19730824_P006-Q28": 0,
+      "malaysia_male_19730824_P006-Q29": 0,
+      "malaysia_male_19730824_P006-Q30": 0
+    },
+    "stage": "dev"
+  },
+  "run": {
+    "slices": 30,
+    "scheduled": 186,
+    "attempted": 93,
+    "global_hard_cap": 243
+  }
+}
