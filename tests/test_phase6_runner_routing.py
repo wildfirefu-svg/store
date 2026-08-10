@@ -40,6 +40,9 @@ def mingli_case(case_id: str = "c0", answer: str = "B") -> dict:
     case = make_case(case_id, answer)
     # 裁决 2A 配套（执行偏离，计划 mingli_case 增补）：官方 prompt 读 case["birth_info"]
     case["birth_info"] = {"raw": "1990年1月2日3时0分，男，北京"}
+    # Phase 7 双主键契约（设计 §3.0）：adapter 归一化行恒带 chart_case_id，
+    # mingli_official_cot_astro 缺失时 runner fail-closed；夹具对齐 adapter 输出。
+    case["chart_case_id"] = case_id
     case["chart_input"] = {
         "four_pillars": {k: {"gan": "甲", "zhi": "子", "gan_wuxing": "木", "zhi_wuxing": "水",
                              "shi_shen_gan": "比肩", "shi_shen_zhi_main": "正印",
