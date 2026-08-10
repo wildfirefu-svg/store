@@ -1,0 +1,10 @@
+{
+  "status": "OK",
+  "profile_id": "baziqa_xjz_reasoned",
+  "arm": "b1a_prime",
+  "repeat_idx": 0,
+  "scheduled_calls": null,
+  "hard_cap": null,
+  "calls_attempted": 5,
+  "retry_total": 0
+}
