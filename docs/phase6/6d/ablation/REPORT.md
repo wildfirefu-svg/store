@@ -1,86 +1,94 @@
-# Phase 6D 消融实验汇总报告
+# Phase 6D 后续独立探索：Permutation × Model Protocol 2×2 Ablation
 
 > **日期**: 2026-08-09
-> **分支**: main (merge 9a393d5 + 3258170 + f59e42f)
-> **模型**: deepseek-v4-flash
-> **数据集**: baziqa_contest8_{2024,2025}_holdout_enriched.jsonl
+> **状态**: NEEDS_REVISION / 探索性证据可用
+> **性质**: 独立探索性实验，与 6D-v2 无关
+> **模型**: deepseek-v4-flash / deepseek-reasoner
+> **数据集**: baziqa_contest8_2024_holdout_enriched.jsonl（40 cases，单次运行）
 
 ---
 
-## 1. 执行摘要
+## 1. 摘要
 
-本报告汇总两轮实验的完整结果：
+本报告记录一次独立的 2×2 消融探索，测试两个因子对 BaziQA 选择题准确率的影响：
 
-1. **6D v1 时间上下文注入实验**（r1）：测试预计算大运/流年信息注入 prompt 是否提升准确率
-2. **3 因子消融实验**：测试 permutation（选项打乱）、thinking 模式、以及两者组合对准确率的影响
+- **Permutation**（选项打乱）：on / off
+- **Model Protocol**（模型协议）：deepseek-v4-flash（disabled）/ deepseek-reasoner（auto）
 
-**核心结论**：
+6D-v1 实验数据作为参照组列入附录，不构成本实验的阶段。
 
-- 6D 时间上下文注入：**NON_INFERIOR**，不提升准确率
-- Permutation（选项打乱）：**有害**，准确率下降 10pp
-- Thinking 模式：**有害**，准确率下降 2.5pp
-- 两者组合：**最差**，准确率下降 12.5pp，低于随机基线
-- **基线策略（无增强）是最优解**：32.5% 准确率
+**本次单次运行的观测结果**：
 
----
+- 基线（perm=off, flash=disabled）：32.5%
+- perm=off, reasoner=auto：30.0%
+- perm=on, flash=disabled：22.5%
+- perm=on, reasoner=auto：20.0%
 
-## 2. 实验背景
-
-### 2.1 6D v1 时间上下文注入
-
-Phase 6D 测试假设：将八字时间上下文（大运起止、流年干支、目标年份）预计算并注入 prompt，可以帮助模型更准确地回答时间相关问题。
-
-- **OFF 臂**：标准 prompt，不含时间上下文
-- **ON 臂**：prompt 中注入预计算的时间上下文
-- **routed cases**：31 个含明确目标年份的 case
-- **repeat**：3 次（paired design）
-- **总调用**：186 次（31 cases × 3 repeats × 2 arms）
-
-### 2.2 3 因子消融实验
-
-基于 6D 实验中发现的"模型准确率低于 25% 随机基线"现象，设计 3 因子消融实验：
-
-| 因子 | 水平 | 实现 |
-|---|---|---|
-| Permutation | on / off | `--shuffle-options --shuffle-seed 42` |
-| Thinking | auto / disabled | `--thinking-mode auto`（使用 deepseek-reasoner）|
-| RAG | on / off | `--rag`（本轮未测试）|
+以上数字与各 `run_*.md` 一致，可作为探索性结果。单次 40 题不足以断言因果关系或全局最优。
 
 ---
 
-## 3. 实验结果
+## 2. 实验设计
 
-### 3.1 6D v1 时间上下文注入（r1）
+### 2.1 因子与水平
 
-**数据集**：31 routed cases × 3 repeats = 93 calls/arm
-
-| 臂 | 正确数 | 准确率 |
-|---|---|---|
-| OFF（无时间上下文） | 19/93 | 20.43% |
-| ON（含时间上下文） | 18/93 | 19.35% |
-| paired_delta | -1 | -1.08pp |
-
-按年度拆分：
-
-| 年度 | OFF | ON | Delta |
+| 因子 | off 水平 | on 水平 | 实现方式 |
 |---|---|---|---|
-| 2024 | 11/54 = 20.4% | 10/54 = 18.5% | -1.85pp |
-| 2025 | 8/39 = 20.5% | 8/39 = 20.5% | 0.00pp |
+| Permutation | 原始选项顺序 | `--shuffle-options --shuffle-seed 42` | `shuffle_options.py` 随机重排 A/B/C/D |
+| Model Protocol | `deepseek-v4-flash` + `thinking=disabled` | `deepseek-reasoner` + `thinking=auto` | API 层切换 model name + max_tokens |
 
-**结论**：NON_INFERIOR（delta 在 -2pp 阈值内）。时间上下文注入不提升准确率。
+**注意**：`thinking=auto` 在代码中实际将 API 请求的 model 字段从 `deepseek-v4-flash` 切换为 `deepseek-reasoner`。因此 "thinking on/off" 本质上是**模型协议对比**（flash vs reasoner），不是同一模型内部的纯 thinking 开关。
 
-### 3.2 3 因子消融实验
+### 2.2 2×2 设计矩阵
 
-**数据集**：2024 holdout，40 cases，1 repeat
+| 组名 | Permutation | Model Protocol | Run ID |
+|---|---|---|---|
+| 基线 | off | flash (disabled) | 29a7d183 |
+| C | off | reasoner (auto) | 4135389d |
+| D | on | flash (disabled) | 4d2bfdd1 (2024 子集) |
+| A | on | reasoner (auto) | 087626ec |
 
-| 组 | Permutation | Thinking | 准确率 | vs 基线 | 安全分 |
+### 2.3 固定参数
+
+| 参数 | 值 |
+|---|---|
+| provider | deepseek |
+| profile | baziqa_xjz_reasoned |
+| method | direct_choice |
+| arm | b1a_prime |
+| ziwei_arm | none |
+| temperature | 0.0（flash）/ 删除（reasoner） |
+| max_tokens | 16384（flash）/ 65536（reasoner） |
+| dataset | 2024 holdout, 40 cases |
+| repeat | 1（单次） |
+
+### 2.4 数据完整性限制
+
+本次探索使用 `run_benchmark.py` 直接运行，输出仅包含 `run_*.md`（报告）和 `summary.json`（运行元数据）。与 6D-v1 归档不同，**缺少以下产物**：
+
+- `details.jsonl`（逐题模型输出与解析结果）
+- `details.events.jsonl`（API 调用事件流）
+- `details.manifest.json`（请求指纹与 provenance）
+- `audit_index.json`（审计索引）
+
+因此，无法从文件独立重算逐题结果。准确率数字来源于 `run_*.md` 中的 `SUMMARY` 块。
+
+---
+
+## 3. 观测结果
+
+### 3.1 2×2 准确率
+
+| 组 | Permutation | Model Protocol | 准确率 | vs 基线 | 安全分 |
 |---|---|---|---|---|---|
-| **基线** | off | disabled | **32.5%** (13/40) | - | 87.5% |
-| C | off | auto | 30.0% (12/40) | -2.5pp | 98.8% |
-| D | on | disabled | 22.5% (9/40) | -10.0pp | 90.0% |
-| A | on | auto | 20.0% (8/40) | -12.5pp | 97.5% |
+| 基线 | off | flash | 32.5% (13/40) | - | 87.5% |
+| C | off | reasoner | 30.0% (12/40) | -2.5pp | 98.8% |
+| D | on | flash | 22.5% (9/40) | -10.0pp | 90.0% |
+| A | on | reasoner | 20.0% (8/40) | -12.5pp | 97.5% |
 
-**Group D 完整 80-case 结果**（2024 + 2025）：
+### 3.2 Group D 完整 80-case 结果
+
+Group D 额外在 2024+2025 合并数据集（80 cases）上运行了一次：
 
 | 年度 | 正确数 | 准确率 |
 |---|---|---|
@@ -88,132 +96,110 @@ Phase 6D 测试假设：将八字时间上下文（大运起止、流年干支�
 | 2025 | 12/40 | 30.0% |
 | 总计 | 21/80 | 26.25% |
 
+### 3.3 6D-v1 参照数据（非本实验阶段）
+
+6D-v1 r1 实验在 31 个 routed cases × 3 repeats 上测试时间上下文注入，结果为 NON_INFERIOR。该数据作为背景参照列入附录 A，不参与本实验的对比或结论。
+
 ---
 
-## 4. 分析
+## 4. 观测分析
 
-### 4.1 Permutation 为何有害
+以下分析基于单次 40-case 运行的观测，不构成确定性因果结论。
 
-Permutation 导致准确率从 32.5% 降至 22.5%（-10pp）。原因分析：
+### 4.1 Permutation 的观测
 
-1. **位置模式依赖**：模型在训练中学到了选项位置相关的统计规律（如"最长选项通常是正确答案"）。打乱选项后，这些规律失效。
+Permutation on 时准确率低于 off 时（flash: 22.5% vs 32.5%；reasoner: 20.0% vs 30.0%），两次对比均下降约 10pp。
 
-2. **Unshuffle 机制验证**：代码审查确认 `unshuffle_predicted_answer` 使用 reverse map 正确还原标签，排除实现 bug。
+可能原因（非确认性）：
+- 模型可能依赖选项位置相关的统计规律，打乱后失效
+- 原始选项可能按逻辑顺序排列，打乱后增加理解难度
+- `unshuffle_predicted_answer` 代码审查确认使用 reverse map 正确还原标签，排除实现 bug
 
-3. **选项语义关联**：原始选项可能按逻辑顺序排列（如时间先后、程度递进），打乱后增加了模型理解难度。
+### 4.2 Model Protocol 的观测
 
-### 4.2 Thinking 模式为何有害
+Reasoner 准确率低于 flash（perm off: 30.0% vs 32.5%；perm on: 20.0% vs 22.5%），两次对比均下降约 2.5pp。
 
-Thinking 模式导致准确率从 32.5% 降至 30.0%（-2.5pp）。原因分析：
+需要注意：这是 flash vs reasoner 的**模型间对比**，不是同一模型的 thinking 开关。reasoner 的 reasoning_content 平均消耗 13K+ tokens，单 call 耗时 3-5 分钟（vs flash 5 秒）。
 
-1. **过度推理**：对于简单问题，thinking 模式让模型过度分析，偏离直觉判断。模型在 reasoning_content 中反复权衡，最终选择了更"复杂"但错误的答案。
+### 4.3 组合观测
 
-2. **资源消耗**：thinking 模式每 call 消耗 13K+ reasoning tokens，耗时 3-5 分钟/call（vs 基线 5 秒/call），但准确率不升反降。
+Permutation on + reasoner 的组合准确率 20.0%，低于 25% 随机基线。两个因子的下降幅度大致叠加（-10pp + -2.5pp ≈ -12.5pp），未观察到明显的协同放大或抵消。
 
-3. **Token 限制**：初始实验中 max_tokens=16384 不足以容纳完整推理 + 最终答案（finish_reason=length），修复后 max_tokens=65536 解决了截断问题，但准确率仍低于基线。
+### 4.4 样本量限制
 
-### 4.3 组合效应
+每组仅 40 cases × 1 repeat。以基线 32.5% 为例，95% 置信区间约为 ±14.5pp（Wilson 区间）。因此：
 
-Permutation + Thinking 组合（Group A）准确率 20.0%，低于随机基线 25%。两者叠加产生负面协同效应：
+- 10pp 的 permutation 效应**可能**显著，但单次运行不足以确认
+- 2.5pp 的 model protocol 效应**在统计噪声范围内**，无法区分真实效应与随机波动
+- 需要 3+ repeats 或更大样本才能做出可靠推断
 
-- Permutation 破坏了模型的位置线索
-- Thinking 模式让模型在缺失线索的情况下过度推理
-- 两者叠加导致模型系统性选错
+---
 
-### 4.4 6D routed cases vs 全 holdout 对比
+## 5. 待修订事项
 
-| 数据集 | 基线准确率 | 说明 |
+| # | 问题 | 修订方向 |
 |---|---|---|
-| 6D routed cases (31×3) | 20.43% | 仅含时间相关问题（最难） |
-| 2024 full holdout (40) | 32.5% | 含所有题型（混合难度） |
+| 1 | 缺少 details/events/manifest/audit | 后续运行应使用 6D orchestrator 或添加 `--dump-details` 选项 |
+| 2 | 单次 40 题无重复 | 需要 3+ repeats 才能计算统计显著性 |
+| 3 | `thinking=auto` 实为模型切换 | 报告中应始终称"model protocol"而非"thinking" |
+| 4 | 无 2025 数据的 reasoner 组 | Group C/A 仅在 2024 上运行 |
+| 5 | 未测试 RAG 因子 | 原设计的第三个因子（RAG）未执行 |
 
-6D 实验的低准确率（~20%）是因为只测试了最难的 routed cases。在完整 holdout 上，模型基线准确率为 32.5%，超过 25% 随机基线，说明模型具备一定的八字命理知识。
+---
 
-### 4.5 Per-case 分析（6D r1，31 routed cases）
+## 6. 后续方向建议
 
-| 类别 | 数量 | 说明 |
+以下为探索性建议，不构成承诺：
+
+| 方向 | 说明 | 前置条件 |
 |---|---|---|
-| 不变（delta=0） | 24 | 多数 0/3 正确（知识瓶颈） |
-| 变好（delta>0） | 3 | +1, +2, +2 |
-| 变差（delta<0） | 4 | -1, -1, -2, -2 |
-| 净 delta | -1 | 与整体 -1.08pp 一致 |
-
-7 个非零 delta case 中，变好与变差几乎对冲（3 vs 4），说明时间上下文对个别 case 有帮助但对另一些造成干扰，无净收益。
-
----
-
-## 5. 关键发现
-
-1. **模型基线 32.5% 超过随机**：deepseek-v4-flash 在八字 MCQ 上具备一定能力，不需要额外增强。
-
-2. **Permutation 有害（-10pp）**：打乱选项破坏模型依赖的位置模式，是最大的负面因子。
-
-3. **Thinking 模式有害（-2.5pp）**：过度推理对简单判断有害无益，且资源消耗极大。
-
-4. **时间上下文注入无收益**：6D 实验确认预计算大运/流年信息不提升准确率。
-
-5. **最难的 routed cases 准确率 ~20%**：31 个时间相关 case 是知识瓶颈区，24/31 全错，需要领域知识补充而非推理增强。
+| 带重复的 2×2 | 3 repeats × 40 cases × 4 组 = 480 calls | 预算 ~4h（flash）/ ~12h（reasoner） |
+| RAG alone | 在基线（perm=off, flash）上添加 `--rag` | 验证 RAG 索引可用性 |
+| Few-shot 注入 | 在 prompt 中加入正确推理示例 | 设计示例选取策略 |
+| 结构化命盘格式 | JSON 格式 vs 纯文本对比 | 修改 `chart_context.py` |
+| 基线错误分析 | 对基线答错的 27 case 逐题分类 | 需要 details.jsonl（当前缺失） |
 
 ---
 
-## 6. 建议
+## 附录 A：6D-v1 r1 参照数据
 
-### 短期（不重跑 API）
+> 以下数据来自独立的 6D-v1 实验，仅作背景参照。
 
-- **保持基线策略**：`direct_choice + thinking=disabled + no shuffle` 已是最优
-- **放弃 permutation**：unshuffle 机制正确但打乱本身有害
-- **放弃 thinking 模式**：过度推理降低准确率且资源消耗过大
+### A.1 实验设计
 
-### 中期（需要 API 调用）
+- 数据集：31 routed cases × 3 repeats = 93 calls/arm
+- 臂：OFF（无时间上下文）vs ON（含时间上下文）
+- 判定阈值：min_case_delta / 3 = -2pp
 
-| 优先级 | 实验 | 预期 | 成本 |
+### A.2 结果
+
+| 臂 | 正确数 | 准确率 |
+|---|---|---|
+| OFF | 19/93 | 20.43% |
+| ON | 18/93 | 19.35% |
+| paired_delta | -1 | -1.08pp |
+
+按年度：
+
+| 年度 | OFF | ON | Delta |
 |---|---|---|---|
-| P1 | RAG alone（无 perm, 无 thinking） | +3-5pp | 40 calls, ~7 min |
-| P2 | Few-shot 示例注入 | +3-5pp | 40 calls, ~7 min |
-| P3 | 结构化 JSON 命盘格式 | +2-3pp | 40 calls, ~7 min |
+| 2024 | 11/54 = 20.4% | 10/54 = 18.5% | -1.85pp |
+| 2025 | 8/39 = 20.5% | 8/39 = 20.5% | 0.00pp |
 
-### 长期
+判定：NON_INFERIOR
 
-- **错误分析**：对基线答错的 27 个 case 逐题分析，区分"知识缺口"和"推理错误"
-- **知识库扩充**：针对错误率最高的领域（如 career, study）补充命理规则
-- **模型升级**：测试 deepseek-v4-pro（更强基础模型）是否在不启用 thinking 的情况下有更好表现
+### A.3 Per-case 分布（6D-v1，31 routed cases）
 
----
-
-## 7. 附录
-
-### 7.1 实验配置
-
-| 参数 | 值 |
+| 类别 | 数量 |
 |---|---|
-| provider | deepseek |
-| model | deepseek-v4-flash |
-| profile | baziqa_xjz_reasoned |
-| method | direct_choice |
-| arm | b1a_prime |
-| ziwei_arm | none |
-| temperature | 0.0（disabled）/ 删除（auto） |
-| max_tokens | 16384（disabled）/ 65536（auto） |
+| delta=0（on/off 无变化） | 24 |
+| delta>0（on 更好） | 3 |
+| delta<0（on 更差） | 4 |
+| 净 delta | -1 |
 
-### 7.2 Run IDs
+24 个 delta=0 的 case 中，多数在 on/off 两个臂均 0/3 正确。这表明这些 case 的瓶颈在于模型知识而非上下文信息。
 
-| 实验 | Run ID | 数据集 | Cases | 准确率 |
-|---|---|---|---|---|
-| 6D r1 OFF | (archived) | routed × 3 | 93 | 20.43% |
-| 6D r1 ON | (archived) | routed × 3 | 93 | 19.35% |
-| 基线 2024 | 29a7d183 | 2024 holdout | 40 | 32.5% |
-| Group D (80) | 4d2bfdd1 | 2024+2025 holdout | 80 | 26.25% |
-| Group C (2024) | 4135389d | 2024 holdout | 40 | 30.0% |
-| Group A (2024) | 087626ec | 2024 holdout | 40 | 20.0% |
-
-### 7.3 代码变更
-
-| Commit | 说明 |
-|---|---|
-| 3258170 | 支持 thinking_mode=auto（deepseek-reasoner） |
-| f59e42f | max_tokens=65536 + reasoning_content fallback |
-
-### 7.4 6D r1 实验归档位置
+### A.4 归档位置
 
 ```
 docs/phase6/6d/runs/phase6-6d-v1-20260808-r1/
@@ -226,4 +212,24 @@ docs/phase6/6d/runs/phase6-6d-v1-20260808-r1/
 
 ---
 
-*Generated by Phase 6D Ablation Experiment Pipeline*
+## 附录 B：Run IDs 与代码变更
+
+### B.1 Run IDs
+
+| 组 | Run ID | 数据集 | Cases | 准确率 |
+|---|---|---|---|---|
+| 基线 | 29a7d183 | 2024 holdout | 40 | 32.5% |
+| C (reasoner) | 4135389d | 2024 holdout | 40 | 30.0% |
+| D (perm, 80) | 4d2bfdd1 | 2024+2025 holdout | 80 | 26.25% |
+| A (perm+reasoner) | 087626ec | 2024 holdout | 40 | 20.0% |
+
+### B.2 代码变更
+
+| Commit | 说明 |
+|---|---|
+| 3258170 | 支持 thinking_mode=auto（切换为 deepseek-reasoner） |
+| f59e42f | max_tokens=65536 + reasoning_content fallback |
+
+---
+
+*探索性实验报告，不构成确定性结论。*
