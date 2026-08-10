@@ -18,7 +18,8 @@ import re
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+# Archived at docs/phase6/6c-premise/ — repo root is three levels up.
+REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 
 from bazi_calculator import get_shishen  # noqa: E402
@@ -316,7 +317,7 @@ def main() -> None:
             "examples": examples,
         }
 
-    out_path = REPO_ROOT / ".tmp/claim_contradiction_report.json"
+    out_path = Path(__file__).resolve().parent / "claim_contradiction_report.json"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
 
