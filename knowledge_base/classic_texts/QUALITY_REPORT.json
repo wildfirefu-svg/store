@@ -1,0 +1,241 @@
+{
+  "generated_at": "2026-08-10T17:25:21",
+  "validator": "scripts/validate_classic_distillation.py",
+  "books": {
+    "ditiansui": {
+      "name": "滴天髓",
+      "dir": "ditiansui",
+      "rules": {
+        "count": 799,
+        "sha256": "45b30b5023e8fbbb41d5eb0459b3108008fb51d75f2ea56ecb0b48074ae73ced",
+        "categories": {
+          "格局": 210,
+          "六亲": 141,
+          "五行": 77,
+          "用神": 77,
+          "大运": 71,
+          "天干": 62,
+          "其他": 54,
+          "性情": 39,
+          "十神": 37,
+          "地支": 18,
+          "理气": 10,
+          "疾病": 2,
+          "流年": 1
+        }
+      },
+      "mcq": {
+        "count": 646,
+        "sha256": "1a7f0b284ee131b1df990e70e44ee2483a48cd7107b126f69b99eb6de66bd96e",
+        "answer_dist": {
+          "B": 162,
+          "C": 162,
+          "D": 161,
+          "A": 161
+        },
+        "answer_pct": {
+          "B": 0.2508,
+          "C": 0.2508,
+          "D": 0.2492,
+          "A": 0.2492
+        }
+      },
+      "quarantine_rules": {
+        "count": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "quarantine_mcq": {
+        "count": 88,
+        "sha256": "6796d318c3745b2421db6737037473e428eb177016799c8499291476ca21909a"
+      },
+      "gates": {
+        "G1_rule_id_unique": true,
+        "G2_mcq_id_unique": true,
+        "G3_schema": true,
+        "G4_source_rule_id": true,
+        "G5_traceability": true,
+        "G6_answer_dist": true,
+        "G7_chapter_complete": true,
+        "G8_mcq_well_formed": true
+      },
+      "all_gates_pass": true
+    },
+    "zipingzhenquan": {
+      "name": "子平真诠",
+      "dir": "zipingzhenquan",
+      "rules": {
+        "count": 156,
+        "sha256": "be6c01562f7f47d337715801a64d4161ab24e4f9dbe6692e03222b6623230a43",
+        "categories": {
+          "格局": 98,
+          "大运": 29,
+          "用神": 13,
+          "天干": 7,
+          "其他": 5,
+          "五行": 2,
+          "十神": 1,
+          "性情": 1
+        }
+      },
+      "mcq": {
+        "count": 155,
+        "sha256": "e5ba00bd28129fba0a2b5fa5dbbed9aae67354ef4fe9a0eddf3cd850d952c779",
+        "answer_dist": {
+          "A": 39,
+          "B": 39,
+          "C": 39,
+          "D": 38
+        },
+        "answer_pct": {
+          "A": 0.2516,
+          "B": 0.2516,
+          "C": 0.2516,
+          "D": 0.2452
+        }
+      },
+      "quarantine_rules": {
+        "count": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "quarantine_mcq": {
+        "count": 0
+      },
+      "gates": {
+        "G1_rule_id_unique": true,
+        "G2_mcq_id_unique": true,
+        "G3_schema": true,
+        "G4_source_rule_id": true,
+        "G5_traceability": true,
+        "G6_answer_dist": true,
+        "G7_chapter_complete": true,
+        "G8_mcq_well_formed": true
+      },
+      "all_gates_pass": true
+    },
+    "qiongtongbaojian": {
+      "name": "穷通宝鉴",
+      "dir": "qiongtongbaojian",
+      "rules": {
+        "count": 2373,
+        "sha256": "6f8160bf5d4890fb83934de5a20383a6319b4baad5aff5ad5e46adadd4810b50",
+        "categories": {
+          "格局": 1360,
+          "用神": 325,
+          "五行": 182,
+          "调候": 167,
+          "六亲": 131,
+          "十神": 54,
+          "性情": 45,
+          "大运": 36,
+          "疾病": 31,
+          "吉凶": 24,
+          "天干": 5,
+          "地支": 5,
+          "其他": 3,
+          "凶险": 2,
+          "寿命": 1,
+          "忌神": 1,
+          "流年": 1
+        }
+      },
+      "mcq": {
+        "count": 2176,
+        "sha256": "0a08cc1af5017793707d62442fab5ec23598dc94c30953fa1e2707040c505696",
+        "answer_dist": {
+          "B": 544,
+          "C": 544,
+          "D": 544,
+          "A": 544
+        },
+        "answer_pct": {
+          "B": 0.25,
+          "C": 0.25,
+          "D": 0.25,
+          "A": 0.25
+        }
+      },
+      "quarantine_rules": {
+        "count": 126,
+        "sha256": "795d81133923bb8d1ae90c5d8c4584d581825f8de177e9c59f672819600304c3"
+      },
+      "quarantine_mcq": {
+        "count": 123,
+        "sha256": "2eb0213059f1cd28616decf495ce4a0a1956188bc65e9bb6ea052d1e82c839f2"
+      },
+      "gates": {
+        "G1_rule_id_unique": true,
+        "G2_mcq_id_unique": true,
+        "G3_schema": true,
+        "G4_source_rule_id": true,
+        "G5_traceability": true,
+        "G6_answer_dist": true,
+        "G7_chapter_complete": true,
+        "G8_mcq_well_formed": true
+      },
+      "all_gates_pass": true
+    },
+    "sanmingtonghui": {
+      "name": "三命通会",
+      "dir": "sanmingtonghui",
+      "rules": {
+        "count": 1542,
+        "sha256": "f1cb68a6d55e066d0e122ae9bcece3b2defddf617d194fb37bbc40b565f8aca7",
+        "categories": {
+          "五行": 553,
+          "格局": 259,
+          "其他": 185,
+          "神煞": 163,
+          "大运": 101,
+          "地支": 59,
+          "十神": 47,
+          "性情": 42,
+          "纳音": 42,
+          "六亲": 42,
+          "流年": 21,
+          "疾病": 16,
+          "用神": 7,
+          "天干": 2,
+          "凶格": 2,
+          "财运": 1
+        }
+      },
+      "mcq": {
+        "count": 777,
+        "sha256": "b69e36a27b739f02557ed51472069f13c49bfc7c0f4762a6a7e240bdaf28ea0b",
+        "answer_dist": {
+          "A": 195,
+          "B": 194,
+          "C": 194,
+          "D": 194
+        },
+        "answer_pct": {
+          "A": 0.251,
+          "B": 0.2497,
+          "C": 0.2497,
+          "D": 0.2497
+        }
+      },
+      "quarantine_rules": {
+        "count": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "quarantine_mcq": {
+        "count": 0
+      },
+      "gates": {
+        "G1_rule_id_unique": true,
+        "G2_mcq_id_unique": true,
+        "G3_schema": true,
+        "G4_source_rule_id": true,
+        "G5_traceability": true,
+        "G6_answer_dist": true,
+        "G7_chapter_complete": false,
+        "G8_mcq_well_formed": true
+      },
+      "all_gates_pass": false
+    }
+  },
+  "known_limitations": [
+    "三命通会 G7 章节完整性: 80/383 章已蒸馏 (卷一-卷五基础内容)，缺 303 章 (卷五-卷十二格局与赋)。需 ~606 API calls 补齐，本轮未 scope。"
+  ]
+}
