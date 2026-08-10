@@ -1,0 +1,121 @@
+{
+  "stage": "preflight",
+  "verdict": "PASS",
+  "generated_at": "2026-08-10T18:31:34",
+  "work_dir": ".tmp\\phase7",
+  "pinned_commit": "b7433280fd86d7a7c27debbc47d0303c218f0bfd",
+  "phase7_code_fingerprint": "11fff7a290e8f04eaed7a667c5c157a235c48aa3c91618f0ac3d42c83e450d37",
+  "data_json": {
+    "path": "G:\\project\\agent\\data/mingli/data.json",
+    "sha256": "528240929b23859656bf7ec0c126da92e2523c2cf091b11f83c0e8e377412054",
+    "bytes": 159402
+  },
+  "fortune_api": {
+    "path": "G:\\project\\agent\\data/mingli/fortune_api_results.json",
+    "sha256": "e44ff5201486dc1917bbb24b6905a53e6a1359e76ada0eb8d5b2d9a5a88d29ed",
+    "bytes": 914720
+  },
+  "budget": {
+    "scheduled_calls": 160,
+    "hard_cap": 180,
+    "smoke_size": 10
+  },
+  "env_flags": {
+    "rag": false,
+    "fewshot": false,
+    "apb": false,
+    "shuffle_options": false
+  },
+  "year_distribution": {
+    "2022": 40,
+    "2023": 40,
+    "2024": 40,
+    "2025": 40
+  },
+  "category_distribution": {
+    "事业": 25,
+    "健康": 17,
+    "外貌": 3,
+    "婚姻": 44,
+    "子女": 6,
+    "学业": 11,
+    "官非": 1,
+    "家庭": 22,
+    "性格": 14,
+    "灾劫": 2,
+    "财运": 13,
+    "运势": 2
+  },
+  "checks": [
+    {
+      "name": "data_sha256",
+      "passed": true,
+      "detail": "data=528240929b23859656bf7ec0c126da92e2523c2cf091b11f83c0e8e377412054 fortune=e44ff5201486dc1917bbb24b6905a53e6a1359e76ada0eb8d5b2d9a5a88d29ed"
+    },
+    {
+      "name": "question_count",
+      "passed": true,
+      "detail": "160 != 160"
+    },
+    {
+      "name": "unique_question_ids",
+      "passed": true,
+      "detail": "unique=160 wellformed=True"
+    },
+    {
+      "name": "unique_chart_case_ids",
+      "passed": true,
+      "detail": "32 != 32"
+    },
+    {
+      "name": "chart_distribution_frozen",
+      "passed": true,
+      "detail": "30x5+case_19x6+case_20x4"
+    },
+    {
+      "name": "adapter_normalization",
+      "passed": true,
+      "detail": "rows=160 unique_ids=160 charts=32"
+    },
+    {
+      "name": "fortune_join",
+      "passed": true,
+      "detail": "hit=32/32 rows_with_chart_input=160 missing=[]"
+    },
+    {
+      "name": "year_category_distribution",
+      "passed": true,
+      "detail": "years=['2022', '2023', '2024', '2025'] categories=12"
+    },
+    {
+      "name": "profile_resolution",
+      "passed": true,
+      "detail": "mingli_official_cot_astro"
+    },
+    {
+      "name": "visibility_gate",
+      "passed": true,
+      "detail": "required=['八字命盘信息：', '十二宫位星曜分布：', '紫微命盘信息：']"
+    },
+    {
+      "name": "parser_synthetic",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "env_sanitize",
+      "passed": true,
+      "detail": "leaked=[]"
+    },
+    {
+      "name": "budget_frozen",
+      "passed": true,
+      "detail": "scheduled=160 hard_cap=180 smoke=10 transitions=[(10, 160)]"
+    },
+    {
+      "name": "max_cases_state_machine",
+      "passed": true,
+      "detail": "{10->160} only"
+    }
+  ]
+}

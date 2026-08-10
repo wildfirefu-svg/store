@@ -1,0 +1,20 @@
+{
+  "fetched_at": "2026-08-10T10:31:28.368731+00:00",
+  "repo": "https://github.com/DestinyLinker/MingLi-Bench",
+  "pinned_commit": "b7433280fd86d7a7c27debbc47d0303c218f0bfd",
+  "license": "LICENSE 存在（1081 bytes）",
+  "license_sha256": "2163a239e9b1e8b61ac70067aba7b625eb6835be7a898ebd938697c79780362c",
+  "license_copy_path": "docs\\phase7\\LICENSE",
+  "files": [
+    {
+      "path": "data\\mingli\\data.json",
+      "sha256": "528240929b23859656bf7ec0c126da92e2523c2cf091b11f83c0e8e377412054",
+      "bytes": 159402
+    },
+    {
+      "path": "data\\mingli\\fortune_api_results.json",
+      "sha256": "e44ff5201486dc1917bbb24b6905a53e6a1359e76ada0eb8d5b2d9a5a88d29ed",
+      "bytes": 914720
+    }
+  ]
+}
