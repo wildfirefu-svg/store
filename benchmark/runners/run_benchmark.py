@@ -309,6 +309,19 @@ def _mingli_data_ready() -> bool:
         os.path.exists(os.path.join("data", "mingli", "fortune_api_results.json"))
 
 
+def _detail_chart_case_id(case, profile_id):
+    """终态 detail 的命盘键（设计 §3.0 双主键）：有值透传；缺失仅对
+    mingli_official_cot_astro fail-closed（RuntimeError），其它 profile 返回 None。"""
+    chart_case_id = case.get("chart_case_id")
+    if chart_case_id:
+        return str(chart_case_id)
+    if profile_id == "mingli_official_cot_astro":
+        raise RuntimeError(
+            "chart_case_id 缺失：mingli_official_cot_astro 要求每题带命盘键"
+            f"（case_id={case.get('case_id')!r}）")
+    return None
+
+
 def _attempt_with_ledger(case, call_once, sample_idx=0):
     """Phase 6 模型调用重试账本。
 
@@ -1380,6 +1393,8 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
                 "parser_failure_reason": "model_call_failed",
                 "temporal_route_state": detail_route_state,
                 "time_context_sha256": detail_time_sha,
+                "chart_case_id": _detail_chart_case_id(
+                    case, _PHASE6_CTX.profile_id if _PHASE6_CTX is not None else None),
             }
             if shuffle_options:
                 label_map = case.get('answer_label_map') or {}
@@ -1457,6 +1472,8 @@ def run_model_benchmark(cases, provider, model, prompt_version, max_cases=20, me
             "mode": "on-3" if case.get('answer_label_map') else "off-3",
             "temporal_route_state": detail_route_state,
             "time_context_sha256": detail_time_sha,
+            "chart_case_id": _detail_chart_case_id(
+                case, _PHASE6_CTX.profile_id if _PHASE6_CTX is not None else None),
         }
         if phase4_direct_c2:
             detail["phase4_direct_c2"] = True
