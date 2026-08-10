@@ -73,6 +73,10 @@
 
 因此，无法从文件独立重算逐题结果。准确率数字来源于 `run_*.md` 中的 `SUMMARY` 块。
 
+**组合数据集**：Group D 使用的 `docs/phase6/6d/ablation_holdout_combined.jsonl`（2024+2025 拼接）当前未纳入 Git。SHA-256：`e23477f845e873fb73c8a7f349789cb2df5235c06e497990d1e341f4713ea5f4`。后续复现应由固定脚本生成，或保存生成 manifest 与两个源数据集 SHA。
+
+**6D-v1 归档 SHA 漂移**：附录 A 引用的 6D-v1 数据中，当前 audit/merged 文件 SHA 与 receipt/audit 记录存在换行漂移（CRLF/LF）。数值已从当前 merged details 语义重算，但密码学归档链不完全匹配。
+
 ---
 
 ## 3. 观测结果
@@ -113,7 +117,7 @@ Permutation on 时准确率低于 off 时（flash: 22.5% vs 32.5%；reasoner: 20
 可能原因（非确认性）：
 - 模型可能依赖选项位置相关的统计规律，打乱后失效
 - 原始选项可能按逻辑顺序排列，打乱后增加理解难度
-- `unshuffle_predicted_answer` 代码审查确认使用 reverse map 正确还原标签，排除实现 bug
+- `unshuffle_predicted_answer` 静态代码检查显示 reverse map 逻辑合理；由于缺少逐题 details 与 label map，无法完全排除运行时配置或标签还原问题
 
 ### 4.2 Model Protocol 的观测
 
@@ -169,7 +173,7 @@ Permutation on + reasoner 的组合准确率 20.0%，低于 25% 随机基线。�
 
 - 数据集：31 routed cases × 3 repeats = 93 calls/arm
 - 臂：OFF（无时间上下文）vs ON（含时间上下文）
-- 判定阈值：min_case_delta / 3 = -2pp
+- 判定阈值：总体 paired_delta ≥ −2pp；病例级 min_case_delta 修正值为 −0.666667，仅作护栏/诊断，不影响 verdict
 
 ### A.2 结果
 
@@ -197,7 +201,7 @@ Permutation on + reasoner 的组合准确率 20.0%，低于 25% 随机基线。�
 | delta<0（on 更差） | 4 |
 | 净 delta | -1 |
 
-24 个 delta=0 的 case 中，多数在 on/off 两个臂均 0/3 正确。这表明这些 case 的瓶颈在于模型知识而非上下文信息。
+24 个 delta=0 的 case 在本次注入下未获得收益；具体原因可能包括知识不足、上下文未被有效利用、题目歧义或推理错误，需逐题 details 才能区分。
 
 ### A.4 归档位置
 
