@@ -4,20 +4,20 @@
   "prefix": "qtbj",
   "actions": {
     "R1_reID_rules": {
-      "before": 1154,
-      "clean": 1154,
-      "quarantine": 0
+      "before": 2499,
+      "clean": 2373,
+      "quarantine": 126
     },
     "R3_reID_mcq": {
-      "kept": 1167,
-      "quarantined": 5
+      "kept": 2176,
+      "quarantined": 123
     },
     "R5_answer_balance": {
       "dist": {
-        "B": 292,
-        "C": 292,
-        "D": 292,
-        "A": 291
+        "B": 544,
+        "C": 544,
+        "D": 544,
+        "A": 544
       }
     }
   },
