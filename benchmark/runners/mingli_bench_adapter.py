@@ -239,12 +239,19 @@ def load_and_normalize(
         case_id = entry.get("case_id")
         if not case_id:
             continue
+        chart_case_id = str(case_id)
         # Guard against case_id collisions with the baziqa dataset by
         # prepending a namespace prefix. Fixtures / already-namespaced ids
-        # pass through unchanged.
-        case_id = str(case_id)
-        if not case_id.startswith("mingli_"):
-            case_id = f"mingli_{case_id}"
+        # pass through unchanged. Official entries carry a unique question
+        # id (ftb_NNNN); it takes precedence over the chart-level case_id
+        # (case_N), which is shared by multiple questions on the same chart.
+        qid = str(entry.get("id") or "")
+        if qid:
+            case_id = qid if qid.startswith("mingli_") else f"mingli_{qid}"
+        else:
+            case_id = chart_case_id
+            if not case_id.startswith("mingli_"):
+                case_id = f"mingli_{case_id}"
         question = entry.get("question") or ""
         options = _normalise_options(entry.get("options"))
         answer = entry.get("answer") or ""
@@ -260,6 +267,7 @@ def load_and_normalize(
 
         row: dict[str, Any] = {
             "case_id": case_id,
+            "chart_case_id": chart_case_id,
             "question": question,
             "options": options,
             "answer": answer,
@@ -269,8 +277,12 @@ def load_and_normalize(
         }
 
         if include_astro:
-            original_case_id = str(entry.get("case_id") or "")
-            chart = to_canonical_chart_input(fortune_data.get(case_id) or fortune_data.get(original_case_id))
+            # fortune join 用命盘键（原始 case_N）；保留对命名空间键的兜底查找，
+            # 既有夹具（tests/fixtures/mingli/fortune_api_results_sample.json）
+            # 以 mingli_ 前缀键索引，依赖该兜底。
+            chart = to_canonical_chart_input(
+                fortune_data.get(chart_case_id) or fortune_data.get(case_id)
+            )
             if chart:
                 row["chart_input"] = chart
 

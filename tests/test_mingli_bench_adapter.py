@@ -179,3 +179,88 @@ def test_load_and_normalize_supports_official_questions_payload(tmp_path):
     # API 形状归一化为 ziwei + official_astro；原 chart_input["chineseDate"]
     # 透传断言失效，改为断言 canonical 中的 chinese_date（执行偏离已登记）。
     assert rows[0]["chart_input"]["official_astro"]["chinese_date"] == "x"
+
+
+def test_official_entries_with_id_get_unique_question_keys(tmp_path):
+    """Phase 7 Task 1：官方数据 id=ftb_NNNN 为题目唯一键；case_id=case_N 是命盘分组键，
+    同盘多题共享。normalized case_id 必须按 id 区分，chart_case_id 保留原始分组键。"""
+    _require_impl()
+    data = tmp_path / "data.json"
+    data.write_text(
+        '{"questions":['
+        '{"id":"ftb_0001","case_id":"case_1","question_number":1,"category":"事业",'
+        '"question":"q1?","options":[{"letter":"A","text":"a"},{"letter":"B","text":"b"}],'
+        '"answer":"A"},'
+        '{"id":"ftb_0002","case_id":"case_1","question_number":2,"category":"财运",'
+        '"question":"q2?","options":[{"letter":"A","text":"a"},{"letter":"B","text":"b"}],'
+        '"answer":"B"}'
+        ']}',
+        encoding="utf-8",
+    )
+    rows = load_and_normalize(str(data))
+
+    assert [r["case_id"] for r in rows] == ["mingli_ftb_0001", "mingli_ftb_0002"]
+    assert rows[0]["chart_case_id"] == "case_1"
+    assert rows[1]["chart_case_id"] == "case_1"
+
+
+def test_fortune_join_uses_chart_case_id(tmp_path):
+    """fortune 索引键是原始 case_N（命盘键），同盘多题必须都能命中 chart_input。"""
+    _require_impl()
+    data = tmp_path / "data.json"
+    fortune = tmp_path / "fortune_api_results.json"
+    data.write_text(
+        '{"questions":['
+        '{"id":"ftb_0001","case_id":"case_1","question_number":1,"category":"事业",'
+        '"question":"q1?","options":[{"letter":"A","text":"a"},{"letter":"B","text":"b"}],'
+        '"answer":"A"},'
+        '{"id":"ftb_0002","case_id":"case_1","question_number":2,"category":"财运",'
+        '"question":"q2?","options":[{"letter":"A","text":"a"},{"letter":"B","text":"b"}],'
+        '"answer":"B"}'
+        ']}',
+        encoding="utf-8",
+    )
+    fortune.write_text(
+        '[{"case_id":"case_1","bazi":{"four_pillars":{"day":{"gan":"丁"}},'
+        '"day_master":{"wuxing":"火"}}}]',
+        encoding="utf-8",
+    )
+    rows = load_and_normalize(
+        str(data), fortune_api_json_path=str(fortune), include_astro=True
+    )
+
+    assert len(rows) == 2
+    for row in rows:
+        assert row["chart_input"]["four_pillars"]["day"]["gan"] == "丁"
+
+
+def test_missing_id_falls_back_to_case_id_key(tmp_path):
+    """无 id 的 entry 回退旧命名空间逻辑（既有行为回归锁），chart_case_id 取原始 case_id。"""
+    _require_impl()
+    data = tmp_path / "data.json"
+    data.write_text(
+        '{"questions":[{"case_id":"case_121","question_number":121,"category":"家庭",'
+        '"question":"?","options":[{"letter":"A","text":"a"},{"letter":"B","text":"b"}],'
+        '"answer":"B"}]}',
+        encoding="utf-8",
+    )
+    rows = load_and_normalize(str(data))
+
+    assert rows[0]["case_id"] == "mingli_case_121"
+    assert rows[0]["chart_case_id"] == "case_121"
+
+
+def test_already_namespaced_id_not_double_prefixed(tmp_path):
+    """id 已带 mingli_ 前缀时不二次加前缀。"""
+    _require_impl()
+    data = tmp_path / "data.json"
+    data.write_text(
+        '{"questions":[{"id":"mingli_ftb_0001","case_id":"case_1","question_number":1,'
+        '"category":"事业","question":"?","options":[{"letter":"A","text":"a"},'
+        '{"letter":"B","text":"b"}],"answer":"A"}]}',
+        encoding="utf-8",
+    )
+    rows = load_and_normalize(str(data))
+
+    assert rows[0]["case_id"] == "mingli_ftb_0001"
+    assert not rows[0]["case_id"].startswith("mingli_mingli_")
