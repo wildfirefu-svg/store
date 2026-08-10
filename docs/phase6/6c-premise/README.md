@@ -23,7 +23,7 @@
 - **依赖数据集**（脚本经 chart_input 间接依赖）：
   - `benchmark/datasets/baziqa_contest8_2024_holdout_enriched.jsonl` SHA-256：`219460fe4d001430664144328d054ca960b48486a1641f711be2b3f40f195c32`
   - `benchmark/datasets/baziqa_contest8_2025_holdout_enriched.jsonl` SHA-256：`96275b90f1304053e004cd7acab8fbd8f77a75c5caa5893b9d51d3da885ab1ad`
-- **复算锚定 commit**：`aabd983`（脚本修复后重跑产物字节级一致，见 §7）
+- **复算锚定 commit**：分析输入与首次归档锚点 `aabd983`；可执行复算修复提交 `6158040`（前者中的脚本仍有错误路径锚点，全新 clone 直接复算请检出后者，见 §7）
 - **校验引擎**：十神 `bazi_calculator.get_shishen`（支取本气）；干支关系 `benchmark/formatters/bazi_time_context.compute_branch_relation`；五行 `bazi_report_validator.GAN_WUXING` + 标准支五行表
 - **零 API**，复算命令：
 
