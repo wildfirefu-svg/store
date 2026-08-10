@@ -1282,15 +1282,253 @@ def run_mingli_baseline(run_id, resume=False, output_dir=".tmp/phase7/run"):
     return {"status": "ok", "run_id": run_id, "stage": context["stage"]}
 
 
-# -- preflight (zero-API; full assertion chain mounts in the lower half) --
+# -- preflight (zero-API assertion chain, plan Task 7.2; design §4) --
+
+PREFLIGHT_RECEIPT_PATH = "docs/phase7/preflight_receipt.json"
+# 计划头部设计冻结事实（pinned commit b7433280，三方核对一致）
+FROZEN_DATA_JSON_SHA256 = "528240929b23859656bf7ec0c126da92e2523c2cf091b11f83c0e8e377412054"
+FROZEN_FORTUNE_JSON_SHA256 = "e44ff5201486dc1917bbb24b6905a53e6a1359e76ada0eb8d5b2d9a5a88d29ed"
+EXPECTED_YEAR_SET = frozenset({"2022", "2023", "2024", "2025"})
+EXPECTED_CATEGORY_COUNT = 12
+OFFICIAL_ASTRO_REQUIRED = frozenset(
+    {"八字命盘信息：", "紫微命盘信息：", "十二宫位星曜分布："})
+_FTB_ID_RE = re.compile(r"^ftb_(\d{4})$")
 
 
-def run_preflight(work_dir):
-    """CLI skeleton only. The full zero-API assertion chain (data integrity /
-    protocol / env sanitizer / budget, plan Task 7.2) mounts here in the lower
-    half and writes docs/phase7/preflight_receipt.json."""
-    raise NotImplementedError(
-        f"preflight assertion chain is implemented in the lower half (work_dir={work_dir})")
+def _preflight_visibility_required():
+    """official profile + ziwei_arm=None 的 required markers（独立函数以便测试
+    monkeypatch 强制失败）。"""
+    from benchmark.runners.profiles import resolve_profile, visibility_requirements
+    profile = resolve_profile(FROZEN_PROFILE, CHART_SCHEMA)
+    required, _ = visibility_requirements(profile, CHART_SCHEMA, ziwei_arm=None)
+    return profile, required
+
+
+def _preflight_parse(text):
+    """官方 CoT `答案：X` 提取链（runner 计分实际使用的 parser）。"""
+    from benchmark.scorers.choice_accuracy import extract_choice_with_meta
+    return extract_choice_with_meta(text)
+
+
+def run_preflight(work_dir, data_json_path=None, fortune_json_path=None,
+                  receipt_path=None):
+    """Plan Task 7.2 zero-API assertion chain: data integrity + protocol +
+    env sanitizer + budget. Always writes the receipt first; any failed check
+    -> verdict BLOCKED and exit 4 (fail-closed)."""
+    work_dir = Path(work_dir)
+    work_dir.mkdir(parents=True, exist_ok=True)
+    data_json_path = str(data_json_path or os.path.join(_PROJECT_ROOT, DATA_JSON_PATH))
+    fortune_json_path = str(fortune_json_path or os.path.join(_PROJECT_ROOT, FORTUNE_JSON_PATH))
+    receipt_path = str(receipt_path or os.path.join(_PROJECT_ROOT, PREFLIGHT_RECEIPT_PATH))
+
+    checks = []
+
+    def _record(name, passed, detail=""):
+        checks.append({"name": name, "passed": bool(passed), "detail": detail})
+
+    data_sha = _sha256_file(data_json_path)
+    fortune_sha = _sha256_file(fortune_json_path)
+    data_bytes = os.path.getsize(data_json_path) if os.path.exists(data_json_path) else 0
+    fortune_bytes = os.path.getsize(fortune_json_path) if os.path.exists(fortune_json_path) else 0
+    _record("data_sha256",
+            data_sha == FROZEN_DATA_JSON_SHA256
+            and fortune_sha == FROZEN_FORTUNE_JSON_SHA256,
+            f"data={data_sha} fortune={fortune_sha}")
+
+    # -- 完整性（design §4.2）--
+    raw_entries = None
+    load_error = ""
+    try:
+        loaded = json.loads(Path(data_json_path).read_text(encoding="utf-8"))
+        if isinstance(loaded, list):
+            raw_entries = loaded
+        elif isinstance(loaded, dict) and isinstance(loaded.get("questions"), list):
+            raw_entries = loaded["questions"]
+        else:
+            load_error = f"unexpected data.json shape: {type(loaded).__name__}"
+    except Exception as exc:
+        load_error = f"{type(exc).__name__}: {exc}"
+    entries = [e for e in raw_entries or [] if isinstance(e, dict)]
+
+    n_questions = len(entries) if raw_entries is not None else -1
+    _record("question_count", n_questions == SCHEDULED_CALLS,
+            (f"{n_questions} != {SCHEDULED_CALLS} {load_error}").strip())
+
+    ids = [str(e.get("id") or "") for e in entries]
+    id_nums = []
+    ids_wellformed = len(ids) == n_questions
+    for qid in ids:
+        m = _FTB_ID_RE.match(qid)
+        if m:
+            id_nums.append(int(m.group(1)))
+        else:
+            ids_wellformed = False
+    _record("unique_question_ids",
+            ids_wellformed and len(set(ids)) == SCHEDULED_CALLS
+            and sorted(id_nums) == list(range(1, SCHEDULED_CALLS + 1)),
+            f"unique={len(set(ids))} wellformed={ids_wellformed}")
+
+    chart_counts = Counter(str(e.get("case_id") or "") for e in entries)
+    _record("unique_chart_case_ids", len(chart_counts) == EXPECTED_CHART_COUNT,
+            f"{len(chart_counts)} != {EXPECTED_CHART_COUNT}")
+    bad_charts = {c: n for c, n in sorted(chart_counts.items())
+                  if not c or n != _expected_chart_quota(c)}
+    _record("chart_distribution_frozen",
+            len(chart_counts) == EXPECTED_CHART_COUNT and not bad_charts,
+            f"bad={bad_charts}" if bad_charts else "30x5+case_19x6+case_20x4")
+
+    norm_rows = None
+    norm_error = ""
+    try:
+        from benchmark.runners.mingli_bench_adapter import load_and_normalize
+        norm_rows = load_and_normalize(
+            data_json_path, fortune_api_json_path=fortune_json_path,
+            include_astro=True)
+    except Exception as exc:
+        norm_error = f"{type(exc).__name__}: {exc}"
+    norm_ids = [r.get("case_id") for r in norm_rows or []]
+    norm_charts = {r.get("chart_case_id") for r in norm_rows or []}
+    _record("adapter_normalization",
+            norm_rows is not None and len(norm_rows) == SCHEDULED_CALLS
+            and len(set(norm_ids)) == SCHEDULED_CALLS
+            and all(str(i).startswith("mingli_ftb_") for i in norm_ids)
+            and len(norm_charts) == EXPECTED_CHART_COUNT,
+            norm_error or f"rows={len(norm_rows or [])} "
+                          f"unique_ids={len(set(norm_ids))} charts={len(norm_charts)}")
+
+    fortune_keys = set()
+    try:
+        loaded_f = json.loads(Path(fortune_json_path).read_text(encoding="utf-8"))
+        if isinstance(loaded_f, dict):
+            fortune_keys = {str(k) for k in loaded_f}
+        elif isinstance(loaded_f, list):
+            fortune_keys = {str(i.get("case_id")) for i in loaded_f
+                            if isinstance(i, dict) and i.get("case_id")}
+    except Exception:
+        pass
+    missing_charts = sorted(norm_charts - fortune_keys)
+    rows_with_chart = sum(1 for r in norm_rows or [] if r.get("chart_input"))
+    _record("fortune_join",
+            len(norm_charts) == EXPECTED_CHART_COUNT and not missing_charts
+            and rows_with_chart == SCHEDULED_CALLS,
+            f"hit={len(norm_charts & fortune_keys)}/{len(norm_charts)} "
+            f"rows_with_chart_input={rows_with_chart} "
+            f"missing={missing_charts[:3]}")
+
+    year_dist, cat_dist = {}, {}
+    years, categories = [], []
+    try:
+        from benchmark.runners.mingli_bench_adapter import _infer_year
+        years = [_infer_year(e) for e in entries]
+        categories = [str(e.get("category") or "") for e in entries]
+        year_dist = dict(sorted(Counter(years).items()))
+        cat_dist = dict(sorted(Counter(categories).items()))
+    except Exception as exc:
+        load_error = f"{type(exc).__name__}: {exc}"
+    _record("year_category_distribution",
+            bool(years) and set(years) <= EXPECTED_YEAR_SET
+            and len(cat_dist) == EXPECTED_CATEGORY_COUNT,
+            f"years={sorted(set(years))} categories={len(cat_dist)} {load_error}".strip())
+
+    # -- 协议（design §4.3）--
+    profile, required, proto_error = None, frozenset(), ""
+    try:
+        profile, required = _preflight_visibility_required()
+    except SystemExit as exc:
+        proto_error = f"resolve_profile SystemExit: {exc}"
+    except Exception as exc:
+        proto_error = f"{type(exc).__name__}: {exc}"
+    _record("profile_resolution",
+            profile is not None
+            and getattr(profile, "profile_id", None) == FROZEN_PROFILE,
+            proto_error or FROZEN_PROFILE)
+    _record("visibility_gate", frozenset(required) == OFFICIAL_ASTRO_REQUIRED,
+            f"required={sorted(required)}")
+
+    parse_failures = []
+    for text, want in (("推理过程略。答案：B", "B"), ("分析略。最终答案：C", "C")):
+        try:
+            meta = _preflight_parse(text)
+        except Exception as exc:
+            parse_failures.append(f"exception:{exc}")
+            continue
+        if not meta.get("valid") or meta.get("choice") != want:
+            parse_failures.append(f"{text!r}->{meta!r}")
+    try:
+        garbage = _preflight_parse("无法从文本确定任何选项")
+        if garbage.get("valid"):
+            parse_failures.append(f"garbage parsed: {garbage!r}")
+    except Exception as exc:
+        parse_failures.append(f"garbage exception: {exc}")
+    _record("parser_synthetic", not parse_failures, "; ".join(parse_failures))
+
+    # -- 环境净化负向核验（design §3.4/§4.4，复用 6.2 的 _build_child_env）--
+    sentinel = {v: os.environ.get(v) for v in ENV_PURGE_VARS}
+    leaked = []
+    try:
+        for v in ENV_PURGE_VARS:
+            os.environ[v] = "1"
+        child = _build_child_env()
+        leaked = [v for v in ENV_PURGE_VARS if v in child]
+    finally:
+        for v, old in sentinel.items():
+            if old is None:
+                os.environ.pop(v, None)
+            else:
+                os.environ[v] = old
+    _record("env_sanitize", not leaked, f"leaked={leaked}")
+
+    # -- 预算与 {10→160} 状态机（design §4.5，复用 6.3 的 _advance_max_cases）--
+    _record("budget_frozen",
+            SCHEDULED_CALLS == 160 and HARD_CAP == 180 and SMOKE_SIZE == 10
+            and MAX_CASES_LEGAL_TRANSITIONS == frozenset({(SMOKE_SIZE, MAIN_MAX_CASES)}),
+            f"scheduled={SCHEDULED_CALLS} hard_cap={HARD_CAP} "
+            f"smoke={SMOKE_SIZE} transitions={sorted(MAX_CASES_LEGAL_TRANSITIONS)}")
+
+    sm_ok, sm_detail = True, ""
+    ctx = {"smoke_size": SMOKE_SIZE, "max_cases": SMOKE_SIZE}
+    try:
+        _advance_max_cases(ctx, MAIN_MAX_CASES)
+        if ctx.get("max_cases") != MAIN_MAX_CASES:
+            sm_ok, sm_detail = False, "legal transition did not advance"
+    except SystemExit as exc:
+        sm_ok, sm_detail = False, f"legal 10->160 rejected (exit {exc.code})"
+    if sm_ok:
+        ctx2 = {"smoke_size": SMOKE_SIZE, "max_cases": SMOKE_SIZE}
+        try:
+            _advance_max_cases(ctx2, 20)
+            sm_ok, sm_detail = False, "illegal 10->20 accepted"
+        except SystemExit as exc:
+            if exc.code != EXIT_CONTRACT:
+                sm_ok, sm_detail = False, \
+                    f"illegal transition exit {exc.code} != {EXIT_CONTRACT}"
+    _record("max_cases_state_machine", sm_ok, sm_detail or "{10->160} only")
+
+    verdict = "PASS" if all(c["passed"] for c in checks) else "BLOCKED"
+    receipt = {
+        "stage": "preflight",
+        "verdict": verdict,
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "work_dir": str(work_dir),
+        "pinned_commit": _pinned_commit(),
+        "phase7_code_fingerprint": _phase7_code_fingerprint(),
+        "data_json": {"path": data_json_path, "sha256": data_sha,
+                      "bytes": data_bytes},
+        "fortune_api": {"path": fortune_json_path, "sha256": fortune_sha,
+                        "bytes": fortune_bytes},
+        "budget": {"scheduled_calls": SCHEDULED_CALLS, "hard_cap": HARD_CAP,
+                   "smoke_size": SMOKE_SIZE},
+        "env_flags": _env_flags(),
+        "year_distribution": year_dist,
+        "category_distribution": cat_dist,
+        "checks": checks,
+    }
+    _atomic_write_json(receipt_path, receipt)
+    if verdict != "PASS":
+        failed = [c["name"] for c in checks if not c["passed"]]
+        _blocked(f"preflight BLOCKED: failed checks {failed}; "
+                 f"receipt: {receipt_path}")
+    return EXIT_OK
 
 
 # -- CLI (frozen contract) --

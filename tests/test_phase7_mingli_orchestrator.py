@@ -1230,3 +1230,184 @@ class TestFakeRunnerEndToEnd:
         assert context["completeness"]["verdict"] == "BLOCKED_INCOMPLETE"
         assert 1 in {c["clause"] for c in context["completeness"]["checks"]
                      if not c["passed"]}
+
+
+# ---------------------------------------------------------------- Task 7 preflight
+
+_PREFLIGHT_CATEGORIES = ["事业", "官非", "健康", "婚姻", "感情", "子女",
+                         "家庭", "六亲", "财运", "学业", "运势", "外貌"]
+
+
+def _synthetic_mingli_entries():
+    """合成 160 题：ftb_0001–ftb_0160 / case_1–case_32，分布 30×5+case_19×6+case_20×4。"""
+    entries = []
+    qn = 0
+    for chart_idx in range(1, 33):
+        chart_id = f"case_{chart_idx}"
+        count = {19: 6, 20: 4}.get(chart_idx, 5)
+        for _ in range(count):
+            qn += 1
+            entries.append({
+                "id": f"ftb_{qn:04d}",
+                "case_id": chart_id,
+                "question_number": qn,
+                "question": f"合成题 {qn}？",
+                "options": ["A. 甲", "B. 乙", "C. 丙", "D. 丁"],
+                "answer": "A",
+                "category": _PREFLIGHT_CATEGORIES[qn % len(_PREFLIGHT_CATEGORIES)],
+            })
+    assert len(entries) == 160
+    return entries
+
+
+def _synthetic_fortune_entries():
+    return [{
+        "case_id": f"case_{i}",
+        "api_response": {"data": {"data": {
+            "chineseDate": "甲子 乙丑 丙寅 丁卯",
+            "time": "卯时",
+            "fiveElementsClass": "金四局",
+            "zodiac": "鼠",
+            "palaces": [{"name": "命宫", "heavenlyStem": "甲", "earthlyBranch": "子",
+                         "majorStars": [{"name": "紫微", "brightness": "庙"}],
+                         "minorStars": [], "decadal": {"range": [1, 10]},
+                         "isBodyPalace": False}],
+        }}},
+    } for i in range(1, 33)]
+
+
+class TestPreflight:
+    """计划 Task 7.2：零 API preflight 断言链（合成数据驱动，无网络）。"""
+
+    def _invoke(self, tmp_path, monkeypatch, entries=None, fortune=None,
+                patch_sha=True):
+        data_path = tmp_path / "data.json"
+        fortune_path = tmp_path / "fortune_api_results.json"
+        data_path.write_text(
+            json.dumps(entries if entries is not None
+                       else _synthetic_mingli_entries(), ensure_ascii=False),
+            encoding="utf-8")
+        fortune_path.write_text(
+            json.dumps(fortune if fortune is not None
+                       else _synthetic_fortune_entries(), ensure_ascii=False),
+            encoding="utf-8")
+        if patch_sha:
+            monkeypatch.setattr(orch, "FROZEN_DATA_JSON_SHA256",
+                                orch._sha256_file(data_path))
+            monkeypatch.setattr(orch, "FROZEN_FORTUNE_JSON_SHA256",
+                                orch._sha256_file(fortune_path))
+        receipt_path = tmp_path / "preflight_receipt.json"
+        kwargs = {"work_dir": str(tmp_path / "work"),
+                  "data_json_path": str(data_path),
+                  "fortune_json_path": str(fortune_path),
+                  "receipt_path": str(receipt_path)}
+        return kwargs, receipt_path
+
+    @staticmethod
+    def _failed_names(receipt):
+        return {c["name"] for c in receipt["checks"] if not c["passed"]}
+
+    def test_pass_on_synthetic_data(self, tmp_path, monkeypatch):
+        kwargs, receipt_path = self._invoke(tmp_path, monkeypatch)
+        assert orch.run_preflight(**kwargs) == 0
+        receipt = _load_json(receipt_path)
+        assert receipt["verdict"] == "PASS"
+        assert all(c["passed"] for c in receipt["checks"])
+        names = {c["name"] for c in receipt["checks"]}
+        assert {"data_sha256", "question_count", "unique_question_ids",
+                "unique_chart_case_ids", "chart_distribution_frozen",
+                "adapter_normalization", "fortune_join",
+                "year_category_distribution", "profile_resolution",
+                "visibility_gate", "parser_synthetic", "env_sanitize",
+                "budget_frozen", "max_cases_state_machine"} <= names
+        assert receipt["data_json"]["sha256"] == \
+            orch._sha256_file(kwargs["data_json_path"])
+        assert receipt["data_json"]["bytes"] == \
+            os.path.getsize(kwargs["data_json_path"])
+        assert receipt["fortune_api"]["sha256"] == \
+            orch._sha256_file(kwargs["fortune_json_path"])
+        assert receipt["pinned_commit"] == orch._pinned_commit()
+        assert receipt["year_distribution"] == {
+            "2022": 40, "2023": 40, "2024": 40, "2025": 40}
+        assert len(receipt["category_distribution"]) == 12
+        assert receipt["budget"] == {"scheduled_calls": 160,
+                                     "hard_cap": 180, "smoke_size": 10}
+        assert receipt["env_flags"] == {"rag": False, "fewshot": False,
+                                        "apb": False, "shuffle_options": False}
+
+    def test_blocked_question_count(self, tmp_path, monkeypatch):
+        kwargs, receipt_path = self._invoke(
+            tmp_path, monkeypatch, entries=_synthetic_mingli_entries()[:-1])
+        with pytest.raises(SystemExit) as exc:
+            orch.run_preflight(**kwargs)
+        assert exc.value.code == 4
+        receipt = _load_json(receipt_path)
+        assert receipt["verdict"] == "BLOCKED"
+        assert "question_count" in self._failed_names(receipt)
+
+    def test_blocked_duplicate_question_id(self, tmp_path, monkeypatch):
+        entries = _synthetic_mingli_entries()
+        entries[1]["id"] = "ftb_0001"
+        kwargs, receipt_path = self._invoke(tmp_path, monkeypatch, entries=entries)
+        with pytest.raises(SystemExit) as exc:
+            orch.run_preflight(**kwargs)
+        assert exc.value.code == 4
+        assert "unique_question_ids" in self._failed_names(_load_json(receipt_path))
+
+    def test_blocked_chart_distribution(self, tmp_path, monkeypatch):
+        entries = _synthetic_mingli_entries()
+        moved = next(e for e in entries if e["case_id"] == "case_19")
+        moved["case_id"] = "case_18"          # case_18×6 / case_19×5 → 冻结分布破坏
+        kwargs, receipt_path = self._invoke(tmp_path, monkeypatch, entries=entries)
+        with pytest.raises(SystemExit) as exc:
+            orch.run_preflight(**kwargs)
+        assert exc.value.code == 4
+        assert "chart_distribution_frozen" in \
+            self._failed_names(_load_json(receipt_path))
+
+    def test_blocked_fortune_missing_chart(self, tmp_path, monkeypatch):
+        kwargs, receipt_path = self._invoke(
+            tmp_path, monkeypatch, fortune=_synthetic_fortune_entries()[:-1])
+        with pytest.raises(SystemExit) as exc:
+            orch.run_preflight(**kwargs)
+        assert exc.value.code == 4
+        assert "fortune_join" in self._failed_names(_load_json(receipt_path))
+
+    def test_blocked_data_sha_drift(self, tmp_path, monkeypatch):
+        # 不 patch 冻结 SHA：合成数据 SHA ≠ 计划头部冻结值 → fail-closed
+        kwargs, receipt_path = self._invoke(tmp_path, monkeypatch, patch_sha=False)
+        with pytest.raises(SystemExit) as exc:
+            orch.run_preflight(**kwargs)
+        assert exc.value.code == 4
+        assert "data_sha256" in self._failed_names(_load_json(receipt_path))
+
+    def test_blocked_env_purger_leaks(self, tmp_path, monkeypatch):
+        kwargs, receipt_path = self._invoke(tmp_path, monkeypatch)
+        monkeypatch.setattr(orch, "_build_child_env", lambda: dict(os.environ))
+        with pytest.raises(SystemExit) as exc:
+            orch.run_preflight(**kwargs)
+        assert exc.value.code == 4
+        assert "env_sanitize" in self._failed_names(_load_json(receipt_path))
+        # 负向核验结束后父进程环境被还原
+        for var in orch.ENV_PURGE_VARS:
+            assert var not in os.environ
+
+    def test_blocked_state_machine_widened(self, tmp_path, monkeypatch):
+        kwargs, receipt_path = self._invoke(tmp_path, monkeypatch)
+        monkeypatch.setattr(orch, "MAX_CASES_LEGAL_TRANSITIONS",
+                            frozenset({(10, 160), (10, 20)}))
+        with pytest.raises(SystemExit) as exc:
+            orch.run_preflight(**kwargs)
+        assert exc.value.code == 4
+        assert "max_cases_state_machine" in \
+            self._failed_names(_load_json(receipt_path))
+
+    def test_blocked_visibility_markers_lost(self, tmp_path, monkeypatch):
+        kwargs, receipt_path = self._invoke(tmp_path, monkeypatch)
+        monkeypatch.setattr(orch, "_preflight_visibility_required",
+                            lambda: (None, frozenset({"八字命盘信息："})))
+        with pytest.raises(SystemExit) as exc:
+            orch.run_preflight(**kwargs)
+        assert exc.value.code == 4
+        failed = self._failed_names(_load_json(receipt_path))
+        assert "visibility_gate" in failed
