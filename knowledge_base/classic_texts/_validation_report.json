@@ -70,10 +70,10 @@
         "pass": true
       },
       "G2_mcq_id_unique": {
-        "total": 311,
-        "unique": 25,
-        "duplicates": 286,
-        "pass": false
+        "total": 155,
+        "unique": 155,
+        "duplicates": 0,
+        "pass": true
       },
       "G3_schema": {
         "bad_rules": 0,
@@ -82,10 +82,10 @@
         "pass": true
       },
       "G4_source_rule_id": {
-        "total_refs": 311,
-        "bad": 311,
+        "total_refs": 155,
+        "bad": 0,
         "ambiguous_rule_ids": 0,
-        "pass": false
+        "pass": true
       },
       "G5_traceability": {
         "total": 156,
@@ -95,17 +95,14 @@
       },
       "G6_answer_dist": {
         "dist_pct": {
-          "B": 0.4823,
-          "C": 0.2862,
-          "A": 0.1994,
-          "D": 0.0322
+          "A": 0.2516,
+          "B": 0.2516,
+          "C": 0.2516,
+          "D": 0.2452
         },
         "invalid_answers": 0,
-        "out_of_band": [
-          "B",
-          "D"
-        ],
-        "pass": false
+        "out_of_band": [],
+        "pass": true
       },
       "G7_chapter_complete": {
         "progress_done": 58,
@@ -121,7 +118,7 @@
     "passed": false,
     "totals": {
       "rules": 156,
-      "mcq": 311
+      "mcq": 155
     }
   },
   {
@@ -197,22 +194,22 @@
         "pass": true
       },
       "G2_mcq_id_unique": {
-        "total": 845,
-        "unique": 15,
-        "duplicates": 830,
-        "pass": false
+        "total": 777,
+        "unique": 777,
+        "duplicates": 0,
+        "pass": true
       },
       "G3_schema": {
         "bad_rules": 0,
-        "bad_mcq": 3,
+        "bad_mcq": 0,
         "parse_errors": 0,
-        "pass": false
+        "pass": true
       },
       "G4_source_rule_id": {
-        "total_refs": 845,
-        "bad": 845,
+        "total_refs": 777,
+        "bad": 0,
         "ambiguous_rule_ids": 0,
-        "pass": false
+        "pass": true
       },
       "G5_traceability": {
         "total": 1542,
@@ -222,18 +219,14 @@
       },
       "G6_answer_dist": {
         "dist_pct": {
-          "A": 0.3219,
-          "B": 0.424,
-          "C": 0.215,
-          "D": 0.0392
+          "A": 0.251,
+          "B": 0.2497,
+          "C": 0.2497,
+          "D": 0.2497
         },
-        "invalid_answers": 3,
-        "out_of_band": [
-          "A",
-          "B",
-          "D"
-        ],
-        "pass": false
+        "invalid_answers": 0,
+        "out_of_band": [],
+        "pass": true
       },
       "G7_chapter_complete": {
         "progress_done": 80,
@@ -242,14 +235,14 @@
         "pass": false
       },
       "G8_mcq_well_formed": {
-        "malformed": 3,
-        "pass": false
+        "malformed": 0,
+        "pass": true
       }
     },
     "passed": false,
     "totals": {
       "rules": 1542,
-      "mcq": 845
+      "mcq": 777
     }
   }
 ]
