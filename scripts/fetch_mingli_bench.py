@@ -17,6 +17,7 @@ PINNED_COMMIT = "b7433280fd86d7a7c27debbc47d0303c218f0bfd"
 REQUIRED_FILES = ("data/data.json", "data/fortune_api_results.json")
 DEST_DIR = Path("data/mingli")
 MANIFEST_PATH = Path(".tmp/phase6/mingli_fetch_manifest.json")
+LICENSE_DIR = Path("docs/phase7")
 BLOCKED_EXIT = 4
 
 
@@ -43,12 +44,23 @@ def _copy_required(src_root: Path) -> list[dict]:
     return entries
 
 
-def _license_note(src_root: Path) -> str:
+def _license_info(src_root: Path, license_out: Path) -> dict:
     for name in ("LICENSE", "LICENSE.md", "LICENSE.txt"):
         p = src_root / name
         if p.exists():
-            return f"{name} 存在（{p.stat().st_size} bytes）"
-    return "未发现 LICENSE 文件；README 声明 MIT（需人工复核）"
+            license_out.mkdir(parents=True, exist_ok=True)
+            dst = license_out / p.name
+            shutil.copyfile(p, dst)
+            return {
+                "note": f"{name} 存在（{p.stat().st_size} bytes）",
+                "license_sha256": sha256_file(p),
+                "license_copy_path": str(dst),
+            }
+    return {
+        "note": "未发现 LICENSE 文件；README 声明 MIT（需人工复核）",
+        "license_sha256": None,
+        "license_copy_path": None,
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -56,6 +68,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--source-dir", type=Path, default=None,
                         help="本地已有仓库副本时跳过网络获取（测试/离线用）")
     parser.add_argument("--work-dir", type=Path, default=Path(".tmp/phase6/mingli_src"))
+    parser.add_argument("--manifest-out", type=Path, default=MANIFEST_PATH,
+                        help="manifest 输出路径")
+    parser.add_argument("--license-out", type=Path, default=LICENSE_DIR,
+                        help="LICENSE 副本输出目录（文件名保持源文件名）")
     args = parser.parse_args(argv)
 
     try:
@@ -63,6 +79,14 @@ def main(argv: list[str] | None = None) -> int:
             src_root = args.source_dir
             if not src_root.exists():
                 raise FileNotFoundError(f"--source-dir 不存在: {src_root}")
+            if not (src_root / ".git").exists():
+                raise RuntimeError(f"--source-dir 不是 git 仓库: {src_root}")
+            r = _git(["rev-parse", "HEAD"], cwd=src_root)
+            if r.returncode != 0:
+                raise RuntimeError(f"git rev-parse HEAD 失败: {r.stderr.strip()[:400]}")
+            head = r.stdout.strip()
+            if head != PINNED_COMMIT:
+                raise RuntimeError(f"HEAD {head} != 钉死 commit {PINNED_COMMIT}")
         else:
             src_root = args.work_dir
             if not (src_root / ".git").exists():
@@ -80,15 +104,18 @@ def main(argv: list[str] | None = None) -> int:
                 raise RuntimeError(f"HEAD {head} != 钉死 commit {PINNED_COMMIT}")
 
         entries = _copy_required(src_root)
+        license_info = _license_info(src_root, args.license_out)
         manifest = {
             "fetched_at": datetime.now(timezone.utc).isoformat(),
             "repo": REPO_URL,
             "pinned_commit": PINNED_COMMIT,
-            "license": _license_note(src_root),
+            "license": license_info["note"],
+            "license_sha256": license_info["license_sha256"],
+            "license_copy_path": license_info["license_copy_path"],
             "files": entries,
         }
-        MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
-        MANIFEST_PATH.write_text(
+        args.manifest_out.parent.mkdir(parents=True, exist_ok=True)
+        args.manifest_out.write_text(
             json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
         )
         print(json.dumps({"status": "OK", "files": [e["path"] for e in entries]},
