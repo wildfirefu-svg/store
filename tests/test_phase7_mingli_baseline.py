@@ -93,3 +93,57 @@ class TestDetailChartCaseIdIntegration:
         failure_detail = rows[0]
         assert failure_detail["terminal_state"] == "call_failed"
         assert failure_detail["chart_case_id"] == "case_1"
+
+
+class TestOfficialSystemPromptPayload:
+    """Task 4：mingli_official_cot_astro 的 system message = OFFICIAL_SYSTEM_PROMPT；
+    其它 profile 与 ctx=None 行为与改造前逐字节一致。
+
+    mock 方式：_call_once_messages 函数内局部 `from claude_api import
+    call_model_messages_sync_with_meta`（调用时绑定），故 monkeypatch
+    claude_api 模块属性即可捕获 system_prompt 实参。
+    """
+
+    def _invoke_and_capture(self, monkeypatch, profile_id):
+        import claude_api
+
+        from benchmark.formatters.mingli_prompt import OFFICIAL_SYSTEM_PROMPT  # noqa: F401
+
+        captured = {}
+
+        def fake_call(messages, provider=None, model=None, system_prompt=None,
+                      temperature=None, timeout=None, thinking_mode=None):
+            captured["system_prompt"] = system_prompt
+            return "答案：A", {}
+
+        monkeypatch.setattr(claude_api, "call_model_messages_sync_with_meta", fake_call)
+        ctx = None if profile_id is None else run_benchmark.Phase6Context(profile_id=profile_id)
+        monkeypatch.setattr(run_benchmark, "_PHASE6_CTX", ctx)
+        case = {"case_id": "mingli_ftb_0001", "question": "命主2024年事业运势如何？"}
+        text, _meta = run_benchmark._call_once_messages(
+            [{"role": "user", "content": "q"}], "deepseek", "model-x", case=case)
+        assert text == "答案：A"
+        return captured, case
+
+    def test_official_profile_sends_official_system_prompt(self, monkeypatch):
+        from benchmark.formatters.mingli_prompt import OFFICIAL_SYSTEM_PROMPT
+
+        captured, _case = self._invoke_and_capture(monkeypatch, "mingli_official_cot_astro")
+        assert captured["system_prompt"] == OFFICIAL_SYSTEM_PROMPT
+
+    def test_other_profile_keeps_resolved_system_prompt(self, monkeypatch):
+        from benchmark.formatters.mingli_prompt import OFFICIAL_SYSTEM_PROMPT
+
+        captured, case = self._invoke_and_capture(monkeypatch, "baziqa_xjz_reasoned")
+        expected = run_benchmark._resolve_system_prompt(
+            case, rag_k=2, retrieval_mode="legacy", option_evidence_k=2,
+            suppress_rag=False, suppress_apb=False)
+        assert captured["system_prompt"] == expected
+        assert captured["system_prompt"] != OFFICIAL_SYSTEM_PROMPT
+
+    def test_none_ctx_unchanged(self, monkeypatch):
+        captured, case = self._invoke_and_capture(monkeypatch, None)
+        expected = run_benchmark._resolve_system_prompt(
+            case, rag_k=2, retrieval_mode="legacy", option_evidence_k=2,
+            suppress_rag=False, suppress_apb=False)
+        assert captured["system_prompt"] == expected

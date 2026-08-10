@@ -608,11 +608,16 @@ def _call_once_messages(messages, provider, model, case=None, temperature=None, 
                         suppress_rag=False, suppress_apb=False):
     """单次模型调用（不包装异常）。返回 (text, meta_dict)，异常原样抛出。"""
     from claude_api import call_model_messages_sync_with_meta
+    if _PHASE6_CTX is not None and _PHASE6_CTX.profile_id == "mingli_official_cot_astro":
+        from benchmark.formatters.mingli_prompt import OFFICIAL_SYSTEM_PROMPT
+        system_prompt = OFFICIAL_SYSTEM_PROMPT
+    else:
+        system_prompt = _resolve_system_prompt(case, rag_k=rag_k, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k, suppress_rag=suppress_rag, suppress_apb=suppress_apb)
     text, meta = call_model_messages_sync_with_meta(
         messages,
         provider=provider,
         model=model,
-        system_prompt=_resolve_system_prompt(case, rag_k=rag_k, retrieval_mode=retrieval_mode, option_evidence_k=option_evidence_k, suppress_rag=suppress_rag, suppress_apb=suppress_apb),
+        system_prompt=system_prompt,
         temperature=temperature,
         timeout=timeout,
         thinking_mode=(
