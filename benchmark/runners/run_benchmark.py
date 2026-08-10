@@ -326,7 +326,9 @@ def _attempt_with_ledger(case, call_once, sample_idx=0):
     """Phase 6 模型调用重试账本。
 
     两套独立预算：
-      - 网络异常 / provider 异常：每键最多 3 次重试（4 次尝试），原策略不变。
+      - 网络异常 / provider 异常：正常执行路径每键最多 3 次网络尝试（首次 + 2 次重试）；
+        before_call 先记账后调用，crash/resume 可因 pre-call journal 累计 call_attempt=4，
+        属崩溃续跑账本语义，不算第 3 次重试。
       - finish_reason != 'stop' 截断：每键最多 1 次重试（截断 2 次后耗尽），窄重试。
     两种预算互不消耗；总调用受 hard_cap 限制。
     - ctx 为 None（非 profile 运行）：直接调用。
@@ -1767,8 +1769,8 @@ def _build_parser():
     parser.add_argument('--sample-temperature', type=float, default=0.4, help='Sampling temperature used when --n-samples > 1')
     parser.add_argument('--aggregate', default='majority', choices=['majority', 'emit_samples'],
                         help='Aggregation strategy; emit_samples = Phase 6 6A1 逐样本明细（聚合离线）')
-    parser.add_argument('--attempt-stage', default='main',
-                        help='Phase 6 attempt key 的 attempt_stage（main/anchor/diversity_probe/...）')
+    parser.add_argument('--attempt-stage', default='main', choices=ATTEMPT_STAGES,
+                        help='Phase 6 attempt key 的 attempt_stage（main/anchor/dual/controlled_retest/...）')
     parser.add_argument('--as-of-date', default='',
                         help='v6 高优 7：enrichment 锚定日期，入 resume manifest')
     parser.add_argument('--apb-block', action='store_true', help='Append anti-position-bias instruction to system prompt (Phase 3)')

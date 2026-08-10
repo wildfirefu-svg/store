@@ -22,7 +22,7 @@ ATTEMPT_KEY_FIELDS: tuple = (
     "dataset_id", "profile_id", "arm", "attempt_stage", "provider", "model",
     "case_id", "repeat_idx", "sample_idx", "permutation_id",
 )
-ATTEMPT_STAGES = ("main", "bazi", "ziwei", "judge", "diversity_probe", "anchor")
+ATTEMPT_STAGES = ("main", "bazi", "ziwei", "judge", "diversity_probe", "anchor", "dual", "controlled_retest")
 TERMINAL_STATES = ("parsed", "invalid", "unresolved", "judge_unresolved", "call_failed")
 
 

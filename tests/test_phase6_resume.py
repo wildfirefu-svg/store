@@ -12,6 +12,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from benchmark.runners.run_benchmark import (
     ATTEMPT_STAGES,
     RESUME_MANIFEST_FIELDS,
+    _build_parser,
     build_attempt_key,
     load_completed_keys,
 )
@@ -282,3 +283,35 @@ def test_manifest_rejects_thinking_mode_drift(tmp_path, monkeypatch):
             profile="baziqa_xjz_direct",
             thinking_mode="disabled",
         )
+
+
+# ---- Phase 7 Task 3：attempt stage vocabulary 冻结 + fail-closed 校验（设计 §3.6）----
+
+FROZEN_ATTEMPT_STAGES = (
+    "main", "bazi", "ziwei", "judge", "diversity_probe", "anchor",
+    "dual", "controlled_retest",
+)
+
+
+def test_attempt_stages_vocabulary_frozen():
+    """ATTEMPT_STAGES 恰为冻结的 8 值；dual/controlled_retest 合法化。"""
+    assert tuple(ATTEMPT_STAGES) == FROZEN_ATTEMPT_STAGES
+    assert "dual" in ATTEMPT_STAGES
+    assert "controlled_retest" in ATTEMPT_STAGES
+
+
+def _parse_runner_argv(extra):
+    return _build_parser().parse_args(["--dataset", "ds.jsonl", *extra])
+
+
+def test_attempt_stage_rejects_unknown_value():
+    """--attempt-stage bogus 解析即拒绝（argparse choices → SystemExit 非 0）。"""
+    with pytest.raises(SystemExit) as exc_info:
+        _parse_runner_argv(["--attempt-stage", "bogus"])
+    assert exc_info.value.code != 0
+
+
+@pytest.mark.parametrize("stage", ["main", "anchor", "dual", "controlled_retest"])
+def test_attempt_stage_accepts_frozen_values(stage):
+    args = _parse_runner_argv(["--attempt-stage", stage])
+    assert args.attempt_stage == stage
