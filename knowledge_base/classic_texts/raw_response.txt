@@ -1,0 +1,418 @@
+[
+  {
+    "id": "dts_tg_01",
+    "category": "天干",
+    "subject": "丙火",
+    "condition": "五阳干中",
+    "rule": "丙火为阳中之阳，是纯阳之火，万物由此而发，得此而敛。",
+    "original_text": "五陽皆陽丙为最"
+  },
+  {
+    "id": "dts_tg_02",
+    "category": "天干",
+    "subject": "癸水",
+    "condition": "五阴干中",
+    "rule": "癸水为阴中之阴，是纯阴之水，万物由此而生，得此而茂。",
+    "original_text": "五陰皆陰癸为至"
+  },
+  {
+    "id": "dts_tg_03",
+    "category": "五行",
+    "subject": "十干",
+    "condition": "以先天后天言之",
+    "rule": "十干之气，先天同出一源，后天一气相包，甲乙皆木，丙丁皆火，戊己皆土，庚辛皆金，壬癸皆水，区别只在阳刚阴柔、阳健阴顺。",
+    "original_text": "夫十干之气，以先天言之，固一原同出，以后天言之，亦一气相包。"
+  },
+  {
+    "id": "dts_tg_04",
+    "category": "天干",
+    "subject": "五阳干",
+    "condition": "面对财杀之势",
+    "rule": "五阳干得阳之气，能成阳刚之势，不畏惧财杀之势。",
+    "original_text": "五陽从气不从势"
+  },
+  {
+    "id": "dts_tg_05",
+    "category": "天干",
+    "subject": "五阴干",
+    "condition": "面对旺盛之势",
+    "rule": "五阴干得阴之气，能成阴顺之义，木盛则从木，火盛则从火，土盛则从土，金盛则从金，水盛则从水。",
+    "original_text": "五陰从势无情义"
+  },
+  {
+    "id": "dts_tg_06",
+    "category": "天干",
+    "subject": "甲木",
+    "condition": "生于春初木嫩气寒",
+    "rule": "甲木生于春初，木嫩气寒，得火而发荣。",
+    "original_text": "甲木参天，脱胎要火"
+  },
+  {
+    "id": "dts_tg_07",
+    "category": "天干",
+    "subject": "甲木",
+    "condition": "生于春季",
+    "rule": "甲木生于春季，旺极之势，宜泄其菁英，强木得火方化其顽，衰金不能克旺木，故春不容金。",
+    "original_text": "春不容金"
+  },
+  {
+    "id": "dts_tg_08",
+    "category": "天干",
+    "subject": "甲木",
+    "condition": "生于秋季",
+    "rule": "甲木生于秋季，失时就衰，根气收敛下达，秋土生金泄气最为虚薄，故秋不容土。",
+    "original_text": "秋不容土"
+  },
+  {
+    "id": "dts_tg_09",
+    "category": "天干",
+    "subject": "甲木",
+    "condition": "柱中寅午戌全又透丙丁",
+    "rule": "甲木遇火势炽烈，宜坐辰，辰为水库湿土，能生木泄火，称为火炽乘龙。",
+    "original_text": "火炽乘龙"
+  },
+  {
+    "id": "dts_tg_10",
+    "category": "天干",
+    "subject": "甲木",
+    "condition": "柱中申子辰全又透壬癸",
+    "rule": "甲木遇水势泛滥，水泛木浮，宜坐寅，寅为火土生地、木之禄旺，能纳水气，称为水宕骑虎。",
+    "original_text": "水宕骑虎"
+  },
+  {
+    "id": "dts_tg_11",
+    "category": "天干",
+    "subject": "乙木",
+    "condition": "生于丑未月",
+    "rule": "乙木生于丑未月，未为木库得以蟠根，丑为湿土可以受气，称为刲羊解牛。",
+    "original_text": "刲羊解牛"
+  },
+  {
+    "id": "dts_tg_12",
+    "category": "天干",
+    "subject": "乙木",
+    "condition": "生于申酉月",
+    "rule": "乙木生于申酉月，得丙丁透出天干，制化得宜，不畏金强，称为怀丁抱丙，跨凤乘猴。",
+    "original_text": "怀丁抱丙，跨凤乘猴"
+  },
+  {
+    "id": "dts_tg_13",
+    "category": "天干",
+    "subject": "乙木",
+    "condition": "生于亥子月，四柱无丙丁又无戌未燥土",
+    "rule": "乙木生于亥子月，虚湿之地，即使年支有午，亦难发生，称为骑马亦忧。",
+    "original_text": "虚湿之地，骑马亦忧"
+  },
+  {
+    "id": "dts_tg_14",
+    "category": "天干",
+    "subject": "乙木",
+    "condition": "天干透甲，地支藏寅",
+    "rule": "乙木得甲木相助，如藤萝系甲，春固得助，秋亦合扶，四季皆宜。",
+    "original_text": "藤萝系甲，可春可秋"
+  },
+  {
+    "id": "dts_tg_15",
+    "category": "天干",
+    "subject": "丙火",
+    "condition": "面对庚金",
+    "rule": "丙火猛烈，能煅庚金，有除寒解冻之功。",
+    "original_text": "能煅庚金"
+  },
+  {
+    "id": "dts_tg_16",
+    "category": "天干",
+    "subject": "丙火",
+    "condition": "逢辛金",
+    "rule": "丙火与辛金相合，合柔顺而寓和平，反而怯弱。",
+    "original_text": "逢辛反怯"
+  },
+  {
+    "id": "dts_tg_17",
+    "category": "天干",
+    "subject": "丙火",
+    "condition": "见戊己土多",
+    "rule": "丙火见土多，土为其子，成慈爱之德，泄其威须用己土，戊土高燥见丙火而焦坼。",
+    "original_text": "土众成慈"
+  },
+  {
+    "id": "dts_tg_18",
+    "category": "天干",
+    "subject": "丙火",
+    "condition": "遇壬癸水旺",
+    "rule": "丙火遇水旺，水为其君，显忠节之风，遏其焰必要壬水，癸水阴柔逢丙火而涸干。",
+    "original_text": "水猖显节"
+  },
+  {
+    "id": "dts_tg_19",
+    "category": "天干",
+    "subject": "丙火",
+    "condition": "柱中寅午戌全，甲木透出",
+    "rule": "丙火猛烈，若甲木来生，火势更旺，必当焚灭。",
+    "original_text": "虎马犬乡，甲木若来，必当焚灭"
+  },
+  {
+    "id": "dts_tg_20",
+    "category": "天干",
+    "subject": "丁火",
+    "condition": "外柔顺而内文明",
+    "rule": "丁火属阴，柔而得中，外柔顺而内文明，内性昭融。",
+    "original_text": "丁火柔中，内性昭融"
+  },
+  {
+    "id": "dts_tg_21",
+    "category": "天干",
+    "subject": "丁火",
+    "condition": "抱乙木",
+    "rule": "丁火抱乙木而孝，使辛金不伤乙木。",
+    "original_text": "抱乙而孝"
+  },
+  {
+    "id": "dts_tg_22",
+    "category": "天干",
+    "subject": "丁火",
+    "condition": "合壬水",
+    "rule": "丁火合壬水而忠，使戊土不伤壬水。",
+    "original_text": "合壬而忠"
+  },
+  {
+    "id": "dts_tg_23",
+    "category": "天干",
+    "subject": "丁火",
+    "condition": "时当乘旺",
+    "rule": "丁火虽时当乘旺，而不至赫炎。",
+    "original_text": "旺而不烈"
+  },
+  {
+    "id": "dts_tg_24",
+    "category": "天干",
+    "subject": "丁火",
+    "condition": "即时值就衰",
+    "rule": "丁火即时值就衰，而不至于熄灭。",
+    "original_text": "衰而不穷"
+  },
+  {
+    "id": "dts_tg_25",
+    "category": "天干",
+    "subject": "丁火",
+    "condition": "干透甲乙，生于秋",
+    "rule": "丁火有甲乙木生助，秋生不畏金。",
+    "original_text": "如有嫡母，可秋可冬"
+  },
+  {
+    "id": "dts_tg_26",
+    "category": "天干",
+    "subject": "戊土",
+    "condition": "春夏气动而辟",
+    "rule": "戊土春夏气动而辟，则发生万物。",
+    "original_text": "静翕动辟，万物司命"
+  },
+  {
+    "id": "dts_tg_27",
+    "category": "天干",
+    "subject": "戊土",
+    "condition": "秋冬气静而翕",
+    "rule": "戊土秋冬气静而翕，则收藏万物。",
+    "original_text": "静翕动辟，万物司命"
+  },
+  {
+    "id": "dts_tg_28",
+    "category": "天干",
+    "subject": "戊土",
+    "condition": "生于春夏，火旺",
+    "rule": "戊土生于春夏，火旺宜水润之，水润则物生。",
+    "original_text": "水润物生"
+  },
+  {
+    "id": "dts_tg_29",
+    "category": "天干",
+    "subject": "戊土",
+    "condition": "生于秋冬，水多",
+    "rule": "戊土生于秋冬，水多宜火暖之，火燥则物病。",
+    "original_text": "火燥物病"
+  },
+  {
+    "id": "dts_tg_30",
+    "category": "天干",
+    "subject": "戊土",
+    "condition": "生于寅申月",
+    "rule": "戊土生于寅申月，春受克气虚宜静，秋多泄体薄怕冲。",
+    "original_text": "若在艮坤，怕冲宜静"
+  },
+  {
+    "id": "dts_tg_31",
+    "category": "天干",
+    "subject": "己土",
+    "condition": "面对木盛",
+    "rule": "己土性柔和，木藉以培养，木不克土，故不愁木盛。",
+    "original_text": "不愁木盛"
+  },
+  {
+    "id": "dts_tg_32",
+    "category": "天干",
+    "subject": "己土",
+    "condition": "面对水狂",
+    "rule": "己土体端凝，水得以纳藏，水不冲土，故不畏水狂。",
+    "original_text": "不畏水狂"
+  },
+  {
+    "id": "dts_tg_33",
+    "category": "天干",
+    "subject": "己土",
+    "condition": "火少",
+    "rule": "己土火少则晦火，火少则土不旺。",
+    "original_text": "火少火晦"
+  },
+  {
+    "id": "dts_tg_34",
+    "category": "天干",
+    "subject": "己土",
+    "condition": "金多",
+    "rule": "己土金多则金光，金多土得金泄而光。",
+    "original_text": "金多金光"
+  },
+  {
+    "id": "dts_tg_35",
+    "category": "天干",
+    "subject": "己土",
+    "condition": "柱中土气深固，又得丙火",
+    "rule": "己土得丙火去其阴湿之气，更足以滋生万物，若要物旺宜助宜帮。",
+    "original_text": "若要物旺，宜助宜帮"
+  },
+  {
+    "id": "dts_tg_36",
+    "category": "天干",
+    "subject": "庚金",
+    "condition": "得壬水",
+    "rule": "庚金得壬水，则气流而清。",
+    "original_text": "得水而清"
+  },
+  {
+    "id": "dts_tg_37",
+    "category": "天干",
+    "subject": "庚金",
+    "condition": "得丁火",
+    "rule": "庚金得丁火，则气纯而锐。",
+    "original_text": "得火而锐"
+  },
+  {
+    "id": "dts_tg_38",
+    "category": "天干",
+    "subject": "庚金",
+    "condition": "生于春夏，遇丑辰湿土",
+    "rule": "庚金生于春夏，遇丑辰之湿土则生。",
+    "original_text": "土润则生"
+  },
+  {
+    "id": "dts_tg_39",
+    "category": "天干",
+    "subject": "庚金",
+    "condition": "逢未戌燥土",
+    "rule": "庚金逢未戌之燥土则脆。",
+    "original_text": "土干则脆"
+  },
+  {
+    "id": "dts_tg_40",
+    "category": "天干",
+    "subject": "庚金",
+    "condition": "面对甲木",
+    "rule": "庚金为甲木正敌，力能伐之。",
+    "original_text": "能赢甲兄"
+  },
+  {
+    "id": "dts_tg_41",
+    "category": "天干",
+    "subject": "庚金",
+    "condition": "与乙相合",
+    "rule": "庚金与乙相合，转觉有情。",
+    "original_text": "输于乙妹"
+  },
+  {
+    "id": "dts_tg_42",
+    "category": "天干",
+    "subject": "辛金",
+    "condition": "戊己土多",
+    "rule": "辛金畏土之叠，戊土太重而涸水埋金。",
+    "original_text": "畏土之叠"
+  },
+  {
+    "id": "dts_tg_43",
+    "category": "天干",
+    "subject": "辛金",
+    "condition": "壬癸水多",
+    "rule": "辛金乐水之盈，壬水有余而润土养金。",
+    "original_text": "乐水之盈"
+  },
+  {
+    "id": "dts_tg_44",
+    "category": "天干",
+    "subject": "辛金",
+    "condition": "生于夏而火多",
+    "rule": "辛金生于夏而火多，有己土则晦火而生金，热则喜母。",
+    "original_text": "热则喜母"
+  },
+  {
+    "id": "dts_tg_45",
+    "category": "天干",
+    "subject": "辛金",
+    "condition": "生于冬而水旺",
+    "rule": "辛金生于冬而水旺，有丁火则温水而养金，寒则喜丁。",
+    "original_text": "寒则喜丁"
+  },
+  {
+    "id": "dts_tg_46",
+    "category": "天干",
+    "subject": "壬水",
+    "condition": "申子辰全又透癸水",
+    "rule": "壬水通河，能泄金气，刚中之德，周流不滞，如申子辰全又透癸水，其势泛滥，必须用木泄之。",
+    "original_text": "通根透癸，冲天奔地"
+  },
+  {
+    "id": "dts_tg_47",
+    "category": "天干",
+    "subject": "壬水",
+    "condition": "合丁化木",
+    "rule": "壬水合丁化木，又能生火，化则有情。",
+    "original_text": "化则有情"
+  },
+  {
+    "id": "dts_tg_48",
+    "category": "天干",
+    "subject": "壬水",
+    "condition": "生于四五六 月，柱中火土并旺",
+    "rule": "壬水生于夏月，火土并旺，从火从土，仍有相济之功。",
+    "original_text": "从则相济"
+  },
+  {
+    "id": "dts_tg_49",
+    "category": "天干",
+    "subject": "癸水",
+    "condition": "柱中有甲乙寅卯",
+    "rule": "癸水得龙以成云雨，能运水气，生木制火，润土养金，定为贵格。",
+    "original_text": "得龙而运，功化斯神"
+  },
+  {
+    "id": "dts_tg_50",
+    "category": "天干",
+    "subject": "癸水",
+    "condition": "见火土多",
+    "rule": "癸水性极弱，见火土多即从化，不愁火土。",
+    "original_text": "不愁火土"
+  },
+  {
+    "id": "dts_tg_51",
+    "category": "天干",
+    "subject": "癸水",
+    "condition": "见庚辛金多",
+    "rule": "癸水弱水不能泄金气，金多反浊，不论庚辛。",
+    "original_text": "不论庚辛"
+  },
+  {
+    "id": "dts_tg_52",
+    "category": "天干",
+    "subject": "癸水",
+    "condition": "合戊见丙火",
+    "rule": "癸水合戊土，阴极则阳生，柱中得丙火透露，引出化神，化象斯真。",
+    "original_text": "合戊见火，化象斯真"
+  }
+]
