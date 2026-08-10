@@ -1,0 +1,439 @@
+{
+  "correct": {
+    "rows": 69,
+    "unique_cases": 38,
+    "rows_with_contradiction": 10,
+    "row_contradiction_rate": 0.1449,
+    "claims_total": 731,
+    "claims_contradiction": 15,
+    "claims_consistent": 708,
+    "claims_unverifiable": 8,
+    "claim_contradiction_rate": 0.0205,
+    "per_type": {
+      "branch_rel": {
+        "consistent": 54,
+        "unverifiable": 8,
+        "contradiction": 1
+      },
+      "gan_rel": {
+        "contradiction": 2,
+        "consistent": 4
+      },
+      "shishen_gan": {
+        "consistent": 137,
+        "contradiction": 5
+      },
+      "shishen_zhi": {
+        "consistent": 41
+      },
+      "wuxing_gan": {
+        "consistent": 251
+      },
+      "wuxing_zhi": {
+        "consistent": 221,
+        "contradiction": 7
+      }
+    },
+    "examples": [
+      {
+        "case_id": "male_19611230_P003-Q12",
+        "correct": true,
+        "claim": "丁庚合",
+        "type": "gan_rel",
+        "engine_truth": "丁庚:非五合",
+        "note": ""
+      },
+      {
+        "case_id": "male_19710412_P005-Q21",
+        "correct": true,
+        "claim": "戊辛合",
+        "type": "gan_rel",
+        "engine_truth": "戊辛:非五合",
+        "note": ""
+      },
+      {
+        "case_id": "chaozhou_male_19720108_P002-Q8",
+        "correct": true,
+        "claim": "亥金",
+        "type": "wuxing_zhi",
+        "engine_truth": "亥五行属水",
+        "note": ""
+      },
+      {
+        "case_id": "chaozhou_male_19720108_P002-Q8",
+        "correct": true,
+        "claim": "丑金",
+        "type": "wuxing_zhi",
+        "engine_truth": "丑五行属土",
+        "note": ""
+      },
+      {
+        "case_id": "male_20070131_P008-Q40",
+        "correct": true,
+        "claim": "偏财（戊土）",
+        "type": "shishen_gan",
+        "engine_truth": "戊相对日主乙的十神=正财",
+        "note": ""
+      },
+      {
+        "case_id": "guangdong_female_19800824_P001-Q1",
+        "correct": true,
+        "claim": "庚申为劫财",
+        "type": "shishen_gan",
+        "engine_truth": "庚相对日主己的十神=伤官",
+        "note": ""
+      },
+      {
+        "case_id": "chaozhou_male_19720108_P002-Q8",
+        "correct": true,
+        "claim": "亥金",
+        "type": "wuxing_zhi",
+        "engine_truth": "亥五行属水",
+        "note": ""
+      },
+      {
+        "case_id": "chaozhou_male_19720108_P002-Q8",
+        "correct": true,
+        "claim": "丑金",
+        "type": "wuxing_zhi",
+        "engine_truth": "丑五行属土",
+        "note": ""
+      },
+      {
+        "case_id": "female_19831028_P004-Q17",
+        "correct": true,
+        "claim": "甲木为伤官",
+        "type": "shishen_gan",
+        "engine_truth": "甲相对日主己的十神=正官",
+        "note": ""
+      },
+      {
+        "case_id": "beijing_male_19700722_P008-Q40",
+        "correct": true,
+        "claim": "正官（己土）",
+        "type": "shishen_gan",
+        "engine_truth": "己相对日主癸的十神=七杀",
+        "note": ""
+      },
+      {
+        "case_id": "beijing_male_19700722_P008-Q40",
+        "correct": true,
+        "claim": "戌金",
+        "type": "wuxing_zhi",
+        "engine_truth": "戌五行属土",
+        "note": ""
+      },
+      {
+        "case_id": "guangdong_female_19511114_P001-Q5",
+        "correct": true,
+        "claim": "酉亥害",
+        "type": "branch_rel",
+        "engine_truth": "酉亥实际关系=无",
+        "note": "注意:酉或亥不在命盘四支中"
+      },
+      {
+        "case_id": "singapore_male_19930408_P004-Q16",
+        "correct": true,
+        "claim": "癸酉为食神",
+        "type": "shishen_gan",
+        "engine_truth": "癸相对日主己的十神=偏财",
+        "note": ""
+      },
+      {
+        "case_id": "singapore_male_19930408_P004-Q16",
+        "correct": true,
+        "claim": "子火",
+        "type": "wuxing_zhi",
+        "engine_truth": "子五行属水",
+        "note": ""
+      },
+      {
+        "case_id": "singapore_male_19930408_P004-Q16",
+        "correct": true,
+        "claim": "辰火",
+        "type": "wuxing_zhi",
+        "engine_truth": "辰五行属土",
+        "note": ""
+      }
+    ]
+  },
+  "wrong": {
+    "rows": 171,
+    "unique_cases": 69,
+    "rows_with_contradiction": 27,
+    "row_contradiction_rate": 0.1579,
+    "claims_total": 1871,
+    "claims_contradiction": 32,
+    "claims_consistent": 1813,
+    "claims_unverifiable": 26,
+    "claim_contradiction_rate": 0.0171,
+    "per_type": {
+      "branch_rel": {
+        "consistent": 165,
+        "unverifiable": 24,
+        "contradiction": 5
+      },
+      "gan_rel": {
+        "consistent": 11,
+        "unverifiable": 2
+      },
+      "shishen_gan": {
+        "consistent": 336,
+        "contradiction": 9
+      },
+      "shishen_zhi": {
+        "consistent": 116,
+        "contradiction": 2
+      },
+      "wuxing_gan": {
+        "consistent": 616
+      },
+      "wuxing_zhi": {
+        "consistent": 569,
+        "contradiction": 16
+      }
+    },
+    "examples": [
+      {
+        "case_id": "guangdong_female_19800824_P001-Q5",
+        "correct": false,
+        "claim": "壬水伤官",
+        "type": "shishen_gan",
+        "engine_truth": "壬相对日主己的十神=正财",
+        "note": ""
+      },
+      {
+        "case_id": "chaozhou_male_19720108_P002-Q8",
+        "correct": false,
+        "claim": "亥金",
+        "type": "wuxing_zhi",
+        "engine_truth": "亥五行属水",
+        "note": ""
+      },
+      {
+        "case_id": "male_19710412_P005-Q24",
+        "correct": false,
+        "claim": "辛亥为正财",
+        "type": "shishen_gan",
+        "engine_truth": "辛相对日主丁的十神=偏财",
+        "note": ""
+      },
+      {
+        "case_id": "male_20070131_P008-Q40",
+        "correct": false,
+        "claim": "丙戌为偏财",
+        "type": "shishen_gan",
+        "engine_truth": "丙相对日主乙的十神=伤官",
+        "note": ""
+      },
+      {
+        "case_id": "male_19611230_P003-Q11",
+        "correct": false,
+        "claim": "午木",
+        "type": "wuxing_zhi",
+        "engine_truth": "午五行属火",
+        "note": ""
+      },
+      {
+        "case_id": "male_19611230_P003-Q13",
+        "correct": false,
+        "claim": "申丑相刑",
+        "type": "branch_rel",
+        "engine_truth": "申丑实际关系=无",
+        "note": "注意:申或丑不在命盘四支中"
+      },
+      {
+        "case_id": "male_19611230_P003-Q13",
+        "correct": false,
+        "claim": "申丑刑",
+        "type": "branch_rel",
+        "engine_truth": "申丑实际关系=无",
+        "note": "注意:申或丑不在命盘四支中"
+      },
+      {
+        "case_id": "male_19710412_P005-Q24",
+        "correct": false,
+        "claim": "辛亥为正财",
+        "type": "shishen_gan",
+        "engine_truth": "辛相对日主丁的十神=偏财",
+        "note": ""
+      },
+      {
+        "case_id": "male_20070131_P008-Q39",
+        "correct": false,
+        "claim": "辰金",
+        "type": "wuxing_zhi",
+        "engine_truth": "辰五行属土",
+        "note": ""
+      },
+      {
+        "case_id": "guangdong_female_19800824_P001-Q4",
+        "correct": false,
+        "claim": "庚金食神",
+        "type": "shishen_gan",
+        "engine_truth": "庚相对日主己的十神=伤官",
+        "note": ""
+      },
+      {
+        "case_id": "chaozhou_male_19720108_P002-Q10",
+        "correct": false,
+        "claim": "亥金",
+        "type": "wuxing_zhi",
+        "engine_truth": "亥五行属水",
+        "note": ""
+      },
+      {
+        "case_id": "chaozhou_male_19720108_P002-Q10",
+        "correct": false,
+        "claim": "丑金",
+        "type": "wuxing_zhi",
+        "engine_truth": "丑五行属土",
+        "note": ""
+      },
+      {
+        "case_id": "male_19611230_P003-Q14",
+        "correct": false,
+        "claim": "子金",
+        "type": "wuxing_zhi",
+        "engine_truth": "子五行属水",
+        "note": ""
+      },
+      {
+        "case_id": "male_19710412_P005-Q23",
+        "correct": false,
+        "claim": "亥金",
+        "type": "wuxing_zhi",
+        "engine_truth": "亥五行属水",
+        "note": ""
+      },
+      {
+        "case_id": "male_19710412_P005-Q23",
+        "correct": false,
+        "claim": "申土",
+        "type": "wuxing_zhi",
+        "engine_truth": "申五行属金",
+        "note": ""
+      },
+      {
+        "case_id": "male_20070131_P008-Q39",
+        "correct": false,
+        "claim": "申金为七杀",
+        "type": "shishen_zhi",
+        "engine_truth": "申本气庚相对日主乙的十神=正官",
+        "note": ""
+      },
+      {
+        "case_id": "male_20070131_P008-Q40",
+        "correct": false,
+        "claim": "丙火为偏财",
+        "type": "shishen_gan",
+        "engine_truth": "丙相对日主乙的十神=伤官",
+        "note": ""
+      },
+      {
+        "case_id": "singapore_male_19930408_P004-Q16",
+        "correct": false,
+        "claim": "子火",
+        "type": "wuxing_zhi",
+        "engine_truth": "子五行属水",
+        "note": ""
+      },
+      {
+        "case_id": "singapore_male_19930408_P004-Q16",
+        "correct": false,
+        "claim": "辰火",
+        "type": "wuxing_zhi",
+        "engine_truth": "辰五行属土",
+        "note": ""
+      },
+      {
+        "case_id": "malaysia_male_19730824_P006-Q28",
+        "correct": false,
+        "claim": "食神为壬",
+        "type": "shishen_gan",
+        "engine_truth": "壬相对日主壬的十神=比肩",
+        "note": ""
+      },
+      {
+        "case_id": "malaysia_male_19730824_P006-Q29",
+        "correct": false,
+        "claim": "申丑合",
+        "type": "branch_rel",
+        "engine_truth": "申丑实际关系=无",
+        "note": ""
+      },
+      {
+        "case_id": "miyazaki_male_19830421_P003-Q15",
+        "correct": false,
+        "claim": "寅水",
+        "type": "wuxing_zhi",
+        "engine_truth": "寅五行属木",
+        "note": ""
+      },
+      {
+        "case_id": "singapore_male_19930408_P004-Q16",
+        "correct": false,
+        "claim": "子火",
+        "type": "wuxing_zhi",
+        "engine_truth": "子五行属水",
+        "note": ""
+      },
+      {
+        "case_id": "singapore_male_19930408_P004-Q16",
+        "correct": false,
+        "claim": "辰火",
+        "type": "wuxing_zhi",
+        "engine_truth": "辰五行属土",
+        "note": ""
+      },
+      {
+        "case_id": "malaysia_male_19730824_P006-Q29",
+        "correct": false,
+        "claim": "申丑合",
+        "type": "branch_rel",
+        "engine_truth": "申丑实际关系=无",
+        "note": ""
+      },
+      {
+        "case_id": "beijing_male_19700722_P008-Q36",
+        "correct": false,
+        "claim": "戌金",
+        "type": "wuxing_zhi",
+        "engine_truth": "戌五行属土",
+        "note": ""
+      },
+      {
+        "case_id": "beijing_male_19700722_P008-Q38",
+        "correct": false,
+        "claim": "戌火",
+        "type": "wuxing_zhi",
+        "engine_truth": "戌五行属土",
+        "note": ""
+      },
+      {
+        "case_id": "hongkong_female_19870705_P002-Q10",
+        "correct": false,
+        "claim": "卯木为偏印",
+        "type": "shishen_zhi",
+        "engine_truth": "卯本气乙相对日主乙的十神=比肩",
+        "note": ""
+      },
+      {
+        "case_id": "singapore_male_19930408_P004-Q18",
+        "correct": false,
+        "claim": "丙火为偏印",
+        "type": "shishen_gan",
+        "engine_truth": "丙相对日主己的十神=正印",
+        "note": ""
+      },
+      {
+        "case_id": "malaysia_male_19880110_P005-Q23",
+        "correct": false,
+        "claim": "子酉合",
+        "type": "branch_rel",
+        "engine_truth": "子酉实际关系=无",
+        "note": "注意:子或酉不在命盘四支中"
+      }
+    ]
+  }
+}
