@@ -1275,6 +1275,98 @@ class TestFakeRunnerEndToEnd:
                      if not c["passed"]}
 
 
+# ------------------------------------------- 6.10 slice 输出目录创建（真实 runner 集成缺陷回归）
+
+
+class TestSliceOutputDirCreation:
+    """真实 runner 集成缺陷回归：resume_ledger._atomic_write_json 不建父目录，
+    manifest 路径派生自 --case-details-jsonl（<dir>/detail.jsonl →
+    <dir>/detail.manifest.json）；stage executor 必须在 runner 子进程调用前
+    建好 detail 父目录，否则真实 runner 首跑即 FileNotFoundError → exit 4。
+    测试内 _FakeRunner 自建父目录，掩盖了该假设，故此处用只断言不写盘的
+    runner 替身锁定 executor 侧的保障。"""
+
+    @staticmethod
+    def _dir_asserting_runner(captured):
+        def _runner(cmd):
+            detail = Path(cmd[cmd.index("--case-details-jsonl") + 1])
+            assert detail.parent.is_dir(), \
+                f"detail parent missing at runner call: {detail.parent}"
+            captured.append(list(cmd))
+            return None
+        return _runner
+
+    def test_execute_smoke_creates_main_dir(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(orch, "_ensure_normalized_dataset",
+                            _fake_normalized_dataset)
+        cmds = []
+        monkeypatch.setattr(orch, "_run_runner_subprocess",
+                            self._dir_asserting_runner(cmds))
+        orch._execute_smoke(tmp_path, {})
+        assert len(cmds) == 1
+        assert (tmp_path / "main").is_dir()
+
+    def test_execute_main_resume_creates_main_dir(self, tmp_path, monkeypatch):
+        cmds = []
+        monkeypatch.setattr(orch, "_run_runner_subprocess",
+                            self._dir_asserting_runner(cmds))
+        orch._execute_main_resume(tmp_path, {})
+        assert len(cmds) == 1
+        assert "--resume" in cmds[0]
+        assert (tmp_path / "main").is_dir()
+
+    def test_execute_retest_creates_retest_dir(self, tmp_path, monkeypatch):
+        _main_artifacts(tmp_path, n_parsed=158,
+                        eligible_ids=["mingli_ftb_0002", "mingli_ftb_0007"],
+                        n_call_attempts=170)
+        cmds = []
+        monkeypatch.setattr(orch, "_run_runner_subprocess",
+                            self._dir_asserting_runner(cmds))
+        orch._execute_retest(tmp_path, {})
+        assert len(cmds) == 1
+        assert orch._retest_paths(tmp_path)["dir"].is_dir()
+
+    def test_resume_with_incomplete_smoke_reexecutes_smoke(
+            self, tmp_path, monkeypatch):
+        """真实失败现场回归：smoke 阶段 runner 失败（无 smoke_completed_at、
+        main/ 无任何 runner 产物）后 --resume 必须重新执行 smoke 阶段并走完
+        全链，而不是误拒或跳级。"""
+        _install_passing_preflight_receipt(tmp_path, monkeypatch)
+        monkeypatch.setattr(orch, "_ensure_normalized_dataset",
+                            _fake_normalized_dataset)
+        out_dir = tmp_path / "out"
+
+        # 首跑：runner 子进程失败（真实现场：FileNotFoundError → exit=1 → _blocked）
+        def _failing_runner(cmd):
+            orch._blocked("runner failed (exit=1): simulated FileNotFoundError")
+
+        monkeypatch.setattr(orch, "_run_runner_subprocess", _failing_runner)
+        with pytest.raises(SystemExit) as exc:
+            orch.run_mingli_baseline("rsmoke", output_dir=str(out_dir))
+        assert exc.value.code == 4
+        runs_root = out_dir / "runs" / "rsmoke"
+        context = _load_json(runs_root / orch.RUN_CONTEXT_NAME)
+        assert context["stage"] == "smoke_first_pass"
+        assert "smoke_completed_at" not in context
+        # main/ 无任何 runner 产物（修复后目录本身可被 executor 预建）
+        assert not (runs_root / "main" / "detail.jsonl").exists()
+        assert not (runs_root / "main" / "detail.events.jsonl").exists()
+
+        # --resume：重新执行 smoke 并跑完全链
+        fake = _FakeRunner()
+        monkeypatch.setattr(orch, "_run_runner_subprocess", fake)
+        result = orch.run_mingli_baseline("rsmoke", resume=True,
+                                          output_dir=str(out_dir))
+        assert result["status"] == "ok"
+        stages = [(c[c.index("--attempt-stage") + 1],
+                   c[c.index("--max-cases") + 1]) for c in fake.cmds]
+        assert ("main", "10") in stages           # smoke 被重新执行
+        assert ("main", "160") in stages          # main resume 继续
+        assert any(s == "controlled_retest" for s, _ in stages)
+        context = _load_json(runs_root / orch.RUN_CONTEXT_NAME)
+        assert context["stage"] == "published"
+
+
 # ---------------------------------------------------------------- Task 7 preflight
 
 _PREFLIGHT_CATEGORIES = ["事业", "官非", "健康", "婚姻", "感情", "子女",

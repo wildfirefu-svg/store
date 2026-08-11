@@ -1149,9 +1149,17 @@ def _run_runner_subprocess(cmd):
     return result
 
 
+def _ensure_slice_output_dir(slice_info):
+    """真实 runner 的 resume_ledger._atomic_write_json 不建父目录（manifest 路径
+    派生自 --case-details-jsonl）；executor 必须在 runner 子进程调用前建好
+    detail 父目录，否则首跑即 FileNotFoundError -> runner exit=1 -> BLOCKED。"""
+    Path(slice_info["detail_path"]).parent.mkdir(parents=True, exist_ok=True)
+
+
 def _execute_smoke(runs_root, context):
     _ensure_normalized_dataset(runs_root)
     slice_info = _main_slice_info(runs_root, SMOKE_SIZE)
+    _ensure_slice_output_dir(slice_info)
     cmd = _build_runner_command(slice_info)
     _run_runner_subprocess(cmd)
     context["smoke_completed_at"] = time.strftime("%Y-%m-%dT%H:%M:%S")
@@ -1159,6 +1167,7 @@ def _execute_smoke(runs_root, context):
 
 def _execute_main_resume(runs_root, context):
     slice_info = _main_slice_info(runs_root, MAIN_MAX_CASES)
+    _ensure_slice_output_dir(slice_info)
     cmd = _build_runner_command(slice_info, resume=True)
     _run_runner_subprocess(cmd)
     ledger = BudgetLedger(Path(runs_root) / BUDGET_LEDGER_NAME, HARD_CAP)
@@ -1192,8 +1201,9 @@ def _execute_retest(runs_root, context):
         ledger.record_slice_completed(
             "retest_prealloc", manifest["hard_cap"], manifest["scheduled_calls"])
         resume = False
-    cmd = _build_runner_command(_retest_slice_info(runs_root, manifest),
-                                resume=resume)
+    slice_info = _retest_slice_info(runs_root, manifest)
+    _ensure_slice_output_dir(slice_info)
+    cmd = _build_runner_command(slice_info, resume=resume)
     _run_runner_subprocess(cmd)
     context["retest_report"] = _compute_retest_report(manifest, paths["detail"])
     return manifest
