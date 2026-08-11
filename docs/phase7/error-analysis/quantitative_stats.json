@@ -160,13 +160,6 @@
    "right_without": 28,
    "p_value": 0.9123
   },
-  "allwrong_chart_member": {
-   "wrong_with": 34,
-   "wrong_without": 73,
-   "right_with": 0,
-   "right_without": 53,
-   "p_value": 0.0
-  },
   "cat:事业": {
    "wrong_with": 19,
    "wrong_without": 88,
@@ -284,5 +277,1161 @@
   "question_len_median": 12,
   "astro_palace_stars_median": 12,
   "test": "Fisher exact one-sided (enrichment), alpha=0.05, no multiple-testing correction"
+ },
+ "chart_quote_rates": {
+  "matching_rules": {
+   "chinese_date_quoted": "official_astro.chinese_date 精确子串 ∈ raw_answer",
+   "palace_star_quoted": "palace_stars 去重星名集合中 ≥1 个精确子串 ∈ raw_answer"
+  },
+  "wrong_group": {
+   "chinese_date": {
+    "quoted": 32,
+    "total": 107
+   },
+   "palace_star": {
+    "quoted": 107,
+    "total": 107
+   }
+  },
+  "right_group": {
+   "chinese_date": {
+    "quoted": 12,
+    "total": 53
+   },
+   "palace_star": {
+    "quoted": 53,
+    "total": 53
+   }
+  },
+  "per_question": [
+   {
+    "case_id": "mingli_ftb_0001",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0002",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0003",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0004",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0005",
+    "correct": true,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0006",
+    "correct": true,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0007",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0008",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0009",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0010",
+    "correct": true,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0011",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0012",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0013",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0014",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0015",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0016",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0017",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0018",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0019",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0020",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0021",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0022",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0023",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0024",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0025",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0026",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0027",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0028",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0029",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0030",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0031",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0032",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0033",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0034",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0035",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0036",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0037",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0038",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0039",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0040",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0041",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0042",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0043",
+    "correct": true,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0044",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0045",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0046",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0047",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0048",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0049",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0050",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0051",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0052",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0053",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0054",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0055",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0056",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0057",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0058",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0059",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0060",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0061",
+    "correct": true,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0062",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0063",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0064",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0065",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0066",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0067",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0068",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0069",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0070",
+    "correct": true,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0071",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0072",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0073",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0074",
+    "correct": true,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0075",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0076",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0077",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0078",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0079",
+    "correct": true,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0080",
+    "correct": true,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0081",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0082",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0083",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0084",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0085",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0086",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0087",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0088",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0089",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0090",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0091",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0092",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0093",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0094",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0095",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0096",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0097",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0098",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0099",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0100",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0101",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0102",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0103",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0104",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0105",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0106",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0107",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0108",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0109",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0110",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0111",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0112",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0113",
+    "correct": true,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0114",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0115",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0116",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0117",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0118",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0119",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0120",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0121",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0122",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0123",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0124",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0125",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0126",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0127",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0128",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0129",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0130",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0131",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0132",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0133",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0134",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0135",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0136",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0137",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0138",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0139",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0140",
+    "correct": true,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0141",
+    "correct": true,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0142",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0143",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0144",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0145",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0146",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0147",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0148",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0149",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0150",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0151",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0152",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0153",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0154",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0155",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0156",
+    "correct": false,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0157",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0158",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0159",
+    "correct": false,
+    "chinese_date_quoted": true,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   },
+   {
+    "case_id": "mingli_ftb_0160",
+    "correct": true,
+    "chinese_date_quoted": false,
+    "palace_star_quoted": true,
+    "palace_star_total": 28
+   }
+  ]
+ },
+ "allwrong_chart_sanity_check": {
+  "null_model": "iid questions, per-question error rate = 107/160; per-chart all-wrong prob = p^n_i; Poisson-binomial exact tail",
+  "p_error": 0.66875,
+  "expected_allwrong_charts": 4.3022,
+  "observed_allwrong_charts": 7,
+  "p_ge_observed": 0.1292,
+  "interpretation": "非循环检验：不先按结果选盘。p>=0.05 则不能拒绝同率零假设，盘级聚集不构成统计证据"
  }
 }

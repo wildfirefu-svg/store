@@ -115,15 +115,15 @@ def main() -> None:
         if name == "astro_coverage_low":
             astro = (m.get("chart_input") or {}).get("official_astro") or {}
             return len(astro.get("palace_stars") or {}) < astro_med
-        if name == "allwrong_chart_member":
-            return row["chart_case_id"] in allwrong
         if name.startswith("cat:"):
             return m.get("category") == name[4:]
         if name.startswith("year:"):
             return str(m.get("year")) == name[5:]
         raise ValueError(name)
 
-    feats = (["question_long", "astro_coverage_low", "allwrong_chart_member"]
+    # allwrong_chart_member 已移除：先按结果选全错盘再检验其成员富集是循环定义，
+    # 盘级异质性改用 §6 的非循环 Poisson-binomial sanity check。
+    feats = (["question_long", "astro_coverage_low"]
              + [f"cat:{c}" for c in sorted({r['_meta'].get('category') for r in details})]
              + [f"year:{y}" for y in ("2022", "2023", "2024", "2025")])
     enrich = {}
@@ -139,6 +139,70 @@ def main() -> None:
         "question_len_median": qlen_med,
         "astro_palace_stars_median": astro_med,
         "test": "Fisher exact one-sided (enrichment), alpha=0.05, no multiple-testing correction",
+    }
+
+    # ---- 5. 盘面引用率（显式匹配规则，逐题结果落盘）----
+    # 规则（冻结）：
+    #   chinese_date_quoted：official_astro.chinese_date 作为精确子串出现在 raw_answer 中。
+    #   palace_star_quoted：official_astro.palace_stars 全部宫位星名去重集合中，
+    #                       至少 1 个星名作为精确子串出现在 raw_answer 中。
+    quote_rows = []
+    for r in details:
+        raw = r.get("raw_answer") or ""
+        astro = ((r["_meta"].get("chart_input") or {}).get("official_astro") or {})
+        cd = str(astro.get("chinese_date") or "")
+        stars = {s for v in (astro.get("palace_stars") or {}).values() for s in str(v).split() if s}
+        quote_rows.append({
+            "case_id": r["case_id"],
+            "correct": r["correct"],
+            "chinese_date_quoted": bool(cd) and cd in raw,
+            "palace_star_quoted": any(s in raw for s in stars),
+            "palace_star_total": len(stars),
+        })
+
+    def rate(rows, key):
+        sub = [q for q in quote_rows if (not q["correct"]) == (rows == "wrong")]
+        return {"quoted": sum(q[key] for q in sub), "total": len(sub)}
+
+    out["chart_quote_rates"] = {
+        "matching_rules": {
+            "chinese_date_quoted": "official_astro.chinese_date 精确子串 ∈ raw_answer",
+            "palace_star_quoted": "palace_stars 去重星名集合中 ≥1 个精确子串 ∈ raw_answer",
+        },
+        "wrong_group": {
+            "chinese_date": rate("wrong", "chinese_date_quoted"),
+            "palace_star": rate("wrong", "palace_star_quoted"),
+        },
+        "right_group": {
+            "chinese_date": rate("right", "chinese_date_quoted"),
+            "palace_star": rate("right", "palace_star_quoted"),
+        },
+        "per_question": quote_rows,
+    }
+
+    # ---- 6. 全错盘非循环 sanity check（Poisson-binomial 精确尾部）----
+    # 零假设：各题独立、错误率同为全局 p=107/160。每盘全错概率 q_i = p**(n_i)，
+    # 全错盘数 X ~ Poisson-binomial(q_i)。报 E[X] 与 P(X>=observed)。
+    p_err = len(wrong) / len(details)
+    qs = [(t and (p_err ** t)) for c, (k, t) in sorted(charts.items())]
+    observed = len(allwrong)
+    # DP 计算 Poisson-binomial 分布
+    dist = [1.0]
+    for q in qs:
+        nd = [0.0] * (len(dist) + 1)
+        for i, v in enumerate(dist):
+            nd[i] += v * (1 - q)
+            nd[i + 1] += v * q
+        dist = nd
+    expected = sum(q for q in qs)
+    tail = sum(dist[observed:])
+    out["allwrong_chart_sanity_check"] = {
+        "null_model": "iid questions, per-question error rate = 107/160; per-chart all-wrong prob = p^n_i; Poisson-binomial exact tail",
+        "p_error": round(p_err, 6),
+        "expected_allwrong_charts": round(expected, 4),
+        "observed_allwrong_charts": observed,
+        "p_ge_observed": round(tail, 4),
+        "interpretation": "非循环检验：不先按结果选盘。p>=0.05 则不能拒绝同率零假设，盘级聚集不构成统计证据",
     }
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
