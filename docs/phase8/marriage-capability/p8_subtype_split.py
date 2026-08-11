@@ -125,6 +125,8 @@ def main() -> None:
             merged_from = decision["merged_from"]
             merge_reason = decision["reason"]
         else:
+            if bucket not in BUCKET_TO_SUBTYPE:
+                sys.exit(f"unadjudicated bucket {bucket!r} for {cid}: add MERGE_DECISIONS")
             primary = BUCKET_TO_SUBTYPE[bucket]
             secondary = list(SECONDARY_DECISIONS.get(cid, []))
             merged_from = None
@@ -159,6 +161,7 @@ def main() -> None:
         json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
         + "\n",
         encoding="utf-8",
+        newline="\n",
     )
     print(f"written {OUT}: {by_primary} total={len(cases)}")
 

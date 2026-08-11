@@ -12,10 +12,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 
 STRATEGIES = ("json_canonical", "jsonl_canonical", "raw_bytes", "git_canonical_lf")
 REQUIRED_KEYS = ("path", "sha256", "strategy")
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 STRATEGY_NOTES = {
     "json_canonical": 'sort_keys=True, ensure_ascii=False, separators=(",", ":") + 末尾 \\n',
     "jsonl_canonical": "逐行 canonical JSON、冻结行序、每行及文件末尾均 \\n",
@@ -60,10 +62,15 @@ def atomic_add(manifest_path: Path, sha_entries: list[dict]) -> dict:
             raise ValueError(f"invalid sha entry (need {REQUIRED_KEYS}): {entry!r}")
         if entry["strategy"] not in STRATEGIES:
             raise ValueError(f"unknown strategy {entry['strategy']!r}")
+        if not _SHA256_RE.fullmatch(entry["sha256"]):
+            raise ValueError(f"invalid sha256 hex {entry['sha256']!r} in {entry['path']!r}")
 
     entries: dict[str, dict] = {}
     if manifest_path.exists():
-        existing = json.loads(manifest_path.read_text(encoding="utf-8"))
+        try:
+            existing = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise ValueError(f"manifest corrupted, refusing to overwrite: {manifest_path}: {exc}") from exc
         entries = {e["path"]: e for e in existing["entries"]}
     for entry in sha_entries:
         entries[entry["path"]] = entry
@@ -75,7 +82,9 @@ def atomic_add(manifest_path: Path, sha_entries: list[dict]) -> dict:
     }
     tmp = manifest_path.with_name(manifest_path.name + ".tmp")
     tmp.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"
+        json.dumps(payload, ensure_ascii=False, indent=1) + "\n",
+        encoding="utf-8",
+        newline="\n",
     )
     json.loads(tmp.read_text(encoding="utf-8"))  # 写后校验：不可解析即中断，不替换
     os.replace(tmp, manifest_path)

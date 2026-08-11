@@ -175,20 +175,24 @@ class TestFreezeManifest:
     def test_atomic_add_creates_and_preserves_entries(self, tmp_path):
         freeze = _load_module("p8_freeze", "docs/phase8/marriage-capability/p8_freeze.py")
         manifest = tmp_path / "m.json"
-        freeze.atomic_add(manifest, [{"path": "a", "sha256": "x", "strategy": "raw_bytes"}])
         freeze.atomic_add(
-            manifest, [{"path": "b", "sha256": "y", "strategy": "json_canonical"}]
+            manifest, [{"path": "a", "sha256": "1" * 64, "strategy": "raw_bytes"}]
+        )
+        freeze.atomic_add(
+            manifest, [{"path": "b", "sha256": "2" * 64, "strategy": "json_canonical"}]
         )
         m = json.loads(manifest.read_text(encoding="utf-8"))
         assert {e["path"] for e in m["entries"]} == {"a", "b"}
-        assert {e["sha256"] for e in m["entries"]} == {"x", "y"}
+        assert {e["sha256"] for e in m["entries"]} == {"1" * 64, "2" * 64}
 
     def test_atomic_add_fault_before_replace_keeps_manifest_parseable(
         self, tmp_path, monkeypatch
     ):
         freeze = _load_module("p8_freeze", "docs/phase8/marriage-capability/p8_freeze.py")
         manifest = tmp_path / "m.json"
-        freeze.atomic_add(manifest, [{"path": "a", "sha256": "x", "strategy": "raw_bytes"}])
+        freeze.atomic_add(
+            manifest, [{"path": "a", "sha256": "1" * 64, "strategy": "raw_bytes"}]
+        )
         before = manifest.read_bytes()
 
         def boom(*_args, **_kwargs):
@@ -197,7 +201,7 @@ class TestFreezeManifest:
         monkeypatch.setattr(freeze.os, "replace", boom)
         with pytest.raises(RuntimeError):
             freeze.atomic_add(
-                manifest, [{"path": "b", "sha256": "y", "strategy": "raw_bytes"}]
+                manifest, [{"path": "b", "sha256": "2" * 64, "strategy": "raw_bytes"}]
             )
         assert manifest.read_bytes() == before
         assert json.loads(manifest.read_text(encoding="utf-8"))  # 无半写状态
@@ -207,7 +211,9 @@ class TestFreezeManifest:
     ):
         freeze = _load_module("p8_freeze", "docs/phase8/marriage-capability/p8_freeze.py")
         manifest = tmp_path / "m.json"
-        freeze.atomic_add(manifest, [{"path": "a", "sha256": "x", "strategy": "raw_bytes"}])
+        freeze.atomic_add(
+            manifest, [{"path": "a", "sha256": "1" * 64, "strategy": "raw_bytes"}]
+        )
         before = manifest.read_bytes()
 
         def boom(*_args, **_kwargs):
@@ -216,7 +222,7 @@ class TestFreezeManifest:
         monkeypatch.setattr(freeze.Path, "write_text", boom)
         with pytest.raises(OSError):
             freeze.atomic_add(
-                manifest, [{"path": "b", "sha256": "y", "strategy": "raw_bytes"}]
+                manifest, [{"path": "b", "sha256": "2" * 64, "strategy": "raw_bytes"}]
             )
         assert manifest.read_bytes() == before
         assert json.loads(manifest.read_text(encoding="utf-8"))
@@ -227,6 +233,32 @@ class TestFreezeManifest:
         with pytest.raises(ValueError):
             freeze.atomic_add(manifest, [{"path": "a"}])
         assert not manifest.exists()
+
+    def test_atomic_add_rejects_bad_sha256_format(self, tmp_path):
+        freeze = _load_module("p8_freeze", "docs/phase8/marriage-capability/p8_freeze.py")
+        manifest = tmp_path / "m.json"
+        with pytest.raises(ValueError):
+            freeze.atomic_add(
+                manifest,
+                [{"path": "a", "sha256": "not-hex", "strategy": "raw_bytes"}],
+            )
+        with pytest.raises(ValueError):
+            freeze.atomic_add(
+                manifest,
+                [{"path": "a", "sha256": "abcd" * 15, "strategy": "raw_bytes"}],
+            )
+        assert not manifest.exists()
+
+    def test_atomic_add_corrupted_manifest_raises_without_overwrite(self, tmp_path):
+        freeze = _load_module("p8_freeze", "docs/phase8/marriage-capability/p8_freeze.py")
+        manifest = tmp_path / "m.json"
+        manifest.write_text("{broken json", encoding="utf-8")
+        with pytest.raises(ValueError, match="corrupted"):
+            freeze.atomic_add(
+                manifest,
+                [{"path": "a", "sha256": "0" * 64, "strategy": "raw_bytes"}],
+            )
+        assert manifest.read_text(encoding="utf-8") == "{broken json"
 
 
 class TestReconcileSubtype:
