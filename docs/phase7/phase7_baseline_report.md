@@ -65,7 +65,7 @@ parser 终态分布：`parsed 160 / invalid 0 / call_failed 0`（parser_rate = 1
 
 十二条硬门 **全部通过，verdict=COMPLETE**（160 终态 / 160 唯一题目 ID / 每题恰 1 终态 / 32 命盘分布 30×5+case_19×6+case_20×4 / 终态枚举合法 / 分母 160 / 无复测越权 / call_attempt 160≤180 / merged SHA 一致 / thinking_mode 逐行 disabled / response_model 逐行一致 / chart_case_id join 逐行一致）。
 
-SHA 交叉核验（本报告撰写时重算）：merged_details、mingli_data、fortune_api 与 audit index 记录一致。receipt 字段全集见 `phase7_baseline_receipt.json`（`model_label="DeepSeek-V4-Flash non-thinking"`、`completeness_verdict=COMPLETE` 等）。
+SHA 交叉核验（本报告撰写时重算）：merged_details、mingli_data、fortune_api 与 audit index 记录一致。**归档 SHA 针对 Git canonical LF 字节**（`sha256_byte_policy="git-canonical-lf"`，见 audit index 与 receipt）：所有 artifact SHA 以 HEAD blob 字节重算并冻结，Windows 工作树的 CRLF 检出与 `autocrlf=false`/Linux 检出均按 LF 规范字节校验。receipt 字段全集见 `phase7_baseline_receipt.json`（`model_label="DeepSeek-V4-Flash non-thinking"`、`completeness_verdict=COMPLETE` 等）。
 
 **r1 说明**：首个 run_id（`...-r1`）在首个模型调用前因 orchestrator 切片目录缺陷中止（零 API 消耗），缺陷修复（`b3e3e2a`）后按 fail-closed 契约不可 resume，本报告全部为 r2 数据。r1 现场保留于 `.tmp` 备查。
 

@@ -3,7 +3,7 @@
   "run_id": "phase7-mingli-v4flash-nt-20260811-r2",
   "user_run_id": "phase7-mingli-v4flash-nt-20260811-r2",
   "archive_dir": ".tmp\\phase7\\run\\runs\\phase7-mingli-v4flash-nt-20260811-r2\\archive",
-  "audit_index_sha256": "51d67718ebc3bb8895993ea249661fbf5c49abeb5074d53a11a9e6da41ad1057",
+  "audit_index_sha256": "a61479ab38463b87e0b6817944b7b3990ea6891b068fd75fd3f65f167bf3bbee",
   "provider": "deepseek",
   "model": "deepseek-v4-flash",
   "thinking_mode": "disabled",
@@ -18,7 +18,7 @@
   "phase7_code_fingerprint": "13b337a07521b57c1d553ba0afcc26fc29c0f926a0507a0c52bdcf420508f45b",
   "mingli_data_sha256": "528240929b23859656bf7ec0c126da92e2523c2cf091b11f83c0e8e377412054",
   "fortune_api_sha256": "e44ff5201486dc1917bbb24b6905a53e6a1359e76ada0eb8d5b2d9a5a88d29ed",
-  "normalized_jsonl_sha256": "c904bb0568b201076ddd93dc4103bb6360602a6cb7604397be25088fd25791cf",
+  "normalized_jsonl_sha256": "370111fa6b1f1303188390a9d5f55c736841073339a5f65ee9c675e859937a86",
   "pinned_commit": "b7433280fd86d7a7c27debbc47d0303c218f0bfd",
   "license_sha256": "2163a239e9b1e8b61ac70067aba7b625eb6835be7a898ebd938697c79780362c",
   "rag": false,
@@ -43,5 +43,6 @@
   "response_model_values": [
     "deepseek-v4-flash"
   ],
-  "response_model_missing_count": 0
+  "response_model_missing_count": 0,
+  "sha256_byte_policy": "git-canonical-lf"
 }

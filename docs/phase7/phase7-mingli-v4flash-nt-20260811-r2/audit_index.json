@@ -17,7 +17,7 @@
   "phase7_code_fingerprint": "13b337a07521b57c1d553ba0afcc26fc29c0f926a0507a0c52bdcf420508f45b",
   "mingli_data_sha256": "528240929b23859656bf7ec0c126da92e2523c2cf091b11f83c0e8e377412054",
   "fortune_api_sha256": "e44ff5201486dc1917bbb24b6905a53e6a1359e76ada0eb8d5b2d9a5a88d29ed",
-  "normalized_jsonl_sha256": "c904bb0568b201076ddd93dc4103bb6360602a6cb7604397be25088fd25791cf",
+  "normalized_jsonl_sha256": "370111fa6b1f1303188390a9d5f55c736841073339a5f65ee9c675e859937a86",
   "pinned_commit": "b7433280fd86d7a7c27debbc47d0303c218f0bfd",
   "license_sha256": "2163a239e9b1e8b61ac70067aba7b625eb6835be7a898ebd938697c79780362c",
   "env_flags": {
@@ -128,15 +128,15 @@
     "unselected_eligible_case_ids": [],
     "selected_not_executed_case_ids": []
   },
-  "merged_details_sha256": "588c24d5376053f3baca3583ca0c3ae99b871aca647c81e663cbab7990cfadcf",
+  "merged_details_sha256": "44d22d4422b3f6c9bf29a1cf4ef9ebfee26b6276dccc3f4339a82795ef6a8a2a",
   "artifact_sha256": {
-    "main_detail_sha256": "588c24d5376053f3baca3583ca0c3ae99b871aca647c81e663cbab7990cfadcf",
-    "main_events_sha256": "e8e6de48e41c8cc540a3c602b694fcf7be224319fcde519b6261d4bb9e3294f4",
+    "main_detail_sha256": "44d22d4422b3f6c9bf29a1cf4ef9ebfee26b6276dccc3f4339a82795ef6a8a2a",
+    "main_events_sha256": "a90b9a308b90e6f25c78cef172b97a5728e68f02661382f6462ff412999a2069",
     "retest_detail_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
     "retest_events_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-    "retest_manifest_sha256": "55347d531f93e823c05a6cfc152c66eed877bf92169cb848b13b1eb383446eac",
-    "run_manifest_sha256": "aeb402ef91005911c5c20a2beeff943985da6cda227d206f240279c1badf16a9",
-    "normalized_jsonl_sha256": "c904bb0568b201076ddd93dc4103bb6360602a6cb7604397be25088fd25791cf"
+    "retest_manifest_sha256": "42a0ef405de2b8da774beb186b48b904c3e34193d91d21be7e3dae17549938a5",
+    "run_manifest_sha256": "236903e0bbcce8e92d140a3fbc763c5bc065ead953a9b6388a19a6b1346d4b6c",
+    "normalized_jsonl_sha256": "370111fa6b1f1303188390a9d5f55c736841073339a5f65ee9c675e859937a86"
   },
   "run_context": {
     "experiment_id": "phase7-mingli-baseline",
@@ -317,5 +317,6 @@
       }
     }
   },
-  "archived_at": "2026-08-11T09:24:57"
+  "archived_at": "2026-08-11T09:24:57",
+  "sha256_byte_policy": "git-canonical-lf"
 }
