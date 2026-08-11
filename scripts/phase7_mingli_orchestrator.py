@@ -1249,6 +1249,7 @@ def _execute_finalize(runs_root, context):
 
 def run_mingli_baseline(run_id, resume=False, output_dir=".tmp/phase7/run"):
     _validate_run_id(run_id)
+    _validate_preflight_for_run()  # fail-closed 准入门：先于 run 目录创建与任何 runner/API 调用
     runs_root, context = _prepare_run_context(output_dir, run_id, resume)
     stage = context["stage"]
     if stage == STAGE_PUBLISHED:
@@ -1529,6 +1530,61 @@ def run_preflight(work_dir, data_json_path=None, fortune_json_path=None,
         _blocked(f"preflight BLOCKED: failed checks {failed}; "
                  f"receipt: {receipt_path}")
     return EXIT_OK
+
+
+def _validate_preflight_for_run(receipt_path=None, data_json_path=None,
+                                fortune_json_path=None):
+    """run 入口 fail-closed 准入门：三方一致（receipt ↔ 当前磁盘文件 ↔ 模块
+    冻结常量）。任一不一致 -> 退出 4；在 run 目录创建与任何 runner/API 调用
+    之前执行，无跳过开关。"""
+    receipt_path = str(receipt_path or
+                       os.path.join(_PROJECT_ROOT, PREFLIGHT_RECEIPT_PATH))
+    data_json_path = str(data_json_path or
+                         os.path.join(_PROJECT_ROOT, DATA_JSON_PATH))
+    fortune_json_path = str(fortune_json_path or
+                            os.path.join(_PROJECT_ROOT, FORTUNE_JSON_PATH))
+    if not os.path.exists(receipt_path):
+        _blocked(f"preflight receipt missing: {receipt_path}; "
+                 "run 'preflight' first (fail-closed admission gate)")
+    try:
+        receipt = json.loads(Path(receipt_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        _blocked(f"preflight receipt unreadable: {receipt_path}: {exc}")
+    if receipt.get("verdict") != "PASS":
+        _blocked(f"preflight receipt verdict={receipt.get('verdict')!r} "
+                 f"!= 'PASS': {receipt_path}")
+    frozen_commit = _pinned_commit()
+    if receipt.get("pinned_commit") != frozen_commit:
+        _blocked(f"preflight pinned_commit drift: "
+                 f"receipt={receipt.get('pinned_commit')!r} "
+                 f"!= frozen={frozen_commit!r}")
+    data_sha = _sha256_file(data_json_path)
+    receipt_data_sha = (receipt.get("data_json") or {}).get("sha256")
+    if receipt_data_sha != FROZEN_DATA_JSON_SHA256 \
+            or data_sha != FROZEN_DATA_JSON_SHA256:
+        _blocked(f"data.json sha256 three-way drift: receipt={receipt_data_sha!r} "
+                 f"frozen={FROZEN_DATA_JSON_SHA256!r} disk={data_sha!r}")
+    fortune_sha = _sha256_file(fortune_json_path)
+    receipt_fortune_sha = (receipt.get("fortune_api") or {}).get("sha256")
+    if receipt_fortune_sha != FROZEN_FORTUNE_JSON_SHA256 \
+            or fortune_sha != FROZEN_FORTUNE_JSON_SHA256:
+        _blocked(f"fortune_api sha256 three-way drift: "
+                 f"receipt={receipt_fortune_sha!r} "
+                 f"frozen={FROZEN_FORTUNE_JSON_SHA256!r} disk={fortune_sha!r}")
+    current_fp = _phase7_code_fingerprint()
+    if receipt.get("phase7_code_fingerprint") != current_fp:
+        _blocked(f"phase7 code fingerprint drift: "
+                 f"receipt={receipt.get('phase7_code_fingerprint')!r} "
+                 f"!= current={current_fp!r} (re-run preflight after code change)")
+    budget = receipt.get("budget") or {}
+    if budget.get("scheduled_calls") != SCHEDULED_CALLS \
+            or budget.get("hard_cap") != HARD_CAP:
+        _blocked(f"preflight budget drift: receipt={budget!r} != "
+                 f"frozen scheduled={SCHEDULED_CALLS} hard_cap={HARD_CAP}")
+    if receipt.get("env_flags") != _env_flags():
+        _blocked(f"preflight env_flags drift: "
+                 f"receipt={receipt.get('env_flags')!r} != frozen={_env_flags()!r}")
+    return receipt
 
 
 # -- CLI (frozen contract) --

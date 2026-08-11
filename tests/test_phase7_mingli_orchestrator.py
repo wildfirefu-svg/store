@@ -85,6 +85,40 @@ def _smoke_fixtures(tmp_path, n=10, parsed=10, call_failed=0, gate_blocked=0):
     return detail_path, events_path
 
 
+def _install_passing_preflight_receipt(tmp_path, monkeypatch):
+    """run 准入门的合法 PASS receipt 夹具：receipt/数据路径 monkeypatch 到 tmp，
+    冻结 SHA 对齐合成数据，保证 receipt ↔ 磁盘 ↔ 冻结常量三方一致。"""
+    data_path = tmp_path / "data.json"
+    fortune_path = tmp_path / "fortune_api_results.json"
+    data_path.write_text(json.dumps([]), encoding="utf-8")
+    fortune_path.write_text(json.dumps([]), encoding="utf-8")
+    monkeypatch.setattr(orch, "FROZEN_DATA_JSON_SHA256",
+                        orch._sha256_file(data_path))
+    monkeypatch.setattr(orch, "FROZEN_FORTUNE_JSON_SHA256",
+                        orch._sha256_file(fortune_path))
+    monkeypatch.setattr(orch, "DATA_JSON_PATH", str(data_path))
+    monkeypatch.setattr(orch, "FORTUNE_JSON_PATH", str(fortune_path))
+    receipt_path = tmp_path / "preflight_receipt.json"
+    orch._atomic_write_json(receipt_path, {
+        "stage": "preflight",
+        "verdict": "PASS",
+        "generated_at": "2026-08-10T00:00:00",
+        "pinned_commit": orch._pinned_commit(),
+        "phase7_code_fingerprint": orch._phase7_code_fingerprint(),
+        "data_json": {"path": str(data_path),
+                      "sha256": orch.FROZEN_DATA_JSON_SHA256,
+                      "bytes": os.path.getsize(data_path)},
+        "fortune_api": {"path": str(fortune_path),
+                        "sha256": orch.FROZEN_FORTUNE_JSON_SHA256,
+                        "bytes": os.path.getsize(fortune_path)},
+        "budget": {"scheduled_calls": orch.SCHEDULED_CALLS,
+                   "hard_cap": orch.HARD_CAP, "smoke_size": orch.SMOKE_SIZE},
+        "env_flags": orch._env_flags(),
+    })
+    monkeypatch.setattr(orch, "PREFLIGHT_RECEIPT_PATH", str(receipt_path))
+    return receipt_path
+
+
 # ---------------------------------------------------------------- 6.1 CLI
 
 
@@ -146,6 +180,7 @@ class TestRunIdContract:
             assert exc.value.code == 2, bad
 
     def test_existing_artifacts_without_resume_rejected(self, tmp_path, monkeypatch):
+        _install_passing_preflight_receipt(tmp_path, monkeypatch)
         monkeypatch.setattr(orch, "_execute_smoke", lambda *a: None)
         with pytest.raises(SystemExit):  # smoke 判定无 detail → BLOCKED，但产物目录已建
             orch.run_mingli_baseline("r1", output_dir=str(tmp_path))
@@ -153,7 +188,8 @@ class TestRunIdContract:
             orch.run_mingli_baseline("r1", output_dir=str(tmp_path))
         assert exc.value.code == 2
 
-    def test_resume_without_context_or_manifest_rejected(self, tmp_path):
+    def test_resume_without_context_or_manifest_rejected(self, tmp_path, monkeypatch):
+        _install_passing_preflight_receipt(tmp_path, monkeypatch)
         with pytest.raises(SystemExit) as exc:
             orch.run_mingli_baseline("ghost", resume=True, output_dir=str(tmp_path))
         assert exc.value.code == 2
@@ -167,6 +203,7 @@ class TestRunIdContract:
 
     def test_crash_after_smoke_resume_continues_from_main_resume(
             self, tmp_path, monkeypatch):
+        _install_passing_preflight_receipt(tmp_path, monkeypatch)
         calls = []
 
         def _boom(runs_root, context):
@@ -189,7 +226,8 @@ class TestRunIdContract:
         assert result["status"] == "ok"
         assert calls == ["smoke", "main_resume", "retest", "finalize"]
 
-    def test_published_receipt_rerun_rejected(self, tmp_path):
+    def test_published_receipt_rerun_rejected(self, tmp_path, monkeypatch):
+        _install_passing_preflight_receipt(tmp_path, monkeypatch)
         runs_root = tmp_path / "runs" / "r4"
         runs_root.mkdir(parents=True)
         (runs_root / orch.RECEIPT_FILENAME).write_text("{}", encoding="utf-8")
@@ -324,6 +362,7 @@ class TestMaxCasesStateMachine:
         assert exc.value.code == 2
 
     def test_flow_records_transition_into_run_context(self, tmp_path, monkeypatch):
+        _install_passing_preflight_receipt(tmp_path, monkeypatch)
         monkeypatch.setattr(orch, "_execute_smoke", lambda *a: None)
         monkeypatch.setattr(orch, "_judge_smoke",
                             lambda *a, **k: {"passed": True, "failures": []})
@@ -607,6 +646,7 @@ class TestSmokeVerdict:
 
     def test_flow_blocks_when_smoke_fails(self, tmp_path, monkeypatch):
         """smoke 判定失败 → 退出 4 且不进入 main_resume。"""
+        _install_passing_preflight_receipt(tmp_path, monkeypatch)
         monkeypatch.setattr(orch, "_execute_smoke", lambda *a: None)
         monkeypatch.setattr(orch, "_judge_smoke",
                             lambda *a, **k: {"passed": False, "failures": ["x"]})
@@ -1025,7 +1065,8 @@ class TestPhase7CodeFingerprint:
         # resume 侧漂移比对字段集同步覆盖
         assert "phase7_code_fingerprint" in orch.RUN_MANIFEST_IDENTITY_FIELDS
 
-    def test_resume_fingerprint_drift_rejected(self, tmp_path):
+    def test_resume_fingerprint_drift_rejected(self, tmp_path, monkeypatch):
+        _install_passing_preflight_receipt(tmp_path, monkeypatch)
         runs_root, _ = orch._prepare_run_context(str(tmp_path), "fp2", False)
         manifest = _load_json(runs_root / orch.RUN_MANIFEST_NAME)
         manifest["phase7_code_fingerprint"] = "0" * 64
@@ -1140,6 +1181,7 @@ class TestFakeRunnerEndToEnd:
 
     def test_full_chain_no_network(self, tmp_path, monkeypatch):
         self._install_guards(monkeypatch)
+        _install_passing_preflight_receipt(tmp_path, monkeypatch)
         fake = _FakeRunner()
         monkeypatch.setattr(orch, "_run_runner_subprocess", fake)
         monkeypatch.setattr(orch, "_ensure_normalized_dataset",
@@ -1215,6 +1257,7 @@ class TestFakeRunnerEndToEnd:
 
     def test_hard_gate_failure_exit4_no_receipt(self, tmp_path, monkeypatch):
         self._install_guards(monkeypatch)
+        _install_passing_preflight_receipt(tmp_path, monkeypatch)
         fake = _FakeRunner(drop_last=True)  # main 缺 1 题（159 行）
         monkeypatch.setattr(orch, "_run_runner_subprocess", fake)
         monkeypatch.setattr(orch, "_ensure_normalized_dataset",
@@ -1411,3 +1454,75 @@ class TestPreflight:
         assert exc.value.code == 4
         failed = self._failed_names(_load_json(receipt_path))
         assert "visibility_gate" in failed
+
+
+# ------------------------------------------------------- run 入口 preflight 准入门
+
+
+class TestPreflightAdmissionGate:
+    """run 入口 fail-closed 准入门：receipt ↔ 当前磁盘 ↔ 冻结常量三方一致，
+    任一失败退出 4 且不得创建 run 目录、不得触达 runner/模型。"""
+
+    def test_missing_receipt_rejects_no_run_dir(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(orch, "PREFLIGHT_RECEIPT_PATH",
+                            str(tmp_path / "no_such_receipt.json"))
+        smoke_called = []
+        monkeypatch.setattr(orch, "_execute_smoke",
+                            lambda *a: smoke_called.append(1))
+        out_dir = tmp_path / "out"
+        with pytest.raises(SystemExit) as exc:
+            orch.run_mingli_baseline("gate0", output_dir=str(out_dir))
+        assert exc.value.code == 4
+        assert not out_dir.exists()
+        assert not smoke_called
+
+    def test_blocked_verdict_rejects(self, tmp_path, monkeypatch):
+        receipt_path = _install_passing_preflight_receipt(tmp_path, monkeypatch)
+        receipt = _load_json(receipt_path)
+        receipt["verdict"] = "BLOCKED"
+        orch._atomic_write_json(receipt_path, receipt)
+        with pytest.raises(SystemExit) as exc:
+            orch.run_mingli_baseline("gate1", output_dir=str(tmp_path / "out"))
+        assert exc.value.code == 4
+        assert not (tmp_path / "out").exists()
+
+    def test_code_fingerprint_drift_rejects(self, tmp_path, monkeypatch):
+        receipt_path = _install_passing_preflight_receipt(tmp_path, monkeypatch)
+        receipt = _load_json(receipt_path)
+        receipt["phase7_code_fingerprint"] = "0" * 64  # 与当前代码现算值漂移
+        orch._atomic_write_json(receipt_path, receipt)
+        with pytest.raises(SystemExit) as exc:
+            orch.run_mingli_baseline("gate2", output_dir=str(tmp_path / "out"))
+        assert exc.value.code == 4
+        assert not (tmp_path / "out").exists()
+
+    def test_data_tampered_after_pass_receipt_rejects(self, tmp_path, monkeypatch):
+        _install_passing_preflight_receipt(tmp_path, monkeypatch)
+        # PASS receipt 之后篡改数据：当前文件 SHA ≠ receipt/冻结值
+        Path(orch.DATA_JSON_PATH).write_text(
+            json.dumps([{"tampered": True}]), encoding="utf-8")
+        with pytest.raises(SystemExit) as exc:
+            orch.run_mingli_baseline("gate3", output_dir=str(tmp_path / "out"))
+        assert exc.value.code == 4
+        assert not (tmp_path / "out").exists()
+
+    def test_gate_invoked_and_passes_before_run_dir(self, tmp_path, monkeypatch):
+        _install_passing_preflight_receipt(tmp_path, monkeypatch)
+        calls = []
+        real_gate = orch._validate_preflight_for_run
+
+        def _spy(*a, **k):
+            receipt = real_gate(*a, **k)
+            calls.append(receipt)
+            return receipt
+
+        monkeypatch.setattr(orch, "_validate_preflight_for_run", _spy)
+        monkeypatch.setattr(orch, "_execute_smoke", lambda *a: None)
+        with pytest.raises(SystemExit) as exc:  # smoke 无 detail → BLOCKED（在门之后）
+            orch.run_mingli_baseline("gate4", output_dir=str(tmp_path / "out"))
+        assert exc.value.code == 4
+        assert len(calls) == 1                      # 准入门被调用且通过（未抛）
+        assert calls[0]["verdict"] == "PASS"
+        # 门通过之后才创建 run 目录
+        assert (tmp_path / "out" / "runs" / "gate4"
+                / orch.RUN_CONTEXT_NAME).exists()
