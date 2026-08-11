@@ -1,0 +1,16 @@
+{
+ "schema_version": "1.0",
+ "sha_strategies": {
+  "json_canonical": "sort_keys=True, ensure_ascii=False, separators=(\",\", \":\") + 末尾 \\n",
+  "jsonl_canonical": "逐行 canonical JSON、冻结行序、每行及文件末尾均 \\n",
+  "raw_bytes": "文件原始字节 SHA-256",
+  "git_canonical_lf": "CRLF→LF 归一化后 SHA-256（git canonical LF 文本复算口径）"
+ },
+ "entries": [
+  {
+   "path": "docs/phase8/marriage-capability/subtype_split.json",
+   "sha256": "d5b06e4c4a9aa694a95bdc3b523007b66f5496aa743db40908b154cf13241f63",
+   "strategy": "json_canonical"
+  }
+ ]
+}
