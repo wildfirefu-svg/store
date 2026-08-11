@@ -1,0 +1,288 @@
+{
+ "n_total": 160,
+ "n_wrong": 107,
+ "n_right": 53,
+ "letter_distribution": {
+  "expected_all": {
+   "A": 33,
+   "B": 49,
+   "C": 40,
+   "D": 38
+  },
+  "predicted_wrong_group": {
+   "A": 21,
+   "B": 23,
+   "C": 40,
+   "D": 23
+  },
+  "predicted_right_group": {
+   "A": 10,
+   "B": 20,
+   "C": 9,
+   "D": 14
+  }
+ },
+ "confusion_pairs_wrong": {
+  "A->C": 17,
+  "C->D": 16,
+  "B->C": 14,
+  "D->B": 12,
+  "B->A": 10,
+  "D->C": 9,
+  "C->A": 8,
+  "C->B": 7,
+  "B->D": 5,
+  "A->B": 4,
+  "D->A": 3,
+  "A->D": 2
+ },
+ "marriage_deepdive": {
+  "total": 44,
+  "wrong": 38,
+  "by_question_type": {
+   "事件反查(X年发生何事)": {
+    "correct": 0,
+    "total": 3
+   },
+   "其他": {
+    "correct": 0,
+    "total": 4
+   },
+   "多段婚姻/离婚细节": {
+    "correct": 0,
+    "total": 7
+   },
+   "婚姻状况描述": {
+    "correct": 4,
+    "total": 14
+   },
+   "应期(结婚/婚恋时间)": {
+    "correct": 1,
+    "total": 10
+   },
+   "感情细节(拍拖/分手/桃花)": {
+    "correct": 1,
+    "total": 5
+   },
+   "配偶特征": {
+    "correct": 0,
+    "total": 1
+   }
+  }
+ },
+ "allwrong_charts": {
+  "charts": [
+   "case_6",
+   "case_17",
+   "case_20",
+   "case_24",
+   "case_27",
+   "case_30",
+   "case_31"
+  ],
+  "categories": {
+   "case_6": [
+    "婚姻",
+    "学业",
+    "性格",
+    "财运"
+   ],
+   "case_17": [
+    "婚姻",
+    "子女",
+    "学业",
+    "家庭"
+   ],
+   "case_20": [
+    "婚姻"
+   ],
+   "case_24": [
+    "健康",
+    "外貌",
+    "家庭",
+    "财运"
+   ],
+   "case_27": [
+    "婚姻",
+    "学业",
+    "家庭",
+    "性格"
+   ],
+   "case_30": [
+    "事业",
+    "健康",
+    "性格"
+   ],
+   "case_31": [
+    "事业",
+    "外貌",
+    "婚姻",
+    "学业",
+    "家庭"
+   ]
+  },
+  "years": {
+   "case_6": [
+    "2022"
+   ],
+   "case_17": [
+    "2024"
+   ],
+   "case_20": [
+    "2024"
+   ],
+   "case_24": [
+    "2024"
+   ],
+   "case_27": [
+    "2025"
+   ],
+   "case_30": [
+    "2025"
+   ],
+   "case_31": [
+    "2025"
+   ]
+  }
+ },
+ "feature_enrichment": {
+  "question_long": {
+   "wrong_with": 46,
+   "wrong_without": 61,
+   "right_with": 32,
+   "right_without": 21,
+   "p_value": 0.9876
+  },
+  "astro_coverage_low": {
+   "wrong_with": 40,
+   "wrong_without": 67,
+   "right_with": 25,
+   "right_without": 28,
+   "p_value": 0.9123
+  },
+  "allwrong_chart_member": {
+   "wrong_with": 34,
+   "wrong_without": 73,
+   "right_with": 0,
+   "right_without": 53,
+   "p_value": 0.0
+  },
+  "cat:事业": {
+   "wrong_with": 19,
+   "wrong_without": 88,
+   "right_with": 6,
+   "right_without": 47,
+   "p_value": 0.2069
+  },
+  "cat:健康": {
+   "wrong_with": 10,
+   "wrong_without": 97,
+   "right_with": 7,
+   "right_without": 46,
+   "p_value": 0.8458
+  },
+  "cat:外貌": {
+   "wrong_with": 3,
+   "wrong_without": 104,
+   "right_with": 0,
+   "right_without": 53,
+   "p_value": 0.2963
+  },
+  "cat:婚姻": {
+   "wrong_with": 38,
+   "wrong_without": 69,
+   "right_with": 6,
+   "right_without": 47,
+   "p_value": 0.0008
+  },
+  "cat:子女": {
+   "wrong_with": 3,
+   "wrong_without": 104,
+   "right_with": 3,
+   "right_without": 50,
+   "p_value": 0.9061
+  },
+  "cat:学业": {
+   "wrong_with": 8,
+   "wrong_without": 99,
+   "right_with": 3,
+   "right_without": 50,
+   "p_value": 0.4756
+  },
+  "cat:官非": {
+   "wrong_with": 1,
+   "wrong_without": 106,
+   "right_with": 0,
+   "right_without": 53,
+   "p_value": 0.6687
+  },
+  "cat:家庭": {
+   "wrong_with": 12,
+   "wrong_without": 95,
+   "right_with": 10,
+   "right_without": 43,
+   "p_value": 0.939
+  },
+  "cat:性格": {
+   "wrong_with": 7,
+   "wrong_without": 100,
+   "right_with": 7,
+   "right_without": 46,
+   "p_value": 0.9524
+  },
+  "cat:灾劫": {
+   "wrong_with": 0,
+   "wrong_without": 107,
+   "right_with": 2,
+   "right_without": 51,
+   "p_value": 1.0
+  },
+  "cat:财运": {
+   "wrong_with": 5,
+   "wrong_without": 102,
+   "right_with": 8,
+   "right_without": 45,
+   "p_value": 0.9938
+  },
+  "cat:运势": {
+   "wrong_with": 1,
+   "wrong_without": 106,
+   "right_with": 1,
+   "right_without": 52,
+   "p_value": 0.8917
+  },
+  "year:2022": {
+   "wrong_with": 24,
+   "wrong_without": 83,
+   "right_with": 16,
+   "right_without": 37,
+   "p_value": 0.8954
+  },
+  "year:2023": {
+   "wrong_with": 25,
+   "wrong_without": 82,
+   "right_with": 15,
+   "right_without": 38,
+   "p_value": 0.8093
+  },
+  "year:2024": {
+   "wrong_with": 30,
+   "wrong_without": 77,
+   "right_with": 10,
+   "right_without": 43,
+   "p_value": 0.1426
+  },
+  "year:2025": {
+   "wrong_with": 28,
+   "wrong_without": 79,
+   "right_with": 12,
+   "right_without": 41,
+   "p_value": 0.3896
+  }
+ },
+ "feature_notes": {
+  "question_len_median": 12,
+  "astro_palace_stars_median": 12,
+  "test": "Fisher exact one-sided (enrichment), alpha=0.05, no multiple-testing correction"
+ }
+}
