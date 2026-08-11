@@ -31,6 +31,17 @@ SUBTYPES = ["婚姻状态", "结婚离婚应期", "多段婚姻", "配偶特征"
 PRIORITY = ["多段婚姻", "事件反查", "配偶特征", "结婚离婚应期", "婚姻状态"]
 MERGEABLE_BUCKETS = ["感情细节", "其他"]
 
+# P8-2A 冻结 schema（计划 v3.1）：六 KB 入口允许键与 top_n 类型。
+KB_ALLOWED_QUERIES = {
+    "search_gejue": {"allowed_args": {"query", "category"}, "top_n": "int"},
+    "search_shishen_combo": {"allowed_args": {"combo_name"}, "top_n": "int"},
+    "search_shensha": {"allowed_args": {"name"}, "top_n": "null"},
+    "search_nayin": {"allowed_args": {"gan", "zhi"}, "top_n": "null"},
+    "search_bingyao": {"allowed_args": {"query"}, "top_n": "int"},
+    "search_xiangyi": {"allowed_args": {"gan_or_zhi"}, "top_n": "int"},
+}
+COMPUTATION_TYPES = {"dayun", "liunian", "sihua", "other"}
+
 
 def _load_module(name: str, relpath: str):
     spec = importlib.util.spec_from_file_location(name, _REPO / relpath)
@@ -259,6 +270,100 @@ class TestFreezeManifest:
                 [{"path": "a", "sha256": "0" * 64, "strategy": "raw_bytes"}],
             )
         assert manifest.read_text(encoding="utf-8") == "{broken json"
+
+
+class TestRequiredKnowledge:
+    """required_knowledge.jsonl 结构化 schema 校验（P8-2A，计划 v3.1）。"""
+
+    def _rows(self) -> list[dict]:
+        path = _P8_DIR / "required_knowledge.jsonl"
+        return [json.loads(l) for l in path.open(encoding="utf-8") if l.strip()]
+
+    def test_35_rows(self):
+        rows = self._rows()
+        assert len(rows) == 35
+        assert [r["case_id"] for r in rows] == _expected_35()
+
+    def test_row_schema(self):
+        for row in self._rows():
+            assert isinstance(row.get("case_id"), str)
+            assert isinstance(row.get("items"), list) and row["items"]
+            for item in row["items"]:
+                for key in (
+                    "item_id",
+                    "item_type",
+                    "computation_type",
+                    "target_years",
+                    "required_inputs",
+                    "query_specs",
+                ):
+                    assert key in item, f"{row['case_id']}: missing {key}"
+
+    def test_item_id_stable_and_sequential(self):
+        for row in self._rows():
+            for i, item in enumerate(row["items"], start=1):
+                assert item["item_id"] == f"{row['case_id']}#k{i}"
+
+    def test_item_type_enum(self):
+        for row in self._rows():
+            for item in row["items"]:
+                assert item["item_type"] in {"computation", "doctrine"}
+
+    def test_computation_items(self):
+        for row in self._rows():
+            for item in row["items"]:
+                if item["item_type"] != "computation":
+                    continue
+                assert item["computation_type"] in COMPUTATION_TYPES, item["item_id"]
+                assert item["target_years"] is not None and item["target_years"], item["item_id"]
+                assert isinstance(item["required_inputs"], list) and item["required_inputs"]
+                assert item["query_specs"] == []
+
+    def test_doctrine_items(self):
+        for row in self._rows():
+            for item in row["items"]:
+                if item["item_type"] != "doctrine":
+                    continue
+                assert item["computation_type"] is None
+                assert item["target_years"] is None
+                assert item["query_specs"], item["item_id"]
+
+    def test_entrypoint_whitelist(self):
+        for row in self._rows():
+            for item in row["items"]:
+                for qs in item["query_specs"]:
+                    assert qs["entrypoint"] in KB_ALLOWED_QUERIES, qs["query_id"]
+
+    def test_query_id_format(self):
+        for row in self._rows():
+            for item in row["items"]:
+                for j, qs in enumerate(item["query_specs"], start=1):
+                    assert qs["query_id"] == f"{item['item_id']}#q{j}"
+
+    def test_args_exact_allowed_keys_and_no_top_n(self):
+        """args 键恰对应该入口冻结允许键；args 内不得含 top_n；未知键/缺键 fail-closed。"""
+        for row in self._rows():
+            for item in row["items"]:
+                for qs in item["query_specs"]:
+                    allowed = KB_ALLOWED_QUERIES[qs["entrypoint"]]["allowed_args"]
+                    assert set(qs["args"]) == allowed, qs["query_id"]
+                    assert "top_n" not in qs["args"]
+
+    def test_top_n_type_per_entrypoint(self):
+        for row in self._rows():
+            for item in row["items"]:
+                for qs in item["query_specs"]:
+                    want = KB_ALLOWED_QUERIES[qs["entrypoint"]]["top_n"]
+                    if want == "int":
+                        assert isinstance(qs["top_n"], int) and qs["top_n"] > 0
+                    else:
+                        assert qs["top_n"] is None
+
+    def test_synonym_source_nonempty(self):
+        for row in self._rows():
+            for item in row["items"]:
+                for qs in item["query_specs"]:
+                    assert isinstance(qs["synonym_source"], str) and qs["synonym_source"]
 
 
 class TestReconcileSubtype:

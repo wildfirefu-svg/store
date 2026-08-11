@@ -8,6 +8,11 @@
  },
  "entries": [
   {
+   "path": "docs/phase8/marriage-capability/required_knowledge.jsonl",
+   "sha256": "48e44ff87be1acb4da123977b804e1aa7c311bc2652024599eb57fb4f1e94296",
+   "strategy": "jsonl_canonical"
+  },
+  {
    "path": "docs/phase8/marriage-capability/subtype_split.json",
    "sha256": "d5b06e4c4a9aa694a95bdc3b523007b66f5496aa743db40908b154cf13241f63",
    "strategy": "json_canonical"
