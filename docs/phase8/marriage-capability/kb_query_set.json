@@ -1,0 +1,1355 @@
+{
+ "schema_version": "1.0",
+ "source": "docs/phase8/marriage-capability/required_knowledge.jsonl",
+ "queries": [
+  {
+   "query_id": "mingli_ftb_0125#k4#q2",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "六亲断诀",
+    "query": "夫"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0125#k4",
+     "query_id": "mingli_ftb_0125#k4#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0098#k1#q2",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "六亲断诀",
+    "query": "子女"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0098#k1",
+     "query_id": "mingli_ftb_0098#k1#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0026#k1#q2",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "婚姻",
+    "query": "姻缘"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0026#k1",
+     "query_id": "mingli_ftb_0026#k1#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0044#k1",
+     "query_id": "mingli_ftb_0044#k1#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0129#k1",
+     "query_id": "mingli_ftb_0129#k1#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0013#k1#q1",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "婚姻",
+    "query": "婚姻"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0013#k1",
+     "query_id": "mingli_ftb_0013#k1#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0026#k1",
+     "query_id": "mingli_ftb_0026#k1#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0044#k1",
+     "query_id": "mingli_ftb_0044#k1#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0048#k1",
+     "query_id": "mingli_ftb_0048#k1#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0054#k1",
+     "query_id": "mingli_ftb_0054#k1#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0058#k1",
+     "query_id": "mingli_ftb_0058#k1#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0085#k4",
+     "query_id": "mingli_ftb_0085#k4#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0098#k1",
+     "query_id": "mingli_ftb_0098#k1#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0112#k1",
+     "query_id": "mingli_ftb_0112#k1#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0122#k1",
+     "query_id": "mingli_ftb_0122#k1#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0129#k1",
+     "query_id": "mingli_ftb_0129#k1#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0134#k1",
+     "query_id": "mingli_ftb_0134#k1#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0139#k1",
+     "query_id": "mingli_ftb_0139#k1#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0153#k1",
+     "query_id": "mingli_ftb_0153#k1#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0134#k1#q2",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "婚姻",
+    "query": "婚恋"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0134#k1",
+     "query_id": "mingli_ftb_0134#k1#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0054#k1#q2",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "婚姻",
+    "query": "感情"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0054#k1",
+     "query_id": "mingli_ftb_0054#k1#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0106#k4",
+     "query_id": "mingli_ftb_0106#k4#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0107#k4",
+     "query_id": "mingli_ftb_0107#k4#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0139#k1",
+     "query_id": "mingli_ftb_0139#k1#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0002#k4#q1",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "婚姻",
+    "query": "结婚"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0002#k4",
+     "query_id": "mingli_ftb_0002#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0007#k4",
+     "query_id": "mingli_ftb_0007#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0017#k4",
+     "query_id": "mingli_ftb_0017#k4#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0051#k4",
+     "query_id": "mingli_ftb_0051#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0063#k4",
+     "query_id": "mingli_ftb_0063#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0076#k4",
+     "query_id": "mingli_ftb_0076#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0092#k5",
+     "query_id": "mingli_ftb_0092#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0097#k4",
+     "query_id": "mingli_ftb_0097#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0101#k4",
+     "query_id": "mingli_ftb_0101#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0102#k4",
+     "query_id": "mingli_ftb_0102#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0124#k4",
+     "query_id": "mingli_ftb_0124#k4#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0143#k4",
+     "query_id": "mingli_ftb_0143#k4#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0083#k1#q1",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "婚姻",
+    "query": "配偶"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0083#k1",
+     "query_id": "mingli_ftb_0083#k1#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0108#k4",
+     "query_id": "mingli_ftb_0108#k4#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0077#k4#q2",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "婚姻断诀",
+    "query": "二婚"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0077#k4",
+     "query_id": "mingli_ftb_0077#k4#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0096#k1",
+     "query_id": "mingli_ftb_0096#k1#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0122#k1#q2",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "婚姻断诀",
+    "query": "克夫"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0122#k1",
+     "query_id": "mingli_ftb_0122#k1#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0077#k4#q1",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "婚姻断诀",
+    "query": "再婚"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0077#k4",
+     "query_id": "mingli_ftb_0077#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0096#k1",
+     "query_id": "mingli_ftb_0096#k1#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0100#k1#q2",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "婚姻断诀",
+    "query": "刑"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0100#k1",
+     "query_id": "mingli_ftb_0100#k1#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0099#k4#q2",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "婚姻断诀",
+    "query": "婚变"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0099#k4",
+     "query_id": "mingli_ftb_0099#k4#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0058#k1#q2",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "婚姻断诀",
+    "query": "已婚"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0058#k1",
+     "query_id": "mingli_ftb_0058#k1#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0112#k1",
+     "query_id": "mingli_ftb_0112#k1#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0153#k1",
+     "query_id": "mingli_ftb_0153#k1#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0048#k1#q2",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "婚姻断诀",
+    "query": "独身"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0048#k1",
+     "query_id": "mingli_ftb_0048#k1#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0099#k4#q1",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "婚姻断诀",
+    "query": "离婚"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0099#k4",
+     "query_id": "mingli_ftb_0099#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0100#k1",
+     "query_id": "mingli_ftb_0100#k1#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0102#k5",
+     "query_id": "mingli_ftb_0102#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0108#k7",
+     "query_id": "mingli_ftb_0108#k7#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0013#k1#q2",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "婚姻断诀",
+    "query": "离异"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0013#k1",
+     "query_id": "mingli_ftb_0013#k1#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0002#k4#q2",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "应期直断",
+    "query": "婚期"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0002#k4",
+     "query_id": "mingli_ftb_0002#k4#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0007#k4",
+     "query_id": "mingli_ftb_0007#k4#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0051#k4",
+     "query_id": "mingli_ftb_0051#k4#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0063#k4",
+     "query_id": "mingli_ftb_0063#k4#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0076#k4",
+     "query_id": "mingli_ftb_0076#k4#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0092#k5",
+     "query_id": "mingli_ftb_0092#k5#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0097#k4",
+     "query_id": "mingli_ftb_0097#k4#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0101#k4",
+     "query_id": "mingli_ftb_0101#k4#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0143#k4",
+     "query_id": "mingli_ftb_0143#k4#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0108#k4#q2",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "性格相貌诀",
+    "query": "相貌"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0108#k4",
+     "query_id": "mingli_ftb_0108#k4#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0017#k4#q1",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "流年",
+    "query": "流年"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0017#k4",
+     "query_id": "mingli_ftb_0017#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0085#k4",
+     "query_id": "mingli_ftb_0085#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0124#k4",
+     "query_id": "mingli_ftb_0124#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0125#k4",
+     "query_id": "mingli_ftb_0125#k4#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0044#k4#q1",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "神煞断诀",
+    "query": "文昌"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0044#k4",
+     "query_id": "mingli_ftb_0044#k4#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0002#k4#q3",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "神煞断诀",
+    "query": "桃花"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0002#k4",
+     "query_id": "mingli_ftb_0002#k4#q3"
+    },
+    {
+     "item_id": "mingli_ftb_0106#k4",
+     "query_id": "mingli_ftb_0106#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0107#k4",
+     "query_id": "mingli_ftb_0107#k4#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0083#k1#q2",
+   "entrypoint": "search_gejue",
+   "args": {
+    "category": "财官断诀",
+    "query": "富贵"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0083#k1",
+     "query_id": "mingli_ftb_0083#k1#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0125#k5#q1",
+   "entrypoint": "search_shensha",
+   "args": {
+    "name": "丧门"
+   },
+   "top_n": null,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0125#k5",
+     "query_id": "mingli_ftb_0125#k5#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0129#k2#q2",
+   "entrypoint": "search_shensha",
+   "args": {
+    "name": "八专"
+   },
+   "top_n": null,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0129#k2",
+     "query_id": "mingli_ftb_0129#k2#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0125#k5#q2",
+   "entrypoint": "search_shensha",
+   "args": {
+    "name": "吊客"
+   },
+   "top_n": null,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0125#k5",
+     "query_id": "mingli_ftb_0125#k5#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0085#k5#q2",
+   "entrypoint": "search_shensha",
+   "args": {
+    "name": "咸池"
+   },
+   "top_n": null,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0085#k5",
+     "query_id": "mingli_ftb_0085#k5#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0099#k5",
+     "query_id": "mingli_ftb_0099#k5#q3"
+    },
+    {
+     "item_id": "mingli_ftb_0106#k5",
+     "query_id": "mingli_ftb_0106#k5#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0107#k5",
+     "query_id": "mingli_ftb_0107#k5#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0007#k5#q2",
+   "entrypoint": "search_shensha",
+   "args": {
+    "name": "天喜"
+   },
+   "top_n": null,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0007#k5",
+     "query_id": "mingli_ftb_0007#k5#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0026#k2#q3",
+   "entrypoint": "search_shensha",
+   "args": {
+    "name": "孤辰"
+   },
+   "top_n": null,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0026#k2",
+     "query_id": "mingli_ftb_0026#k2#q3"
+    },
+    {
+     "item_id": "mingli_ftb_0048#k2",
+     "query_id": "mingli_ftb_0048#k2#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0134#k2",
+     "query_id": "mingli_ftb_0134#k2#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0013#k2#q2",
+   "entrypoint": "search_shensha",
+   "args": {
+    "name": "孤鸾"
+   },
+   "top_n": null,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0013#k2",
+     "query_id": "mingli_ftb_0013#k2#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0044#k2",
+     "query_id": "mingli_ftb_0044#k2#q3"
+    },
+    {
+     "item_id": "mingli_ftb_0099#k5",
+     "query_id": "mingli_ftb_0099#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0102#k6",
+     "query_id": "mingli_ftb_0102#k6#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0122#k2",
+     "query_id": "mingli_ftb_0122#k2#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0129#k2",
+     "query_id": "mingli_ftb_0129#k2#q3"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0044#k2#q2",
+   "entrypoint": "search_shensha",
+   "args": {
+    "name": "寡宿"
+   },
+   "top_n": null,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0044#k2",
+     "query_id": "mingli_ftb_0044#k2#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0048#k2",
+     "query_id": "mingli_ftb_0048#k2#q3"
+    },
+    {
+     "item_id": "mingli_ftb_0122#k2",
+     "query_id": "mingli_ftb_0122#k2#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0134#k2",
+     "query_id": "mingli_ftb_0134#k2#q3"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0044#k4#q2",
+   "entrypoint": "search_shensha",
+   "args": {
+    "name": "文昌贵人"
+   },
+   "top_n": null,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0044#k4",
+     "query_id": "mingli_ftb_0044#k4#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0002#k5#q2",
+   "entrypoint": "search_shensha",
+   "args": {
+    "name": "桃花"
+   },
+   "top_n": null,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0002#k5",
+     "query_id": "mingli_ftb_0002#k5#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0017#k5",
+     "query_id": "mingli_ftb_0017#k5#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0026#k2",
+     "query_id": "mingli_ftb_0026#k2#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0051#k5",
+     "query_id": "mingli_ftb_0051#k5#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0054#k2",
+     "query_id": "mingli_ftb_0054#k2#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0058#k2",
+     "query_id": "mingli_ftb_0058#k2#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0063#k5",
+     "query_id": "mingli_ftb_0063#k5#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0076#k5",
+     "query_id": "mingli_ftb_0076#k5#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0077#k5",
+     "query_id": "mingli_ftb_0077#k5#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0085#k5",
+     "query_id": "mingli_ftb_0085#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0092#k6",
+     "query_id": "mingli_ftb_0092#k6#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0096#k2",
+     "query_id": "mingli_ftb_0096#k2#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0097#k5",
+     "query_id": "mingli_ftb_0097#k5#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0101#k5",
+     "query_id": "mingli_ftb_0101#k5#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0106#k5",
+     "query_id": "mingli_ftb_0106#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0107#k5",
+     "query_id": "mingli_ftb_0107#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0108#k5",
+     "query_id": "mingli_ftb_0108#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0112#k2",
+     "query_id": "mingli_ftb_0112#k2#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0124#k5",
+     "query_id": "mingli_ftb_0124#k5#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0134#k2",
+     "query_id": "mingli_ftb_0134#k2#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0139#k2",
+     "query_id": "mingli_ftb_0139#k2#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0143#k5",
+     "query_id": "mingli_ftb_0143#k5#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0153#k2",
+     "query_id": "mingli_ftb_0153#k2#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0125#k5#q3",
+   "entrypoint": "search_shensha",
+   "args": {
+    "name": "白虎"
+   },
+   "top_n": null,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0125#k5",
+     "query_id": "mingli_ftb_0125#k5#q3"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0139#k2#q2",
+   "entrypoint": "search_shensha",
+   "args": {
+    "name": "红艳煞"
+   },
+   "top_n": null,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0139#k2",
+     "query_id": "mingli_ftb_0139#k2#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0002#k5#q1",
+   "entrypoint": "search_shensha",
+   "args": {
+    "name": "红鸾"
+   },
+   "top_n": null,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0002#k5",
+     "query_id": "mingli_ftb_0002#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0007#k5",
+     "query_id": "mingli_ftb_0007#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0013#k2",
+     "query_id": "mingli_ftb_0013#k2#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0017#k5",
+     "query_id": "mingli_ftb_0017#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0026#k2",
+     "query_id": "mingli_ftb_0026#k2#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0044#k2",
+     "query_id": "mingli_ftb_0044#k2#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0048#k2",
+     "query_id": "mingli_ftb_0048#k2#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0051#k5",
+     "query_id": "mingli_ftb_0051#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0054#k2",
+     "query_id": "mingli_ftb_0054#k2#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0058#k2",
+     "query_id": "mingli_ftb_0058#k2#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0063#k5",
+     "query_id": "mingli_ftb_0063#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0076#k5",
+     "query_id": "mingli_ftb_0076#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0077#k5",
+     "query_id": "mingli_ftb_0077#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0092#k6",
+     "query_id": "mingli_ftb_0092#k6#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0097#k5",
+     "query_id": "mingli_ftb_0097#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0101#k5",
+     "query_id": "mingli_ftb_0101#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0102#k6",
+     "query_id": "mingli_ftb_0102#k6#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0108#k5",
+     "query_id": "mingli_ftb_0108#k5#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0112#k2",
+     "query_id": "mingli_ftb_0112#k2#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0124#k5",
+     "query_id": "mingli_ftb_0124#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0143#k5",
+     "query_id": "mingli_ftb_0143#k5#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0153#k2",
+     "query_id": "mingli_ftb_0153#k2#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0100#k3#q1",
+   "entrypoint": "search_shensha",
+   "args": {
+    "name": "羊刃"
+   },
+   "top_n": null,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0100#k3",
+     "query_id": "mingli_ftb_0100#k3#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0013#k2#q3",
+   "entrypoint": "search_shensha",
+   "args": {
+    "name": "阴差阳错"
+   },
+   "top_n": null,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0013#k2",
+     "query_id": "mingli_ftb_0013#k2#q3"
+    },
+    {
+     "item_id": "mingli_ftb_0096#k2",
+     "query_id": "mingli_ftb_0096#k2#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0099#k5",
+     "query_id": "mingli_ftb_0099#k5#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0129#k2",
+     "query_id": "mingli_ftb_0129#k2#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0013#k4#q2",
+   "entrypoint": "search_shishen_combo",
+   "args": {
+    "combo_name": "伤官"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0013#k4",
+     "query_id": "mingli_ftb_0013#k4#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0098#k3",
+     "query_id": "mingli_ftb_0098#k3#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0112#k4",
+     "query_id": "mingli_ftb_0112#k4#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0153#k4",
+     "query_id": "mingli_ftb_0153#k4#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0100#k2#q2",
+   "entrypoint": "search_shishen_combo",
+   "args": {
+    "combo_name": "伤官见官"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0100#k2",
+     "query_id": "mingli_ftb_0100#k2#q2"
+    },
+    {
+     "item_id": "mingli_ftb_0122#k3",
+     "query_id": "mingli_ftb_0122#k3#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0007#k6#q1",
+   "entrypoint": "search_shishen_combo",
+   "args": {
+    "combo_name": "官星"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0007#k6",
+     "query_id": "mingli_ftb_0007#k6#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0013#k3",
+     "query_id": "mingli_ftb_0013#k3#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0044#k3",
+     "query_id": "mingli_ftb_0044#k3#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0063#k6",
+     "query_id": "mingli_ftb_0063#k6#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0083#k2",
+     "query_id": "mingli_ftb_0083#k2#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0097#k6",
+     "query_id": "mingli_ftb_0097#k6#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0098#k2",
+     "query_id": "mingli_ftb_0098#k2#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0099#k6",
+     "query_id": "mingli_ftb_0099#k6#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0101#k6",
+     "query_id": "mingli_ftb_0101#k6#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0102#k7",
+     "query_id": "mingli_ftb_0102#k7#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0106#k6",
+     "query_id": "mingli_ftb_0106#k6#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0107#k6",
+     "query_id": "mingli_ftb_0107#k6#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0108#k6",
+     "query_id": "mingli_ftb_0108#k6#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0112#k3",
+     "query_id": "mingli_ftb_0112#k3#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0129#k3",
+     "query_id": "mingli_ftb_0129#k3#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0153#k3",
+     "query_id": "mingli_ftb_0153#k3#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0085#k7#q1",
+   "entrypoint": "search_shishen_combo",
+   "args": {
+    "combo_name": "官星被合"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0085#k7",
+     "query_id": "mingli_ftb_0085#k7#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0099#k6",
+     "query_id": "mingli_ftb_0099#k6#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0058#k4#q1",
+   "entrypoint": "search_shishen_combo",
+   "args": {
+    "combo_name": "官杀"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0058#k4",
+     "query_id": "mingli_ftb_0058#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0134#k4",
+     "query_id": "mingli_ftb_0134#k4#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0100#k2#q1",
+   "entrypoint": "search_shishen_combo",
+   "args": {
+    "combo_name": "官杀混杂"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0100#k2",
+     "query_id": "mingli_ftb_0100#k2#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0122#k3",
+     "query_id": "mingli_ftb_0122#k3#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0096#k3#q2",
+   "entrypoint": "search_shishen_combo",
+   "args": {
+    "combo_name": "比劫夺财"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0096#k3",
+     "query_id": "mingli_ftb_0096#k3#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0083#k2#q2",
+   "entrypoint": "search_shishen_combo",
+   "args": {
+    "combo_name": "财官相生"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0083#k2",
+     "query_id": "mingli_ftb_0083#k2#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0002#k6#q1",
+   "entrypoint": "search_shishen_combo",
+   "args": {
+    "combo_name": "财星"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0002#k6",
+     "query_id": "mingli_ftb_0002#k6#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0026#k3",
+     "query_id": "mingli_ftb_0026#k3#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0048#k3",
+     "query_id": "mingli_ftb_0048#k3#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0051#k6",
+     "query_id": "mingli_ftb_0051#k6#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0054#k3",
+     "query_id": "mingli_ftb_0054#k3#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0058#k3",
+     "query_id": "mingli_ftb_0058#k3#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0076#k6",
+     "query_id": "mingli_ftb_0076#k6#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0077#k6",
+     "query_id": "mingli_ftb_0077#k6#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0092#k7",
+     "query_id": "mingli_ftb_0092#k7#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0096#k3",
+     "query_id": "mingli_ftb_0096#k3#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0134#k3",
+     "query_id": "mingli_ftb_0134#k3#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0139#k3",
+     "query_id": "mingli_ftb_0139#k3#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0143#k6",
+     "query_id": "mingli_ftb_0143#k6#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0002#k6#q2",
+   "entrypoint": "search_shishen_combo",
+   "args": {
+    "combo_name": "财星被合"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0002#k6",
+     "query_id": "mingli_ftb_0002#k6#q2"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0013#k4#q1",
+   "entrypoint": "search_shishen_combo",
+   "args": {
+    "combo_name": "食神"
+   },
+   "top_n": 5,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0013#k4",
+     "query_id": "mingli_ftb_0013#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0098#k3",
+     "query_id": "mingli_ftb_0098#k3#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0112#k4",
+     "query_id": "mingli_ftb_0112#k4#q1"
+    },
+    {
+     "item_id": "mingli_ftb_0153#k4",
+     "query_id": "mingli_ftb_0153#k4#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0017#k6#q1",
+   "entrypoint": "search_xiangyi",
+   "args": {
+    "gan_or_zhi": "子"
+   },
+   "top_n": 10,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0017#k6",
+     "query_id": "mingli_ftb_0017#k6#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0085#k6#q1",
+   "entrypoint": "search_xiangyi",
+   "args": {
+    "gan_or_zhi": "寅"
+   },
+   "top_n": 10,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0085#k6",
+     "query_id": "mingli_ftb_0085#k6#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0124#k6#q1",
+   "entrypoint": "search_xiangyi",
+   "args": {
+    "gan_or_zhi": "申"
+   },
+   "top_n": 10,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0124#k6",
+     "query_id": "mingli_ftb_0124#k6#q1"
+    }
+   ]
+  },
+  {
+   "query_id": "mingli_ftb_0125#k6#q1",
+   "entrypoint": "search_xiangyi",
+   "args": {
+    "gan_or_zhi": "酉"
+   },
+   "top_n": 10,
+   "sources": [
+    {
+     "item_id": "mingli_ftb_0125#k6",
+     "query_id": "mingli_ftb_0125#k6#q1"
+    }
+   ]
+  }
+ ]
+}

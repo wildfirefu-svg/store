@@ -1,0 +1,46 @@
+{
+ "schema_version": "1.0",
+ "frozen_commit": "a06a3373a9aca926c104534dd0a441e9af0a6fea",
+ "files": [
+  {
+   "path": "knowledge_base/classic_texts/ditiansui/all_rules.json",
+   "blob_sha": "df67639d2ffbc1904f7249e1bf6212e0799ff2d8",
+   "commit": "a06a3373a9aca926c104534dd0a441e9af0a6fea"
+  },
+  {
+   "path": "knowledge_base/classic_texts/ditiansui/quarantine_rules.jsonl",
+   "blob_sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+   "commit": "a06a3373a9aca926c104534dd0a441e9af0a6fea"
+  },
+  {
+   "path": "knowledge_base/classic_texts/qiongtongbaojian/all_rules.json",
+   "blob_sha": "7325c350fe61a9d8fbe225009c045cd3343c557d",
+   "commit": "a06a3373a9aca926c104534dd0a441e9af0a6fea"
+  },
+  {
+   "path": "knowledge_base/classic_texts/qiongtongbaojian/quarantine_rules.jsonl",
+   "blob_sha": "fef8051c76d4f76c4156934abc70df354ca8f3c2",
+   "commit": "a06a3373a9aca926c104534dd0a441e9af0a6fea"
+  },
+  {
+   "path": "knowledge_base/classic_texts/sanmingtonghui/all_rules.json",
+   "blob_sha": "74eaaa09b5a7ba8b53d9d83055aa6e1eb454b48e",
+   "commit": "a06a3373a9aca926c104534dd0a441e9af0a6fea"
+  },
+  {
+   "path": "knowledge_base/classic_texts/sanmingtonghui/quarantine_rules.jsonl",
+   "blob_sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+   "commit": "a06a3373a9aca926c104534dd0a441e9af0a6fea"
+  },
+  {
+   "path": "knowledge_base/classic_texts/zipingzhenquan/all_rules.json",
+   "blob_sha": "6ccf684bc1bc393050e5b2d7c95884c324648e42",
+   "commit": "a06a3373a9aca926c104534dd0a441e9af0a6fea"
+  },
+  {
+   "path": "knowledge_base/classic_texts/zipingzhenquan/quarantine_rules.jsonl",
+   "blob_sha": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+   "commit": "a06a3373a9aca926c104534dd0a441e9af0a6fea"
+  }
+ ]
+}

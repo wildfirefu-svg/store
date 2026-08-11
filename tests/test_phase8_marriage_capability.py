@@ -11,6 +11,7 @@ import importlib.util
 import json
 import os
 import re
+import sqlite3
 import subprocess
 import sys
 from pathlib import Path
@@ -364,6 +365,213 @@ class TestRequiredKnowledge:
             for item in row["items"]:
                 for qs in item["query_specs"]:
                     assert isinstance(qs["synonym_source"], str) and qs["synonym_source"]
+
+
+SNAPSHOT_TABLES = [
+    "gejue", "gejue_fts", "gejue_fts_data", "gejue_fts_idx",
+    "gejue_fts_docsize", "gejue_fts_config",
+    "shishen_combos", "shensha", "nayin", "bingyao", "xiangyi",
+]
+EXCLUDED_TABLES = ["ziwei_patterns", "yangzhai", "wuyun_liuqi"]
+CLASSIC_TEXT_BOOKS = ["ditiansui", "qiongtongbaojian", "sanmingtonghui", "zipingzhenquan"]
+PROBE_QUERIES = [
+    {"entrypoint": "search_gejue", "args": {"query": "婚姻", "category": None}, "top_n": 5},
+    {"entrypoint": "search_shishen_combo", "args": {"combo_name": "官星"}, "top_n": 5},
+    {"entrypoint": "search_shensha", "args": {"name": "红鸾"}, "top_n": None},
+    {"entrypoint": "search_nayin", "args": {"gan": "甲", "zhi": "子"}, "top_n": None},
+    {"entrypoint": "search_bingyao", "args": {"query": "火"}, "top_n": 5},
+    {"entrypoint": "search_xiangyi", "args": {"gan_or_zhi": "甲"}, "top_n": 10},
+]
+
+
+def _git(args: list[str]) -> str:
+    proc = subprocess.run(
+        ["git", "-C", str(_REPO), *args],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        env=dict(os.environ, PYTHONIOENCODING="utf-8"),
+    )
+    assert proc.returncode == 0, proc.stderr
+    return proc.stdout.strip()
+
+
+def _load_json(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+class TestKbQuerySet:
+    """kb_query_set.json：入口名 + 类型化参数 + 来源溯源，六入口允许键 fail-closed。"""
+
+    def _qset(self) -> dict:
+        return _load_json(_P8_DIR / "kb_query_set.json")
+
+    def _rk_doctrine_qs(self) -> list[dict]:
+        rows = [
+            json.loads(l)
+            for l in (_P8_DIR / "required_knowledge.jsonl").open(encoding="utf-8")
+            if l.strip()
+        ]
+        return [
+            qs
+            for row in rows
+            for item in row["items"]
+            for qs in item["query_specs"]
+        ]
+
+    def test_schema_and_entrypoint_whitelist(self):
+        qset = self._qset()
+        assert qset["schema_version"] == "1.0"
+        assert qset["queries"]
+        for q in qset["queries"]:
+            assert q["entrypoint"] in KB_ALLOWED_QUERIES
+            allowed = KB_ALLOWED_QUERIES[q["entrypoint"]]["allowed_args"]
+            assert set(q["args"]) == allowed
+            assert "top_n" not in q["args"]
+            want = KB_ALLOWED_QUERIES[q["entrypoint"]]["top_n"]
+            if want == "int":
+                assert isinstance(q["top_n"], int) and q["top_n"] > 0
+            else:
+                assert q["top_n"] is None
+            assert q["sources"]
+
+    def test_no_duplicate_query(self):
+        qset = self._qset()
+        keys = [(q["entrypoint"], json.dumps(q["args"], sort_keys=True)) for q in qset["queries"]]
+        assert len(keys) == len(set(keys))
+
+    def test_full_coverage_of_doctrine_query_specs(self):
+        qset = self._qset()
+        rk = self._rk_doctrine_qs()
+        qids = {q["query_id"] for q in rk}
+        covered: set[str] = set()
+        for q in qset["queries"]:
+            for src in q["sources"]:
+                assert src["query_id"] in qids, src
+                covered.add(src["query_id"])
+        assert covered == qids
+
+
+class TestClassicTextsFreeze:
+    """classic_texts_freeze.json：四书文件 allowlist + blob SHA + 可达 commit。"""
+
+    def test_eight_files_at_head(self):
+        freeze = _load_json(_P8_DIR / "classic_texts_freeze.json")
+        files = [f["path"] for f in freeze["files"]]
+        expected = [
+            f"knowledge_base/classic_texts/{book}/{name}"
+            for book in CLASSIC_TEXT_BOOKS
+            for name in ("all_rules.json", "quarantine_rules.jsonl")
+        ]
+        assert files == expected
+
+    def test_blob_sha_matches_head(self):
+        freeze = _load_json(_P8_DIR / "classic_texts_freeze.json")
+        for f in freeze["files"]:
+            blob = _git(["rev-parse", f"HEAD:{f['path']}"])
+            assert f["blob_sha"] == blob, f["path"]
+            assert f["commit"]
+            _git(["cat-file", "-e", f["commit"] + "^{commit}"])
+
+
+class TestKbSnapshot:
+    """kb_snapshot.db：全表全字段导出 + 行数一致 + FTS 结构保留。"""
+
+    def _snap_tables(self) -> set[str]:
+        conn = sqlite3.connect((_P8_DIR / "kb_snapshot.db").resolve().as_uri() + "?mode=ro", uri=True)
+        try:
+            return {
+                r[0]
+                for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type IN ('table','virtual')"
+                )
+            }
+        finally:
+            conn.close()
+
+    def test_tables_present_and_excluded_absent(self):
+        tables = self._snap_tables()
+        assert set(SNAPSHOT_TABLES) <= tables
+        assert not (set(EXCLUDED_TABLES) & tables)
+
+    def test_row_counts_match_original(self):
+        conn_snap = sqlite3.connect((_P8_DIR / "kb_snapshot.db").resolve().as_uri() + "?mode=ro", uri=True)
+        conn_orig = sqlite3.connect((_REPO / "knowledge-base" / "bazi_kb.db").resolve().as_uri() + "?mode=ro", uri=True)
+        try:
+            for table in [t for t in SNAPSHOT_TABLES if t != "gejue_fts"]:
+                n_snap = conn_snap.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                n_orig = conn_orig.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                assert n_snap == n_orig, table
+        finally:
+            conn_snap.close()
+            conn_orig.close()
+
+    def test_fts_schema_preserved(self):
+        conn_snap = sqlite3.connect((_P8_DIR / "kb_snapshot.db").resolve().as_uri() + "?mode=ro", uri=True)
+        try:
+            sql = conn_snap.execute(
+                "SELECT sql FROM sqlite_master WHERE name='gejue_fts'"
+            ).fetchone()[0]
+            assert "fts5" in sql and "content='gejue'" in sql
+        finally:
+            conn_snap.close()
+
+
+class TestKbEquivalence:
+    """kb_equivalence.json：全部查询 + 探针查询，命中 ID/顺序/行数/canonical 内容一致。"""
+
+    def test_all_queries_ok(self):
+        eq = _load_json(_P8_DIR / "kb_equivalence.json")
+        assert eq["summary"]["total"] > 0
+        assert eq["summary"]["ok"] == eq["summary"]["total"]
+        for q in eq["queries"]:
+            assert q["ok"] is True
+            assert q["ids_equal"] and q["order_equal"] and q["content_equal"]
+
+    def test_gejue_no_like_fallback(self):
+        """无 category 的 gejue 走 FTS5 路径（bazi_kb.py:261-270），必须证明未静默退回 LIKE。"""
+        eq = _load_json(_P8_DIR / "kb_equivalence.json")
+        gejue = [q for q in eq["queries"] if q["entrypoint"] == "search_gejue"]
+        assert gejue
+        fts_gejue = [q for q in gejue if not q["args"].get("category")]
+        assert fts_gejue  # 探针查询必须走 FTS 路径
+        for q in fts_gejue:
+            assert q["fts_direct_match"] is True
+            assert q["fallback_used"] is False
+        for q in gejue:
+            assert q["fallback_used"] is False
+            if q["args"].get("category"):
+                # category 限定路径为纯 LIKE（bazi_kb.py:255-259），无 FTS 也无 fallback
+                assert q["fts_direct_match"] is None
+
+    def test_covers_query_set_and_probes(self):
+        eq = _load_json(_P8_DIR / "kb_equivalence.json")
+        qset = _load_json(_P8_DIR / "kb_query_set.json")
+        qids = {q["query_id"] for q in qset["queries"]}
+        probe_ids = {q["query_id"] for q in eq["queries"] if q["source"] == "probe"}
+        assert len(probe_ids) == len(PROBE_QUERIES)
+        covered = {q["query_id"] for q in eq["queries"] if q["source"] == "kb_query_set"}
+        assert covered == qids
+
+    def test_regeneration_deterministic(self):
+        """重跑等价性校验应产生与落盘产物字节一致的 JSON。"""
+        snap = _load_module(
+            "p8_kb_snapshot", "docs/phase8/marriage-capability/p8_kb_snapshot.py"
+        )
+        tmp_out = _REPO / ".tmp" / "phase8_kb_equivalence_rerun.json"
+        snap.run_equivalence(
+            _P8_DIR / "kb_query_set.json",
+            PROBE_QUERIES,
+            _REPO / "knowledge-base" / "bazi_kb.db",
+            _P8_DIR / "kb_snapshot.db",
+            tmp_out,
+        )
+        try:
+            before = (_P8_DIR / "kb_equivalence.json").read_bytes()
+            after = tmp_out.read_bytes()
+            assert before == after
+        finally:
+            tmp_out.unlink(missing_ok=True)
 
 
 class TestReconcileSubtype:

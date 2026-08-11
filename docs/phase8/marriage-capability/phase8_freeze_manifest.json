@@ -8,6 +8,26 @@
  },
  "entries": [
   {
+   "path": "docs/phase8/marriage-capability/classic_texts_freeze.json",
+   "sha256": "0dd288d413a304ae136a6b7851d251949f2cb131885c8be9616d3cac10f3c3b0",
+   "strategy": "json_canonical"
+  },
+  {
+   "path": "docs/phase8/marriage-capability/kb_equivalence.json",
+   "sha256": "0203cc742e6b93d4a47b4cbf7333bf6a6405f624bfeb08388e27d344aa4ebf09",
+   "strategy": "json_canonical"
+  },
+  {
+   "path": "docs/phase8/marriage-capability/kb_query_set.json",
+   "sha256": "abf143f318acf1bef266a8213beb20b92a0a6d00d0cbbc177517f3d17cae6328",
+   "strategy": "json_canonical"
+  },
+  {
+   "path": "docs/phase8/marriage-capability/kb_snapshot.db",
+   "sha256": "17a3ee6d1381d9d80625b880a6fe8f9fd38a39f8d4160bb265c5bbc9996a76d6",
+   "strategy": "raw_bytes"
+  },
+  {
    "path": "docs/phase8/marriage-capability/required_knowledge.jsonl",
    "sha256": "48e44ff87be1acb4da123977b804e1aa7c311bc2652024599eb57fb4f1e94296",
    "strategy": "jsonl_canonical"
