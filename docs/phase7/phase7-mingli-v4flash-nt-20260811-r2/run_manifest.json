@@ -1,0 +1,24 @@
+{
+  "experiment_id": "phase7-mingli-baseline",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "thinking_mode": "disabled",
+  "temperature": 0.0,
+  "model_label": "DeepSeek-V4-Flash non-thinking",
+  "profile": "mingli_official_cot_astro",
+  "method": "direct_choice",
+  "arm": "phase7_mingli_baseline",
+  "scheduled_calls": 160,
+  "hard_cap": 180,
+  "as_of_date": "2026-08-10",
+  "chart_schema_version": "approved_v1",
+  "data_json_sha256": "528240929b23859656bf7ec0c126da92e2523c2cf091b11f83c0e8e377412054",
+  "fortune_json_sha256": "e44ff5201486dc1917bbb24b6905a53e6a1359e76ada0eb8d5b2d9a5a88d29ed",
+  "env_flags": {
+    "rag": false,
+    "fewshot": false,
+    "apb": false,
+    "shuffle_options": false
+  },
+  "phase7_code_fingerprint": "13b337a07521b57c1d553ba0afcc26fc29c0f926a0507a0c52bdcf420508f45b"
+}

@@ -1,0 +1,10 @@
+{
+  "attempt_stage": "controlled_retest",
+  "selected_case_ids": [],
+  "case_ids_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+  "eligible_case_ids": [],
+  "unselected_eligible_case_ids": [],
+  "scheduled_calls": 0,
+  "hard_cap": 20,
+  "created_at": "2026-08-11T09:24:57"
+}

@@ -1,0 +1,321 @@
+{
+  "run_id": "phase7-mingli-v4flash-nt-20260811-r2",
+  "user_run_id": "phase7-mingli-v4flash-nt-20260811-r2",
+  "experiment_id": "phase7-mingli-baseline",
+  "stage": "baseline",
+  "frozen_date": "2026-08-10",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "thinking_mode": "disabled",
+  "temperature": 0.0,
+  "model_label": "DeepSeek-V4-Flash non-thinking",
+  "profile": "mingli_official_cot_astro",
+  "method": "direct_choice",
+  "arm": "phase7_mingli_baseline",
+  "code_fingerprint": "a1b0e8e54a31c3bbf311080bef55db7c6e60599a5fbf73396356eb1c2936d926",
+  "prompt_fingerprint": "e136106a8e8730020eb3631b32b6c24424beaf73f5f0fcbc82a274e2120cb22d",
+  "phase7_code_fingerprint": "13b337a07521b57c1d553ba0afcc26fc29c0f926a0507a0c52bdcf420508f45b",
+  "mingli_data_sha256": "528240929b23859656bf7ec0c126da92e2523c2cf091b11f83c0e8e377412054",
+  "fortune_api_sha256": "e44ff5201486dc1917bbb24b6905a53e6a1359e76ada0eb8d5b2d9a5a88d29ed",
+  "normalized_jsonl_sha256": "c904bb0568b201076ddd93dc4103bb6360602a6cb7604397be25088fd25791cf",
+  "pinned_commit": "b7433280fd86d7a7c27debbc47d0303c218f0bfd",
+  "license_sha256": "2163a239e9b1e8b61ac70067aba7b625eb6835be7a898ebd938697c79780362c",
+  "env_flags": {
+    "rag": false,
+    "fewshot": false,
+    "apb": false,
+    "shuffle_options": false
+  },
+  "budget": {
+    "scheduled_calls": 160,
+    "hard_cap": 180,
+    "attempted": 160
+  },
+  "smoke_size": 10,
+  "smoke_verdict": {
+    "passed": true,
+    "failures": [],
+    "terminal_count": 10,
+    "call_failed": 0,
+    "gate_blocked": 0,
+    "parsed": 10,
+    "smoke_size": 10
+  },
+  "max_cases_transitions": [
+    {
+      "from": 10,
+      "to": 160,
+      "at": "2026-08-11T08:58:05"
+    }
+  ],
+  "completeness_verdict": "COMPLETE",
+  "completeness_checks": [
+    {
+      "clause": 1,
+      "name": "main_terminal_rows",
+      "passed": true,
+      "detail": "160 != 160"
+    },
+    {
+      "clause": 2,
+      "name": "unique_question_case_ids",
+      "passed": true,
+      "detail": "160 != 160"
+    },
+    {
+      "clause": 3,
+      "name": "one_terminal_per_case_id",
+      "passed": true,
+      "detail": "duplicates: []"
+    },
+    {
+      "clause": 4,
+      "name": "chart_distribution_frozen",
+      "passed": true,
+      "detail": "detail_charts=32 norm_charts=32"
+    },
+    {
+      "clause": 5,
+      "name": "terminal_state_enum",
+      "passed": true,
+      "detail": "bad states: []"
+    },
+    {
+      "clause": 6,
+      "name": "first_pass_denominator",
+      "passed": true,
+      "detail": "160 != 160"
+    },
+    {
+      "clause": 7,
+      "name": "retest_once_and_subset",
+      "passed": true,
+      "detail": "dups=[] outside=[]"
+    },
+    {
+      "clause": 8,
+      "name": "global_budget",
+      "passed": true,
+      "detail": "160+0=160 > 180"
+    },
+    {
+      "clause": 9,
+      "name": "merged_details_sha",
+      "passed": true,
+      "detail": "deferred to archive self-verify"
+    },
+    {
+      "clause": 10,
+      "name": "thinking_mode_disabled",
+      "passed": true,
+      "detail": "rows: []"
+    },
+    {
+      "clause": 11,
+      "name": "response_model_frozen",
+      "passed": true,
+      "detail": "values: []"
+    },
+    {
+      "clause": 12,
+      "name": "chart_case_id_join",
+      "passed": true,
+      "detail": "missing=[] mismatch=[]"
+    }
+  ],
+  "retest_report": {
+    "retested_case_ids": [],
+    "unselected_eligible_case_ids": [],
+    "selected_not_executed_case_ids": []
+  },
+  "merged_details_sha256": "588c24d5376053f3baca3583ca0c3ae99b871aca647c81e663cbab7990cfadcf",
+  "artifact_sha256": {
+    "main_detail_sha256": "588c24d5376053f3baca3583ca0c3ae99b871aca647c81e663cbab7990cfadcf",
+    "main_events_sha256": "e8e6de48e41c8cc540a3c602b694fcf7be224319fcde519b6261d4bb9e3294f4",
+    "retest_detail_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "retest_events_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "retest_manifest_sha256": "55347d531f93e823c05a6cfc152c66eed877bf92169cb848b13b1eb383446eac",
+    "run_manifest_sha256": "aeb402ef91005911c5c20a2beeff943985da6cda227d206f240279c1badf16a9",
+    "normalized_jsonl_sha256": "c904bb0568b201076ddd93dc4103bb6360602a6cb7604397be25088fd25791cf"
+  },
+  "run_context": {
+    "experiment_id": "phase7-mingli-baseline",
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "thinking_mode": "disabled",
+    "temperature": 0.0,
+    "model_label": "DeepSeek-V4-Flash non-thinking",
+    "profile": "mingli_official_cot_astro",
+    "method": "direct_choice",
+    "arm": "phase7_mingli_baseline",
+    "scheduled_calls": 160,
+    "hard_cap": 180,
+    "as_of_date": "2026-08-10",
+    "chart_schema_version": "approved_v1",
+    "data_json_sha256": "528240929b23859656bf7ec0c126da92e2523c2cf091b11f83c0e8e377412054",
+    "fortune_json_sha256": "e44ff5201486dc1917bbb24b6905a53e6a1359e76ada0eb8d5b2d9a5a88d29ed",
+    "env_flags": {
+      "rag": false,
+      "fewshot": false,
+      "apb": false,
+      "shuffle_options": false
+    },
+    "phase7_code_fingerprint": "13b337a07521b57c1d553ba0afcc26fc29c0f926a0507a0c52bdcf420508f45b",
+    "run_id": "phase7-mingli-v4flash-nt-20260811-r2",
+    "stage": "finalize",
+    "smoke_size": 10,
+    "max_cases": 160,
+    "max_cases_transitions": [
+      {
+        "from": 10,
+        "to": 160,
+        "at": "2026-08-11T08:58:05"
+      }
+    ],
+    "created_at": "2026-08-11T08:56:14",
+    "smoke_completed_at": "2026-08-11T08:58:05",
+    "smoke_verdict": {
+      "passed": true,
+      "failures": [],
+      "terminal_count": 10,
+      "call_failed": 0,
+      "gate_blocked": 0,
+      "parsed": 10,
+      "smoke_size": 10
+    },
+    "retest_report": {
+      "retested_case_ids": [],
+      "unselected_eligible_case_ids": [],
+      "selected_not_executed_case_ids": []
+    },
+    "completeness": {
+      "verdict": "COMPLETE",
+      "checks": [
+        {
+          "clause": 1,
+          "name": "main_terminal_rows",
+          "passed": true,
+          "detail": "160 != 160"
+        },
+        {
+          "clause": 2,
+          "name": "unique_question_case_ids",
+          "passed": true,
+          "detail": "160 != 160"
+        },
+        {
+          "clause": 3,
+          "name": "one_terminal_per_case_id",
+          "passed": true,
+          "detail": "duplicates: []"
+        },
+        {
+          "clause": 4,
+          "name": "chart_distribution_frozen",
+          "passed": true,
+          "detail": "detail_charts=32 norm_charts=32"
+        },
+        {
+          "clause": 5,
+          "name": "terminal_state_enum",
+          "passed": true,
+          "detail": "bad states: []"
+        },
+        {
+          "clause": 6,
+          "name": "first_pass_denominator",
+          "passed": true,
+          "detail": "160 != 160"
+        },
+        {
+          "clause": 7,
+          "name": "retest_once_and_subset",
+          "passed": true,
+          "detail": "dups=[] outside=[]"
+        },
+        {
+          "clause": 8,
+          "name": "global_budget",
+          "passed": true,
+          "detail": "160+0=160 > 180"
+        },
+        {
+          "clause": 9,
+          "name": "merged_details_sha",
+          "passed": true,
+          "detail": "deferred to archive self-verify"
+        },
+        {
+          "clause": 10,
+          "name": "thinking_mode_disabled",
+          "passed": true,
+          "detail": "rows: []"
+        },
+        {
+          "clause": 11,
+          "name": "response_model_frozen",
+          "passed": true,
+          "detail": "values: []"
+        },
+        {
+          "clause": 12,
+          "name": "chart_case_id_join",
+          "passed": true,
+          "detail": "missing=[] mismatch=[]"
+        }
+      ],
+      "stats": {
+        "question_id_count": 160,
+        "chart_case_count": 32,
+        "chart_distribution": {
+          "case_1": 5,
+          "case_10": 5,
+          "case_11": 5,
+          "case_12": 5,
+          "case_13": 5,
+          "case_14": 5,
+          "case_15": 5,
+          "case_16": 5,
+          "case_17": 5,
+          "case_18": 5,
+          "case_19": 6,
+          "case_2": 5,
+          "case_20": 4,
+          "case_21": 5,
+          "case_22": 5,
+          "case_23": 5,
+          "case_24": 5,
+          "case_25": 5,
+          "case_26": 5,
+          "case_27": 5,
+          "case_28": 5,
+          "case_29": 5,
+          "case_3": 5,
+          "case_30": 5,
+          "case_31": 5,
+          "case_32": 5,
+          "case_4": 5,
+          "case_5": 5,
+          "case_6": 5,
+          "case_7": 5,
+          "case_8": 5,
+          "case_9": 5
+        },
+        "terminal_state_counts": {
+          "main": {
+            "parsed": 160
+          },
+          "controlled_retest": {}
+        },
+        "parser_rate": 1.0,
+        "first_pass_accuracy": 0.33125,
+        "attempted": 160,
+        "response_model_values": [
+          "deepseek-v4-flash"
+        ],
+        "response_model_missing_count": 0
+      }
+    }
+  },
+  "archived_at": "2026-08-11T09:24:57"
+}
