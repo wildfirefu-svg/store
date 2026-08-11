@@ -1,7 +1,7 @@
 # Phase 7 错误归因分析设计（零 API）
 
 **日期：** 2026-08-11
-**状态：** v1（按用户指令编写，纯分析，不改 prompt / 不调参 / 零 API）
+**状态：** v1.1（按 v2 产物回写同步：证据字段拆分、非循环 sanity check、Bonferroni 说明、实际特征集合；与 `docs/phase7/error-analysis/` v2 产物一致）
 **输入：** Phase 7 r2 归档 `docs/phase7/phase7-mingli-v4flash-nt-20260811-r2/`（merged_details 160 行，107 错 / 53 对；SHA 按 git-canonical-lf 冻结，commit `0ce25f6`）
 **产出：** `docs/phase7/error-analysis/`（统计数据 + 逐题分类 + 汇总报告）
 
@@ -28,8 +28,8 @@
 
 ### A. 婚姻类深潜（38/44 错）
 - 题型聚类：按 question 文本关键词归类（结婚应期/配偶特征/婚姻状况判断/离婚再婚等），统计各类错误率；
-- 选项结构：正确/错误预测选项 letter 分布、选项文本长度差、迷惑项模式；
-- 命盘信息缺口：错题的 `chart_input`/`birth_info` 字段完备性与对照组比较（缺字段是否富集于错题）。
+- 选项结构：正确/错误预测选项 letter 分布与混淆对（实际完成口径；选项文本长度差与迷惑项模式未单独立项，被 letter 分布分析取代）；
+- 命盘信息缺口：错题的注入 astro 宫星覆盖（palace_stars 计数中位分割）与对照组比较；v1.1 增补盘面引用率（chinese_date / 宫星精确子串匹配，规则与逐题结果落盘于 quantitative_stats.json `chart_quote_rates`）。
 
 ### B. 7 个全错命盘（case_6/17/20/24/27/30/31）
 - 盘级 vs 题级：同盘题目的 raw_answer 是否呈现共同的命盘读取/注入异常（如 astro 块字段缺失、盘信息被误读），还是各题独立的知识性错误；
@@ -47,10 +47,13 @@
 | `option_confusion` | 选项混淆（推理方向对但选错 letter，或二选一选错） |
 | `answer_format` | 答案格式问题（输出无法解析或解析到错误 letter；预期极少，因 parsed=160） |
 
-分类由子代理分批阅读 raw_answer 完成，每题产出 `{case_id, category, error_type, confidence, evidence}`（evidence 为 raw_answer 中的关键句摘录）；主分类器拿不准的标 `confidence=low` 供汇总时复核。
+分类由子代理分批阅读 raw_answer 完成，每题产出 `{case_id, chart_case_id, category, year, error_type, confidence, analyst_note, evidence_quote}`：`analyst_note` 为标注者概括，`evidence_quote` 为 raw_answer 的**逐字精确子串**（20–80 字，落盘后程序化子串校验 107/107）；chart_case_id/category/year 一律从 normalized dataset 机械重导（首轮 14 行手工误标教训）。主分类器拿不准的标 `confidence=low` 供汇总时复核。
 
 ### D. 特征富集量化（对照正确组）
-对以下特征做错题组 vs 对照组的富集检验（Fisher 精确检验，α=0.05，多重比较不做校正但标注）：category、year、题长分位、选项数、chart 字段完备性、全错盘成员。输出每个特征的列联表与 p 值，明确"相关 ≠ 因果"。
+对以下特征做错题组 vs 对照组的富集检验（Fisher 精确检验，α=0.05）：category、year、题长分位、注入 astro 宫星覆盖（中位分割）。v1.1 冻结两点：
+- **多重比较说明**：实际检验 18 项，报告须给简单 Bonferroni 对照（婚姻类 0.0008×18≈0.0144，仍 <0.05）。
+- **禁止循环检验**：`allwrong_chart_member` 之类"先按结果选盘再检验成员富集"的特征不得进入 Fisher。盘级异质性的非循环替代：同率零假设（p=107/160）+ Poisson-binomial 精确尾部（落盘 `allwrong_chart_sanity_check`：期望 4.30、观察 7、P(X≥7)=0.1292，不构成显著证据）。
+输出每个特征的列联表与 p 值，明确"相关 ≠ 因果"。
 
 ## 4. 候选改进项（只列举，不实施）
 
