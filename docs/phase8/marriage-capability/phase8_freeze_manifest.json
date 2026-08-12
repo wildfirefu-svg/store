@@ -78,6 +78,11 @@
    "strategy": "jsonl_canonical"
   },
   {
+   "path": "docs/phase8/marriage-capability/sealed_marriageset_spec.md",
+   "sha256": "043ce38676dc51d725e4d5492e6d634c454293c42d85af85e5fe36aed82a92ff",
+   "strategy": "git_canonical_lf"
+  },
+  {
    "path": "docs/phase8/marriage-capability/subtype_split.json",
    "sha256": "d5b06e4c4a9aa694a95bdc3b523007b66f5496aa743db40908b154cf13241f63",
    "strategy": "json_canonical"
