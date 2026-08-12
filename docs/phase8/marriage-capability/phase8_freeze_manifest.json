@@ -8,6 +8,16 @@
  },
  "entries": [
   {
+   "path": "docs/phase8/marriage-capability/c1_detector.py",
+   "sha256": "f2a28d65ef960cafb66711cd0bf88165255eac67fd5dcd98c91030489779a9f1",
+   "strategy": "git_canonical_lf"
+  },
+  {
+   "path": "docs/phase8/marriage-capability/c1_replay.py",
+   "sha256": "b14bf155c3827c14bdc300944c4b73ce4b7ece1eb5e07af6750de10c37f04ee9",
+   "strategy": "git_canonical_lf"
+  },
+  {
    "path": "docs/phase8/marriage-capability/classic_texts_freeze.json",
    "sha256": "0dd288d413a304ae136a6b7851d251949f2cb131885c8be9616d3cac10f3c3b0",
    "strategy": "json_canonical"

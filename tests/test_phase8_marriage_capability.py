@@ -892,6 +892,115 @@ class TestKnowledgeAudit:
         # 本数据集探针无 missing_input/semantic_gap，undetermined 可为 0（设计允许单列）
 
 
+class TestC1Detector:
+    """c1_detector.py：检测/候选提取/重选（合成 fixture）。"""
+
+    def _mod(self):
+        return _load_module("c1_detector", "docs/phase8/marriage-capability/c1_detector.py")
+
+    def _fixture(self) -> list[dict]:
+        return [
+            json.loads(l)
+            for l in (_REPO / "tests" / "fixtures" / "phase8" / "c1_synth.jsonl").open(encoding="utf-8")
+            if l.strip()
+        ]
+
+    def test_detect_conflict_positive(self):
+        mod = self._mod()
+        for row in self._fixture():
+            if row["case_id"].startswith("mingli_ftb_00"):
+                result = mod.detect(row["raw_answer"], row["options"])
+                assert result["conflict"] is True, row["case_id"]
+                assert result["final_letter"] == row["predicted_answer"]
+                assert result["body_conclusion"] is not None
+
+    def test_detect_conflict_negative(self):
+        mod = self._mod()
+        for row in self._fixture():
+            if row["case_id"].startswith("synth_neg"):
+                result = mod.detect(row["raw_answer"], row["options"])
+                assert result["conflict"] is False, row["case_id"]
+
+    def test_candidate_extraction(self):
+        mod = self._mod()
+        row = next(r for r in self._fixture() if r["case_id"] == "mingli_ftb_0018")
+        result = mod.detect(row["raw_answer"], row["options"])
+        assert result["candidate_letter"] == "B"  # 正文结论 2018 → 选项 B
+
+    def test_reselect(self):
+        mod = self._mod()
+        row = next(r for r in self._fixture() if r["case_id"] == "mingli_ftb_0034")
+        result = mod.detect(row["raw_answer"], row["options"])
+        assert result["candidate_letter"] == "C"  # 正文结论 2012 → 选项 C
+
+
+class TestC1Replay:
+    """c1_replay.py：纯评估逻辑（四态、分母对账、PASS/TERMINATED 裁决）。"""
+
+    def _mod(self):
+        return _load_module("c1_replay", "docs/phase8/marriage-capability/c1_replay.py")
+
+    def _fixture(self) -> list[dict]:
+        return [
+            json.loads(l)
+            for l in (_REPO / "tests" / "fixtures" / "phase8" / "c1_synth.jsonl").open(encoding="utf-8")
+            if l.strip()
+        ]
+
+    def test_change_result_enum(self):
+        mod = self._mod()
+        for row in self._fixture():
+            result = mod.evaluate_row(row)
+            assert result["change_result"] in {"improved", "harmed", "unchanged", "changed_wrong_to_wrong"}
+
+    def test_improved(self):
+        mod = self._mod()
+        row = next(r for r in self._fixture() if r["case_id"] == "mingli_ftb_0018")
+        result = mod.evaluate_row(row)
+        assert result["change_result"] == "improved"
+        assert result["old_letter"] == "C"
+        assert result["new_letter"] == "B"
+        assert result["expected"] == "B"
+
+    def test_unchanged_when_not_triggered(self):
+        mod = self._mod()
+        row = next(r for r in self._fixture() if r["case_id"] == "synth_neg_001")
+        result = mod.evaluate_row(row)
+        assert result["change_result"] == "unchanged"
+        assert result["new_letter"] is None
+
+    def test_verdict_pass(self):
+        """0018/0034/0073 全 improved 且 harmed=0 → C1_PASS。"""
+        mod = self._mod()
+        rows = self._fixture()
+        verdict = mod.compute_verdict(rows)
+        assert verdict["verdict"] == "C1_PASS"
+        assert verdict["harmed"] == 0
+        assert verdict["targets_improved"] == ["mingli_ftb_0018", "mingli_ftb_0034", "mingli_ftb_0073"]
+
+    def test_verdict_terminated_on_harmed(self):
+        mod = self._mod()
+        rows = self._fixture()
+        # 构造一个 harmed 例：正文结论 2018（选项 B），但最终答案 A 正确
+        rows.append({
+            "case_id": "synth_harmed",
+            "expected_answer": "A",
+            "predicted_answer": "A",
+            "options": ["A. 2016", "B. 2018", "C. 2020", "D. 2022"],
+            "raw_answer": "综合判断：2018年机会最大。\n\n**答案：A**",
+        })
+        verdict = mod.compute_verdict(rows)
+        assert verdict["verdict"] == "C1_TERMINATED"
+
+    def test_denominator_160(self):
+        """四态和 == 160（回放分母对账）。"""
+        mod = self._mod()
+        rows = self._fixture()
+        verdict = mod.compute_verdict(rows)
+        total = sum(verdict["counts"].values())
+        assert total == len(rows)
+
+
 class TestReconcileSubtype:
     """p8_reconcile.py 首项：亚型 35 题对账。"""
 

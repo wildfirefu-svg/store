@@ -1,0 +1,7 @@
+{"case_id": "mingli_ftb_0018", "expected_answer": "B", "predicted_answer": "C", "options": ["A. 2016", "B. 2018", "C. 2020", "D. 2022"], "raw_answer": "综合判断：2018年机会最大。\n\n**答案：C**"}
+{"case_id": "mingli_ftb_0034", "expected_answer": "C", "predicted_answer": "B", "options": ["A. 2008", "B. 2010", "C. 2012", "D. 2014"], "raw_answer": "全文分析论证2012年结婚最符合命理，末尾却写答案B。\n\n**答案：B**"}
+{"case_id": "mingli_ftb_0073", "expected_answer": "C", "predicted_answer": "D", "options": ["A. 2016", "B. 2017", "C. 2018", "D. 以上时间都不符合"], "raw_answer": "正文说'2018年最符合'，却选D'以上时间都不符合'，存在论证矛盾。\n\n**答案：D**"}
+{"case_id": "synth_neg_001", "expected_answer": "A", "predicted_answer": "A", "options": ["A. 2016", "B. 2018", "C. 2020", "D. 2022"], "raw_answer": "分析后选A。\n\n**答案：A**"}
+{"case_id": "synth_neg_002", "expected_answer": "B", "predicted_answer": "B", "options": ["A. 2016", "B. 2018", "C. 2020", "D. 2022"], "raw_answer": "分析后选B。\n\n**答案：B**"}
+{"case_id": "synth_edge_001", "expected_answer": "A", "predicted_answer": "A", "options": ["A. 2016", "B. 2018", "C. 2020", "D. 2022"], "raw_answer": "正文提到2018年，但最终答案A与正文一致。\n\n**答案：A**"}
+{"case_id": "synth_edge_002", "expected_answer": "C", "predicted_answer": "C", "options": ["A. 2016", "B. 2018", "C. 2020", "D. 2022"], "raw_answer": "无年份结论，直接选C。\n\n**答案：C**"}
