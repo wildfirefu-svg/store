@@ -1032,6 +1032,31 @@ class TestC1ReplayResult:
     def test_no_overwrite_gate(self):
         """已存在 c1_detector_eval.json 时拒绝覆盖（单次回放机械门）。"""
         assert (_P8_DIR / "c1_detector_eval.json").exists()
+        replay = _load_module("c1_replay", "docs/phase8/marriage-capability/c1_replay.py")
+        with pytest.raises(SystemExit, match="已存在"):
+            replay._check_frozen_and_no_overwrite(_P8_DIR / "c1_detector_eval.json")
+
+    def test_frozen_sha_drift_gate(self, tmp_path, monkeypatch):
+        """双冻结 SHA 漂移即拒绝运行。"""
+        replay = _load_module("c1_replay", "docs/phase8/marriage-capability/c1_replay.py")
+        # 模拟 manifest 中 c1_detector.py SHA 漂移
+        import json as _json
+        manifest_path = _P8_DIR / "phase8_freeze_manifest.json"
+        original = _json.loads(manifest_path.read_text(encoding="utf-8"))
+        tampered = _json.loads(manifest_path.read_text(encoding="utf-8"))
+        for e in tampered["entries"]:
+            if e["path"].endswith("c1_detector.py"):
+                e["sha256"] = "0" * 64
+        monkeypatch.setattr(
+            replay, "P8_DIR", tmp_path
+        )
+        (tmp_path / "phase8_freeze_manifest.json").write_text(
+            _json.dumps(tampered), encoding="utf-8"
+        )
+        (tmp_path / "c1_detector.py").write_text("x", encoding="utf-8")
+        (tmp_path / "c1_replay.py").write_text("y", encoding="utf-8")
+        with pytest.raises(SystemExit, match="SHA 漂移"):
+            replay._check_frozen_and_no_overwrite(tmp_path / "out.json")
 
 
 class TestReconcileSubtype:

@@ -32,6 +32,25 @@ def _load_detector():
     return mod
 
 
+def _check_frozen_and_no_overwrite(out_path: Path) -> None:
+    """6B.1 运行前校验：双冻结 SHA == manifest；eval 已存在即拒绝覆盖。"""
+    import hashlib
+
+    manifest_path = P8_DIR / "phase8_freeze_manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    entries = {e["path"]: e for e in manifest["entries"]}
+    for name in ("c1_detector.py", "c1_replay.py"):
+        rel = f"docs/phase8/marriage-capability/{name}"
+        current = hashlib.sha256(
+            (P8_DIR / name).read_bytes().replace(b"\r\n", b"\n")
+        ).hexdigest()
+        frozen = entries[rel]["sha256"]
+        if current != frozen:
+            sys.exit(f"6B.1 拒绝运行：{name} SHA 漂移 {current} != {frozen}")
+    if out_path.exists():
+        sys.exit("6B.1 拒绝运行：c1_detector_eval.json 已存在（单次回放机械门）")
+
+
 def evaluate_row(row: dict, detector=None) -> dict:
     """逐题评估：old/new/expected/change_result。"""
     detector = detector or _load_detector()
@@ -92,11 +111,22 @@ def compute_verdict(rows: list[dict]) -> dict:
     }
 
 
-def run_replay(details_path: Path, out_path: Path) -> dict:
-    """单次回放（6B）：只执行已冻结 evaluator，产出 c1_detector_eval.json。"""
+def run_replay(details_path: Path, out_path: Path, cases160_path: Path | None = None) -> dict:
+    """单次回放（6B）：只执行已冻结 evaluator，产出 c1_detector_eval.json。
+
+    merged_details.jsonl 无 options 字段，需从 mingli_160.jsonl 按 case_id 补充。
+    """
     rows = [
         json.loads(l) for l in details_path.open(encoding="utf-8") if l.strip()
     ]
+    if cases160_path is not None:
+        norm = {
+            r["case_id"]: r
+            for r in (json.loads(l) for l in cases160_path.open(encoding="utf-8") if l.strip())
+        }
+        for row in rows:
+            if "options" not in row or row["options"] is None:
+                row["options"] = (norm.get(row["case_id"]) or {}).get("options")
     verdict = compute_verdict(rows)
     verdict["replay_count"] = 1
     verdict["total"] = len(rows)
@@ -110,11 +140,14 @@ def run_replay(details_path: Path, out_path: Path) -> dict:
 
 
 def main() -> None:
+    out_path = P8_DIR / "c1_detector_eval.json"
+    _check_frozen_and_no_overwrite(out_path)
     run_replay(
         REPO / "docs" / "phase7" / "phase7-mingli-v4flash-nt-20260811-r2" / "merged_details.jsonl",
-        P8_DIR / "c1_detector_eval.json",
+        out_path,
+        REPO / "docs" / "phase7" / "phase7-mingli-v4flash-nt-20260811-r2" / "mingli_160.jsonl",
     )
-    print(f"c1 replay written to {P8_DIR / 'c1_detector_eval.json'}")
+    print(f"c1 replay written to {out_path}")
 
 
 if __name__ == "__main__":
