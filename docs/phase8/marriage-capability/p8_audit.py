@@ -92,6 +92,39 @@ def _classify_doctrine(item: dict, kb_hits: int, classic_hits: int, prompt_has: 
     return {"gap_class": "知识缺失", "undetermined_reason": None}
 
 
+def _kb_query(conn, entrypoint: str, args: dict) -> list[str]:
+    """对 KB 快照执行单个入口查询，返回命中条文 ID 列表（只读）。"""
+    if entrypoint == "search_gejue":
+        rows = conn.execute(
+            "SELECT id FROM gejue WHERE category=? AND (text LIKE ? OR keywords LIKE ?)",
+            (args["category"], f"%{args['query']}%", f"%{args['query']}%"),
+        ).fetchall()
+    elif entrypoint == "search_shishen_combo":
+        rows = conn.execute(
+            "SELECT id FROM shishen_combos WHERE combo LIKE ?", (f"%{args['combo_name']}%",)
+        ).fetchall()
+    elif entrypoint == "search_shensha":
+        rows = conn.execute(
+            "SELECT id FROM shensha WHERE name LIKE ?", (f"%{args['name']}%",)
+        ).fetchall()
+    elif entrypoint == "search_nayin":
+        rows = conn.execute(
+            "SELECT id FROM nayin WHERE gan_zhi=?", (args["gan"] + args["zhi"],)
+        ).fetchall()
+    elif entrypoint == "search_bingyao":
+        rows = conn.execute(
+            "SELECT id FROM bingyao WHERE disease LIKE ? OR symptom LIKE ?",
+            (f"%{args['query']}%", f"%{args['query']}%"),
+        ).fetchall()
+    elif entrypoint == "search_xiangyi":
+        rows = conn.execute(
+            "SELECT id FROM xiangyi WHERE gan_or_zhi LIKE ?", (f"%{args['gan_or_zhi']}%",)
+        ).fetchall()
+    else:
+        rows = []
+    return [str(r[0]) for r in rows]
+
+
 def run_audit(rk_path: Path, probe_path: Path, cases160_path: Path, out_path: Path,
               summary_path: Path) -> dict:
     # prompt fingerprint 硬门
@@ -114,9 +147,11 @@ def run_audit(rk_path: Path, probe_path: Path, cases160_path: Path, out_path: Pa
     conn = sqlite3.connect(snap.resolve().as_uri() + "?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
 
-    # classic_texts 冻结检索结果（已落盘）
-    classic = json.loads((P8_DIR / "classic_texts_search_results.json").read_text(encoding="utf-8"))
-    classic_hits_total = classic["summary"]["total_hits"]
+    # classic_texts 冻结检索（逐项核查用，不落盘）
+    classic_mod = _load(
+        "classic_texts_search", "docs/phase8/marriage-capability/classic_texts_search.py"
+    )
+    freeze_path = P8_DIR / "classic_texts_freeze.json"
 
     audit_rows = []
     for row in rk_rows:
@@ -134,55 +169,34 @@ def run_audit(rk_path: Path, probe_path: Path, cases160_path: Path, out_path: Pa
                 injected = False
                 cls = _classify_computation(item, status, injected)
             else:
-                # doctrine：KB 快照检索 + classic_texts 冻结核查 + prompt 现存字段
-                kb_hits = 0
+                # doctrine：KB 快照检索（命中条文 ID 落盘）+ classic_texts 逐项冻结核查 + prompt 现存字段
+                kb_hit_ids: list[str] = []
                 for qs in item["query_specs"]:
-                    ep, args = qs["entrypoint"], qs["args"]
-                    if ep == "search_gejue":
-                        n = conn.execute(
-                            "SELECT COUNT(*) FROM gejue WHERE category=? AND (text LIKE ? OR keywords LIKE ?)",
-                            (args["category"], f"%{args['query']}%", f"%{args['query']}%"),
-                        ).fetchone()[0]
-                    elif ep == "search_shishen_combo":
-                        n = conn.execute(
-                            "SELECT COUNT(*) FROM shishen_combos WHERE combo LIKE ?",
-                            (f"%{args['combo_name']}%",),
-                        ).fetchone()[0]
-                    elif ep == "search_shensha":
-                        n = conn.execute(
-                            "SELECT COUNT(*) FROM shensha WHERE name LIKE ?",
-                            (f"%{args['name']}%",),
-                        ).fetchone()[0]
-                    elif ep == "search_nayin":
-                        n = conn.execute(
-                            "SELECT COUNT(*) FROM nayin WHERE gan_zhi=?",
-                            (args["gan"] + args["zhi"],),
-                        ).fetchone()[0]
-                    elif ep == "search_bingyao":
-                        n = conn.execute(
-                            "SELECT COUNT(*) FROM bingyao WHERE disease LIKE ? OR symptom LIKE ?",
-                            (f"%{args['query']}%", f"%{args['query']}%"),
-                        ).fetchone()[0]
-                    elif ep == "search_xiangyi":
-                        n = conn.execute(
-                            "SELECT COUNT(*) FROM xiangyi WHERE gan_or_zhi LIKE ?",
-                            (f"%{args['gan_or_zhi']}%",),
-                        ).fetchone()[0]
-                    else:
-                        n = 0
-                    kb_hits += n
+                    kb_hit_ids.extend(_kb_query(conn, qs["entrypoint"], qs["args"]))
+                kb_hits = len(kb_hit_ids)
+                # 逐项 classic_texts 核查（用该项 query 词组，git object 冻结版）
+                classic_groups = [[qs["args"].get("query") or qs["args"].get("name") or qs["args"].get("combo_name") or ""] for qs in item["query_specs"]]
+                classic_groups = [g for g in classic_groups if g[0]]
+                classic_result = classic_mod.search_frozen(classic_groups, freeze_path, None) if classic_groups else {"results": []}
+                classic_hits = len(classic_result["results"])
                 # prompt 现存字段：官方 prompt 只含 birth_info + astro 块，无婚姻规则/断语
                 # （设计 §3 已核实：零婚姻规则、零大运流年序列、零四化表）→ doctrine 知识一律未注入。
                 prompt_has = False
-                cls = _classify_doctrine(item, kb_hits, classic_hits_total, prompt_has)
-            items.append(
-                {
-                    "item_id": item["item_id"],
-                    "item_type": item["item_type"],
-                    "gap_class": cls["gap_class"],
-                    "undetermined_reason": cls["undetermined_reason"],
+                cls = _classify_doctrine(item, kb_hits, classic_hits, prompt_has)
+                evidence = {
+                    "kb_hit_ids": sorted(set(kb_hit_ids)),
+                    "classic_hits": classic_hits,
+                    "not_found_by_frozen_search": kb_hits == 0,
                 }
-            )
+            record = {
+                "item_id": item["item_id"],
+                "item_type": item["item_type"],
+                "gap_class": cls["gap_class"],
+                "undetermined_reason": cls["undetermined_reason"],
+            }
+            if item["item_type"] == "doctrine":
+                record["evidence"] = evidence
+            items.append(record)
         determined = [i["gap_class"] for i in items if i["gap_class"] != "undetermined"]
         if not determined:
             primary_gap = "undetermined"
@@ -211,6 +225,9 @@ def run_audit(rk_path: Path, probe_path: Path, cases160_path: Path, out_path: Pa
     for row in audit_rows:
         case_counts[row["primary_gap"]] = case_counts.get(row["primary_gap"], 0) + 1
     n_items = sum(len(r["items"]) for r in audit_rows)
+    classic_total = json.loads(
+        (P8_DIR / "classic_texts_search_results.json").read_text(encoding="utf-8")
+    )["summary"]["total_hits"]
     summary = {
         "schema_version": "1.0",
         "n_cases": len(audit_rows),
@@ -218,7 +235,7 @@ def run_audit(rk_path: Path, probe_path: Path, cases160_path: Path, out_path: Pa
         "gap_counts_item_level": gap_counts,
         "gap_counts_case_level_primary": case_counts,
         "denominator_check": sum(gap_counts.values()) == n_items,
-        "classic_texts_hits_total": classic_hits_total,
+        "classic_texts_hits_total": classic_total,
         "prompt_fingerprint": fp,
     }
 

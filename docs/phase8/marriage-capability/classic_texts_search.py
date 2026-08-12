@@ -93,8 +93,11 @@ def _git_show(commit: str, path: str) -> bytes:
     return proc.stdout
 
 
-def search_frozen(groups: list[list[str]], freeze_path: Path, out_path: Path) -> dict:
-    """按 classic_texts_freeze.json 的冻结 commit 逐文件检索（git object，不读工作区）。"""
+def search_frozen(groups: list[list[str]], freeze_path: Path, out_path: Path | None = None) -> dict:
+    """按 classic_texts_freeze.json 的冻结 commit 逐文件检索（git object，不读工作区）。
+
+    out_path 为 None 时只返回结果不落盘（供逐项核查复用）。
+    """
     freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
     results = []
     for f in freeze["files"]:
@@ -127,12 +130,13 @@ def search_frozen(groups: list[list[str]], freeze_path: Path, out_path: Path) ->
         "results": deduped,
         "summary": {"total_hits": len(deduped), "quarantined_hits": sum(1 for h in deduped if h["quarantined"])},
     }
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=1) + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
+    if out_path is not None:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=1) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
     return payload
 
 
