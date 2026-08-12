@@ -58,7 +58,40 @@ def subtype_check() -> list[tuple[str, bool, str]]:
     return results
 
 
-CHECKS: dict[str, list[tuple[str, bool, str]]] = {"subtype_split": subtype_check()}
+def probe_check() -> list[tuple[str, bool, str]]:
+    """探针 item_id 集 == required_knowledge computation 项集（P8-1.5 对账）。"""
+    rows = [
+        json.loads(l)
+        for l in (P8_DIR / "required_knowledge.jsonl").open(encoding="utf-8")
+        if l.strip()
+    ]
+    expected = {
+        item["item_id"]
+        for row in rows
+        for item in row["items"]
+        if item["item_type"] == "computation"
+    }
+    probe = json.loads((P8_DIR / "computability_probe.json").read_text(encoding="utf-8"))
+    actual = {i["item_id"] for i in probe["items"]}
+    results: list[tuple[str, bool, str]] = [
+        ("探针 item_id 集 == computation 项集", actual == expected, f"{len(actual)} vs {len(expected)}"),
+        (
+            "四态值域合法且总量一致",
+            all(
+                i["computability_status"] in {"computable", "missing_input", "no_interface", "semantic_gap"}
+                for i in probe["items"]
+            )
+            and probe["summary"]["total"] == len(actual),
+            json.dumps(probe["summary"], ensure_ascii=False),
+        ),
+    ]
+    return results
+
+
+CHECKS: dict[str, list[tuple[str, bool, str]]] = {
+    "subtype_split": subtype_check(),
+    "computability_probe": probe_check(),
+}
 
 
 def main() -> None:

@@ -13,6 +13,11 @@
    "strategy": "json_canonical"
   },
   {
+   "path": "docs/phase8/marriage-capability/computability_probe.json",
+   "sha256": "c2a6c0245ee613760df418016acf67bc35b9f202fa7c76e06d5dc50b3c4d5295",
+   "strategy": "json_canonical"
+  },
+  {
    "path": "docs/phase8/marriage-capability/kb_equivalence.json",
    "sha256": "0203cc742e6b93d4a47b4cbf7333bf6a6405f624bfeb08388e27d344aa4ebf09",
    "strategy": "json_canonical"

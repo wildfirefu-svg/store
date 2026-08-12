@@ -574,6 +574,130 @@ class TestKbEquivalence:
             tmp_out.unlink(missing_ok=True)
 
 
+class TestComputabilityProbe:
+    """computability_probe.json：四态、无 current_*、双跑字节一致、缺失三态。"""
+
+    def _probe(self) -> dict:
+        return _load_json(_P8_DIR / "computability_probe.json")
+
+    def _computation_items(self) -> list[dict]:
+        rows = [
+            json.loads(l)
+            for l in (_P8_DIR / "required_knowledge.jsonl").open(encoding="utf-8")
+            if l.strip()
+        ]
+        return [
+            item
+            for row in rows
+            for item in row["items"]
+            if item["item_type"] == "computation"
+        ]
+
+    def test_status_enum_and_coverage(self):
+        probe = self._probe()
+        assert probe["schema_version"] == "1.0"
+        statuses = [i["computability_status"] for i in probe["items"]]
+        assert set(statuses) <= {"computable", "missing_input", "no_interface", "semantic_gap"}
+        assert "computable" in statuses  # dayun/liunian 至少可算
+        assert "no_interface" in statuses  # 流年四化无独立接口
+        assert len(probe["items"]) == len(self._computation_items())
+
+    def test_item_id_set_matches_computation_items(self):
+        probe = self._probe()
+        expected = {i["item_id"] for i in self._computation_items()}
+        actual = {i["item_id"] for i in probe["items"]}
+        assert actual == expected
+
+    def test_no_current_fields_recursive(self):
+        """递归扫描探针输出，不得出现任何 current_* 字段。"""
+        probe = self._probe()
+        hits: list[str] = []
+
+        def walk(obj, path: str) -> None:
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    if k.startswith("current_"):
+                        hits.append(f"{path}.{k}")
+                    walk(v, f"{path}.{k}")
+            elif isinstance(obj, list):
+                for i, v in enumerate(obj):
+                    walk(v, f"{path}[{i}]")
+
+        walk(probe, "$")
+        assert hits == []
+
+    def test_double_run_byte_identical(self):
+        """双跑字节一致门：重跑探针输出与落盘产物逐字节一致。"""
+        probe_mod = _load_module(
+            "p8_probe", "docs/phase8/marriage-capability/p8_probe.py"
+        )
+        tmp_out = _REPO / ".tmp" / "phase8_probe_rerun.json"
+        probe_mod.run_probe(
+            _P8_DIR / "required_knowledge.jsonl",
+            _MINGLI_160,
+            tmp_out,
+        )
+        try:
+            assert (_P8_DIR / "computability_probe.json").read_bytes() == tmp_out.read_bytes()
+        finally:
+            tmp_out.unlink(missing_ok=True)
+
+    def test_missing_gender(self):
+        """gender 缺失/非男女 → missing_input。"""
+        probe_mod = _load_module(
+            "p8_probe", "docs/phase8/marriage-capability/p8_probe.py"
+        )
+        case = {
+            "case_id": "mingli_ftb_test",
+            "chart_input": {
+                "official_astro": {"chinese_date": "甲寅 戊辰 己亥 壬申"}
+            },
+            "birth_info": {"gender": "其他", "year": 1974, "month": 4, "day": 28},
+        }
+        item = {
+            "item_id": "mingli_ftb_test#k1",
+            "computation_type": "dayun",
+            "target_years": ["2006"],
+        }
+        result = probe_mod.probe_computation_item(item, case)
+        assert result["computability_status"] == "missing_input"
+        assert "gender" in result["reason"]
+
+    def test_bad_chinese_date(self):
+        """chinese_date 解析失败 → missing_input + 原因。"""
+        probe_mod = _load_module(
+            "p8_probe", "docs/phase8/marriage-capability/p8_probe.py"
+        )
+        case = {
+            "case_id": "mingli_ftb_test",
+            "chart_input": {"official_astro": {"chinese_date": "甲寅戊辰"}},
+            "birth_info": {"gender": "男", "year": 1974, "month": 4, "day": 28},
+        }
+        item = {
+            "item_id": "mingli_ftb_test#k2",
+            "computation_type": "liunian",
+            "target_years": ["2006"],
+        }
+        result = probe_mod.probe_computation_item(item, case)
+        assert result["computability_status"] == "missing_input"
+        assert "chinese_date" in result["reason"]
+
+    def test_no_interface_sihua(self):
+        """四化无独立接口 → no_interface。"""
+        probe = self._probe()
+        sihua = [i for i in probe["items"] if i["computation_type"] == "sihua"]
+        assert sihua
+        for i in sihua:
+            assert i["computability_status"] == "no_interface"
+            assert i["reason"]
+
+    def test_parse_rules_recorded(self):
+        """chinese_date→年/月柱解析规则必须落盘。"""
+        probe = self._probe()
+        rules = probe.get("parse_rules")
+        assert rules and "chinese_date" in rules and "gender" in rules
+
+
 class TestReconcileSubtype:
     """p8_reconcile.py 首项：亚型 35 题对账。"""
 
