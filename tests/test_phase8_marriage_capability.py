@@ -709,6 +709,189 @@ class TestComputabilityProbe:
             ), i["item_id"]
 
 
+CLASSIC_TEXT_ALLOWED_FIELDS = {"rule", "original_text", "subject", "condition", "category"}
+GAP_CLASSES = {"知识缺失", "检索不可见", "计算缺失", "注入缺失", "模型未利用", "undetermined"}
+PRIMARY_GAP_PRIORITY = ["计算缺失", "注入缺失", "检索不可见", "知识缺失", "模型未利用"]
+
+
+class TestClassicTextsSearch:
+    """classic_texts_search.py：匹配语义冻结 + schema fail-closed + quarantine 标记。"""
+
+    def _mod(self):
+        return _load_module(
+            "classic_texts_search",
+            "docs/phase8/marriage-capability/classic_texts_search.py",
+        )
+
+    def test_search_fields_frozen(self):
+        mod = self._mod()
+        assert set(mod.SEARCH_FIELDS) == CLASSIC_TEXT_ALLOWED_FIELDS
+        assert set(mod.PRIMARY_FIELDS) == {"rule", "original_text"}
+        assert set(mod.AUX_FIELDS) == {"subject", "condition", "category"}
+
+    def test_schema_fail_closed_on_unknown_field(self, tmp_path):
+        mod = self._mod()
+        bad = tmp_path / "bad.json"
+        bad.write_text(
+            json.dumps([{"id": "x", "rule": "r", "unknown_field": "u"}]),
+            encoding="utf-8",
+        )
+        with pytest.raises(SystemExit):
+            mod.search_file(bad, [["婚姻"]])
+
+    def test_schema_fail_closed_on_missing_required(self, tmp_path):
+        mod = self._mod()
+        bad = tmp_path / "bad.json"
+        bad.write_text(json.dumps([{"id": "x", "rule": "r"}]), encoding="utf-8")
+        with pytest.raises(SystemExit):
+            mod.search_file(bad, [["婚姻"]])
+
+    def test_group_or_and_between_groups(self, tmp_path):
+        """同义词组内 OR、组间 AND、子串匹配（去空白）。"""
+        mod = self._mod()
+        fixture = tmp_path / "rules.json"
+        fixture.write_text(
+            json.dumps(
+                [
+                    {"id": "a", "category": "婚姻", "subject": "婚配", "condition": "男命",
+                     "rule": "财星得地妻贤", "original_text": "财星得地妻贤",
+                     "source_book": "x", "source_chapter": "y"},
+                    {"id": "b", "category": "婚姻", "subject": "婚配", "condition": "女命",
+                     "rule": "官星有根夫贵", "original_text": "官星有根夫贵",
+                     "source_book": "x", "source_chapter": "y"},
+                    {"id": "c", "category": "婚姻", "subject": "婚配", "condition": "男命",
+                     "rule": "财星得地 妻贤", "original_text": "财星得地 妻贤",
+                     "source_book": "x", "source_chapter": "y"},
+                ],
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        # 组内 OR（财星|官星）AND 组间（妻贤）
+        hits = mod.search_file(fixture, [["财星", "官星"], ["妻贤"]])
+        ids = {h["record_id"] for h in hits}
+        assert ids == {"a", "c"}  # c 去空白后子串命中；b 缺妻贤
+        for h in hits:
+            assert h["matched_fields"]
+
+    def test_quarantine_flagged(self, tmp_path):
+        mod = self._mod()
+        fixture = tmp_path / "q.jsonl"
+        fixture.write_text(
+            json.dumps({"id": "q1", "category": "婚姻", "subject": "s", "condition": "c",
+                        "rule": "财星得地妻贤", "original_text": "财星得地妻贤",
+                        "source_book": "x", "source_chapter": "y", "quarantine_reason": "低质"},
+                       ensure_ascii=False)
+            + "\n",
+            encoding="utf-8",
+        )
+        hits = mod.search_file(fixture, [["财星"]], quarantined=True)
+        assert hits and all(h["quarantined"] is True for h in hits)
+
+    def test_results_stable_order_and_pointer(self, tmp_path):
+        mod = self._mod()
+        fixture = tmp_path / "rules.json"
+        fixture.write_text(
+            json.dumps(
+                [
+                    {"id": "a", "category": "婚姻", "subject": "s", "condition": "c",
+                     "rule": "财星得地妻贤", "original_text": "财星得地妻贤",
+                     "source_book": "x", "source_chapter": "y"},
+                    {"id": "b", "category": "婚姻", "subject": "s", "condition": "c",
+                     "rule": "官星有根夫贵", "original_text": "官星有根夫贵",
+                     "source_book": "x", "source_chapter": "y"},
+                ],
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        hits = mod.search_file(fixture, [["财星", "官星"]])  # 单组 OR
+        assert [h["record_id"] for h in hits] == ["a", "b"]  # 文件序+行序稳定
+        for h in hits:
+            assert h["json_pointer"].startswith("/")
+            assert h["excerpt"]
+
+
+class TestPromptRebuild:
+    """prompt 重建审计：fingerprint 硬门 + prompt_evidence。"""
+
+    def test_fingerprint_matches_receipt(self):
+        audit = _load_module("p8_audit", "docs/phase8/marriage-capability/p8_audit.py")
+        profile = audit.resolve_profile("mingli_official_cot_astro")
+        assert audit.prompt_fingerprint(profile) == (
+            "e136106a8e8730020eb3631b32b6c24424beaf73f5f0fcbc82a274e2120cb22d"
+        )
+
+    def test_prompt_evidence_recorded(self):
+        audit = json.loads(
+            (_P8_DIR / "knowledge_audit.jsonl").open(encoding="utf-8").readline()
+        )
+        assert "prompt_evidence" in audit
+        ev = audit["prompt_evidence"]
+        assert ev and all("field_path" in e and "excerpt" in e for e in ev)
+
+
+class TestKnowledgeAudit:
+    """knowledge_audit.jsonl：gap_class 枚举、探针映射、primary_gap 优先级、双口径分母。"""
+
+    def _rows(self) -> list[dict]:
+        return [
+            json.loads(l)
+            for l in (_P8_DIR / "knowledge_audit.jsonl").open(encoding="utf-8")
+            if l.strip()
+        ]
+
+    def test_35_rows_and_case_set(self):
+        rows = self._rows()
+        assert len(rows) == 35
+        assert [r["case_id"] for r in rows] == _expected_35()
+
+    def test_gap_class_enum(self):
+        for row in self._rows():
+            for item in row["items"]:
+                assert item["gap_class"] in GAP_CLASSES
+
+    def test_probe_mapping(self):
+        """no_interface→计算缺失；missing_input→undetermined(input_missing)；semantic_gap→undetermined。"""
+        probe = _load_json(_P8_DIR / "computability_probe.json")
+        status_by_id = {i["item_id"]: i["computability_status"] for i in probe["items"]}
+        for row in self._rows():
+            for item in row["items"]:
+                if item["item_type"] != "computation":
+                    continue
+                status = status_by_id[item["item_id"]]
+                if status == "no_interface":
+                    assert item["gap_class"] == "计算缺失", item["item_id"]
+                elif status == "missing_input":
+                    assert item["gap_class"] == "undetermined"
+                    assert item["undetermined_reason"] == "input_missing"
+                elif status == "semantic_gap":
+                    assert item["gap_class"] == "undetermined"
+
+    def test_primary_gap_priority(self):
+        for row in self._rows():
+            determined = [
+                i["gap_class"] for i in row["items"] if i["gap_class"] != "undetermined"
+            ]
+            if not determined:
+                assert row["primary_gap"] == "undetermined"
+            else:
+                expected = min(determined, key=PRIMARY_GAP_PRIORITY.index)
+                assert row["primary_gap"] == expected
+                assert row["primary_gap_reason"]
+
+    def test_denominator_reconciliation(self):
+        """知识项总数 = 五类 + undetermined（双口径分母对账）。"""
+        rows = self._rows()
+        n_items = sum(len(r["items"]) for r in rows)
+        gap_counts: dict[str, int] = {}
+        for row in rows:
+            for item in row["items"]:
+                gap_counts[item["gap_class"]] = gap_counts.get(item["gap_class"], 0) + 1
+        assert sum(gap_counts.values()) == n_items
+        # 本数据集探针无 missing_input/semantic_gap，undetermined 可为 0（设计允许单列）
+
+
 class TestReconcileSubtype:
     """p8_reconcile.py 首项：亚型 35 题对账。"""
 

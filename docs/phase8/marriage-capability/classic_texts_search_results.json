@@ -1,0 +1,117 @@
+{
+ "schema_version": "1.0",
+ "search_fields": [
+  "rule",
+  "original_text",
+  "subject",
+  "condition",
+  "category"
+ ],
+ "primary_fields": [
+  "rule",
+  "original_text"
+ ],
+ "aux_fields": [
+  "subject",
+  "condition",
+  "category"
+ ],
+ "normalization": "去空白；繁简不转换；大小写不转换",
+ "groups": [
+  [
+   "婚配",
+   "婚姻",
+   "夫妻",
+   "配偶",
+   "姻缘",
+   "桃花",
+   "红鸾"
+  ]
+ ],
+ "frozen_commit": "a06a3373a9aca926c104534dd0a441e9af0a6fea",
+ "results": [
+  {
+   "record_id": "dts_033_001",
+   "file": "knowledge_base/classic_texts/ditiansui/all_rules.json",
+   "line": 418,
+   "json_pointer": "/417",
+   "matched_fields": [
+    "rule"
+   ],
+   "excerpt": "喜神与财神关系和谐，则婚姻和美；否则克妻，或妻貌丑、夫妻不和。",
+   "quarantined": false
+  },
+  {
+   "record_id": "dts_033_008",
+   "file": "knowledge_base/classic_texts/ditiansui/all_rules.json",
+   "line": 425,
+   "json_pointer": "/424",
+   "matched_fields": [
+    "rule"
+   ],
+   "excerpt": "财星泄气过重、比劫显露，或身旺无财，则夫妻难全美。",
+   "quarantined": false
+  },
+  {
+   "record_id": "dts_033_025",
+   "file": "knowledge_base/classic_texts/ditiansui/all_rules.json",
+   "line": 442,
+   "json_pointer": "/441",
+   "matched_fields": [
+    "rule"
+   ],
+   "excerpt": "日主忌财，财合闲神化财，主夫妻不和。",
+   "quarantined": false
+  },
+  {
+   "record_id": "qtbj_055_014",
+   "file": "knowledge_base/classic_texts/qiongtongbaojian/all_rules.json",
+   "line": 1452,
+   "json_pointer": "/1451",
+   "matched_fields": [
+    "rule"
+   ],
+   "excerpt": "用丁火者，以甲木为妻，若有庚金制甲，则夫妻难以偕老。",
+   "quarantined": false
+  },
+  {
+   "record_id": "smth_034_000",
+   "file": "knowledge_base/classic_texts/sanmingtonghui/all_rules.json",
+   "line": 759,
+   "json_pointer": "/758",
+   "matched_fields": [
+    "rule"
+   ],
+   "excerpt": "以年支或日支查四柱，寅午戌见卯、巳酉丑见午、申子辰见酉、亥卯未见子即为咸池，又名桃花煞、败神。",
+   "quarantined": false
+  },
+  {
+   "record_id": "smth_047_002",
+   "file": "knowledge_base/classic_texts/sanmingtonghui/all_rules.json",
+   "line": 1244,
+   "json_pointer": "/1243",
+   "matched_fields": [
+    "rule"
+   ],
+   "excerpt": "男性命带金舆，主多妻妾，且有阴福（女性贵人）扶持，婚姻感情方面较为丰富。",
+   "quarantined": false
+  },
+  {
+   "record_id": "smth_067_007",
+   "file": "knowledge_base/classic_texts/sanmingtonghui/all_rules.json",
+   "line": 1508,
+   "json_pointer": "/1507",
+   "matched_fields": [
+    "original_text",
+    "rule",
+    "subject"
+   ],
+   "excerpt": "命犯桃花煞，主好酒色。",
+   "quarantined": false
+  }
+ ],
+ "summary": {
+  "total_hits": 7,
+  "quarantined_hits": 0
+ }
+}
