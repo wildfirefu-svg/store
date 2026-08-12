@@ -87,10 +87,9 @@ def _expand_years(target_years: list[str]) -> list[int]:
 
 
 def _stable(obj, allowed: list[str]):
+    """白名单只过滤顶层 dict 键；嵌套值（如 pillars 元素）原样保留（均为稳定字段）。"""
     if isinstance(obj, dict):
-        return {k: _stable(v, allowed) for k, v in obj.items() if k in allowed}
-    if isinstance(obj, list):
-        return [_stable(v, allowed) for v in obj]
+        return {k: v for k, v in obj.items() if k in allowed}
     return obj
 
 

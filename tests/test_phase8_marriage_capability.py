@@ -697,6 +697,17 @@ class TestComputabilityProbe:
         rules = probe.get("parse_rules")
         assert rules and "chinese_date" in rules and "gender" in rules
 
+    def test_dayun_pillars_keep_content(self):
+        """dayun 的 pillars 元素必须保留稳定字段（gan/zhi/years 等），不得被滤空。"""
+        probe = self._probe()
+        dayun = [i for i in probe["items"] if i["computation_type"] == "dayun"]
+        assert dayun
+        for i in dayun:
+            pillars = i["output_summary"]["pillars"]
+            assert pillars and all(
+                p.get("gan") and p.get("zhi") and p.get("years") for p in pillars
+            ), i["item_id"]
+
 
 class TestReconcileSubtype:
     """p8_reconcile.py 首项：亚型 35 题对账。"""
