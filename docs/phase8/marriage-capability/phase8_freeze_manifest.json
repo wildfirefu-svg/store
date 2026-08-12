@@ -13,8 +13,13 @@
    "strategy": "git_canonical_lf"
   },
   {
+   "path": "docs/phase8/marriage-capability/c1_detector_eval.json",
+   "sha256": "3bf8faa1ea7aa10ed2511ca1a22bc84ac4bcf306bdb3c4415cd2b274cc43e58c",
+   "strategy": "json_canonical"
+  },
+  {
    "path": "docs/phase8/marriage-capability/c1_replay.py",
-   "sha256": "b14bf155c3827c14bdc300944c4b73ce4b7ece1eb5e07af6750de10c37f04ee9",
+   "sha256": "e1e97dcaee65b114d757608570c9dd92e9a7b618e2a9ef07a366c059e7510538",
    "strategy": "git_canonical_lf"
   },
   {

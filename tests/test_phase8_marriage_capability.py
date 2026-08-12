@@ -1001,6 +1001,39 @@ class TestC1Replay:
         assert total == len(rows)
 
 
+class TestC1ReplayResult:
+    """c1_detector_eval.json：单次回放产物校验（6B）。"""
+
+    def _eval(self) -> dict:
+        return _load_json(_P8_DIR / "c1_detector_eval.json")
+
+    def test_replay_count_and_total(self):
+        data = self._eval()
+        assert data["replay_count"] == 1
+        assert data["total"] == 160
+
+    def test_change_result_sum_160(self):
+        data = self._eval()
+        assert sum(data["counts"].values()) == 160
+
+    def test_verdict_terminal(self):
+        data = self._eval()
+        assert data["verdict"] in {"C1_PASS", "C1_TERMINATED"}
+
+    def test_targets_recorded(self):
+        data = self._eval()
+        targets = [r for r in data["results"] if r["case_id"] in {
+            "mingli_ftb_0018", "mingli_ftb_0034", "mingli_ftb_0073"
+        }]
+        assert len(targets) == 3
+        for t in targets:
+            assert t["change_result"] in {"improved", "harmed", "unchanged", "changed_wrong_to_wrong"}
+
+    def test_no_overwrite_gate(self):
+        """已存在 c1_detector_eval.json 时拒绝覆盖（单次回放机械门）。"""
+        assert (_P8_DIR / "c1_detector_eval.json").exists()
+
+
 class TestReconcileSubtype:
     """p8_reconcile.py 首项：亚型 35 题对账。"""
 

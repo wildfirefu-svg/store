@@ -1,0 +1,1138 @@
+{
+ "verdict": "C1_TERMINATED",
+ "counts": {
+  "improved": 4,
+  "harmed": 3,
+  "unchanged": 150,
+  "changed_wrong_to_wrong": 3
+ },
+ "harmed": 3,
+ "targets_improved": [
+  "mingli_ftb_0034",
+  "mingli_ftb_0073"
+ ],
+ "results": [
+  {
+   "case_id": "mingli_ftb_0001",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0002",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0003",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0004",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0005",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0006",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0007",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0008",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0009",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0010",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0011",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0012",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0013",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0014",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0015",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0016",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0017",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0018",
+   "old_letter": "C",
+   "new_letter": "D",
+   "expected": "B",
+   "change_result": "changed_wrong_to_wrong"
+  },
+  {
+   "case_id": "mingli_ftb_0019",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0020",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0021",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0022",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0023",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0024",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0025",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0026",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0027",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0028",
+   "old_letter": "C",
+   "new_letter": "D",
+   "expected": "D",
+   "change_result": "improved"
+  },
+  {
+   "case_id": "mingli_ftb_0029",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0030",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0031",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0032",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0033",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0034",
+   "old_letter": "B",
+   "new_letter": "C",
+   "expected": "C",
+   "change_result": "improved"
+  },
+  {
+   "case_id": "mingli_ftb_0035",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0036",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0037",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0038",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0039",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0040",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0041",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0042",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0043",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0044",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0045",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0046",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0047",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0048",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0049",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0050",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0051",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0052",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0053",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0054",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0055",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0056",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0057",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0058",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0059",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0060",
+   "old_letter": "C",
+   "new_letter": "B",
+   "expected": "C",
+   "change_result": "harmed"
+  },
+  {
+   "case_id": "mingli_ftb_0061",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0062",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0063",
+   "old_letter": "D",
+   "new_letter": "C",
+   "expected": "C",
+   "change_result": "improved"
+  },
+  {
+   "case_id": "mingli_ftb_0064",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0065",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0066",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0067",
+   "old_letter": "C",
+   "new_letter": "D",
+   "expected": "A",
+   "change_result": "changed_wrong_to_wrong"
+  },
+  {
+   "case_id": "mingli_ftb_0068",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0069",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0070",
+   "old_letter": "D",
+   "new_letter": "C",
+   "expected": "D",
+   "change_result": "harmed"
+  },
+  {
+   "case_id": "mingli_ftb_0071",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0072",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0073",
+   "old_letter": "D",
+   "new_letter": "C",
+   "expected": "C",
+   "change_result": "improved"
+  },
+  {
+   "case_id": "mingli_ftb_0074",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0075",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0076",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0077",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0078",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0079",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0080",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0081",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0082",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0083",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0084",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0085",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0086",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0087",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0088",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0089",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0090",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0091",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0092",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0093",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0094",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0095",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0096",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0097",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0098",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0099",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0100",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0101",
+   "old_letter": "C",
+   "new_letter": "D",
+   "expected": "B",
+   "change_result": "changed_wrong_to_wrong"
+  },
+  {
+   "case_id": "mingli_ftb_0102",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0103",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0104",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0105",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0106",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0107",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0108",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0109",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0110",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0111",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0112",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0113",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0114",
+   "old_letter": "D",
+   "new_letter": "B",
+   "expected": "D",
+   "change_result": "harmed"
+  },
+  {
+   "case_id": "mingli_ftb_0115",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0116",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0117",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0118",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0119",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0120",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0121",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0122",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0123",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0124",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0125",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0126",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0127",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0128",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0129",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0130",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0131",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0132",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0133",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0134",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0135",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0136",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0137",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0138",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0139",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0140",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0141",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0142",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0143",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0144",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0145",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0146",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0147",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0148",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0149",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0150",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0151",
+   "old_letter": "C",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0152",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0153",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0154",
+   "old_letter": "B",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0155",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "B",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0156",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0157",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0158",
+   "old_letter": "D",
+   "new_letter": null,
+   "expected": "D",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0159",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "C",
+   "change_result": "unchanged"
+  },
+  {
+   "case_id": "mingli_ftb_0160",
+   "old_letter": "A",
+   "new_letter": null,
+   "expected": "A",
+   "change_result": "unchanged"
+  }
+ ],
+ "replay_count": 1,
+ "total": 160
+}
