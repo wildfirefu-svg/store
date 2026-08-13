@@ -9,11 +9,36 @@ Root-cause fixes vs original batch scripts:
   - Relative paths via Path(__file__) -> portable
   - Provenance manifest (URL/SHA/model config) written per run
 
+MCQ mapping proof (P0-1 redesign):
+  source_rule_id is an ORCHESTRATOR-ESTABLISHED MAPPING, not a model echo.
+  The orchestrator sends one rule per API call and stamps source_rule_id
+  with the rule it sent. This does NOT prove the model's response semantically
+  corresponds to the rule.
+
+  Semantic proof is two-tiered:
+    1. _mcq_prefilter: low-cost 2-char substring overlap. Drops obviously
+       unrelated MCQs. NOT a proof -- cannot set _consistency_verified=True.
+    2. _mcq_strict_consistency: checks subject matching (rule's subject must
+       appear in MCQ question) and polarity contradiction (喜 vs 忌, 吉 vs 凶,
+       宜 vs 不宜). Only passing BOTH tiers sets _consistency_verified=True.
+
+  MCQs that pass prefilter but fail strict check are NOT dropped -- they enter
+  semantic_unaudited quarantine for human review. MCQs that fail prefilter are
+  dropped entirely. Old MCQs without _consistency_verified are legacy_unaudited.
+
+  BudgetLedger provides run-level global API call tracking across multiple
+  generate_mcq invocations (P0-2). Callers MUST create a ledger with a frozen
+  hard cap and pass it to every generate_mcq call. When the ledger is
+  exhausted or MCQs are incomplete, callers MUST fail-closed (not update
+  progress, not publish partial results).
+
 Public API:
-  distill_chapter(text, book, chapter) -> list[dict]   (rules, no IDs)
-  generate_mcq(rules, book, chapter) -> list[dict]     (mcq, source_rule_id set)
-  assign_rule_ids(rules, prefix, ch_idx) -> None        (mutates, deterministic)
-  rotate_answers(mcqs) -> None                          (mutates, deterministic)
+  distill_chapter(text, book, chapter) -> list[dict]
+  generate_mcq(rules, book, chapter, ..., ledger=None) -> (verified, unaudited)
+  link_mcq_to_rules(mcqs, rules) -> (linked, unlinked)
+  BudgetLedger(global_hard_cap) -> ledger
+  assign_rule_ids(rules, prefix, ch_idx) -> None
+  rotate_answers(mcqs) -> None
   write_provenance(out_dir, cfg) -> None
 """
 from __future__ import annotations
@@ -29,6 +54,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+# Frozen seed shared with remediate_classic_distillation.py so the answer-rotation
+# protocol is uniform across newly-generated and post-hoc-remediated MCQs.
+ROTATE_SEED = "bazi_classic_distillation_v2"
+
 RULE_PROMPT = (
     "你是八字命理知识工程师。从以下古文段落中提取结构化命理规则，输出JSON数组。\n"
     "每条规则格式（id 由系统赋值，你不要填 id 字段）：\n"
@@ -41,11 +70,29 @@ RULE_PROMPT = (
 
 MCQ_PROMPT = (
     "你是八字命理考试出题专家。根据以下规则生成四选一选择题，每条规则一题。\n"
-    "输出JSON数组，每题格式（id 和 source_rule_id 由系统赋值，你不要填）：\n"
-    '{"question":"题干(含命理背景)","options":{"A":"...","B":"...","C":"...","D":"..."},'
+    "输出JSON数组，每题格式（id 由系统赋值）：\n"
+    '{"source_rule_id":"该题依据的规则id(必须取自下方规则列表中的id)","question":"题干(含命理背景)",'
+    '"options":{"A":"...","B":"...","C":"...","D":"..."},'
     '"answer":"正确字母","explanation":"解析","difficulty":"基础|中级|高级",'
     '"category":"天干|地支|五行|十神|格局|用神|其他"}\n\n'
-    "规则：\n__RULES__\n\n只输出JSON数组。"
+    "规则：\n__RULES__\n\n"
+    "注意：每条规则恰好生成一题，source_rule_id 必须精确取自下方规则的 id 字段，不要编造。只输出JSON数组。"
+)
+
+# Per-rule MCQ prompt (P0-1). Each rule is sent in its own API call. The
+# orchestrator stamps source_rule_id after receiving the response -- this is
+# an orchestrator mapping, NOT a model echo proof. The real proof that the
+# MCQ corresponds to the rule is the two-tiered consistency check
+# (_mcq_prefilter + _mcq_strict_consistency), applied after generation.
+PER_RULE_MCQ_PROMPT = (
+    "你是八字命理考试出题专家。根据下方【唯一】规则生成一道四选一选择题。\n"
+    "输出JSON对象（不要输出数组，只输出单个对象）：\n"
+    '{"question":"题干(含命理背景)",'
+    '"options":{"A":"...","B":"...","C":"...","D":"..."},'
+    '"answer":"正确字母","explanation":"解析","difficulty":"基础|中级|高级",'
+    '"category":"天干|地支|五行|十神|格局|用神|其他"}\n\n'
+    "规则：\n__RULE__\n\n"
+    "注意：只输出JSON对象，不要输出其他内容。题干和解析必须与上方规则内容直接相关。"
 )
 
 
@@ -61,12 +108,41 @@ def _get_api_key() -> str:
     raise RuntimeError("DEEPSEEK_API_KEY not found in env or .env")
 
 
+# Single authoritative frozen model configuration (P0-3). _call() builds the
+# API payload from this constant, canonical_config_sha256() hashes it, and the
+# provenance validator imports the SAME constant -- there is exactly one copy,
+# so a change to the actual model config is always reflected in the canonical
+# fingerprint and validation.
+FROZEN_MODEL_CONFIG = {
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "thinking_mode": "disabled",
+    "temperature": 0.0,
+}
+
+# Authoritative mapping of which classic-text books each canonical producer may
+# operate on (P0-14). Shared by the producers (fill/regen) and the provenance
+# validator so the frozen run's targets are checked against the SAME single
+# source of truth -- a field-complete but unknown target cannot enter a run.
+# Tuple order is the canonical default target order (run identity is
+# order-sensitive, and frozenset iteration order is not stable across
+# processes due to string hash randomization).
+VALID_TARGETS_BY_OPERATION = {
+    "fill": ("zipingzhenquan", "qiongtongbaojian"),
+    "regen": ("zipingzhenquan", "qiongtongbaojian",
+              "sanmingtonghui", "ditiansui"),
+}
+
+
 def _call(prompt: str, timeout: int = 300) -> str:
     from claude_api import call_model_messages_sync_with_meta
     resp, _ = call_model_messages_sync_with_meta(
         [{"role": "user", "content": prompt}],
-        provider="deepseek", model="deepseek-v4-flash",
-        thinking_mode="disabled", temperature=0.0, timeout=timeout,
+        provider=FROZEN_MODEL_CONFIG["provider"],
+        model=FROZEN_MODEL_CONFIG["model"],
+        thinking_mode=FROZEN_MODEL_CONFIG["thinking_mode"],
+        temperature=FROZEN_MODEL_CONFIG["temperature"],
+        timeout=timeout,
     )
     return resp
 
@@ -86,11 +162,1013 @@ def _parse_json_array(s: str) -> list[dict]:
     return []
 
 
-def distill_chapter(text: str, book: str, chapter: str) -> list[dict]:
+def _parse_json_object(s: str) -> dict | None:
+    """Parse a single JSON object from a model response (P0-5 per-rule path)."""
+    s = s.strip()
+    try:
+        v = json.loads(s)
+        return v if isinstance(v, dict) else None
+    except json.JSONDecodeError:
+        m = re.search(r"\{.*\}", s, re.DOTALL)
+        if m:
+            try:
+                v = json.loads(m.group())
+                return v if isinstance(v, dict) else None
+            except json.JSONDecodeError:
+                pass
+    return None
+
+
+def _norm(s: str) -> str:
+    return re.sub(r"\s+", "", s or "")
+
+
+def compute_code_sha(code_files: list[Path]) -> str:
+    """SHA-256 fingerprint of the code files that drive a run (P0-1).
+
+    Includes each file's name as a boundary so two identically-sized files in
+    different order cannot collide. Missing files are skipped.
+    """
+    h = hashlib.sha256()
+    for f in code_files:
+        h.update(f.name.encode("utf-8"))
+        h.update(b"\0")
+        if f.exists():
+            h.update(f.read_bytes())
+        h.update(b"\0")
+    return h.hexdigest()
+
+
+def compute_run_bindings(
+    rules_payload: str | bytes,
+    code_files: list[Path],
+) -> tuple[str, str, str]:
+    """Compute (run_id, code_sha, rules_sha) freezing a distillation run's identity.
+
+    P0-1: the three binding fields uniquely identify a run. A resume of the
+    SAME run (same code + same rules input) reuses the budget; any drift in
+    code or input rules produces a different run_id, so a stale ledger from a
+    different run is rejected (fail-closed) rather than silently reused.
+    """
+    if isinstance(rules_payload, str):
+        rules_payload = rules_payload.encode("utf-8")
+    rules_sha = hashlib.sha256(rules_payload).hexdigest()
+    code_sha = compute_code_sha(code_files)
+    run_id = hashlib.sha256((code_sha + ":" + rules_sha).encode("utf-8")).hexdigest()[:16]
+    return run_id, code_sha, rules_sha
+
+
+def ledger_code_files(scripts_dir: Path, root: Path) -> list[Path]:
+    """Canonical code-file scope whose SHA-256 fingerprints every classic
+    distillation run's ledger identity (P0-1/P0-3).
+
+    A single shared scope is used by fill, regen, AND the provenance validator
+    so the validator can independently re-derive code_sha without trusting a
+    scope recorded in provenance.
+    """
+    return [
+        scripts_dir / "distill_lib.py",
+        scripts_dir / "classic_artifacts.py",
+        scripts_dir / "remediate_classic_distillation.py",
+        scripts_dir / "fill_missing_chapters.py",
+        scripts_dir / "regen_mcq.py",
+        root / "claude_api.py",
+    ]
+
+
+def _sha256_file(p: Path) -> str:
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
+def pre_run_mcq_ids(mcq_path: Path) -> list[str]:
+    """Canonical ordered, de-duplicated list of MCQ ids in a pre-run
+    all_mcq.jsonl (P0-8).
+
+    This is the authoritative source of "which MCQs existed before this run".
+    It is frozen into the immutable run manifest at freeze time, and the
+    provenance's api_generation.pre_run_mcq_ids must equal it so the validator
+    can prove no old MCQ was retroactively claimed as generated.
+    """
+    if not mcq_path.exists():
+        return []
+    ids: list[str] = []
+    for l in mcq_path.read_text(encoding="utf-8").splitlines():
+        if not l.strip():
+            continue
+        try:
+            rid = json.loads(l).get("id")
+        except Exception:
+            continue
+        if isinstance(rid, str) and rid and rid not in ids:
+            ids.append(rid)
+    return ids
+
+
+def _receipt_sha(prev_sha: str, run_id: str, target: str, status: str,
+                 output_shas: dict, prepared_sha: str | None = None) -> str:
+    """SHA-256 of a book completion receipt's canonical content (P0-1).
+
+    `prepared_sha` (the sha of the prepared receipt a completed receipt is
+    consuming) is included when present so a completed receipt explicitly and
+    immutably references the prepared state it finalizes.
+    """
+    content = {
+        "prev_sha": prev_sha, "run_id": run_id, "target": target,
+        "status": status, "output_shas": output_shas,
+    }
+    if prepared_sha is not None:
+        content["prepared_sha"] = prepared_sha
+    payload = json.dumps(
+        content, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _verify_book_receipts(receipts: list, run_id: str, manifest_sha: str) -> dict:
+    """Verify the hash-chained book_receipts list anchored to manifest_sha.
+
+    Each receipt binds (prev_sha, run_id, target, status, output_shas) so a
+    receipt from a different run cannot be transplanted and the chain anchors
+    to manifest_sha so receipts cannot be prepended. NOTE: this is a plain
+    SHA chain -- it detects accidental corruption and *inconsistent* tampering,
+    but it is NOT unforgeable against a writer who recomputes the chain. It is
+    an integrity/consistency guard, not a signature or an external immutable
+    anchor. Returns {target: status}.
+    """
+    prev = manifest_sha
+    statuses: dict[str, str] = {}
+    for r in receipts:
+        if not isinstance(r, dict):
+            raise LedgerCorruptionError(f"book receipt not an object: {r!r}")
+        target = r.get("target")
+        status = r.get("status")
+        output_shas = r.get("output_shas", {})
+        if r.get("prev_sha") != prev:
+            raise LedgerCorruptionError(
+                f"book_receipts chain break for {target!r}: prev_sha mismatch"
+            )
+        expected = _receipt_sha(prev, run_id, target, status, output_shas,
+                                r.get("prepared_sha"))
+        if expected != r.get("sha"):
+            raise LedgerCorruptionError(
+                f"book_receipts sha mismatch for {target!r} (forged receipt)"
+            )
+        # A "prepared" or "completed" receipt with no output_shas proves nothing
+        # -- an attacker could forge it (valid sha, empty outputs) to skip a
+        # book or to fake a prepared state. Both must bind real artifacts that
+        # a resume can re-verify.
+        if status in ("prepared", "completed") and not output_shas:
+            raise LedgerCorruptionError(
+                f"book_receipts {status} receipt for {target!r} has no output_shas "
+                f"(cannot prove a real state)"
+            )
+        prev = r.get("sha")
+        if isinstance(target, str):
+            statuses[target] = status
+    return statuses
+
+
+def _write_manifest_atomic(manifest_path: Path, data: dict) -> None:
+    """Atomically persist the run manifest dict (tmp + os.replace)."""
+    tmp = manifest_path.parent / f".{manifest_path.name}.tmp"
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:
+        tmp.replace(manifest_path)
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
+def _resolve_prepared_receipt(data: dict, receipt: dict, frozen_mutable: dict,
+                              mutable_root: Path) -> tuple[bool, str]:
+    """Resolve a prepared receipt at resume time.
+
+    A prepared receipt is written right before publish (bound to the expected
+    staging output SHAs). At resume the current published bytes are compared:
+      - current == expected  -> publish completed; return (True, 'completed')
+      - current == old frozen mutable -> publish never happened; 'pending'
+      - neither -> 'blocked' (BLOCKED)
+    Returns (is_handled, resolved_status). is_handled is False only when the
+    caller should fall through to the normal pending-drift check.
+    """
+    target = receipt.get("target")
+    expected = receipt.get("output_shas", {})
+    old = frozen_mutable.get(target, {}) or {}
+    old_shas = {k[: -len("_sha256")]: v for k, v in old.items() if k.endswith("_sha256")}
+    cur_expected: dict[str, str | None] = {}
+    for fname in expected:
+        cur = mutable_root / target / fname
+        cur_expected[fname] = _sha256_file(cur) if cur.exists() else None
+    match_expected = all(
+        cur_expected.get(fname) == fsha for fname, fsha in expected.items())
+    match_old = False
+    if old_shas:
+        match_old = all(
+            (mutable_root / target / fname).exists()
+            and _sha256_file(mutable_root / target / fname) == fsha
+            for fname, fsha in old_shas.items())
+    if match_expected:
+        return True, "completed"
+    if match_old:
+        return True, "pending"
+    return True, "blocked"
+
+
+def freeze_run_manifest(
+    manifest_path: Path,
+    manifest: dict,
+    code_files: list[Path],
+    mutable_root: Path | None = None,
+) -> tuple[str, str, str, dict]:
+    """Freeze (or reload) the immutable run manifest and return the run identity.
+
+    `manifest` MUST have the shape {"immutable": {...}, "mutable": {...}}:
+      - immutable: fields that define the run's INTENT and must never drift on
+        resume -- ordered targets, frozen prompt/config SHA, and the SHAs of
+        input files the run does NOT modify.
+      - mutable: the pre-run state of files the run ITSELF modifies
+        (remediation_meta.json, quarantine_mcq.jsonl, progress.json,
+        all_rules.json, all_mcq.jsonl, ...).
+
+    P0-1: written atomically BEFORE any book is processed. On resume the
+    frozen manifest is reloaded, its SHA verified, and the IMMUTABLE fields
+    are compared against the current invocation:
+      - current ordered targets must equal the frozen targets;
+      - current code SHA must equal the frozen code SHA;
+      - current frozen prompt/config SHA must equal the frozen values.
+    Any drift is rejected (LedgerCorruptionError) -- a stale manifest cannot
+    vouch for a different target set or new code. Only the run-modified
+    (mutable) inputs may differ on resume.
+
+    Returns (run_id, code_sha, rules_sha, book_state). book_state is
+    {target: "pending"|"completed"} persisted across resume so a restarted run
+    only processes books not yet completed (P0-2).
+    """
+    immutable = manifest.get("immutable", {})
+    if manifest_path.exists():
+        try:
+            data = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except Exception as e:
+            raise LedgerCorruptionError(
+                f"run manifest unparseable: {manifest_path}: {e}"
+            ) from e
+        if not isinstance(data, dict) or not {"manifest", "manifest_sha256",
+                                              "run_id", "code_sha", "rules_sha"} <= set(data.keys()):
+            raise LedgerCorruptionError(f"run manifest missing required fields: {manifest_path}")
+        payload = json.dumps(data["manifest"], ensure_ascii=False,
+                             separators=(",", ":")).encode("utf-8")
+        actual_sha = hashlib.sha256(payload).hexdigest()
+        if actual_sha != data["manifest_sha256"]:
+            raise LedgerCorruptionError(
+                f"run manifest tampered (sha mismatch): {manifest_path}"
+            )
+        # P0-1: re-derive the identity from the integrity-protected manifest +
+        # current code; reject any forged value stored outside the hash.
+        # rules_sha IS the manifest sha (compute_run_bindings hashes the same
+        # canonical manifest payload), so it must equal the re-derived sha.
+        if data.get("rules_sha") != actual_sha:
+            raise LedgerCorruptionError(
+                f"run manifest rules_sha does not match manifest sha "
+                f"(forged identity): {manifest_path}"
+            )
+        actual_code_sha = compute_code_sha(code_files)
+        if actual_code_sha != data["code_sha"]:
+            raise LedgerCorruptionError(
+                f"run manifest code drift: current code SHA != frozen code SHA "
+                f"-- refusing to resume with changed code"
+            )
+        expected_run_id = hashlib.sha256(
+            (actual_code_sha + ":" + actual_sha).encode("utf-8")).hexdigest()[:16]
+        if expected_run_id != data["run_id"]:
+            raise LedgerCorruptionError(
+                f"run manifest run_id does not match re-derived value "
+                f"(forged identity): {manifest_path}"
+            )
+        # P0-1: the immutable intent must match the current invocation.
+        frozen_immutable = data["manifest"].get("immutable", {})
+        if immutable != frozen_immutable:
+            raise LedgerCorruptionError(
+                f"run manifest immutable intent mismatch: current {immutable!r} "
+                f"vs frozen {frozen_immutable!r} -- refusing to reuse a ledger "
+                f"from a different target set / model config"
+            )
+        # P0-1: verify the hash-chained book_receipts (book_state integrity).
+        receipts = data.get("book_receipts", [])
+        book_state = _verify_book_receipts(receipts, data["run_id"], actual_sha)
+        # P0-2: recoverable transaction protocol + drift rejection.
+        if mutable_root is not None:
+            frozen_mutable = data["manifest"].get("mutable", {})
+            # Resolve prepared receipts. P0-1: only the LATEST prepared per
+            # target is active -- a retry that wrote a newer prepared receipt
+            # supersedes any earlier one, so historical prepared receipts never
+            # participate in recovery (otherwise the old expected SHA could
+            # falsely BLOCK a valid newer publication). This may append a
+            # completed receipt or reclassify a book as pending; a book whose
+            # outputs match neither old nor expected is BLOCKED.
+            completed_targets = {
+                r.get("target") for r in receipts
+                if isinstance(r, dict) and r.get("status") == "completed"}
+            latest_prepared: dict[str, dict] = {}
+            for r in receipts:
+                if (isinstance(r, dict) and r.get("status") == "prepared"
+                        and r.get("target") not in completed_targets):
+                    latest_prepared[r.get("target")] = r
+            changed = False
+            for target, receipt in latest_prepared.items():
+                handled, resolved = _resolve_prepared_receipt(
+                    receipt, receipt, frozen_mutable, mutable_root)
+                if resolved == "blocked":
+                    raise LedgerCorruptionError(
+                        f"prepared book {target} output neither old nor expected "
+                        f"(BLOCKED -- cannot recover safely)")
+                if resolved == "completed":
+                    # Append to the GLOBAL chain tail and immutably reference the
+                    # prepared receipt being consumed -- never fork from the
+                    # prepared's own sha if it is not the chain tail.
+                    prev = receipts[-1]["sha"]
+                    expected = receipt.get("output_shas", {})
+                    prepared_sha = receipt["sha"]
+                    csha = _receipt_sha(prev, data["run_id"], target, "completed",
+                                        expected, prepared_sha)
+                    receipts.append({"target": target, "status": "completed",
+                                     "output_shas": expected, "prepared_sha": prepared_sha,
+                                     "prev_sha": prev, "sha": csha})
+                    completed_targets.add(target)
+                    book_state[target] = "completed"
+                    changed = True
+                else:  # pending -> re-execute
+                    book_state[target] = "pending"
+            if changed:
+                _write_manifest_atomic(manifest_path, data)
+            # Per-target verification: completed must match receipt output_shas
+            # AND the files must exist; pending must match frozen mutable SHAs
+            # AND the files must exist. A missing file is a hard failure (P0-1).
+            for target in frozen_immutable.get("targets", []):
+                if book_state.get(target) == "completed":
+                    receipt = next((r for r in receipts if isinstance(r, dict)
+                                    and r.get("target") == target
+                                    and r.get("status") == "completed"), None)
+                    if receipt is not None:
+                        for fname, fsha in receipt.get("output_shas", {}).items():
+                            cur = mutable_root / target / fname
+                            if not cur.exists():
+                                raise LedgerCorruptionError(
+                                    f"completed book {target} output missing: {fname}")
+                            if _sha256_file(cur) != fsha:
+                                raise LedgerCorruptionError(
+                                    f"completed book {target} output drift: "
+                                    f"{fname} changed after publish"
+                                )
+                else:
+                    frozen_entry = frozen_mutable.get(target, {})
+                    for key, fsha in frozen_entry.items():
+                        if not key.endswith("_sha256"):
+                            continue
+                        fname = key[: -len("_sha256")]
+                        cur = mutable_root / target / fname
+                        if not cur.exists():
+                            raise LedgerCorruptionError(
+                                f"pending book {target} mutable input missing: {fname}")
+                        if _sha256_file(cur) != fsha:
+                            raise LedgerCorruptionError(
+                                f"pending book {target} mutable input drift: "
+                                f"{fname} changed before this run processed it"
+                            )
+        return (data["run_id"], data["code_sha"], data["rules_sha"], book_state)
+
+    payload = json.dumps(manifest, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    run_id, code_sha, rules_sha = compute_run_bindings(payload, code_files)
+    data = {
+        "manifest": manifest,
+        "manifest_sha256": hashlib.sha256(payload).hexdigest(),
+        "run_id": run_id,
+        "code_sha": code_sha,
+        "rules_sha": rules_sha,
+        "book_receipts": [],
+    }
+    tmp = manifest_path.parent / f".{manifest_path.name}.tmp"
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:
+        tmp.replace(manifest_path)
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        raise
+    return run_id, code_sha, rules_sha, {}
+
+
+def append_book_receipt(manifest_path: Path, target: str, status: str,
+                        book_dir: Path | None = None,
+                        output_names: tuple[str, ...] = ()) -> None:
+    """Append a hash-chained receipt for a book (P0-1/P0-2).
+
+    status is "prepared" (bound to expected staging output SHAs, written right
+    before publish) or "completed" (written after publish). Both record output
+    file SHAs so a resume can re-verify the published bytes. For "prepared" or
+    "completed", every output_names file MUST exist in book_dir -- a missing
+    file is a hard error (P0-1) because a receipt that silently skips missing
+    outputs could be forged to bypass verification.
+    """
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise LedgerCorruptionError(f"run manifest unreadable: {manifest_path}: {e}") from e
+    if not isinstance(data, dict):
+        raise LedgerCorruptionError(f"run manifest not an object: {manifest_path}")
+    run_id = data.get("run_id", "")
+    manifest_sha = data.get("manifest_sha256", "")
+    receipts = data.setdefault("book_receipts", [])
+    prev_sha = receipts[-1]["sha"] if receipts else manifest_sha
+    output_shas: dict[str, str] = {}
+    if status in ("prepared", "completed"):
+        if book_dir is None or not output_names:
+            raise LedgerCorruptionError(
+                f"{status} receipt requires book_dir + output_names")
+        for name in output_names:
+            f = Path(book_dir) / name
+            if not f.exists():
+                raise LedgerCorruptionError(
+                    f"cannot write {status} receipt: output missing {name!r} "
+                    f"for {target!r} in {book_dir}")
+            output_shas[name] = _sha256_file(f)
+    sha = _receipt_sha(prev_sha, run_id, target, status, output_shas)
+    receipts.append({"target": target, "status": status,
+                     "output_shas": output_shas, "prev_sha": prev_sha, "sha": sha})
+    _write_manifest_atomic(manifest_path, data)
+
+
+def complete_prepared_receipt(manifest_path: Path, target: str,
+                              book_dir: Path) -> None:
+    """Finalize a prepared book by consuming its latest prepared receipt (P0-2).
+
+    The successful path must NOT re-hash whatever currently exists: a mutation
+    between publish and receipt could otherwise be blessed as the new accepted
+    state. Instead we:
+      - require the latest receipt for `target` to be a prepared receipt;
+      - require every prepared output file to exist and match the prepared
+        expected SHA exactly (else BLOCKED);
+      - write a completed receipt that COPIES the prepared output_shas
+        (never re-defines the expected content) and appends to the global chain
+        tail, immutably referencing the consumed prepared receipt.
+    """
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise LedgerCorruptionError(f"run manifest unreadable: {manifest_path}: {e}") from e
+    if not isinstance(data, dict):
+        raise LedgerCorruptionError(f"run manifest not an object: {manifest_path}")
+    run_id = data.get("run_id", "")
+    receipts = data.setdefault("book_receipts", [])
+    # Latest receipt for this target.
+    latest = None
+    for r in receipts:
+        if isinstance(r, dict) and r.get("target") == target:
+            latest = r
+    if latest is None or latest.get("status") != "prepared":
+        raise LedgerCorruptionError(
+            f"cannot complete {target!r}: latest receipt is not 'prepared'")
+    expected = latest.get("output_shas", {})
+    if not expected:
+        raise LedgerCorruptionError(
+            f"cannot complete {target!r}: prepared receipt has no output_shas")
+    # Verify current published files exist and match the prepared expected SHA.
+    for fname, fsha in expected.items():
+        f = Path(book_dir) / fname
+        if not f.exists():
+            raise LedgerCorruptionError(
+                f"cannot complete {target!r}: output missing {fname!r}")
+        if _sha256_file(f) != fsha:
+            raise LedgerCorruptionError(
+                f"cannot complete {target!r}: {fname!r} does not match prepared "
+                f"SHA (BLOCKED -- content changed since prepared)")
+    # Append completed to the GLOBAL chain tail, copying prepared's SHA set and
+    # referencing the prepared receipt it consumes.
+    prev = receipts[-1]["sha"]
+    prepared_sha = latest["sha"]
+    csha = _receipt_sha(prev, run_id, target, "completed", expected, prepared_sha)
+    receipts.append({"target": target, "status": "completed",
+                     "output_shas": expected, "prepared_sha": prepared_sha,
+                     "prev_sha": prev, "sha": csha})
+    _write_manifest_atomic(manifest_path, data)
+
+
+def clear_run_manifest(manifest_path: Path, ledger_path: Path | None = None) -> None:
+    """Clear a finished run's manifest (and ledger) so the next run is fresh.
+
+    Called after a FULLY successful run. The ledger is removed FIRST (Medium):
+    if the manifest deletion then fails, the next run finds the stale manifest,
+    re-derives its identity, and resumes fail-closed with a fresh ledger
+    (calls_made=0). Removing the manifest first would leave an orphaned ledger
+    whose stale identity mismatches the next run and blocks it; ledger-first
+    avoids that deadlock without weakening fail-closed guarantees.
+    """
+    if ledger_path is not None:
+        ledger_path.unlink(missing_ok=True)
+    manifest_path.unlink(missing_ok=True)
+
+
+# Canonical upstream generation-chain fingerprints (P0-4). 'recovered'
+# upstream provenance must prove the artifacts were produced by the frozen
+# prompts and config below, so these SHAs are recomputed here rather than
+# trusted from the provenance record.
+_CANONICAL_PROMPT_SOURCE = (
+    RULE_PROMPT + "\0" + MCQ_PROMPT + "\0" + PER_RULE_MCQ_PROMPT
+)
+
+
+def canonical_prompt_sha256() -> str:
+    """SHA-256 of the frozen canonical distillation prompts (P0-4)."""
+    return hashlib.sha256(_CANONICAL_PROMPT_SOURCE.encode("utf-8")).hexdigest()
+
+
+def canonical_config_sha256() -> str:
+    """SHA-256 of the frozen canonical model config (P0-3/P0-4).
+
+    Hashes FROZEN_MODEL_CONFIG -- the SAME constant _call() uses to build the
+    API payload -- so the fingerprint always matches what is actually sent.
+    """
+    canonical = json.dumps(
+        FROZEN_MODEL_CONFIG, sort_keys=True, ensure_ascii=False, separators=(",", ":")
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+class BudgetLedger:
+    """Run-level shared API budget ledger (P0-2).
+
+    Frozen at creation with a global hard cap. Passed to generate_mcq
+    across multiple chapter calls to enforce a single run-wide budget.
+    When exhausted, callers MUST fail-closed (not update progress, not
+    publish partial results).
+
+    Persistence (P0-2): the ledger can be saved to a JSON file and reloaded
+    across process restarts, so a crash does not reset the budget. A CORRUPT
+    or tampered ledger is rejected (raises LedgerCorruptionError) -- it does
+    NOT silently start fresh, because that would reset the budget and violate
+    fail-closed.
+
+    Run binding (P0-2): the ledger is bound to a run_id and a code/data SHA
+    at creation time. Reloading a ledger with a mismatched run_id or SHA is
+    rejected -- this prevents stale ledgers from being reused across runs.
+    """
+
+    def __init__(
+        self,
+        global_hard_cap: int,
+        persist_path: Path | None = None,
+        run_id: str = "",
+        code_sha: str = "",
+        rules_sha: str = "",
+    ):
+        self.global_hard_cap = global_hard_cap
+        self.calls_made = 0
+        self.accepted = 0
+        self.skipped = 0
+        self.exhausted = False
+        self.persist_path = persist_path
+        self.run_id = run_id
+        self.code_sha = code_sha
+        self.rules_sha = rules_sha
+
+    @classmethod
+    def load_or_create(
+        cls,
+        persist_path: Path | None,
+        global_hard_cap: int,
+        run_id: str = "",
+        code_sha: str = "",
+        rules_sha: str = "",
+    ) -> "BudgetLedger":
+        """Load ledger from persist_path, or create a new one if it doesn't exist.
+
+        The global_hard_cap is ALWAYS enforced from the argument, not from the
+        persisted file -- this prevents a stale manifest from silently raising
+        the cap. If the persisted calls_made already exceeds the cap, the
+        ledger starts exhausted.
+
+        Fail-closed on corruption (P0-2): if the persisted file is corrupt,
+        has missing fields, negative values, or a cap mismatch, raises
+        LedgerCorruptionError instead of silently starting fresh.
+        """
+        ledger = cls(
+            global_hard_cap=global_hard_cap,
+            persist_path=persist_path,
+            run_id=run_id,
+            code_sha=code_sha,
+            rules_sha=rules_sha,
+        )
+        if persist_path is not None:
+            # P0-1: any run that persists a ledger MUST freeze its identity by
+            # providing all three binding fields (whether creating fresh or
+            # resuming). Refusing to persist without bindings prevents an
+            # unbound ledger that could later be silently reused.
+            binding_fields = ("run_id", "code_sha", "rules_sha")
+            provided = {"run_id": run_id, "code_sha": code_sha, "rules_sha": rules_sha}
+            for k in binding_fields:
+                if not provided[k]:
+                    raise LedgerCorruptionError(
+                        f"ledger binding field {k!r} must be provided when "
+                        f"persisting to {persist_path} (refusing a ledger "
+                        f"without a frozen identity)"
+                    )
+
+        if persist_path is not None and persist_path.exists():
+            try:
+                data = json.loads(persist_path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                # P0-2: a corrupt (unparseable) ledger must be rejected as
+                # LedgerCorruptionError, not crash with a raw JSONDecodeError
+                # that an upstream `except Exception: pass` could swallow.
+                raise LedgerCorruptionError(
+                    f"ledger file unparseable: {persist_path}: {e}"
+                ) from e
+            if not isinstance(data, dict):
+                raise LedgerCorruptionError(
+                    f"ledger file is not a JSON object: {persist_path}"
+                )
+            # Validate all required fields are present and well-typed.
+            required = ("calls_made", "accepted", "skipped", "global_hard_cap")
+            for k in required:
+                if k not in data:
+                    raise LedgerCorruptionError(
+                        f"ledger missing required field {k!r}: {persist_path}"
+                    )
+                if not isinstance(data[k], int):
+                    raise LedgerCorruptionError(
+                        f"ledger field {k!r} is not int: {data[k]!r}"
+                    )
+            # Negative values are corrupt.
+            for k in required:
+                if data[k] < 0:
+                    raise LedgerCorruptionError(
+                        f"ledger field {k!r} is negative: {data[k]}"
+                    )
+            # Cap mismatch: the persisted cap must match the argument.
+            # A mismatch means the ledger was created for a different run
+            # with a different budget -- reusing it would silently change
+            # the budget.
+            if data["global_hard_cap"] != global_hard_cap:
+                raise LedgerCorruptionError(
+                    f"ledger cap mismatch: persisted={data['global_hard_cap']}, "
+                    f"argument={global_hard_cap}"
+                )
+            # Run binding (P0-1): a persisted ledger REQUIRES all three binding
+            # fields present in the file, and they must match the caller's
+            # frozen values EXACTLY. A missing persisted binding field or any
+            # mismatch is a hard failure -- there is no lenient "upgrade" that
+            # would let a stale ledger from a different run be silently reused.
+            for k in binding_fields:
+                persisted_val = data.get(k, "")
+                if not persisted_val:
+                    raise LedgerCorruptionError(
+                        f"ledger missing binding field {k!r} in persisted file "
+                        f"{persist_path} (cannot establish identity)"
+                    )
+                if persisted_val != provided[k]:
+                    raise LedgerCorruptionError(
+                        f"ledger {k} mismatch: persisted={persisted_val[:16]!r}, "
+                        f"argument={provided[k][:16]!r} -- refusing to reuse a "
+                        f"ledger from a different run"
+                    )
+            ledger.calls_made = data["calls_made"]
+            ledger.accepted = data["accepted"]
+            ledger.skipped = data["skipped"]
+            if ledger.calls_made >= global_hard_cap:
+                ledger.exhausted = True
+        return ledger
+
+    def save(self) -> None:
+        """Persist ledger state to persist_path (atomic write)."""
+        if self.persist_path is None:
+            return
+        data = {
+            "global_hard_cap": self.global_hard_cap,
+            "calls_made": self.calls_made,
+            "accepted": self.accepted,
+            "skipped": self.skipped,
+            "exhausted": self.exhausted,
+            "run_id": self.run_id,
+            "code_sha": self.code_sha,
+            "rules_sha": self.rules_sha,
+        }
+        tmp = self.persist_path.parent / f".{self.persist_path.name}.tmp"
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        try:
+            tmp.replace(self.persist_path)
+        except Exception:
+            tmp.unlink(missing_ok=True)
+            raise
+
+    def can_call(self) -> bool:
+        if self.calls_made >= self.global_hard_cap:
+            self.exhausted = True
+            return False
+        return True
+
+    def record_call(self) -> None:
+        self.calls_made += 1
+        self.save()
+
+    def record_accept(self) -> None:
+        self.accepted += 1
+        self.save()
+
+    def record_skip(self) -> None:
+        self.skipped += 1
+        self.save()
+
+    def summary(self) -> dict:
+        return {
+            "calls_made": self.calls_made,
+            "accepted": self.accepted,
+            "skipped": self.skipped,
+            "exhausted": self.exhausted,
+            "remaining": max(0, self.global_hard_cap - self.calls_made),
+            "run_id": self.run_id,
+        }
+
+
+class LedgerCorruptionError(Exception):
+    """Raised when a persisted budget ledger is corrupt or tampered (P0-2)."""
+
+
+# Polarity opposite pairs for bazi terminology (P0-1 strict check).
+# (positive_marker, negative_marker)
+_POLARITY_PAIRS = [
+    ("喜", "忌"),
+    ("吉", "凶"),
+    ("宜", "不宜"),
+    ("有利", "不利"),
+    ("为吉", "为凶"),
+    ("主吉", "主凶"),
+]
+
+# Bazi subject characters for polarity-target binding extraction.
+_BAZI_TARGET_CHARS = "甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥金木水火土"
+
+
+def _extract_polarity_bindings(text: str) -> list[tuple[str, str]]:
+    """Extract polarity-target bindings from text (P0-1).
+
+    Returns [(polarity_marker, target_char), ...].
+
+    For example "甲木喜水滋养，忌金克" ->
+        [("喜", "水"), ("忌", "金")]
+
+    This binds polarity to a SPECIFIC target, not just "polarity appears
+    anywhere". The strict check then verifies the answer option does not
+    bind the OPPOSITE polarity to the SAME target.
+    """
+    bindings: list[tuple[str, str]] = []
+    for pos, neg in _POLARITY_PAIRS:
+        for marker in (pos, neg):
+            for m in re.finditer(marker + f"([{_BAZI_TARGET_CHARS}])", text):
+                bindings.append((marker, m.group(1)))
+    return bindings
+
+
+def _polarity_opposite(marker: str) -> str | None:
+    """Return the opposite polarity marker, or None if not a polarity."""
+    for pos, neg in _POLARITY_PAIRS:
+        if marker == pos:
+            return neg
+        if marker == neg:
+            return pos
+    return None
+
+
+def _mcq_prefilter(mcq: dict, rule: dict) -> bool:
+    """Low-cost prefilter: 2-char substring overlap (P0-1).
+
+    This is NOT a semantic proof. It only filters out obviously unrelated
+    MCQs. MCQs that pass this prefilter must still pass _mcq_strict_consistency
+    to enter the clean set. MCQs that fail the prefilter are dropped entirely.
+
+    Returns True if overlap is found (or if the rule has no checkable content,
+    letting the strict check handle it). Returns False if the MCQ is obviously
+    unrelated.
+    """
+    rule_text = _norm(
+        " ".join(str(rule.get(f, "")) for f in
+                 ("subject", "condition", "rule", "original_text"))
+    )
+    if len(rule_text) < 2:
+        return True
+
+    mcq_text = _norm(
+        str(mcq.get("question", "")) + str(mcq.get("explanation", ""))
+    )
+    if len(mcq_text) < 2:
+        return False
+
+    for i in range(len(rule_text) - 1):
+        if rule_text[i:i + 2] in mcq_text:
+            return True
+    return False
+
+
+def _mcq_strict_consistency(mcq: dict, rule: dict) -> bool:
+    """Strict semantic consistency check (P0-1).
+
+    Returns True only if ALL checks pass:
+      1. Subject present and matches question. Subject missing or too short
+         -> returns False (MCQ enters semantic_unaudited, NOT auto-pass).
+      2. Answer option exists and its text is checked against rule polarity.
+      3. Polarity-target binding: if rule says "喜水", answer option must not
+         say "忌水" (opposite polarity bound to same target).
+      4. Global polarity contradiction (fallback): if rule has 喜 but not 忌,
+         MCQ (question+explanation+answer_option) must not have 忌 without 喜.
+      5. Answer-option support: the answer option text must share at least
+         one bazi target char or polarity binding with the rule. An answer
+         unrelated to the rule (e.g. "甲木性刚" when rule says "甲木喜水")
+         cannot be proven correct -> semantic_unaudited.
+      6. Explanation support: the explanation must share at least one
+         content token (2-char substring) with the answer option text,
+         proving the explanation actually supports the chosen answer.
+
+    Returns False if any check fails or cannot be verified (conservative).
+    MCQs failing this check enter semantic_unaudited quarantine, NOT the
+    clean set.
+    """
+    rule_text = _norm(
+        " ".join(str(rule.get(f, "")) for f in
+                 ("subject", "condition", "rule", "original_text"))
+    )
+    question = _norm(str(mcq.get("question", "")))
+    explanation = _norm(str(mcq.get("explanation", "")))
+
+    # Cannot verify -> conservative False
+    if len(rule_text) < 2:
+        return False
+    if len(question) < 2:
+        return False
+
+    # Check 1: Subject must be present and match question.
+    # subject 缺失时不能自动通过，判 semantic_unaudited。
+    subject = _norm(str(rule.get("subject", "")))
+    if not subject or len(subject) < 2:
+        return False
+    found = any(subject[i:i + 2] in question for i in range(len(subject) - 1))
+    if not found:
+        return False  # Subject mismatch
+
+    # Check 2: Answer option must exist; its text is the primary semantic
+    # payload and must be polarity-consistent with the rule.
+    answer = mcq.get("answer", "")
+    options = mcq.get("options", {})
+    if not isinstance(options, dict) or answer not in options:
+        return False
+    answer_text = _norm(str(options[answer]))
+    if not answer_text:
+        return False
+
+    # Check 3: Polarity-target binding contradiction across the FULL MCQ.
+    # If rule says "喜水", NO part of the MCQ (question, explanation, or
+    # answer option) may say "忌水" (opposite polarity bound to same target).
+    # This is stricter than the global check: it binds polarity to a specific
+    # bazi target character, and checks ALL MCQ text, not just the answer
+    # option -- otherwise a question that contradicts the rule could pass
+    # when the answer option happens to be correct.
+    rule_bindings = _extract_polarity_bindings(rule_text)
+    mcq_bindings = (
+        _extract_polarity_bindings(question)
+        + _extract_polarity_bindings(explanation)
+        + _extract_polarity_bindings(answer_text)
+    )
+    for r_marker, r_target in rule_bindings:
+        r_opposite = _polarity_opposite(r_marker)
+        if r_opposite is None:
+            continue
+        for m_marker, m_target in mcq_bindings:
+            if m_marker == r_opposite and m_target == r_target:
+                return False  # opposite polarity on same target
+
+    # Check 4: Global polarity contradiction (fallback, covers cases where
+    # binding extraction misses a pattern). Uses answer_text (not just
+    # question+explanation) so a wrong answer option is caught.
+    mcq_full = question + explanation + answer_text
+    for pos, neg in _POLARITY_PAIRS:
+        rule_pos = pos in rule_text
+        rule_neg = neg in rule_text
+        mcq_pos = pos in mcq_full
+        mcq_neg = neg in mcq_full
+        # Rule positive-only, MCQ negative-only -> contradiction
+        if rule_pos and not rule_neg and mcq_neg and not mcq_pos:
+            return False
+        # Rule negative-only, MCQ positive-only -> contradiction
+        if rule_neg and not rule_pos and mcq_pos and not mcq_neg:
+            return False
+
+    # Check 5 (P0-1): Answer-option support. The answer option must be
+    # traceable to the rule via shared bazi target chars or shared polarity
+    # bindings. Without this, an unrelated answer ("甲木性刚" when rule is
+    # "甲木喜水") passes just because it does not contradict.
+    if not _answer_supported_by_rule(answer_text, rule_text, rule_bindings, subject):
+        return False
+
+    # Check 6 (P0-1): Explanation support. The explanation must share at
+    # least one 2-char content token with the answer option text, proving
+    # the explanation actually addresses the chosen answer (not just the
+    # topic in general).
+    if not _explanation_supports_answer(explanation, answer_text):
+        return False
+
+    return True
+
+
+def _answer_supported_by_rule(
+    answer_text: str,
+    rule_text: str,
+    rule_bindings: list[tuple[str, str]],
+    subject: str = "",
+) -> bool:
+    """Check 5 helper: answer option must be supported by the rule (P0-1).
+
+    Support is established if ANY of:
+      a) answer shares a polarity binding target with the rule
+         (e.g. rule "喜水", answer "喜水" -> shared target 水);
+      b) answer contains a bazi char that is a polarity TARGET in the rule
+         (not just any bazi char -- the subject chars alone don't count,
+         e.g. "甲木" is subject, "水" is the rule's claim);
+      c) answer shares any 2-char substring with the rule text that is NOT
+         entirely contained in the subject (fallback for rules without
+         explicit polarity targets).
+
+    Returns False if no support relation can be established.
+    """
+    if not answer_text or not rule_text:
+        return False
+
+    # (a) Shared polarity binding target
+    answer_bindings = _extract_polarity_bindings(answer_text)
+    rule_targets = {t for _, t in rule_bindings}
+    answer_targets = {t for _, t in answer_bindings}
+    if rule_targets & answer_targets:
+        return True
+
+    # (b) Answer contains a bazi char that is a polarity target in the rule.
+    # This is stricter than "any shared bazi char" -- it requires the answer
+    # to address the specific target the rule makes a claim about.
+    if rule_targets:
+        answer_bazi = {c for c in answer_text if c in _BAZI_TARGET_CHARS}
+        if rule_targets & answer_bazi:
+            return True
+
+    # (c) Fallback: 2-char substring overlap, excluding substrings that are
+    # entirely within the subject (subject chars alone don't prove the answer
+    # addresses the rule's claim).
+    subj = _norm(subject)
+    for i in range(len(rule_text) - 1):
+        sub = rule_text[i:i + 2]
+        if sub in answer_text:
+            # Skip if this 2-char substring is part of the subject
+            if subj and sub in subj:
+                continue
+            return True
+
+    return False
+
+
+def _explanation_supports_answer(explanation: str, answer_text: str) -> bool:
+    """Check 6 helper: explanation must support the answer option (P0-1).
+
+    The explanation must share at least one 2-char content token with the
+    answer option text. This proves the explanation actually addresses the
+    chosen answer, not just the general topic.
+
+    Returns False if no support relation can be established.
+    """
+    if not explanation or not answer_text:
+        return False
+    if len(explanation) < 2 or len(answer_text) < 2:
+        return False
+    for i in range(len(explanation) - 1):
+        if explanation[i:i + 2] in answer_text:
+            return True
+    for i in range(len(answer_text) - 1):
+        if answer_text[i:i + 2] in explanation:
+            return True
+    return False
+
+
+def distill_chapter(
+    text: str,
+    book: str,
+    chapter: str,
+    ledger: "BudgetLedger | None" = None,
+) -> list[dict]:
+    """Distill rules from a chapter's raw text.
+
+    P0-2: if a ledger is provided, the API call is counted against the
+    run-level budget. If the ledger is exhausted, returns [] and the caller
+    MUST fail-closed (not mark the chapter as done).
+    """
+    if ledger is not None and not ledger.can_call():
+        return []
     prompt = (RULE_PROMPT
               .replace("__BOOK__", book)
               .replace("__CH__", chapter)
               .replace("__TEXT__", text[:8000]))
+    if ledger is not None:
+        ledger.record_call()
     rules = _parse_json_array(_call(prompt))
     for r in rules:
         r.setdefault("source_book", book)
@@ -104,34 +1182,164 @@ def assign_rule_ids(rules: list[dict], prefix: str, ch_idx: int) -> None:
         r["id"] = f"{prefix}_{ch_idx:03d}_{i:03d}"
 
 
-def generate_mcq(rules: list[dict], book: str, chapter: str) -> list[dict]:
+def generate_mcq(
+    rules: list[dict],
+    book: str,
+    chapter: str,
+    max_calls: int = 100,
+    max_retries: int = 2,
+    stats: dict | None = None,
+    ledger: BudgetLedger | None = None,
+) -> tuple[list[dict], list[dict]]:
+    """Generate MCQs, one per rule, with two-tiered consistency gate (P0-1).
+
+    Returns (verified, unaudited):
+      - verified: MCQs passing BOTH prefilter and strict check, with
+        _consistency_verified=True. These enter the clean set.
+      - unaudited: MCQs passing prefilter but failing strict check, with
+        _consistency_verified=False and _audit_reason='semantic_unaudited'.
+        These enter quarantine for human review.
+
+    MCQs failing the prefilter are dropped entirely (not in either list).
+
+    Budget controls (P0-2):
+      - ledger: if provided, uses the ledger's global hard cap instead of
+        local max_calls. The ledger tracks calls across multiple invocations.
+        Callers MUST check ledger.exhausted after the run and fail-closed.
+      - max_calls: local cap (ignored when ledger is provided). Default 100.
+      - max_retries: retries per rule (default 2).
+      - stats: optional dict mutated in-place.
+    """
     if not rules:
-        return []
-    rules_payload = [{"id": r["id"], "subject": r.get("subject", ""),
-                      "condition": r.get("condition", ""), "rule": r.get("rule", "")}
-                     for r in rules[:15]]
-    prompt = (MCQ_PROMPT
-              .replace("__RULES__", json.dumps(rules_payload, ensure_ascii=False, indent=2)))
-    mcqs = _parse_json_array(_call(prompt))
+        return [], []
+    verified: list[dict] = []
+    unaudited: list[dict] = []
+    calls_made = 0
+    skipped = 0
+    max_calls_hit = False
+    for r in rules:
+        rid = r.get("id", "")
+        if not rid:
+            continue
+        # Budget check
+        if ledger is not None:
+            if not ledger.can_call():
+                max_calls_hit = True
+                skipped += 1
+                ledger.record_skip()
+                continue
+        elif calls_made >= max_calls:
+            max_calls_hit = True
+            skipped += 1
+            continue
+        rule_payload = json.dumps({
+            "subject": r.get("subject", ""),
+            "condition": r.get("condition", ""),
+            "rule": r.get("rule", ""),
+            "original_text": r.get("original_text", ""),
+        }, ensure_ascii=False, indent=2)
+        prompt = PER_RULE_MCQ_PROMPT.replace("__RULE__", rule_payload)
+        obj: dict | None = None
+        for _attempt in range(max_retries + 1):
+            if ledger is not None:
+                if not ledger.can_call():
+                    max_calls_hit = True
+                    break
+                ledger.record_call()
+            else:
+                if calls_made >= max_calls:
+                    max_calls_hit = True
+                    break
+                calls_made += 1
+            try:
+                obj = _parse_json_object(_call(prompt, timeout=120))
+            except Exception:
+                obj = None
+            if obj is not None:
+                break
+        if obj is None:
+            skipped += 1
+            if ledger is not None:
+                ledger.record_skip()
+            continue
+        # Tier 1: prefilter (cheap)
+        if not _mcq_prefilter(obj, r):
+            skipped += 1
+            if ledger is not None:
+                ledger.record_skip()
+            continue
+        # Stamp orchestrator mapping
+        obj["source_rule_id"] = rid
+        obj.pop("id", None)
+        # Tier 2: strict consistency
+        if _mcq_strict_consistency(obj, r):
+            obj["_consistency_verified"] = True
+            verified.append(obj)
+            if ledger is not None:
+                ledger.record_accept()
+        else:
+            obj["_consistency_verified"] = False
+            obj["_audit_reason"] = "semantic_unaudited"
+            unaudited.append(obj)
+            if ledger is not None:
+                ledger.record_skip()
+    if stats is not None:
+        stats["calls_made"] = calls_made if ledger is None else ledger.calls_made
+        stats["accepted"] = len(verified)
+        stats["unaudited"] = len(unaudited)
+        stats["skipped"] = skipped
+        stats["max_calls_hit"] = max_calls_hit
+    return verified, unaudited
+
+
+def link_mcq_to_rules(mcqs: list[dict], rules: list[dict]) -> tuple[list[dict], list[dict]]:
+    """Link MCQs to rules with strict consistency gate (P0-1).
+
+    An MCQ is linked (counted in the clean set) only if ALL:
+      1. source_rule_id matches a known rule id (existence check)
+      2. _consistency_verified is True (strict gate was applied at generation)
+      3. Re-run of _mcq_strict_consistency passes (defense-in-depth)
+
+    MCQs without _consistency_verified are NOT linked:
+      - legacy_unaudited: old batch-path MCQs without the flag
+      - semantic_unaudited: new MCQs that failed strict check (has _audit_reason)
+    """
+    rule_map = {r["id"]: r for r in rules if isinstance(r, dict) and r.get("id")}
+    linked: list[dict] = []
+    unlinked: list[dict] = []
     for m in mcqs:
-        m.pop("id", None)
-        m.pop("source_rule_id", None)
-    return mcqs
-
-
-def link_mcq_to_rules(mcqs: list[dict], rules: list[dict]) -> list[dict]:
-    """Link MCQs to rules positionally (1:1 in generation order)."""
-    linked = []
-    for i, m in enumerate(mcqs):
-        m["source_rule_id"] = rules[i]["id"] if i < len(rules) else (rules[-1]["id"] if rules else "")
+        src = m.get("source_rule_id", "")
+        rule = rule_map.get(src)
+        if rule is None:
+            m["quarantine_reason"] = f"invalid_or_missing_source_rule_id: {src!r}"
+            unlinked.append(m)
+            continue
+        if not m.get("_consistency_verified"):
+            reason = m.get("_audit_reason", "legacy_unaudited: no consistency verification")
+            m["quarantine_reason"] = reason
+            unlinked.append(m)
+            continue
+        if not _mcq_strict_consistency(m, rule):
+            m["quarantine_reason"] = f"semantic_consistency_failed: rule={src!r}"
+            unlinked.append(m)
+            continue
         linked.append(m)
-    return linked
+    return linked, unlinked
 
 
 def rotate_answers(mcqs: list[dict]) -> None:
-    """Deterministic rotation: target label cycles A,B,C,D so dist ~= 25% each."""
-    for i, m in enumerate(mcqs):
-        target = "ABCD"[i % 4]
+    """Deterministic rotation using SHA-256(frozen_seed + mcq_id) (P0-5).
+
+    The frozen seed means the permutation cannot be reversed from the public
+    MCQ id alone, unlike a bare MD5 of the id.
+    """
+    import hashlib
+    for m in mcqs:
+        mid = m.get("id", "")
+        if not mid:
+            continue
+        h = hashlib.sha256((ROTATE_SEED + mid).encode()).digest()
+        target = "ABCD"[h[0] % 4]
         cur = m.get("answer", "")
         if cur not in "ABCD" or target == cur:
             continue
