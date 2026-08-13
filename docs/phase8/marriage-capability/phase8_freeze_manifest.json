@@ -79,17 +79,17 @@
   },
   {
    "path": "docs/phase8/marriage-capability/knowledge_audit.jsonl",
-   "sha256": "2b56dbf36cffd77362b9cb6e83796b87780a331e283970879822bc701f605ca9",
+   "sha256": "5b81a0915792e049ee86364b9891fbc45641e69d1ce529bac95959271f98de04",
    "strategy": "jsonl_canonical"
   },
   {
    "path": "docs/phase8/marriage-capability/knowledge_audit_summary.md",
-   "sha256": "5ec20e9ce75562e7c5c65eacc1d693ca01cf4b1aa47d3e82109be01731803176",
+   "sha256": "23f4af227f57e7e656bd5265c02b4d67a45de37e9f6bbdc96127d1cc84a5fbdc",
    "strategy": "git_canonical_lf"
   },
   {
    "path": "docs/phase8/marriage-capability/p8_audit.py",
-   "sha256": "b49b0f78a4d659cbbb02a7add54b9fdae784773bd5c46cd05d9083b429b0eff4",
+   "sha256": "98cf8dec748b69b1e8356a1b7a9cbbeec65e3b6b8f1f255a87df4d0a843f6da7",
    "strategy": "git_canonical_lf"
   },
   {
@@ -124,7 +124,7 @@
   },
   {
    "path": "docs/phase8/marriage-capability/provenance.json",
-   "sha256": "93358a75d7fd7f0f264069a8683a88da48816a8d8c318fc8e038934fb33cd380",
+   "sha256": "b6926af991a1a3f9b84a44913fccb22101cd7a6997d9ed2774b893670863aaed",
    "strategy": "json_canonical"
   },
   {

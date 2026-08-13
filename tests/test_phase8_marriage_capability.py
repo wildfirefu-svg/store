@@ -847,14 +847,78 @@ class TestPromptRebuild:
                     assert pe["excerpt"]
 
     def test_model_not_utilized_reachable(self):
-        """逐项 prompt 检查后'模型未利用'必须可达（prompt 含红鸾/桃花等星曜名或年份）。"""
+        """'模型未利用'只允许来自注入区星曜名（palace_stars 精确匹配）。"""
         rows = [
             json.loads(l)
             for l in (_P8_DIR / "knowledge_audit.jsonl").open(encoding="utf-8")
             if l.strip()
         ]
-        classes = {i["gap_class"] for row in rows for i in row["items"]}
-        assert "模型未利用" in classes
+        cls = [i["gap_class"] for row in rows for i in row["items"]]
+        assert "模型未利用" in cls
+        # 所有模型未利用项的证据必须来自注入区星曜（found=True 且摘录不含题干标记）
+        for row in rows:
+            for item in row["items"]:
+                if item["gap_class"] != "模型未利用":
+                    continue
+                pe = item["prompt_evidence"]
+                assert pe["found"] is True, item["item_id"]
+                assert pe["excerpt"] and "问题：" not in pe["excerpt"], item["item_id"]
+
+    def test_question_terms_not_injected(self):
+        """负向：题干/选项关键词（结婚/婚期）不得判'模型未利用'。"""
+        rows = {
+            r["case_id"]: r
+            for r in (
+                json.loads(l)
+                for l in (_P8_DIR / "knowledge_audit.jsonl").open(encoding="utf-8")
+                if l.strip()
+            )
+        }
+        item = next(i for i in rows["mingli_ftb_0002"]["items"] if i["item_id"] == "mingli_ftb_0002#k4")
+        assert item["gap_class"] == "检索不可见"  # 题干含'结婚'，但注入区无该知识
+        assert item["prompt_evidence"]["found"] is False
+
+    def test_birth_year_not_injection(self):
+        """负向：出生日期含四位年份不得判目标年份计算已注入。"""
+        rows = {
+            r["case_id"]: r
+            for r in (
+                json.loads(l)
+                for l in (_P8_DIR / "knowledge_audit.jsonl").open(encoding="utf-8")
+                if l.strip()
+            )
+        }
+        item = next(i for i in rows["mingli_ftb_0092"]["items"] if i["item_id"] == "mingli_ftb_0092#k1")
+        assert item["gap_class"] == "注入缺失"  # other 年龄换算：年份出现在 birth_info 不得判注入
+        assert item["prompt_evidence"]["found"] is False
+
+    def test_palace_name_not_injection(self):
+        """负向：'子女宫'等宫位名不得满足'子女'检索词。"""
+        rows = {
+            r["case_id"]: r
+            for r in (
+                json.loads(l)
+                for l in (_P8_DIR / "knowledge_audit.jsonl").open(encoding="utf-8")
+                if l.strip()
+            )
+        }
+        item = next(i for i in rows["mingli_ftb_0098"]["items"] if i["item_id"] == "mingli_ftb_0098#k1")
+        assert item["gap_class"] == "检索不可见"  # '子女'命中'子女宫'（宫位名）不得判注入
+        assert item["prompt_evidence"]["found"] is False
+
+    def test_star_name_injection(self):
+        """正向：astro 注入区存在星曜名（文昌）才允许判'模型未利用'。"""
+        rows = {
+            r["case_id"]: r
+            for r in (
+                json.loads(l)
+                for l in (_P8_DIR / "knowledge_audit.jsonl").open(encoding="utf-8")
+                if l.strip()
+            )
+        }
+        item = next(i for i in rows["mingli_ftb_0044"]["items"] if i["item_id"] == "mingli_ftb_0044#k4")
+        assert item["gap_class"] == "模型未利用"  # 文昌星在 palace_stars，知识已注入但模型答错
+        assert item["prompt_evidence"]["found"] is True
 
     def test_doctrine_evidence_query_ids(self):
         """doctrine evidence 落盘 query_id + classic 定位/摘录。"""

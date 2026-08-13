@@ -27,18 +27,35 @@ COMPUTATION_MARKERS = {
     "liunian": ["流年"],
     "dayun": ["大运"],
     "sihua": ["四化", "化禄", "化权", "化科", "化忌"],
-    "other": [],  # 年龄换算：检查 prompt 是否含公历年份（birth_info.raw）
+    "other": [],  # 年龄换算：换算结果（年龄区间）不在官方 prompt 中，不得用任意年份判定注入
 }
 
 
-def _computation_injected(prompt: str, item: dict) -> tuple[bool, list[str]]:
-    """逐项检查 prompt 是否包含该计算项的产物标志词。返回 (injected, 命中词)。"""
+def split_prompt(prompt: str) -> dict:
+    """把完整 prompt 拆分为 injected_context / question / options（分区判定，禁止读题干/选项）。
+
+    官方 prompt 结构（mingli_prompt.py format_official_cot_prompt）：
+    "命主信息：..." + "八字命盘信息/紫微命盘信息..." + "问题：..." + "选项：..."
+    注入区 = 问题标记之前的全部内容（birth_info 原文 + astro 块）。
+    """
+    q_marker = "\n\n问题："
+    opt_marker = "\n\n选项："
+    q_idx = prompt.find(q_marker)
+    opt_idx = prompt.find(opt_marker, q_idx) if q_idx >= 0 else -1
+    injected = prompt[:q_idx] if q_idx >= 0 else prompt
+    question = prompt[q_idx + len(q_marker):opt_idx] if q_idx >= 0 and opt_idx >= 0 else ""
+    options = prompt[opt_idx + len(opt_marker):] if opt_idx >= 0 else ""
+    return {"injected_context": injected, "question": question, "options": options}
+
+
+def _computation_injected(injected_context: str, item: dict) -> tuple[bool, list[str]]:
+    """逐项检查注入区是否包含该计算项的产物标志词。返回 (injected, 命中词)。
+
+    约束（NEEDS_FIX 二轮）：不得用任意四位年份证明目标年份/年龄换算已注入。
+    """
     ctype = item["computation_type"]
     markers = COMPUTATION_MARKERS.get(ctype, [])
-    hits = [m for m in markers if m in prompt]
-    if ctype == "other":
-        m = re.search(r"\d{4}", prompt)
-        return bool(m), [m.group(0)] if m else []
+    hits = [m for m in markers if m in injected_context]
     return bool(hits), hits
 
 
@@ -59,11 +76,34 @@ def _doctrine_terms(item: dict) -> list[str]:
     return [t for t in (_qs_term(qs["args"]) for qs in item["query_specs"]) if t]
 
 
-def _prompt_excerpt(prompt: str, term: str) -> str | None:
-    idx = prompt.find(term)
+def _palace_star_names(case: dict) -> set[str]:
+    """从 official_astro.palace_stars 提取星曜名集合（注入区中的明确目标事实）。"""
+    astro = (case.get("chart_input") or {}).get("official_astro") or {}
+    stars: set[str] = set()
+    for v in (astro.get("palace_stars") or {}).values():
+        for s in str(v).split():
+            if s:
+                stars.add(s)
+    return stars
+
+
+def _doctrine_injected(star_names: set[str], item: dict) -> tuple[bool, list[str]]:
+    """逐项检查注入区是否包含该 doctrine 项检索词。
+
+    约束（NEEDS_FIX 二轮）：只承认以星曜名身份出现在 astro 注入区的检索词
+    （palace_stars 集合精确匹配）——避免题干/选项词、宫位名（如'子女宫'）、
+    单字地支（如'子'）被误判为知识已注入。
+    """
+    checkable = [t for t in _doctrine_terms(item) if len(t) >= 2]
+    found_terms = [t for t in checkable if t in star_names]
+    return bool(found_terms), found_terms
+
+
+def _prompt_excerpt(text: str, term: str) -> str | None:
+    idx = text.find(term)
     if idx < 0:
         return None
-    return prompt[max(0, idx - 20): idx + len(term) + 30].replace("\n", " ")
+    return text[max(0, idx - 20): idx + len(term) + 30].replace("\n", " ")
 
 
 def _load(name: str, relpath: str):
@@ -209,18 +249,21 @@ def run_audit(rk_path: Path, probe_path: Path, cases160_path: Path, out_path: Pa
         cid = row["case_id"]
         case = norm[cid]
         prompt = rebuild_prompt(case)
+        parts = split_prompt(prompt)
+        injected_context = parts["injected_context"]
+        star_names = _palace_star_names(case)
         case_prompt_evidence = _prompt_evidence(prompt)
         items = []
         for item in row["items"]:
             if item["item_type"] == "computation":
                 status = status_by_id[item["item_id"]]
-                # 逐项检查 prompt 是否含该计算项产物标志词（不得硬编码）
-                injected, hits = _computation_injected(prompt, item)
+                # 逐项检查注入区是否含该计算项产物标志词（禁读题干/选项，禁用任意年份）
+                injected, hits = _computation_injected(injected_context, item)
                 cls = _classify_computation(item, status, injected)
                 item_prompt_evidence = {
-                    "required_term": " | ".join(COMPUTATION_MARKERS.get(item["computation_type"], [])) or "公历年份",
+                    "required_term": " | ".join(COMPUTATION_MARKERS.get(item["computation_type"], [])) or "年龄区间换算结果",
                     "found": injected,
-                    "excerpt": _prompt_excerpt(prompt, hits[0]) if hits else None,
+                    "excerpt": _prompt_excerpt(injected_context, hits[0]) if hits else None,
                 }
             else:
                 # doctrine：KB 快照逐 query_spec 检索（query_id + 命中 ID 落盘）
@@ -249,15 +292,13 @@ def run_audit(rk_path: Path, probe_path: Path, cases160_path: Path, out_path: Pa
                         }
                     )
                 classic_hits = sum(len(q["hits"]) for q in classic_queries)
-                # 逐项检查 prompt 是否含该 doctrine 项检索词（不得硬编码）
-                terms = _doctrine_terms(item)
-                found_terms = [t for t in terms if t in prompt]
-                prompt_has = bool(found_terms)
+                # 逐项检查注入区是否含该 doctrine 项检索词（星曜名集合精确匹配）
+                prompt_has, found_terms = _doctrine_injected(star_names, item)
                 cls = _classify_doctrine(item, kb_hits, classic_hits, prompt_has)
                 item_prompt_evidence = {
-                    "required_term": " | ".join(terms),
+                    "required_term": " | ".join(_doctrine_terms(item)),
                     "found": prompt_has,
-                    "excerpt": _prompt_excerpt(prompt, found_terms[0]) if found_terms else None,
+                    "excerpt": _prompt_excerpt(injected_context, found_terms[0]) if found_terms else None,
                 }
                 evidence = {
                     "kb_queries": kb_queries,
