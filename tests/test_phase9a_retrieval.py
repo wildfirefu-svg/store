@@ -145,3 +145,44 @@ class TestPhase9aManifest:
             raised = e
         assert raised is not None  # sealed 后新增条目必须拒绝（幂等核验除外）
         assert "sealed" in str(raised.code) or "cannot modify" in str(raised.code)
+
+
+class TestRetrieverCore:
+    def test_canonical_keys(self):
+        r = _load_module("retriever", "docs/phase9a/retrieval/retriever.py")
+        assert r.canonical_key("kb", "gejue", "ss2_021") == "kb:gejue:ss2_021"
+        assert r.canonical_key("classic", "ditiansui/all_rules.json", 3, "x1") == "classic:ditiansui/all_rules.json:3:x1"
+
+    def test_sort_key_order(self):
+        r = _load_module("retriever", "docs/phase9a/retrieval/retriever.py")
+        a = r.sort_key(score=3.0, source_priority=1, category="婚姻", doc_key="kb:gejue:a")
+        b = r.sort_key(score=2.0, source_priority=1, category="婚姻", doc_key="kb:gejue:b")
+        assert a < b
+
+    def test_s5_parses_json_array(self):
+        r = _load_module("retriever", "docs/phase9a/retrieval/retriever.py")
+        hits = r.strategy_s5("婚姻", top_n=5)
+        assert isinstance(hits, list)  # .json 数组解析成功即不崩溃（P0-5 修复验证）
+
+    def test_s5_git_show_fail_closed(self):
+        r = _load_module("retriever", "docs/phase9a/retrieval/retriever.py")
+        try:
+            r._load_frozen_file("docs/phase8/marriage-capability/nonexistent.json", "deadbeef")
+            raised = False
+        except SystemExit:
+            raised = True
+        assert raised  # git show 失败必须 fail-closed
+
+    def test_s5_frozen_blob_sha_consistent(self):
+        """冻结 blob 一致性：classic_texts_freeze.json 声明的 commit:path 必须可 git show，
+        且实际 blob SHA 与声明一致（若声明 blob_sha，中优：不做仅 cat-file 的存在性检查）。"""
+        import subprocess as sp
+        freeze = json.loads((P8 / "classic_texts_freeze.json").read_text(encoding="utf-8"))
+        for f in freeze["files"]:
+            if "quarantine" in f["path"]:
+                continue
+            proc = sp.run(["git", "-C", str(REPO), "cat-file", "-e", f"{f['commit']}:{f['path']}"], capture_output=True)
+            assert proc.returncode == 0, f"frozen blob missing: {f['commit']}:{f['path']}"
+            if "blob_sha" in f:  # 声明了 blob_sha 则必须与 git rev-parse 一致
+                rev = sp.run(["git", "-C", str(REPO), "rev-parse", f"{f['commit']}:{f['path']}"], capture_output=True, text=True)
+                assert rev.returncode == 0 and rev.stdout.strip() == f["blob_sha"], f"blob sha mismatch: {f['path']}"
