@@ -1,6 +1,6 @@
 # 密封婚姻题集 + 非婚姻护栏集规约（P8-4/P8-5）
 
-> 设计依据：`docs/superpowers/specs/2026-08-11-phase8-marriage-capability-design.md` v1.3.1（§P8-4/P8-5 与 v1.3.1 增补）。
+> 设计依据：`docs/superpowers/specs/2026-08-11-phase8-marriage-capability-design.md` v1.3.2（§P8-4/P8-5 与 v1.3.1/v1.3.2 增补；v1.3.2 修订快照范围与 §6 输入/脚本 SHA 冻结）。
 > 计划依据：`docs/superpowers/plans/2026-08-11-phase8-marriage-capability.md` v3.2（Task 7）。
 > 本规约只冻结双集规约与配对框架，**不含采集**；采集另批。
 
@@ -47,7 +47,7 @@
 - manifest 明确列出**允许不同字段集合**与**必须相同字段集合**；
 - 多个候选方向分别成臂、分别实验，**不得把多层增强打包后仍称"唯一变量"**；臂集合由 P8-2B 题级多标签分布决定。
 
-### 3.2 指纹组成（v1.3.1 增补，冻结）
+### 3.2 指纹组成（v1.3.1 增补，冻结；v1.3.2 保持）
 
 - baseline 必须与 Phase 7 归档相同：profile、prompt fingerprint、provider/model、thinking_mode、temperature、method 及其余推理参数；
 - 配对两臂必须相同：dataset / case / 顺序 / 调度及全部非 treatment 字段；
