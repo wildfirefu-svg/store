@@ -1,0 +1,277 @@
+{
+ "schema_version": "1.0",
+ "seed": 20260813,
+ "sample_ratio": 0.1,
+ "pool_size": 673,
+ "sample_size": 67,
+ "sample_list": [
+  {
+   "item_id": "mingli_ftb_0002#k4",
+   "canonical_key": "kb:gejue:hy_006"
+  },
+  {
+   "item_id": "mingli_ftb_0002#k4",
+   "canonical_key": "kb:gejue:hy_017"
+  },
+  {
+   "item_id": "mingli_ftb_0002#k5",
+   "canonical_key": "kb:shensha:3"
+  },
+  {
+   "item_id": "mingli_ftb_0002#k5",
+   "canonical_key": "kb:gejue:xm_011"
+  },
+  {
+   "item_id": "mingli_ftb_0002#k6",
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:421:dts_033_004"
+  },
+  {
+   "item_id": "mingli_ftb_0002#k6",
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:426:dts_033_009"
+  },
+  {
+   "item_id": "mingli_ftb_0002#k6",
+   "canonical_key": "kb:gejue:cy_015"
+  },
+  {
+   "item_id": "mingli_ftb_0002#k6",
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:424:dts_033_007"
+  },
+  {
+   "item_id": "mingli_ftb_0007#k6",
+   "canonical_key": "kb:gejue:lq_025"
+  },
+  {
+   "item_id": "mingli_ftb_0007#k6",
+   "canonical_key": "kb:shishen_combos:396"
+  },
+  {
+   "item_id": "mingli_ftb_0007#k6",
+   "canonical_key": "kb:gejue:lq_012"
+  },
+  {
+   "item_id": "mingli_ftb_0013#k1",
+   "canonical_key": "kb:gejue:hy_014"
+  },
+  {
+   "item_id": "mingli_ftb_0013#k4",
+   "canonical_key": "kb:gejue:ss_049"
+  },
+  {
+   "item_id": "mingli_ftb_0013#k4",
+   "canonical_key": "kb:shishen_combos:71"
+  },
+  {
+   "item_id": "mingli_ftb_0013#k4",
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:492:dts_036_007"
+  },
+  {
+   "item_id": "mingli_ftb_0013#k4",
+   "canonical_key": "kb:gejue:xiandai_006"
+  },
+  {
+   "item_id": "mingli_ftb_0013#k4",
+   "canonical_key": "kb:shishen_combos:70"
+  },
+  {
+   "item_id": "mingli_ftb_0013#k4",
+   "canonical_key": "kb:gejue:dts2_018"
+  },
+  {
+   "item_id": "mingli_ftb_0017#k4",
+   "canonical_key": "classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:679:smth_029_001"
+  },
+  {
+   "item_id": "mingli_ftb_0017#k4",
+   "canonical_key": "kb:gejue:B2_014"
+  },
+  {
+   "item_id": "mingli_ftb_0017#k4",
+   "canonical_key": "classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:678:smth_029_000"
+  },
+  {
+   "item_id": "mingli_ftb_0017#k6",
+   "canonical_key": "classic:knowledge_base/classic_texts/qiongtongbaojian/all_rules.json:11:qtbj_000_011"
+  },
+  {
+   "item_id": "mingli_ftb_0026#k2",
+   "canonical_key": "kb:shensha:14"
+  },
+  {
+   "item_id": "mingli_ftb_0044#k2",
+   "canonical_key": "kb:gejue:ss2_006"
+  },
+  {
+   "item_id": "mingli_ftb_0044#k4",
+   "canonical_key": "kb:gejue:lq_015"
+  },
+  {
+   "item_id": "mingli_ftb_0058#k4",
+   "canonical_key": "kb:gejue:hy_009"
+  },
+  {
+   "item_id": "mingli_ftb_0058#k4",
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:452:dts_034_007"
+  },
+  {
+   "item_id": "mingli_ftb_0058#k4",
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:434:dts_033_017"
+  },
+  {
+   "item_id": "mingli_ftb_0083#k1",
+   "canonical_key": "kb:gejue:hy_008"
+  },
+  {
+   "item_id": "mingli_ftb_0083#k1",
+   "canonical_key": "kb:gejue:gy_018"
+  },
+  {
+   "item_id": "mingli_ftb_0083#k1",
+   "canonical_key": "kb:gejue:mjyj_008"
+  },
+  {
+   "item_id": "mingli_ftb_0083#k1",
+   "canonical_key": "classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:1040:smth_042_025"
+  },
+  {
+   "item_id": "mingli_ftb_0083#k2",
+   "canonical_key": "kb:shishen_combos:272"
+  },
+  {
+   "item_id": "mingli_ftb_0083#k2",
+   "canonical_key": "kb:gejue:zgzd_012"
+  },
+  {
+   "item_id": "mingli_ftb_0085#k5",
+   "canonical_key": "classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:762:smth_034_003"
+  },
+  {
+   "item_id": "mingli_ftb_0085#k6",
+   "canonical_key": "classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:109:smth_006_026"
+  },
+  {
+   "item_id": "mingli_ftb_0085#k7",
+   "canonical_key": "kb:gejue:hy_002"
+  },
+  {
+   "item_id": "mingli_ftb_0096#k3",
+   "canonical_key": "kb:gejue:hy_007"
+  },
+  {
+   "item_id": "mingli_ftb_0096#k3",
+   "canonical_key": "kb:shishen_combos:138"
+  },
+  {
+   "item_id": "mingli_ftb_0098#k1",
+   "canonical_key": "kb:gejue:lq_020"
+  },
+  {
+   "item_id": "mingli_ftb_0098#k1",
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:448:dts_034_003"
+  },
+  {
+   "item_id": "mingli_ftb_0100#k1",
+   "canonical_key": "kb:gejue:hydj_003"
+  },
+  {
+   "item_id": "mingli_ftb_0100#k2",
+   "canonical_key": "kb:shishen_combos:10"
+  },
+  {
+   "item_id": "mingli_ftb_0100#k2",
+   "canonical_key": "kb:shishen_combos:377"
+  },
+  {
+   "item_id": "mingli_ftb_0100#k2",
+   "canonical_key": "classic:knowledge_base/classic_texts/qiongtongbaojian/all_rules.json:1065:qtbj_039_014"
+  },
+  {
+   "item_id": "mingli_ftb_0100#k2",
+   "canonical_key": "kb:shishen_combos:287"
+  },
+  {
+   "item_id": "mingli_ftb_0100#k3",
+   "canonical_key": "kb:gejue:jb_025"
+  },
+  {
+   "item_id": "mingli_ftb_0100#k3",
+   "canonical_key": "classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:1192:smth_046_029"
+  },
+  {
+   "item_id": "mingli_ftb_0108#k4",
+   "canonical_key": "kb:gejue:xm_011"
+  },
+  {
+   "item_id": "mingli_ftb_0122#k1",
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:556:dts_038_030"
+  },
+  {
+   "item_id": "mingli_ftb_0124#k6",
+   "canonical_key": "classic:knowledge_base/classic_texts/qiongtongbaojian/all_rules.json:18:qtbj_001_004"
+  },
+  {
+   "item_id": "mingli_ftb_0125#k4",
+   "canonical_key": "classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:1516:smth_068_006"
+  },
+  {
+   "item_id": "mingli_ftb_0125#k4",
+   "canonical_key": "kb:gejue:hy_003"
+  },
+  {
+   "item_id": "mingli_ftb_0125#k5",
+   "canonical_key": "kb:gejue:yjzd_009"
+  },
+  {
+   "item_id": "mingli_ftb_0125#k6",
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:18:dts_003_003"
+  },
+  {
+   "item_id": "mingli_ftb_0013#k4",
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:450:dts_034_005"
+  },
+  {
+   "item_id": "mingli_ftb_0085#k5",
+   "canonical_key": "classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:761:smth_034_002"
+  },
+  {
+   "item_id": "mingli_ftb_0058#k4",
+   "canonical_key": "kb:shishen_combos:10"
+  },
+  {
+   "item_id": "mingli_ftb_0013#k4",
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:445:dts_034_000"
+  },
+  {
+   "item_id": "mingli_ftb_0100#k3",
+   "canonical_key": "kb:gejue:ln_032"
+  },
+  {
+   "item_id": "mingli_ftb_0002#k4",
+   "canonical_key": "kb:gejue:ln_010"
+  },
+  {
+   "item_id": "mingli_ftb_0083#k1",
+   "canonical_key": "classic:knowledge_base/classic_texts/qiongtongbaojian/all_rules.json:1382:qtbj_053_048"
+  },
+  {
+   "item_id": "mingli_ftb_0058#k4",
+   "canonical_key": "kb:gejue:lq_025"
+  },
+  {
+   "item_id": "mingli_ftb_0007#k6",
+   "canonical_key": "kb:gejue:lq_018"
+  },
+  {
+   "item_id": "mingli_ftb_0013#k4",
+   "canonical_key": "kb:shishen_combos:101"
+  },
+  {
+   "item_id": "mingli_ftb_0100#k2",
+   "canonical_key": "kb:shishen_combos:336"
+  },
+  {
+   "item_id": "mingli_ftb_0125#k4",
+   "canonical_key": "kb:gejue:lq_018"
+  }
+ ]
+}

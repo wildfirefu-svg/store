@@ -147,6 +147,22 @@ class TestPhase9aManifest:
         assert "sealed" in str(raised.code) or "cannot modify" in str(raised.code)
 
 
+class TestQcSampleList:
+    def test_stratified_by_item(self):
+        lst = _load_json(P9 / "qc_sample_list.json")
+        cfg = _load_json(P9 / "qc_config.json")
+        assert lst["seed"] == cfg["seed"] and lst["sample_ratio"] == cfg["sample_ratio"]
+        sample = lst["sample_list"]
+        assert sample and len(sample) >= 10
+        by_item = {}
+        for s in sample:
+            by_item.setdefault(s["item_id"], 0)
+            by_item[s["item_id"]] += 1
+        assert len(by_item) >= 10  # 分层：覆盖多个 item，而非平面抽样集中于少数 item
+        pairs = [(s["item_id"], s["canonical_key"]) for s in sample]
+        assert len(pairs) == len(set(pairs))
+
+
 class TestSilverJudgment:
     def test_pairs_only_no_metadata_rows(self):
         rows = [json.loads(l) for l in (P9 / "silver_relevance_judgment.jsonl").open(encoding="utf-8") if l.strip()]

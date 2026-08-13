@@ -76,6 +76,16 @@
    "path": "docs/phase9a/retrieval/silver_judgment_summary.json",
    "strategy": "json_canonical",
    "sha256": "d1ca1d74d71d2ee0bfa5469fa8603922146b00289f20fa27b7cd7e95212df001"
+  },
+  "qc_gate_py": {
+   "path": "docs/phase9a/retrieval/qc_gate.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "11bce8f2f58cfd7b8de7b87e227c7c7c9d446caf8049501fa0a2b4338c87c713"
+  },
+  "qc_sample_list": {
+   "path": "docs/phase9a/retrieval/qc_sample_list.json",
+   "strategy": "json_canonical",
+   "sha256": "4d2c8bccd22a4467a2fd6e75cb2945c8b57b9a9bdd2c0abf5277735dd565a29d"
   }
  }
 }
