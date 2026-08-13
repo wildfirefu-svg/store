@@ -54,7 +54,7 @@
 | S4 同义词扩展 | 冻结词表（结婚/婚期/成婚/姻缘/婚恋；红鸾/天喜 等）组合 S1 并查 | 词表需人工裁决并冻结 |
 | S5 classic 联合 | S1 结果 + classic_texts 冻结版检索（已有 search_frozen 实现）合并去重 | 来源混合的排序口径 |
 
-**评估协议（冻结）**：全部策略在同一固定 query 集（§2.1 的 198 个 item-query + fts_behavior_probe 3 个漏检词 + 每入口 1 个探针）上执行；逐策略落盘命中（canonical key/来源/排序/去重后计数）；双跑字节一致门。
+**评估协议（冻结）**：全部策略在同一固定 query 集（§2.1 的 198 个 item-query + fts_behavior_probe 3 个漏检词 + **单字探针（鸾/缘，实施时补录于检索探针集）** + 每入口 1 个探针）上执行；逐策略落盘命中（canonical key/来源/排序/去重后计数）；双跑字节一致门。
 
 ---
 
@@ -71,7 +71,7 @@
 - **pair 规模**：Phase 8 原始 pool 的唯一 item-document pair = **11,411**；S1–S5 top-10 pooling 后实际 pair 数**重新计算并记录**于 `silver_relevance_judgment.jsonl` 的 `pool_stats.actual_pair_count`（不得用全局 2,519 文档数代替）。
 - 两源都参与评价（S1–S5 均可能命中两源），故按合并 pool 冻结。
 
-## 4.2 盲标闭环流程（P0-3 修订：顺序文内一致）
+### 4.2 盲标闭环流程（P0-3 修订：顺序文内一致）
 
 1. **先冻结**全部策略代码、query 集、同义词表、ranking/truncation 配置及其 SHA（§6 主冻结产物）。
 2. **执行 S1–S5**，取所有策略候选**并集**；pooling depth 冻结（**每策略每 (item,query) 取 top-10**，执行前确定，落盘于 ranking_config）；**重算实际 item-document pair 数并记录**。
