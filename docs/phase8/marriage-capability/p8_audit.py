@@ -114,6 +114,10 @@ def _doctrine_injected(injected_context: str, facts: set[str], star_names: set[s
     chart_fact_present（结构化事实已注入），**不等于学理知识已注入**；同理排除
     宫位名/干支/生肖等全部结构化事实词。doctrine_injected=true 仅当检索词以
     非结构化文本身份出现在注入区（规则/解释/断诀文本）。
+
+    已知限制（P2，不阻断当前冻结）：按值全局排除结构化事实词，对含星名的断诀
+    规则（如'桃花主婚缘变化'）会整体排除；复用本审计器于 enhanced/RAG prompt 前，
+    需改为 span-aware 检测（区分结构化字段区与解释性规则区），而非按值排除。
     """
     checkable = [t for t in _doctrine_terms(item) if len(t) >= 2]
     chart_facts = [t for t in checkable if t in star_names]
