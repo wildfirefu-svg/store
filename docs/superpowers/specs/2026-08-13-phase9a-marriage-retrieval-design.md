@@ -64,9 +64,9 @@
 
 ### 4.1 candidate_pool 口径（P0-1 修订：KB + classic 合并）
 
-- **KB 源**：112 项 198 query_specs 的 `evidence.kb_queries[].hit_ids`，含重复 **2,902**，唯一条文 **537**（canonical key = 表名 + ID，如 `gejue:ss2_021`）。
+- **KB 源**：112 项 198 query_specs 的 `evidence.kb_queries[].hit_ids`，含重复 **2,902**，唯一条文 **546**（canonical key = 表名/入口名 + ID，如 `gejue:ss2_021`；**注意**：裸 ID 去重为 537，其中 9 个 ID（70/25/41/15/11/6/3/42/43）在 shensha / shishen_combos / xiangyi 表间碰撞且为不同条文，故按 canonical key 口径为 546）。
 - **classic 源**：`evidence.classic_queries[].hits`，含重复 **8,655**，唯一条文 **1,973**（canonical key = 冻结路径 + 行号 + record_id）。
-- **合并 pool**：含重复 **11,557**，唯一 canonical key **2,510**（去重规则：同一 canonical key 只标一次）。
+- **合并 pool**：含重复 **11,557**，唯一 canonical key **2,519**（去重规则：同一 canonical key 只标一次；两源 overlap=0）。
 - 两源都参与评价（S1–S5 均可能命中两源），故按合并 pool 冻结。
 
 ### 4.2 盲标闭环流程（P0-2 修订：策略先冻结，judgment 后于全部策略执行）
