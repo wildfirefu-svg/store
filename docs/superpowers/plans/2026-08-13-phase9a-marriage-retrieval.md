@@ -197,8 +197,9 @@ print("configs written")
 
 Create: `docs/phase9a/retrieval/phase9a_manifest.py`
 ```python
-"""Phase 9A 专用 manifest helper：逻辑名称为键、真 append-only、stage 状态机。
-复用 p8_freeze 四策略 SHA 函数；原子写（tmp → 校验 → os.replace）。"""
+"""Phase 9A 专用 manifest helper：逻辑名称为键、真 append-only、单向 stage 状态机。
+复用 p8_freeze 四策略 SHA 函数；原子写（tmp → 校验 → os.replace）。
+路径统一以仓库根相对路径保存，由 __file__ 推导的 REPO_ROOT 解析（任意 cwd/worktree 可执行）。"""
 from __future__ import annotations
 
 import json
@@ -208,6 +209,7 @@ from pathlib import Path
 
 import p8_freeze  # docs/phase8/marriage-capability（sys.path 由调用方注入）
 
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 STRATEGY_FN = {
     "json_canonical": p8_freeze.json_canonical_sha256,
     "jsonl_canonical": p8_freeze.jsonl_canonical_sha256,
@@ -215,6 +217,7 @@ STRATEGY_FN = {
     "git_canonical_lf": p8_freeze.git_canonical_lf_sha256,
 }
 STAGES = ("config_frozen", "code_frozen", "sealed")
+STAGE_ORDER = {None: 0, "config_frozen": 1, "code_frozen": 2, "sealed": 3}
 
 
 def _load(path: Path) -> dict:
@@ -230,23 +233,47 @@ def _atomic_write(path: Path, payload: dict) -> None:
     os.replace(tmp, path)
 
 
+def _rel(p: Path) -> str:
+    try:
+        return str(p.resolve().relative_to(REPO_ROOT))
+    except ValueError:
+        return str(p)  # 目录外路径（如 tmp 镜像）原样保存
+
+
+def _abs(rel: str) -> Path:
+    p = Path(rel)
+    return p if p.is_absolute() else REPO_ROOT / p
+
+
 def freeze(manifest_path: Path, entries: dict[str, tuple[Path, str]]) -> dict:
-    """append-only 冻结：同名已存在且 SHA 不一致 → fail-closed；一致 → 幂等跳过。"""
+    """append-only 冻结：同名已存在且 SHA 不一致 → fail-closed；一致 → 幂等跳过。
+    sealed 后拒绝任何新增（幂等核验除外，P0 修订：封存不可变）。"""
     manifest = _load(manifest_path)
+    if manifest["stage"] == "sealed":
+        # 幂等核验：全部条目 SHA 与磁盘一致才允许（不写盘）；否则 fail-closed
+        for name, (p, strategy) in entries.items():
+            existing = manifest["entries"].get(name)
+            if existing is None or existing["sha256"] != STRATEGY_FN[strategy](p):
+                sys.exit(f"FAIL: manifest sealed; cannot modify entry {name}")
+        return manifest
     for name, (p, strategy) in entries.items():
         sha = STRATEGY_FN[strategy](p)
         existing = manifest["entries"].get(name)
         if existing is not None and existing["sha256"] != sha:
             sys.exit(f"FAIL: {name} already frozen with different SHA (append-only violated)")
-        manifest["entries"][name] = {"path": str(p), "strategy": strategy, "sha256": sha}
+        manifest["entries"][name] = {"path": _rel(p), "strategy": strategy, "sha256": sha}
     _atomic_write(manifest_path, manifest)
     return manifest
 
 
 def set_stage(manifest_path: Path, stage: str) -> None:
+    """单向状态机：None→config_frozen→code_frozen→sealed；禁止回退；sealed 后拒绝任何变更。"""
     if stage not in STAGES:
         sys.exit(f"FAIL: unknown stage {stage}")
     manifest = _load(manifest_path)
+    current = manifest["stage"]
+    if STAGE_ORDER[stage] <= STAGE_ORDER[current]:
+        sys.exit(f"FAIL: stage regression {current} -> {stage} forbidden")
     manifest["stage"] = stage
     _atomic_write(manifest_path, manifest)
 
@@ -258,7 +285,7 @@ def verify_frozen(manifest_path: Path, names: list[str]) -> None:
         entry = manifest["entries"].get(name)
         if entry is None:
             sys.exit(f"FAIL: {name} not frozen before use")
-        if STRATEGY_FN[entry["strategy"]](Path(entry["path"])) != entry["sha256"]:
+        if STRATEGY_FN[entry["strategy"]](_abs(entry["path"])) != entry["sha256"]:
             sys.exit(f"FAIL: {name} SHA drift before use")
 ```
 
@@ -299,6 +326,33 @@ class TestPhase9aManifest:
         except SystemExit:
             raised = True
         assert raised  # 未冻结即使用 → fail-closed
+
+    def test_stage_machine_one_way(self, tmp_path):
+        import phase9a_manifest as pm
+        m = tmp_path / "manifest.json"
+        pm.set_stage(m, "config_frozen")
+        pm.set_stage(m, "code_frozen")
+        pm.set_stage(m, "sealed")
+        for bad in ("code_frozen", "config_frozen", None):
+            try:
+                pm.set_stage(m, bad)
+                raised = False
+            except SystemExit:
+                raised = True
+            assert raised  # 回退与 None 均拒绝（P0：sealed 后不可变）
+
+    def test_sealed_rejects_new_entry(self, tmp_path):
+        import phase9a_manifest as pm
+        m = tmp_path / "manifest.json"
+        f = tmp_path / "a.json"
+        f.write_text('{"x": 1}', encoding="utf-8")
+        pm.set_stage(m, "sealed")
+        try:
+            pm.freeze(m, {"a": (f, "json_canonical")})
+            raised = False
+        except SystemExit:
+            raised = True
+        assert raised  # sealed 后新增条目必须拒绝（幂等核验除外）
 ```
 
 - [ ] **Step 5: 初始化 manifest（config_frozen 阶段，逻辑名称为键）**
@@ -375,7 +429,7 @@ if __name__ == "__main__":
 Run: `.venv/Scripts/python.exe docs/phase9a/retrieval/query_extractor.py`
 Expected: `item_query_map written: {'aggregate_queries': 53, 'items': 112, 'item_query_refs': 198}`。
 
-随后立即冻结该条目（P0 修订：生成后立即冻结，供 Task 4+ verify 使用）：
+随后立即冻结该条目与代码（P0 修订：生成后立即冻结，供 Task 4+ verify 使用；query_extractor_py 供 fingerprint 单源）：
 ```python
 import sys
 from pathlib import Path
@@ -383,10 +437,11 @@ sys.path.insert(0, "docs/phase8/marriage-capability")
 sys.path.insert(0, "docs/phase9a/retrieval")
 import phase9a_manifest as pm
 P9 = Path("docs/phase9a/retrieval")
-pm.freeze(P9 / "manifest.json", {"item_query_map": (P9 / "item_query_map.json", "json_canonical")})
-print("item_query_map frozen; total entries:", len(json.loads((P9 / "manifest.json").read_text(encoding="utf-8"))["entries"]))
+pm.freeze(P9 / "manifest.json", {"item_query_map": (P9 / "item_query_map.json", "json_canonical"),
+                                 "query_extractor_py": (P9 / "query_extractor.py", "git_canonical_lf")})
+print("item_query_map + query_extractor_py frozen; total entries:", len(json.loads((P9 / "manifest.json").read_text(encoding="utf-8"))["entries"]))
 ```
-Expected: `item_query_map frozen; total entries: 7`。
+Expected: `item_query_map + query_extractor_py frozen; total entries: 8`。
 
 - [ ] **Step 7: 测试转绿 + Commit**
 
@@ -434,6 +489,17 @@ class TestRetrieverCore:
         except SystemExit:
             raised = True
         assert raised  # git show 失败必须 fail-closed
+
+    def test_s5_frozen_blob_sha_consistent(self):
+        """冻结 blob 一致性：classic_texts_freeze.json 声明的 commit:path 必须可 git show（P0 修订：
+        S5 读取的冻结对象与冻结文件声明一致，防漂移）。"""
+        import subprocess as sp
+        freeze = json.loads((P8 / "classic_texts_freeze.json").read_text(encoding="utf-8"))
+        for f in freeze["files"]:
+            if "quarantine" in f["path"]:
+                continue
+            proc = sp.run(["git", "-C", str(REPO), "cat-file", "-e", f"{f['commit']}:{f['path']}"], capture_output=True)
+            assert proc.returncode == 0, f"frozen blob missing: {f['commit']}:{f['path']}"
 ```
 
 - [ ] **Step 2: 运行确认失败**
@@ -1057,23 +1123,17 @@ def validate_review_coverage(sample_list: list[dict], reviews: list[dict]) -> No
         sys.exit(f"HUMAN_QC_REQUIRED: coverage mismatch missing={len(missing)} extra={len(extra)} dup={dup}")
 
 
-def check_disagreement(reviews: list[dict], judgment_path: Path, max_rate: float, result_path: Path) -> dict:
-    """分歧率 = 人类标签与 silver 标签不一致占比；结果原子落盘 qc_result.json（tmp + os.replace）。
-    返回 dict（verdict/disagreement_rate）供调用方分支；**不在此 sys.exit**——
-    QC_FAIL 正式终态由 run_eval.py 发布（P0 修订：失败分支必须形成完整终态链）。"""
+def check_disagreement(reviews: list[dict], judgment_path: Path, max_rate: float) -> dict:
+    """分歧率 = 人类标签与 silver 标签不一致占比；**纯函数不写盘**（P0 修订：
+    qc_result 由 run_eval 与分支产物放入同一发布批次，避免绕过 one-shot 发布事务）。"""
     validate_human_review_schema(reviews)
     silver = {(r["item_id"], r["canonical_key"]): r["label"]
               for r in (json.loads(l) for l in judgment_path.open(encoding="utf-8") if l.strip())}
     n_diff = sum(1 for r in reviews if r["human_label"] != silver[(r["item_id"], r["canonical_key"])])
     rate = n_diff / len(reviews) if reviews else 1.0
-    result = {"schema_version": "1.0", "disagreement_rate": rate, "n_reviewed": len(reviews), "n_diff": n_diff,
-              "max_disagreement_rate": max_rate,
-              "verdict": "PASS" if rate <= max_rate else "SILVER_RETRIEVAL_NOT_READY"}
-    tmp = result_path.with_name(result_path.name + ".tmp")
-    tmp.write_text(json.dumps(result, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
-    json.loads(tmp.read_text(encoding="utf-8"))  # 写后校验
-    os.replace(tmp, result_path)  # 原子落盘
-    return result
+    return {"schema_version": "1.0", "disagreement_rate": rate, "n_reviewed": len(reviews), "n_diff": n_diff,
+            "max_disagreement_rate": max_rate,
+            "verdict": "PASS" if rate <= max_rate else "SILVER_RETRIEVAL_NOT_READY"}
 
 
 def main() -> None:
@@ -1180,7 +1240,7 @@ def qc_state(review_path: Path, sample_path: Path) -> str:
 ```json
 {"schema_version": "1.0", "file": "qc_human_review.jsonl", "line_fields": ["item_id", "canonical_key", "human_label", "note"], "human_label_enum": ["relevant", "partially_relevant", "irrelevant", "uncertain"], "note_required": true, "rules": ["human_label 必填且属于枚举", "note 必填非空", "pair 与 qc_sample_list 一一对应（无缺失/重复/额外）"]}
 ```
-随后立即冻结零字节模板与 schema（P0 修订：生成后立即冻结，供 run_eval verify 使用）：
+随后**只冻结 schema**（P0 修订：零字节 qc_human_review.jsonl 不可冻结——人工填写后必然漂移；完成后的 review 在填写完毕、校验通过后、run_eval 前首次冻结）：
 ```python
 import sys
 from pathlib import Path
@@ -1188,12 +1248,11 @@ sys.path.insert(0, "docs/phase8/marriage-capability")
 sys.path.insert(0, "docs/phase9a/retrieval")
 import phase9a_manifest as pm
 P9 = Path("docs/phase9a/retrieval")
-pm.freeze(P9 / "manifest.json", {"qc_human_review": (P9 / "qc_human_review.jsonl", "jsonl_canonical"),
-                                 "qc_human_review_schema": (P9 / "qc_human_review_schema.json", "json_canonical")})
-print("qc_human_review + schema frozen")
+pm.freeze(P9 / "manifest.json", {"qc_human_review_schema": (P9 / "qc_human_review_schema.json", "json_canonical")})
+print("qc_human_review_schema frozen")
 ```
-Expected: `qc_human_review + schema frozen`。
-`qc_result.json` 由 Task 7 的 `check_disagreement` 原子生成（返回 dict；分歧超门时 QC_FAIL 正式终态由 run_eval.py 发布，不在此 sys.exit）。
+Expected: `qc_human_review_schema frozen`。
+`qc_result.json` 由 Task 7 的 `check_disagreement` 返回内存 dict（不写盘，P0 修订），由 run_eval 与分支产物统一原子发布。
 
 - [ ] **Step 4: 测试转绿 + Commit（此任务为显式暂停点）**
 
@@ -1205,7 +1264,24 @@ git diff --cached --name-only
 git commit -m "feat(phase9a): HUMAN_QC_REQUIRED state machine, zero-byte template + schema file"
 ```
 
-**⏸ 暂停点（人工）：** 人类对照 `qc_sample_list.json` 逐条填写 `qc_human_review.jsonl`（human_label ∈ {relevant, partially_relevant, irrelevant, uncertain}）。**未完成前不得执行 Task 7 的评测步骤**；完成后再继续。
+**⏸ 暂停点（人工）：** 人类对照 `qc_sample_list.json` 逐条填写 `qc_human_review.jsonl`（human_label ∈ {relevant, partially_relevant, irrelevant, uncertain}，note 必填）。**未完成前不得执行 Task 7 的评测步骤**；完成后再继续。
+
+**填写完成后（run_eval 前）首次冻结 qc_human_review（P0 修订：填写完毕且校验通过后才冻结）：**
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, "docs/phase8/marriage-capability")
+sys.path.insert(0, "docs/phase9a/retrieval")
+import phase9a_manifest as pm
+import qc_gate as qc
+P9 = Path("docs/phase9a/retrieval")
+reviews = qc.load_human_review(P9 / "qc_human_review.jsonl")
+qc.validate_review_coverage(json.loads((P9 / "qc_sample_list.json").read_text(encoding="utf-8"))["sample_list"], reviews)
+qc.validate_human_review_schema(reviews)
+pm.freeze(P9 / "manifest.json", {"qc_human_review": (P9 / "qc_human_review.jsonl", "jsonl_canonical")})
+print("qc_human_review frozen after full human QC")
+```
+Expected: `qc_human_review frozen after full human QC`（校验不通过则 fail-closed，不得冻结）。
 
 ---
 
@@ -1435,18 +1511,21 @@ class TestRealEval:
             assert ev["metrics"]["n_items"] == 112
 
     def test_no_overwrite_on_rerun(self):
-        """拒绝覆盖：产物已存在时 run_eval 必须 fail-closed（只生成一次）。"""
+        """拒绝覆盖：产物已存在时 run_eval 必须 fail-closed（只生成一次）。
+        sys.exit 消息可能写 stderr（P0 修订：stdout+stderr 合并检查）。"""
         proc = subprocess.run([sys.executable, str(P9 / "run_eval.py")], capture_output=True, text=True,
                               encoding="utf-8", cwd=REPO)
-        assert proc.returncode != 0 and "already exists" in proc.stdout
+        assert proc.returncode != 0 and "already exists" in (proc.stdout + proc.stderr)
 ```
 
 Create: `docs/phase9a/retrieval/run_eval.py`（**持久化生产入口**，不在 .tmp；`__file__` 推导路径，无硬编码）
 ```python
-"""Phase 9A 正式评测生产入口：QC 门 → 每策略/union 一次性评估 → 原子发布，拒绝覆盖。
-双终态链：QC_FAIL（分歧超门）→ SILVER_RETRIEVAL_NOT_READY(metrics=not_computed)；QC_PASS → 正常评估。"""
+"""Phase 9A 正式评测生产入口：QC 门 → 每策略/union 一次性评估 → 事务发布（receipt 标记）。
+双终态链：QC_FAIL（分歧超门）→ SILVER_RETRIEVAL_NOT_READY(metrics=not_computed)；QC_PASS → 正常评估。
+--root 可选参数：镜像工作目录（端到端测试用，P0 修订）。"""
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -1461,8 +1540,8 @@ import phase9a_manifest as pm
 import qc_gate as qc
 
 
-def _write_tmp(name: str, payload) -> Path:
-    tmp = P9 / f".{name}.tmp"
+def _write_tmp(root: Path, name: str, payload) -> Path:
+    tmp = root / f".{name}.tmp"
     if name.endswith(".jsonl"):
         with tmp.open("w", encoding="utf-8", newline="\n") as f:
             for r in payload:
@@ -1472,48 +1551,66 @@ def _write_tmp(name: str, payload) -> Path:
     return tmp
 
 
-def _publish(tmp_files: dict[str, Path]) -> None:
-    """拒绝覆盖 + 全部校验后统一原子发布（避免半套产物）。
-    .jsonl 逐行校验；.json 整文件校验（P0 修订：JSONL 不可整文件 json.loads）。"""
-    for name in tmp_files:
-        if (P9 / name).exists():
+def _publish(root: Path, artifacts: dict[str, Path]) -> None:
+    """事务发布（P0 修订）：逐文件 os.replace 到 root 正式路径（各自原子）→ **最后**原子发布
+    RECEIPT.json 作为唯一'发布完成'标记；正式产物已存在即 fail-closed（半套产物同样拒绝，
+    需人工清理后重跑，但不会被误消费）；消费者只接受 RECEIPT 存在且 artifacts 完整的产物。"""
+    for name in artifacts:
+        if (root / name).exists():
             sys.exit(f"FAIL: {name} already exists - one-shot violated")
-    for name, tmp in tmp_files.items():
+    for name, tmp in artifacts.items():
         if name.endswith(".jsonl"):
             for line in tmp.read_text(encoding="utf-8").splitlines():
                 if line.strip():
                     json.loads(line)  # 逐行校验
         else:
             json.loads(tmp.read_text(encoding="utf-8"))
-    for name, tmp in tmp_files.items():
-        os.replace(tmp, P9 / name)
+    for name, tmp in artifacts.items():
+        os.replace(tmp, root / name)
+    receipt = {"schema_version": "1.0", "artifacts": sorted(artifacts), "published_at": "sealed"}
+    _atomic_json(root / "RECEIPT.json", receipt)  # 最后发布：receipt 存在 = 发布完成
+
+
+def _atomic_json(path: Path, payload: dict) -> None:
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
+    json.loads(tmp.read_text(encoding="utf-8"))
+    os.replace(tmp, path)
 
 
 def main() -> None:
-    pm.verify_frozen(P9 / "manifest.json", ["evaluate_py", "qc_gate_py", "retriever_py", "silver_relevance_judgment",
-                                            "item_query_map", "truncation_config", "ranking_config", "qc_config", "strategy_outputs"])
-    cfg = json.loads((P9 / "qc_config.json").read_text(encoding="utf-8"))
-    trun = json.loads((P9 / "truncation_config.json").read_text(encoding="utf-8"))
-    state = qc.qc_state(P9 / "qc_human_review.jsonl", P9 / "qc_sample_list.json")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--root", default=str(P9))
+    args = parser.parse_args()
+    root = Path(args.root)
+    pm.verify_frozen(root / "manifest.json", ["evaluate_py", "qc_gate_py", "retriever_py", "run_eval_py",
+                                               "silver_relevance_judgment", "item_query_map", "truncation_config",
+                                               "ranking_config", "qc_config", "qc_sample_list", "qc_human_review",
+                                               "strategy_outputs"])
+    cfg = json.loads((root / "qc_config.json").read_text(encoding="utf-8"))
+    trun = json.loads((root / "truncation_config.json").read_text(encoding="utf-8"))
+    state = qc.qc_state(root / "qc_human_review.jsonl", root / "qc_sample_list.json")
     if state != "REVIEWED":
         sys.exit(f"HUMAN_QC_REQUIRED: state={state}")
-    reviews = qc.load_human_review(P9 / "qc_human_review.jsonl")
-    qc.validate_review_coverage(json.loads((P9 / "qc_sample_list.json").read_text(encoding="utf-8"))["sample_list"], reviews)
-    qc_result = qc.check_disagreement(reviews, P9 / "silver_relevance_judgment.jsonl", cfg["max_disagreement_rate"], P9 / "qc_result.json")
-    item_map = json.loads((P9 / "item_query_map.json").read_text(encoding="utf-8"))["items"]
+    reviews = qc.load_human_review(root / "qc_human_review.jsonl")
+    qc.validate_review_coverage(json.loads((root / "qc_sample_list.json").read_text(encoding="utf-8"))["sample_list"], reviews)
+    qc_result = qc.check_disagreement(reviews, root / "silver_relevance_judgment.jsonl", cfg["max_disagreement_rate"])  # 纯函数，不写盘
+    item_map = json.loads((root / "item_query_map.json").read_text(encoding="utf-8"))["items"]
     items = [i["item_id"] for i in item_map]
     if len(items) != 112:
         sys.exit(f"FAIL: frozen item count {len(items)} != 112")
-    judgment = [json.loads(l) for l in (P9 / "silver_relevance_judgment.jsonl").open(encoding="utf-8") if l.strip()]
-    # QC_FAIL 分支：分歧超门 → 正式 NOT_READY 终态（metrics=not_computed），不计算检索指标但完整发布
+    judgment = [json.loads(l) for l in (root / "silver_relevance_judgment.jsonl").open(encoding="utf-8") if l.strip()]
+    # QC_FAIL 分支：qc_result + 正式终态同批次发布（不计算检索指标但完整发布）
     if qc_result["verdict"] == "SILVER_RETRIEVAL_NOT_READY":
         payload = {"schema_version": "1.0", "verdict": "SILVER_RETRIEVAL_NOT_READY", "metrics": "not_computed",
                    "qc_state": "QC_FAIL", "qc_result": qc_result,
                    "note": "QC 分歧超门：不计算检索指标；终态/原因/provenance 完整发布"}
-        _publish({"retrieval_eval.json": _write_tmp("retrieval_eval.json", payload)})
+        artifacts = {"qc_result.json": _write_tmp(root, "qc_result.json", qc_result),
+                     "retrieval_eval.json": _write_tmp(root, "retrieval_eval.json", payload)}
+        _publish(root, artifacts)
         print("QC_FAIL chain published: SILVER_RETRIEVAL_NOT_READY (metrics=not_computed)")
         return
-    # QC_PASS 分支：每策略诊断 + union 正式评估
+    # QC_PASS 分支：每策略诊断 + union 正式评估，qc_result 与全部产物同批次
     per_strategy = {}
     for name in ("s1", "s2", "s3", "s4", "s5"):
         rows = ev.build_bundle(item_map, trun, strategies=(name,))
@@ -1522,10 +1619,11 @@ def main() -> None:
     metrics = ev.compute_metrics(judgment, items, ev.build_bundles_for_eval(rows))
     payload = {"schema_version": "1.0", "verdict": ev.decide(metrics), "metrics": metrics, "gates": ev.GATES,
                "qc_state": "REVIEWED", "qc_result": qc_result, "note": "silver 结论限于工程可复现性，不声称语义正确性"}
-    _publish({
-        "retrieval_bundle_dev.jsonl": _write_tmp("retrieval_bundle_dev.jsonl", rows),
-        "per_strategy_eval.json": _write_tmp("per_strategy_eval.json", {"schema_version": "1.0", "per_strategy": per_strategy, "gates": ev.GATES}),
-        "retrieval_eval.json": _write_tmp("retrieval_eval.json", payload),
+    _publish(root, {
+        "qc_result.json": _write_tmp(root, "qc_result.json", qc_result),
+        "retrieval_bundle_dev.jsonl": _write_tmp(root, "retrieval_bundle_dev.jsonl", rows),
+        "per_strategy_eval.json": _write_tmp(root, "per_strategy_eval.json", {"schema_version": "1.0", "per_strategy": per_strategy, "gates": ev.GATES}),
+        "retrieval_eval.json": _write_tmp(root, "retrieval_eval.json", payload),
     })
     print(f"one-shot eval published: verdict={payload['verdict']}, macro_recall={metrics['macro_weighted_recall']:.3f}, noise={metrics['macro_bundle_noise']:.3f}")
 
@@ -1589,13 +1687,15 @@ class TestReconcile9a:
         assert "FAIL" not in proc.stdout
 
     def test_tamper_detected_in_mirror(self, tmp_path):
-        """篡改负向：在 tmp 镜像中篡改，避免污染真实产物。"""
+        """篡改负向：在 tmp 仓库根镜像中篡改（保留目录结构 + CLOSURE），避免污染真实产物。"""
         import shutil
-        mirror = tmp_path / "mirror"
-        shutil.copytree(P9, mirror)
-        victim = mirror / "ranking_config.json"
+        repo_mirror = tmp_path / "repo"
+        (repo_mirror / "docs").mkdir(parents=True)
+        shutil.copytree(REPO / "docs" / "phase9a", repo_mirror / "docs" / "phase9a")
+        manifest_mirror = repo_mirror / "docs" / "phase9a" / "retrieval" / "manifest.json"
+        victim = repo_mirror / "docs" / "phase9a" / "retrieval" / "ranking_config.json"
         victim.write_text(victim.read_text(encoding="utf-8").replace('"pooling_depth_per_strategy_per_query": 10', '"pooling_depth_per_strategy_per_query": 11'), encoding="utf-8")
-        proc = subprocess.run([sys.executable, str(P9 / "reconcile9a.py"), "--manifest", str(mirror / "manifest.json")],
+        proc = subprocess.run([sys.executable, str(P9 / "reconcile9a.py"), "--manifest", str(manifest_mirror)],
                               capture_output=True, text=True, encoding="utf-8", cwd=REPO)
         assert proc.returncode != 0
         assert "FAIL" in proc.stdout
@@ -1607,27 +1707,73 @@ class TestReconcile9a:
 
 
 class TestTerminalChains:
-    """双终态链 no-network 集成：QC_PASS 与 QC_FAIL 均产出可对账正式终态。"""
+    """双终态链 no-network 端到端（P0 修订）：两个隔离临时镜像目录，真实调用 run_eval 生产入口。"""
 
-    def test_qc_fail_chain_publishes_terminal(self, tmp_path):
-        import qc_gate as qc
-        sample = [{"item_id": "a", "canonical_key": "kb:gejue:1"}]
-        reviews = [{"item_id": "a", "canonical_key": "kb:gejue:1", "human_label": "relevant", "note": "x"}]
-        judgment_path = tmp_path / "j.jsonl"
-        judgment_path.write_text(json.dumps({"item_id": "a", "canonical_key": "kb:gejue:1", "label": "irrelevant"}, ensure_ascii=False) + "\n", encoding="utf-8")
-        result = qc.check_disagreement(reviews, judgment_path, 0.1, tmp_path / "qc_result.json")
-        # 不 sys.exit：返回 dict 供 run_eval 发布正式 QC_FAIL 终态（P0 修订）
-        assert result["verdict"] == "SILVER_RETRIEVAL_NOT_READY" and result["disagreement_rate"] == 1.0
-        # 证据已原子落盘
-        disk = json.loads((tmp_path / "qc_result.json").read_text(encoding="utf-8"))
-        assert disk["verdict"] == "SILVER_RETRIEVAL_NOT_READY"
+    @staticmethod
+    def _make_mirror(tmp_path, disagree: bool):
+        """构造镜像：复制 P9 全量 → 重建镜像 manifest（绝对 tmp 路径条目）→ 按 disagree 填写 QC review。"""
+        import shutil
+        import sys as _sys
+        _sys.path.insert(0, str(P8))
+        _sys.path.insert(0, str(P9))
+        import phase9a_manifest as pm
+        mirror = tmp_path / "mirror"
+        shutil.copytree(P9, mirror)
+        # 重建镜像 manifest：config_frozen → code_frozen → 全量冻结（条目为 tmp 绝对路径）
+        (mirror / "manifest.json").unlink()
+        pm.set_stage(mirror / "manifest.json", "config_frozen")
+        pm.set_stage(mirror / "manifest.json", "code_frozen")
+        targets = {}
+        for name, entry in json.loads((P9 / "manifest.json").read_text(encoding="utf-8"))["entries"].items():
+            src = REPO / entry["path"]
+            if src.exists() and src.parent == P9:  # 只镜像 retrieval 目录内条目（CLOSURE 等目录外不在 run_eval 依赖中）
+                targets[name] = (mirror / src.name, entry["strategy"])
+        pm.freeze(mirror / "manifest.json", targets)
+        # 填写 QC review：PASS=与 silver 一致；FAIL=全部相反
+        sample = json.loads((mirror / "qc_sample_list.json").read_text(encoding="utf-8"))["sample_list"]
+        silver = {r["item_id"] + "|" + r["canonical_key"]: r["label"]
+                  for r in (json.loads(l) for l in (mirror / "silver_relevance_judgment.jsonl").open(encoding="utf-8") if l.strip())}
+        lines = []
+        for s in sample:
+            lbl = silver[s["item_id"] + "|" + s["canonical_key"]]
+            human = lbl if not disagree else ("irrelevant" if lbl != "irrelevant" else "relevant")
+            lines.append(json.dumps({"item_id": s["item_id"], "canonical_key": s["canonical_key"], "human_label": human, "note": "e2e"}, ensure_ascii=False))
+        (mirror / "qc_human_review.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+        return mirror
 
-    def test_qc_pass_chain_metrics_not_computed_absent(self):
-        ev = _load_json(P9 / "retrieval_eval.json")
-        if ev["qc_state"] == "QC_FAIL":
-            assert ev["verdict"] == "SILVER_RETRIEVAL_NOT_READY" and ev["metrics"] == "not_computed"
-        else:
-            assert ev["metrics"]["n_items"] == 112
+    def test_qc_pass_chain_e2e(self, tmp_path):
+        mirror = self._make_mirror(tmp_path, disagree=False)
+        proc = subprocess.run([sys.executable, str(P9 / "run_eval.py"), "--root", str(mirror)],
+                              capture_output=True, text=True, encoding="utf-8", cwd=REPO)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        # 产物集合：qc_result + bundle + per_strategy + eval + RECEIPT 全存在
+        for name in ("qc_result.json", "retrieval_bundle_dev.jsonl", "per_strategy_eval.json", "retrieval_eval.json", "RECEIPT.json"):
+            assert (mirror / name).exists(), name
+        ev = json.loads((mirror / "retrieval_eval.json").read_text(encoding="utf-8"))
+        assert ev["qc_state"] == "REVIEWED" and ev["verdict"] in {"SILVER_RETRIEVAL_READY", "SILVER_RETRIEVAL_NOT_READY"}
+        assert ev["metrics"]["n_items"] == 112
+        # 拒绝覆盖：再次运行必须 fail-closed
+        proc2 = subprocess.run([sys.executable, str(P9 / "run_eval.py"), "--root", str(mirror)],
+                               capture_output=True, text=True, encoding="utf-8", cwd=REPO)
+        assert proc2.returncode != 0 and "already exists" in (proc2.stdout + proc2.stderr)
+
+    def test_qc_fail_chain_e2e(self, tmp_path):
+        mirror = self._make_mirror(tmp_path, disagree=True)
+        proc = subprocess.run([sys.executable, str(P9 / "run_eval.py"), "--root", str(mirror)],
+                              capture_output=True, text=True, encoding="utf-8", cwd=REPO)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        # 产物集合：仅 qc_result + eval + RECEIPT（不生成 bundle/per_strategy）
+        for name in ("qc_result.json", "retrieval_eval.json", "RECEIPT.json"):
+            assert (mirror / name).exists(), name
+        assert not (mirror / "per_strategy_eval.json").exists()
+        ev = json.loads((mirror / "retrieval_eval.json").read_text(encoding="utf-8"))
+        assert ev["qc_state"] == "QC_FAIL" and ev["verdict"] == "SILVER_RETRIEVAL_NOT_READY"
+        assert ev["metrics"] == "not_computed"
+        assert ev["qc_result"]["verdict"] == "SILVER_RETRIEVAL_NOT_READY"  # 原因完整发布
+        # 拒绝覆盖：再次运行必须 fail-closed
+        proc2 = subprocess.run([sys.executable, str(P9 / "run_eval.py"), "--root", str(mirror)],
+                               capture_output=True, text=True, encoding="utf-8", cwd=REPO)
+        assert proc2.returncode != 0 and "already exists" in (proc2.stdout + proc2.stderr)
 ```
 
 - [ ] **Step 2: 运行确认失败**
@@ -1637,25 +1783,24 @@ Expected: FAIL。
 
 - [ ] **Step 3: 生成 treatment_fingerprint + 终态 manifest 仅追加封存 + 实现 reconcile9a.py（顺序冻结）**
 
-**Step 3a: 生成 treatment_fingerprint.json（每组件明细，P0 补缺）**
+**Step 3a: 生成 treatment_fingerprint.json（单源：从 manifest 读取各组件已冻结的 SHA 策略与 SHA，不重复计算）**
 ```python
 import hashlib, json, sys
 from pathlib import Path
-sys.path.insert(0, "docs/phase8/marriage-capability")
-import p8_freeze
 P9 = Path("docs/phase9a/retrieval")
-components = ["retriever.py", "query_extractor.py", "synonym_table.json", "ranking_config.json", "truncation_config.json", "upstream_inputs_sha.json"]
+manifest = json.loads((P9 / "manifest.json").read_text(encoding="utf-8"))
 components_detail = []
 digest = hashlib.sha256()
-for c in components:
-    p = P9 / c
-    sha = p8_freeze.git_canonical_lf_sha256(p)
-    components_detail.append({"path": str(p), "strategy": "git_canonical_lf", "sha256": sha})
-    digest.update(sha.encode() + b"\0")
+for name in ("retriever_py", "query_extractor_py", "synonym_table", "ranking_config", "truncation_config", "upstream_inputs_sha"):
+    entry = manifest["entries"].get(name)
+    if entry is None:
+        sys.exit(f"FAIL: {name} not in manifest - fingerprint cannot be single-sourced")
+    components_detail.append({"logical_name": name, "path": entry["path"], "strategy": entry["strategy"], "sha256": entry["sha256"]})
+    digest.update(entry["sha256"].encode() + b"\0")
 out = {"schema_version": "1.0", "components": components_detail, "sha256": digest.hexdigest(),
-       "note": "Phase 9B enhanced 臂 treatment fingerprint 依据；每组件 path/strategy/SHA 可独立复算"}
+       "note": "Phase 9B enhanced 臂 treatment fingerprint 依据；SHA 单源取自 manifest（P0 修订：避免第二套口径）"}
 (P9 / "treatment_fingerprint.json").write_text(json.dumps(out, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
-print("treatment fingerprint written with per-component details")
+print("treatment fingerprint written (single-sourced from manifest)")
 ```
 
 **Step 3b: 一次性生成最终 CLOSURE.md（终态产物必须先于 closure 存在）**
@@ -1725,11 +1870,11 @@ def main() -> None:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if manifest.get("stage") != "sealed":
         sys.exit("FAIL: manifest not sealed")
-    base = manifest_path.parent  # 镜像模式下条目路径指向镜像目录同名文件
+    # 仓库根推导：manifest 位于 <root>/docs/phase9a/retrieval/manifest.json；镜像模式同样适用
+    base = manifest_path.parent.parent.parent.parent
     all_ok = True
     for name, entry in sorted(manifest["entries"].items()):
-        rel = entry["path"]
-        p = base / Path(rel).name if manifest_path.parent != P9 else REPO / rel
+        p = base / entry["path"]  # 保留仓库相对目录结构（P0：无扁平化碰撞）
         if not p.exists():
             print(f"  FAIL  {name}: missing")
             all_ok = False
