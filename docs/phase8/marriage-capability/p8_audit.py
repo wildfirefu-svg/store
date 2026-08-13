@@ -87,16 +87,38 @@ def _palace_star_names(case: dict) -> set[str]:
     return stars
 
 
-def _doctrine_injected(star_names: set[str], item: dict) -> tuple[bool, list[str]]:
-    """逐项检查注入区是否包含该 doctrine 项检索词。
+def _structured_facts(case: dict) -> set[str]:
+    """注入区中的全部结构化事实词（星曜名/宫位名/干支段/时辰/五行局/生肖）。
 
-    约束（NEEDS_FIX 二轮）：只承认以星曜名身份出现在 astro 注入区的检索词
-    （palace_stars 集合精确匹配）——避免题干/选项词、宫位名（如'子女宫'）、
-    单字地支（如'子'）被误判为知识已注入。
+    结构化事实出现 ≠ 学理知识注入：'文昌'星在盘、'子女'宫存在、'甲寅'柱、
+    '木三局'等只证明盘面数据已注入，不证明断诀/规则/解释文本已注入。
+    """
+    astro = (case.get("chart_input") or {}).get("official_astro") or {}
+    facts = set(_palace_star_names(case))
+    facts |= set((astro.get("palace_stars") or {}).keys())  # 宫位名
+    cd = str(astro.get("chinese_date") or "")
+    for seg in cd.split():
+        if seg:
+            facts.add(seg)  # 干支段（如"甲寅"）
+    for key in ("time", "five_elements_class", "zodiac"):
+        val = str(astro.get(key) or "")
+        if val:
+            facts.add(val)
+    return facts
+
+
+def _doctrine_injected(injected_context: str, facts: set[str], star_names: set[str], item: dict) -> tuple[bool, list[str], list[str]]:
+    """逐项检查 doctrine 注入，返回 (doctrine_injected, 学理命中词, chart_fact_present 星曜名)。
+
+    约束（NEEDS_FIX 三轮）：星曜名称出现（palace_stars 精确匹配）只记录为
+    chart_fact_present（结构化事实已注入），**不等于学理知识已注入**；同理排除
+    宫位名/干支/生肖等全部结构化事实词。doctrine_injected=true 仅当检索词以
+    非结构化文本身份出现在注入区（规则/解释/断诀文本）。
     """
     checkable = [t for t in _doctrine_terms(item) if len(t) >= 2]
-    found_terms = [t for t in checkable if t in star_names]
-    return bool(found_terms), found_terms
+    chart_facts = [t for t in checkable if t in star_names]
+    doctrine_hits = [t for t in checkable if t in injected_context and t not in facts]
+    return bool(doctrine_hits), doctrine_hits, chart_facts
 
 
 def _prompt_excerpt(text: str, term: str) -> str | None:
@@ -252,6 +274,7 @@ def run_audit(rk_path: Path, probe_path: Path, cases160_path: Path, out_path: Pa
         parts = split_prompt(prompt)
         injected_context = parts["injected_context"]
         star_names = _palace_star_names(case)
+        facts = _structured_facts(case)
         case_prompt_evidence = _prompt_evidence(prompt)
         items = []
         for item in row["items"]:
@@ -292,12 +315,13 @@ def run_audit(rk_path: Path, probe_path: Path, cases160_path: Path, out_path: Pa
                         }
                     )
                 classic_hits = sum(len(q["hits"]) for q in classic_queries)
-                # 逐项检查注入区是否含该 doctrine 项检索词（星曜名集合精确匹配）
-                prompt_has, found_terms = _doctrine_injected(star_names, item)
+                # 逐项检查注入区（星曜名/宫位名等结构化事实只记 chart_fact，学理注入需规则文本）
+                prompt_has, found_terms, chart_facts = _doctrine_injected(injected_context, facts, star_names, item)
                 cls = _classify_doctrine(item, kb_hits, classic_hits, prompt_has)
                 item_prompt_evidence = {
                     "required_term": " | ".join(_doctrine_terms(item)),
                     "found": prompt_has,
+                    "chart_fact_present": bool(chart_facts),
                     "excerpt": _prompt_excerpt(injected_context, found_terms[0]) if found_terms else None,
                 }
                 evidence = {

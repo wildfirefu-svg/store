@@ -846,23 +846,23 @@ class TestPromptRebuild:
                 if pe["found"]:
                     assert pe["excerpt"]
 
-    def test_model_not_utilized_reachable(self):
-        """'模型未利用'只允许来自注入区星曜名（palace_stars 精确匹配）。"""
+    def test_model_not_utilized_evidence_semantics(self):
+        """'模型未利用'若存在，证据必须来自非结构化学理文本（星曜名/宫位名不算）。"""
         rows = [
             json.loads(l)
             for l in (_P8_DIR / "knowledge_audit.jsonl").open(encoding="utf-8")
             if l.strip()
         ]
         cls = [i["gap_class"] for row in rows for i in row["items"]]
-        assert "模型未利用" in cls
-        # 所有模型未利用项的证据必须来自注入区星曜（found=True 且摘录不含题干标记）
+        # 模型未利用=0 是合法结果（官方 prompt 注入区无断诀文本）；
+        # 若存在，其证据不得来自结构化事实（found 需为 True 且摘录含断诀句式）
         for row in rows:
             for item in row["items"]:
                 if item["gap_class"] != "模型未利用":
                     continue
                 pe = item["prompt_evidence"]
                 assert pe["found"] is True, item["item_id"]
-                assert pe["excerpt"] and "问题：" not in pe["excerpt"], item["item_id"]
+                assert pe.get("chart_fact_present") is not True, item["item_id"]
 
     def test_question_terms_not_injected(self):
         """负向：题干/选项关键词（结婚/婚期）不得判'模型未利用'。"""
@@ -906,8 +906,8 @@ class TestPromptRebuild:
         assert item["gap_class"] == "检索不可见"  # '子女'命中'子女宫'（宫位名）不得判注入
         assert item["prompt_evidence"]["found"] is False
 
-    def test_star_name_injection(self):
-        """正向：astro 注入区存在星曜名（文昌）才允许判'模型未利用'。"""
+    def test_star_fact_not_doctrine_injection(self):
+        """负向：星曜名出现（文昌星在盘）只记 chart_fact_present，不判'模型未利用'。"""
         rows = {
             r["case_id"]: r
             for r in (
@@ -917,8 +917,10 @@ class TestPromptRebuild:
             )
         }
         item = next(i for i in rows["mingli_ftb_0044"]["items"] if i["item_id"] == "mingli_ftb_0044#k4")
-        assert item["gap_class"] == "模型未利用"  # 文昌星在 palace_stars，知识已注入但模型答错
-        assert item["prompt_evidence"]["found"] is True
+        # 盘面含文昌星（结构化事实），但文昌断诀/含义未注入 → 检索不可见
+        assert item["gap_class"] == "检索不可见"
+        assert item["prompt_evidence"]["found"] is False
+        assert item["prompt_evidence"]["chart_fact_present"] is True
 
     def test_doctrine_evidence_query_ids(self):
         """doctrine evidence 落盘 query_id + classic 定位/摘录。"""
