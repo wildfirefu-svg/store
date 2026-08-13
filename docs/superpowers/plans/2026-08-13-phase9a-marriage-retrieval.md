@@ -1,96 +1,114 @@
-# Phase 9A 婚姻知识检索可行性 Implementation Plan
+# Phase 9A 婚姻知识检索可行性 Implementation Plan（v2）
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 验证婚姻知识检索能否稳定复现与冻结 silver 判据一致的检索结果，冻结可迁移的 retriever 与配置，产出 `SILVER_RETRIEVAL_READY / SILVER_RETRIEVAL_NOT_READY` 之一终态。
+**Goal:** 验证婚姻知识检索能否稳定复现与冻结 silver 判据一致的检索结果，冻结可迁移的 retriever 与配置，产出 `SILVER_RETRIEVAL_READY / SILVER_RETRIEVAL_NOT_READY / HUMAN_QC_REQUIRED` 之一终态。
 
-**Architecture:** 纯本地零 API；复用 Phase 8 冻结输入（kb_snapshot.db、classic_texts 冻结版、required_knowledge、knowledge_audit 的 candidate_pool）。S1–S5 候选策略在冻结配置上执行 → 并集 pooling（每策略每 (item,query) top-10）→ 隐去来源的 silver 规则盲标 → QC 一致性审计（不改标签，fail-closed）→ 一次性指标计算与双终态判定。冻结纪律沿用 Phase 8 的 SHA 四策略 + 原子 manifest。
+**Architecture:** 纯本地零 API；复用 Phase 8 冻结输入（kb_snapshot.db、classic_texts 冻结版、required_knowledge、knowledge_audit 的 candidate_pool）。执行顺序：**基线与输入 SHA → 冻结 query/全部策略配置/QC 参数/初始 manifest → 实现并全量双跑 S1–S5 → 生成 pair pool 与 summary → silver 标注 → pool 后冻结 QC 样本 → 暂停等待完整人工 QC → QC fail-closed → 真实 bundle + 每策略/union 一次性评测 → 原子 provenance 对账与关闭报告**。每个策略独立评估 + union 评估；正式评测产物只生成一次。
 
 **Tech Stack:** Python 3.11+、sqlite3（只读 URI）、git object 读取（classic_texts 冻结版）、pytest、ruff（E9/F821 基线）。
 
 **设计依据：** `docs/superpowers/specs/2026-08-13-phase9a-marriage-retrieval-design.md` v1.3.3（commit `c29862f`）。
-**前置冻结：** Phase 8 CLOSURE（`docs/phase8/CLOSURE.md`，HEAD `0f74de2`）；`p8_reconcile.py` 必须 exit 0。
-
-**命令约定：** 单行、正斜杠路径、PowerShell 与 Git Bash 双兼容；所有 commit 用显式 pathspec；pre-commit stash 冲突可原样重试一次，禁止 `--no-verify`。
-**工作区警告：** 蒸馏线并行 churn 仍存在；只允许动本计划列出的文件。
-
----
-
-## 输入基线（Task 0 复核）
-
-| 输入 | 路径 | 用途 |
-|---|---|---|
-| KB 快照（只读） | `docs/phase8/marriage-capability/kb_snapshot.db` | S1/S2/S3/S4 检索源 |
-| classic_texts 冻结版 | `docs/phase8/marriage-capability/classic_texts_freeze.json` + git object | S5 检索源 |
-| 知识项清单 | `docs/phase8/marriage-capability/required_knowledge.jsonl` | 112 项检索不可见 doctrine 项（`knowledge_audit.jsonl` 的 `gap_class=检索不可见` 过滤） |
-| candidate_pool 证据 | `docs/phase8/marriage-capability/knowledge_audit.jsonl` | 仅作 candidate_pool（11557 含重复 / 11411 唯一 item-document pair），不作 gold |
-| FTS 行为基线 | `docs/phase8/marriage-capability/fts_behavior_probe.json` | 漏检词对照（红鸾/婚姻/姻缘 + 单字探针鸾/缘） |
-| 冻结工具 | `docs/phase8/marriage-capability/p8_freeze.py` | atomic_add 复用 |
+**前置冻结：** Phase 8 CLOSURE（HEAD `0f74de2`）；`p8_reconcile.py` 必须 exit 0。
+**命令约定：** PowerShell（本仓库主要 shell）；所有脚本的路径推导基于 `__file__`，可在任意工作目录（含 worktree）执行；commit 用显式 pathspec。
+**提交纪律：** 每个 commit 前先 `git status --porcelain` + `git diff --cached --name-only` 核对暂存清单，防止卷入并行蒸馏线 churn；pre-commit stash 冲突原样重试一次，禁止 `--no-verify`。
 
 ---
 
-## Task 0: 基线验证与输入复核
+## Task 0: 基线验证与输入 SHA
 
 **Files:**
 - 验证（无新文件）
-- 记录：`.tmp/phase9a-baseline.txt`
+- Create: `docs/phase9a/retrieval/upstream_inputs_sha.json`
 
 - [ ] **Step 1: 复核 Phase 8 对账与输入存在性**
 
 Run:
 ```powershell
 .venv/Scripts/python.exe docs/phase8/marriage-capability/p8_reconcile.py
-```
-Expected: exit 0，无 FAIL（7 节全 ok）。
-
-```powershell
 Test-Path docs/phase8/marriage-capability/kb_snapshot.db
 Test-Path docs/phase8/marriage-capability/classic_texts_freeze.json
 Test-Path docs/phase8/marriage-capability/required_knowledge.jsonl
 Test-Path docs/phase8/marriage-capability/knowledge_audit.jsonl
 ```
-Expected: 全部 True。
+Expected: exit 0 无 FAIL；全部 True。
 
-- [ ] **Step 2: 复核分母数字（53/112/198/11411）**
+- [ ] **Step 2: 断言全部分母（含 11,411 pair）**
 
-Run（一次性脚本写 `.tmp/phase9a_denominator.py` 并执行）：
+写 `.tmp/phase9a_denominator.py` 并执行：
 ```python
 import json
 from pathlib import Path
-qset = json.loads(Path("docs/phase8/marriage-capability/kb_query_set.json").read_text(encoding="utf-8"))
-audit = [json.loads(l) for l in Path("docs/phase8/marriage-capability/knowledge_audit.jsonl").open(encoding="utf-8") if l.strip()]
-rk = {r["case_id"]: r for r in (json.loads(l) for l in Path("docs/phase8/marriage-capability/required_knowledge.jsonl").open(encoding="utf-8") if l.strip())}
+P8 = Path("docs/phase8/marriage-capability")
+qset = json.loads((P8 / "kb_query_set.json").read_text(encoding="utf-8"))
+audit = [json.loads(l) for l in (P8 / "knowledge_audit.jsonl").open(encoding="utf-8") if l.strip()]
+rk = {r["case_id"]: r for r in (json.loads(l) for l in (P8 / "required_knowledge.jsonl").open(encoding="utf-8") if l.strip())}
 inv = [(r["case_id"], i["item_id"]) for r in audit for i in r["items"] if i["gap_class"] == "检索不可见"]
-n_qs = 0
-for cid, iid in inv:
-    item = next(i for i in rk[cid]["items"] if i["item_id"] == iid)
-    n_qs += len(item["query_specs"])
-assert len(qset["queries"]) == 53 and len(inv) == 112 and n_qs == 198
-print("denominators ok: 53/112/198")
+n_qs = sum(len(next(i for i in rk[cid]["items"] if i["item_id"] == iid)["query_specs"]) for cid, iid in inv)
+pairs = set()
+for r in audit:
+    for i in r["items"]:
+        if i["gap_class"] != "检索不可见":
+            continue
+        for q in i["evidence"]["kb_queries"]:
+            pairs.update((i["item_id"], q["entrypoint"], h) for h in q["hit_ids"])
+        for c in i["evidence"]["classic_queries"]:
+            pairs.update((i["item_id"], h.get("file"), h.get("line"), h.get("record_id")) for h in c["hits"])
+assert len(qset["queries"]) == 53 and len(inv) == 112 and n_qs == 198 and len(pairs) == 11411, (len(qset["queries"]), len(inv), n_qs, len(pairs))
+print("denominators ok: 53/112/198/11411")
 ```
-Expected: `denominators ok: 53/112/198`；结果尾部记入 `.tmp/phase9a-baseline.txt`。
+Expected: `denominators ok: 53/112/198/11411`。
 
-- [ ] **Step 3: 记录基线**
+- [ ] **Step 3: 落盘上游输入 SHA（基线，供 Task 8 对账）**
 
-Run:
+写 `.tmp/phase9a_upstream_sha.py` 并执行：
+```python
+import hashlib, json
+from pathlib import Path
+P8 = Path("docs/phase8/marriage-capability")
+def jl_sha(p):
+    lines = [l for l in p.read_text(encoding="utf-8").splitlines() if l.strip()]
+    return hashlib.sha256("".join(json.dumps(json.loads(l), sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n" for l in lines).encode("utf-8")).hexdigest()
+out = {
+    "schema_version": "1.0",
+    "kb_snapshot_db": hashlib.sha256((P8 / "kb_snapshot.db").read_bytes()).hexdigest(),
+    "classic_texts_freeze_json": hashlib.sha256((P8 / "classic_texts_freeze.json").read_bytes()).hexdigest(),
+    "required_knowledge_jsonl": jl_sha(P8 / "required_knowledge.jsonl"),
+    "knowledge_audit_jsonl": jl_sha(P8 / "knowledge_audit.jsonl"),
+    "kb_query_set_json": hashlib.sha256((P8 / "kb_query_set.json").read_bytes()).hexdigest(),
+}
+Path("docs/phase9a/retrieval/upstream_inputs_sha.json").write_text(json.dumps(out, sort_keys=True, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
+print("upstream inputs sha written")
+```
+Expected: `upstream inputs sha written`。
+
+- [ ] **Step 4: Commit**
+
 ```powershell
-git log --oneline -1 | Out-File -Encoding utf8 .tmp/phase9a-baseline.txt -Append
+git add -- docs/phase9a/retrieval/upstream_inputs_sha.json
+git diff --cached --name-only
+git commit -m "feat(phase9a): freeze upstream input SHA baseline"
 ```
-Expected: HEAD = `c29862f`（或其后继）。
 
 ---
 
-## Task 1: 分母冻结 —— item_query_map.json + query_extractor.py
+## Task 1: 冻结 query 集、全部策略配置、QC 参数与初始 manifest
 
 **Files:**
-- Create: `docs/phase9a/retrieval/query_extractor.py`
-- Create: `docs/phase9a/retrieval/item_query_map.json`
+- Create: `docs/phase9a/retrieval/query_set_frozen.json`
+- Create: `docs/phase9a/retrieval/synonym_table.json`
+- Create: `docs/phase9a/retrieval/ranking_config.json`
+- Create: `docs/phase9a/retrieval/truncation_config.json`
+- Create: `docs/phase9a/retrieval/qc_config.json`
+- Create: `docs/phase9a/retrieval/manifest.json`（原子冻结，策略执行前）
 - Test: `tests/test_phase9a_retrieval.py`
 
 - [ ] **Step 1: 写失败测试**
 
-在 `tests/test_phase9a_retrieval.py` 追加（文件顶部统一 helper）：
+`tests/test_phase9a_retrieval.py`（文件顶部 helper）：
 ```python
+import hashlib
+import importlib.util
 import json
 import subprocess
 import sys
@@ -105,39 +123,119 @@ def _load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-class TestItemQueryMap:
-    def test_112_items_198_refs(self):
-        m = _load_json(P9 / "item_query_map.json")
-        assert len(m["items"]) == 112
-        assert sum(len(i["queries"]) for i in m["items"]) == 198
-        assert m["denominator"]["aggregate_queries"] == 53
+def _load_module(name: str, rel: str):
+    spec = importlib.util.spec_from_file_location(name, REPO / rel)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
 
-    def test_query_id_traceability(self):
-        m = _load_json(P9 / "item_query_map.json")
-        rk_qids = set()
-        rows = [json.loads(l) for l in (P8 / "required_knowledge.jsonl").open(encoding="utf-8") if l.strip()]
-        for row in rows:
-            for item in row["items"]:
-                for qs in item["query_specs"]:
-                    rk_qids.add(qs["query_id"])
-        for item in m["items"]:
-            for q in item["queries"]:
-                assert q["query_id"] in rk_qids
+
+class TestFrozenConfigs:
+    def test_query_set_53_queries(self):
+        qs = _load_json(P9 / "query_set_frozen.json")
+        assert len(qs["queries"]) == 53
+        for q in qs["queries"]:
+            assert {"query_id", "entrypoint", "args", "top_n"} <= set(q)
+
+    def test_qc_params_frozen(self):
+        cfg = _load_json(P9 / "qc_config.json")
+        assert cfg["seed"] and cfg["sample_ratio"] == 0.1
+        assert cfg["max_disagreement_rate"] == 0.1
+        assert cfg["sampling"] == "stratified_by_item"  # 分层抽样，非平面 random.sample
+
+    def test_truncation_numeric(self):
+        cfg = _load_json(P9 / "truncation_config.json")
+        assert cfg["N_chars_per_doc"] == 200 and cfg["M_docs_per_item"] == 5 and cfg["K_chars_per_question"] == 1200
+
+    def test_manifest_frozen_before_strategy(self):
+        m = _load_json(P9 / "manifest.json")
+        assert m["stage"] == "config_frozen"
+        for name in ("query_set_frozen", "synonym_table", "ranking_config", "truncation_config", "qc_config", "upstream_inputs_sha"):
+            assert name in m["entries"]
 ```
 
 - [ ] **Step 2: 运行确认失败**
 
-Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestItemQueryMap -q`
-Expected: FAIL（item_query_map.json 不存在）。
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestFrozenConfigs -q`
+Expected: FAIL。
 
-- [ ] **Step 3: 实现 query_extractor.py**
+- [ ] **Step 3: 生成冻结配置（一次性脚本）**
 
+写 `.tmp/phase9a_freeze_configs.py` 并执行：
+```python
+import json, sys
+from pathlib import Path
+sys.path.insert(0, "docs/phase8/marriage-capability")
+import p8_freeze
+REPO = Path(".").resolve()
+P9 = REPO / "docs" / "phase9a" / "retrieval"
+P9.mkdir(parents=True, exist_ok=True)
+qset = json.loads((REPO / "docs/phase8/marriage-capability/kb_query_set.json").read_text(encoding="utf-8"))
+json.dump({"schema_version": "1.0", "source": "kb_query_set.json (Phase 8 冻结)", "queries": qset["queries"]},
+          (P9 / "query_set_frozen.json").open("w", encoding="utf-8", newline="\n"), ensure_ascii=False, indent=1)
+json.dump({"schema_version": "1.0", "synonyms": {"结婚": ["婚期", "成婚", "姻缘", "婚恋"], "婚姻": ["婚配", "姻缘", "婚恋"], "红鸾": ["天喜"]}},
+          (P9 / "synonym_table.json").open("w", encoding="utf-8", newline="\n"), ensure_ascii=False, indent=1)
+json.dump({"schema_version": "1.0", "sort_key": ["-score", "source_priority", "category", "stable_document_id"],
+           "source_priority": {"gejue": 1, "shensha": 2, "shishen_combos": 2, "nayin": 2, "bingyao": 2, "xiangyi": 2, "classic": 3},
+           "pooling_depth_per_strategy_per_query": 10,
+           "strategy_selection_rule": "union of S1-S5; per-strategy metrics reported separately; final bundle uses frozen rule: highest macro weighted_recall among strategies with bundle_noise<=0.20, ties by lowest noise"},
+          (P9 / "ranking_config.json").open("w", encoding="utf-8", newline="\n"), ensure_ascii=False, indent=1)
+json.dump({"schema_version": "1.0", "N_chars_per_doc": 200, "M_docs_per_item": 5, "K_chars_per_question": 1200,
+           "token_estimate": "中文字符 1.5 字符/token", "note": "N=P90 上界；M=Phase8 top_n 对齐；K=800 token 预算"},
+          (P9 / "truncation_config.json").open("w", encoding="utf-8", newline="\n"), ensure_ascii=False, indent=1)
+json.dump({"schema_version": "1.0", "seed": 20260813, "sampling": "stratified_by_item", "sample_ratio": 0.1,
+           "max_disagreement_rate": 0.1, "note": "执行前冻结；样本列表在 pool 生成后冻结；QC 只审计不改标签；分歧超门 → SILVER_RETRIEVAL_NOT_READY"},
+          (P9 / "qc_config.json").open("w", encoding="utf-8", newline="\n"), ensure_ascii=False, indent=1)
+print("configs written")
+```
+
+- [ ] **Step 4: 原子冻结初始 manifest（使用 p8_freeze.atomic_add）**
+
+写 `.tmp/phase9a_manifest_init.py` 并执行：
+```python
+import json, sys
+from pathlib import Path
+sys.path.insert(0, "docs/phase8/marriage-capability")
+import p8_freeze
+P8 = Path("docs/phase8/marriage-capability")
+P9 = Path("docs/phase9a/retrieval")
+m = P9 / "manifest.json"
+if m.exists():
+    print("manifest already exists; refresh entries")
+    manifest = json.loads(m.read_text(encoding="utf-8"))
+else:
+    manifest = {"schema_version": "1.0", "stage": "config_frozen", "entries": {}}
+targets = {
+    "upstream_inputs_sha": (P9 / "upstream_inputs_sha.json", "json_canonical"),
+    "query_set_frozen": (P9 / "query_set_frozen.json", "json_canonical"),
+    "synonym_table": (P9 / "synonym_table.json", "json_canonical"),
+    "ranking_config": (P9 / "ranking_config.json", "json_canonical"),
+    "truncation_config": (P9 / "truncation_config.json", "json_canonical"),
+    "qc_config": (P9 / "qc_config.json", "json_canonical"),
+}
+def sha_of(p, strategy):
+    if strategy == "json_canonical":
+        obj = json.loads(p.read_text(encoding="utf-8"))
+        return hashlib256(json.dumps(obj, sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n")
+    raise ValueError(strategy)
+import hashlib
+hashlib256 = lambda s: hashlib.sha256(s.encode("utf-8")).hexdigest()
+for name, (p, strat) in targets.items():
+    manifest["entries"][name] = {"path": str(p.relative_to(REPO := Path(".").resolve())), "strategy": strat, "sha256": sha_of(p, strat)}
+(m).write_text(json.dumps(manifest, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
+print("manifest frozen:", len(manifest["entries"]), "entries")
+```
+（一次性脚本可在 .tmp 中执行；正式 manifest 落盘 `docs/phase9a/retrieval/manifest.json`。）
+
+- [ ] **Step 5: 生成 item_query_map.json（分母映射，Task 4 依赖）**
+
+Create: `docs/phase9a/retrieval/query_extractor.py`
 ```python
 """Phase 9A 分母冻结：从 required_knowledge 提取 112 项检索不可见项的 item→query 映射。"""
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent.parent
@@ -155,30 +253,19 @@ def main() -> None:
             if item["gap_class"] != "检索不可见":
                 continue
             src = next(i for i in rk[row["case_id"]]["items"] if i["item_id"] == item["item_id"])
-            items.append({
-                "item_id": item["item_id"],
-                "case_id": row["case_id"],
-                "queries": [
-                    {"query_id": qs["query_id"], "entrypoint": qs["entrypoint"], "args": qs["args"], "top_n": qs["top_n"]}
-                    for qs in src["query_specs"]
-                ],
-            })
+            items.append({"item_id": item["item_id"], "case_id": row["case_id"],
+                          "queries": [{"query_id": qs["query_id"], "entrypoint": qs["entrypoint"],
+                                       "args": qs["args"], "top_n": qs["top_n"]} for qs in src["query_specs"]]})
     items.sort(key=lambda i: i["item_id"])
-    payload = {
-        "schema_version": "1.0",
-        "source": "docs/phase8/marriage-capability/required_knowledge.jsonl + knowledge_audit.jsonl",
-        "denominator": {
-            "aggregate_queries": len(qset["queries"]),
-            "items": len(items),
-            "item_query_refs": sum(len(i["queries"]) for i in items),
-        },
-        "items": items,
-    }
+    payload = {"schema_version": "1.0",
+               "source": "docs/phase8/marriage-capability/required_knowledge.jsonl + knowledge_audit.jsonl",
+               "denominator": {"aggregate_queries": len(qset["queries"]), "items": len(items),
+                                "item_query_refs": sum(len(i["queries"]) for i in items)},
+               "items": items}
     P9.mkdir(parents=True, exist_ok=True)
     (P9 / "item_query_map.json").write_text(
         json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n",
-        encoding="utf-8", newline="\n",
-    )
+        encoding="utf-8", newline="\n")
     print(f"item_query_map written: {payload['denominator']}")
 
 
@@ -186,25 +273,25 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: 运行生成 + 测试转绿**
+Run: `.venv/Scripts/python.exe docs/phase9a/retrieval/query_extractor.py`
+Expected: `item_query_map written: {'aggregate_queries': 53, 'items': 112, 'item_query_refs': 198}`。
 
-Run: `.venv/Scripts/python.exe docs/phase9a/retrieval/query_extractor.py`；`.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestItemQueryMap -q`
-Expected: `item_query_map written: {'aggregate_queries': 53, 'items': 112, 'item_query_refs': 198}`；PASS。
+- [ ] **Step 6: 测试转绿 + Commit**
 
-- [ ] **Step 5: Commit**
-
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestFrozenConfigs -q`
+Expected: PASS。
 ```powershell
-git add -- docs/phase9a/retrieval/query_extractor.py docs/phase9a/retrieval/item_query_map.json tests/test_phase9a_retrieval.py
-git commit -m "feat(phase9a): freeze item-query denominator map (53/112/198)"
+git add -- docs/phase9a/retrieval/query_set_frozen.json docs/phase9a/retrieval/synonym_table.json docs/phase9a/retrieval/ranking_config.json docs/phase9a/retrieval/truncation_config.json docs/phase9a/retrieval/qc_config.json docs/phase9a/retrieval/query_extractor.py docs/phase9a/retrieval/item_query_map.json docs/phase9a/retrieval/manifest.json tests/test_phase9a_retrieval.py
+git diff --cached --name-only
+git commit -m "feat(phase9a): freeze query set, strategy configs, QC params, item-query map and initial manifest"
 ```
 
 ---
 
-## Task 2: retriever 核心 —— canonical key、排序键、S1/S5
+## Task 2: retriever 实现（canonical key、排序、S1–S5，含 .json/.jsonl 分支与 fail-closed）
 
 **Files:**
 - Create: `docs/phase9a/retrieval/retriever.py`
-- Create: `docs/phase9a/retrieval/source_snapshot_sha.json`
 - Test: `tests/test_phase9a_retrieval.py`
 
 - [ ] **Step 1: 写失败测试**
@@ -220,31 +307,38 @@ class TestRetrieverCore:
         r = _load_module("retriever", "docs/phase9a/retrieval/retriever.py")
         a = r.sort_key(score=3.0, source_priority=1, category="婚姻", doc_key="kb:gejue:a")
         b = r.sort_key(score=2.0, source_priority=1, category="婚姻", doc_key="kb:gejue:b")
-        assert a < b  # (-score, source_priority, category, stable_document_id)
+        assert a < b
 
-    def test_s1_like_hits_from_snapshot(self):
+    def test_s5_parses_json_array(self):
         r = _load_module("retriever", "docs/phase9a/retrieval/retriever.py")
-        hits = r.strategy_s1("search_gejue", {"query": "婚姻", "category": "婚姻"}, top_n=5)
-        assert hits and all(h["canonical_key"].startswith("kb:gejue:") for h in hits)
-        assert len(hits) <= 5
-```
+        hits = r.strategy_s5("婚姻", top_n=5)
+        assert isinstance(hits, list)  # .json 数组解析成功即不崩溃（P0-5 修复验证）
 
-`_load_module` 为测试文件顶部 helper（复用 Phase 8 测试同款 importlib 加载）。
+    def test_s5_git_show_fail_closed(self):
+        r = _load_module("retriever", "docs/phase9a/retrieval/retriever.py")
+        try:
+            r._load_frozen_file("docs/phase8/marriage-capability/nonexistent.json", "deadbeef")
+            raised = False
+        except SystemExit:
+            raised = True
+        assert raised  # git show 失败必须 fail-closed
+```
 
 - [ ] **Step 2: 运行确认失败**
 
 Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestRetrieverCore -q`
-Expected: FAIL（retriever 模块不存在）。
+Expected: FAIL。
 
-- [ ] **Step 3: 实现 retriever.py（核心：canonical key、排序、S1、S5）**
+- [ ] **Step 3: 实现 retriever.py**
 
 ```python
-"""Phase 9A 可迁移检索器（零 API）。S1–S5 候选策略 + canonical key + 冻结排序键。"""
+"""Phase 9A 可迁移检索器（零 API）。S1–S5 候选策略 + canonical key + 冻结排序键 + fail-closed。"""
 from __future__ import annotations
 
 import json
 import sqlite3
 import subprocess
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent.parent
@@ -274,20 +368,38 @@ def _connect_snapshot():
     return conn
 
 
+def _load_frozen_file(path: str, commit: str) -> bytes:
+    """git show 冻结对象；返回码/输出非零即 fail-closed。"""
+    proc = subprocess.run(["git", "-C", str(REPO), "show", f"{commit}:{path}"], capture_output=True)
+    if proc.returncode != 0 or not proc.stdout:
+        sys.exit(f"FAIL: git show {commit}:{path} rc={proc.returncode}")
+    return proc.stdout
+
+
+def _parse_frozen(rel_path: str, commit: str) -> list[dict]:
+    raw = _load_frozen_file(rel_path, commit)
+    text = raw.decode("utf-8")
+    if rel_path.endswith(".jsonl"):
+        return [json.loads(l) for l in text.splitlines() if l.strip()]
+    obj = json.loads(text)
+    return obj if isinstance(obj, list) else [obj]  # .json 数组 / 单对象兼容
+
+
+def _kb_text(row: dict) -> str:
+    """KB 统一正文提取器：拼接所有非空字段（shensha/nayin 等无 text 字段的表也覆盖）。"""
+    return " ".join(str(v) for v in row.values() if v is not None and str(v) != "")
+
+
 def strategy_s1(entrypoint: str, args: dict, top_n: int = 10) -> list[dict]:
-    """S1：带 category 的 LIKE 子串匹配（bazi_kb.py 语义）。返回 canonical key 命中列表。"""
     table = ENTRY_TABLE[entrypoint]
     conn = _connect_snapshot()
     try:
         if entrypoint == "search_gejue":
             rows = conn.execute(
                 f"SELECT * FROM {table} WHERE category=? AND (text LIKE ? OR keywords LIKE ?) LIMIT ?",
-                (args["category"], f"%{args['query']}%", f"%{args['query']}%", top_n),
-            ).fetchall()
+                (args["category"], f"%{args['query']}%", f"%{args['query']}%", top_n)).fetchall()
         elif entrypoint == "search_shishen_combo":
-            rows = conn.execute(
-                f"SELECT * FROM {table} WHERE combo LIKE ? LIMIT ?", (f"%{args['combo_name']}%", top_n)
-            ).fetchall()
+            rows = conn.execute(f"SELECT * FROM {table} WHERE combo LIKE ? LIMIT ?", (f"%{args['combo_name']}%", top_n)).fetchall()
         elif entrypoint == "search_shensha":
             rows = conn.execute(f"SELECT * FROM {table} WHERE name LIKE ? LIMIT ?", (f"%{args['name']}%", top_n)).fetchall()
         elif entrypoint == "search_nayin":
@@ -295,173 +407,42 @@ def strategy_s1(entrypoint: str, args: dict, top_n: int = 10) -> list[dict]:
         elif entrypoint == "search_bingyao":
             q = f"%{args['query']}%"
             rows = conn.execute(f"SELECT * FROM {table} WHERE disease LIKE ? OR symptom LIKE ? LIMIT ?", (q, q, top_n)).fetchall()
-        else:  # search_xiangyi
+        else:
             rows = conn.execute(f"SELECT * FROM {table} WHERE gan_or_zhi LIKE ? LIMIT ?", (f"%{args['gan_or_zhi']}%", top_n)).fetchall()
     finally:
         conn.close()
-    out = []
-    for row in rows:
-        d = dict(row)
-        out.append({
-            "canonical_key": canonical_key("kb", table, d["id"]),
-            "category": str(d.get("category") or ""),
-            "score": 1.0,
-            "source_priority": SOURCE_PRIORITY[table],
-        })
-    return out
+    return [{"canonical_key": canonical_key("kb", table, d["id"]), "category": str(d.get("category") or ""),
+             "score": 1.0, "source_priority": SOURCE_PRIORITY[table]} for d in (dict(r) for r in rows)]
 
 
-def strategy_s5(term: str, top_n: int = 10) -> list[dict]:
-    """S5：classic_texts 冻结版检索（git object 语义，复用 classic_texts_search.search_file 规则）。"""
-    proc = subprocess.run(
-        ["git", "-C", str(REPO), "show", "HEAD:docs/phase8/marriage-capability/classic_texts_freeze.json"],
-        capture_output=True, text=True, encoding="utf-8",
-    )
-    freeze = json.loads(proc.stdout)
-    hits = []
-    for f in freeze["files"]:
-        if "quarantine" in f["path"]:
-            continue  # quarantine 禁止入 bundle
-        raw = subprocess.run(
-            ["git", "-C", str(REPO), "show", f"{f['commit']}:{f['path']}"], capture_output=True
-        ).stdout
-        tmp = P9 / ".ct_tmp" / f["path"].split("/")[-1]
-        tmp.parent.mkdir(parents=True, exist_ok=True)
-        tmp.write_bytes(raw)
-        try:
-            records = [json.loads(l) for l in tmp.read_text(encoding="utf-8").splitlines() if l.strip()]
-            for idx, rec in enumerate(records):
-                text = " ".join(str(rec.get(k) or "") for k in ("rule", "original_text", "subject", "condition", "category"))
-                if term in "".join(text.split()):
-                    hits.append({
-                        "canonical_key": canonical_key("classic", f["path"], idx + 1, rec.get("id", "?")),
-                        "category": str(rec.get("category") or ""),
-                        "score": 1.0,
-                        "source_priority": SOURCE_PRIORITY["classic"],
-                    })
-        finally:
-            tmp.unlink()
-    try:
-        (P9 / ".ct_tmp").rmdir()
-    except OSError:
-        pass
-    return sorted(hits, key=lambda h: sort_key(h["score"], h["source_priority"], h["category"], h["canonical_key"]))[:top_n]
-```
-
-- [ ] **Step 4: 运行测试转绿**
-
-Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestRetrieverCore -q`
-Expected: PASS。
-
-- [ ] **Step 5: 生成 source_snapshot_sha.json 并提交**
-
-写入 `source_snapshot_sha.json`（引用 Phase 8 冻结输入 SHA，从 manifest 读取）：
-```python
-import json, sys
-sys.path.insert(0, "docs/phase8/marriage-capability")
-import p8_freeze
-from pathlib import Path
-m = json.loads(Path("docs/phase8/marriage-capability/phase8_freeze_manifest.json").read_text(encoding="utf-8"))
-entries = {e["path"]: e for e in m["entries"]}
-out = {
-    "schema_version": "1.0",
-    "kb_snapshot_db": entries["docs/phase8/marriage-capability/kb_snapshot.db"],
-    "classic_texts_freeze": entries["docs/phase8/marriage-capability/classic_texts_freeze.json"],
-    "required_knowledge": entries["docs/phase8/marriage-capability/required_knowledge.jsonl"],
-    "knowledge_audit": entries["docs/phase8/marriage-capability/knowledge_audit.jsonl"],
-}
-Path("docs/phase9a/retrieval/source_snapshot_sha.json").write_text(json.dumps(out, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
-```
-（以一次性脚本执行，产物落盘。）
-
-```powershell
-git add -- docs/phase9a/retrieval/retriever.py docs/phase9a/retrieval/source_snapshot_sha.json tests/test_phase9a_retrieval.py
-git commit -m "feat(phase9a): retriever core - canonical keys, sort key, S1/S5 strategies"
-```
-
----
-
-## Task 3: S2/S3/S4 策略 + 并集 pooling + 配置冻结
-
-**Files:**
-- Modify: `docs/phase9a/retrieval/retriever.py`
-- Create: `docs/phase9a/retrieval/synonym_table.json`
-- Create: `docs/phase9a/retrieval/ranking_config.json`
-- Create: `docs/phase9a/retrieval/truncation_config.json`
-- Test: `tests/test_phase9a_retrieval.py`
-
-- [ ] **Step 1: 写失败测试**
-
-```python
-class TestStrategiesS234:
-    def test_s2_falsifiable_no_crash(self):
-        r = _load_module("retriever", "docs/phase9a/retrieval/retriever.py")
-        hits = r.strategy_s2("婚姻")  # 待证伪策略：允许返回空，但不得抛异常
-        assert isinstance(hits, list)
-
-    def test_s3_bigram_hits(self):
-        r = _load_module("retriever", "docs/phase9a/retrieval/retriever.py")
-        hits = r.strategy_s3("红鸾")
-        assert isinstance(hits, list) and all(h["canonical_key"].startswith("kb:") for h in hits)
-
-    def test_s4_synonym_expansion(self):
-        r = _load_module("retriever", "docs/phase9a/retrieval/retriever.py")
-        syn = _load_json(P9 / "synonym_table.json")
-        assert "结婚" in syn["synonyms"]
-        hits = r.strategy_s4("结婚")
-        assert isinstance(hits, list)
-
-    def test_pool_union_dedup(self):
-        r = _load_module("retriever", "docs/phase9a/retrieval/retriever.py")
-        pool = r.pool_candidates({"query_id": "t#q1", "entrypoint": "search_gejue", "args": {"query": "婚姻", "category": "婚姻"}, "top_n": 5})
-        keys = [h["canonical_key"] for h in pool]
-        assert len(keys) == len(set(keys))
-
-    def test_double_run_byte_identical(self):
-        """固定 query 双跑字节一致门：两次执行命中序列完全相同。"""
-        r = _load_module("retriever", "docs/phase9a/retrieval/retriever.py")
-        q = {"query_id": "t#q1", "entrypoint": "search_gejue", "args": {"query": "婚姻", "category": "婚姻"}, "top_n": 5}
-        first = [(h["canonical_key"], h["score"], h["strategy"]) for h in r.pool_candidates(q)]
-        second = [(h["canonical_key"], h["score"], h["strategy"]) for h in r.pool_candidates(q)]
-        assert first == second
-```
-
-- [ ] **Step 2: 运行确认失败**
-
-Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestStrategiesS234 -q`
-Expected: FAIL（strategy_s2/s3/s4/pool_candidates 不存在）。
-
-- [ ] **Step 3: 实现 S2/S3/S4 与 pooling（追加到 retriever.py）**
-
-```python
 def strategy_s2(term: str, top_n: int = 10) -> list[dict]:
     """S2：FTS5 单字展开（待证伪——unicode61 连续汉字为整体 token，单字 MATCH 通常不命中）。"""
     conn = _connect_snapshot()
     try:
         rows = conn.execute(
             "SELECT g.* FROM gejue g INNER JOIN (SELECT rowid, rank FROM gejue_fts WHERE gejue_fts MATCH ? ORDER BY rank LIMIT ?) f ON g.rowid = f.rowid",
-            (term, top_n),
-        ).fetchall()
+            (term, top_n)).fetchall()
     except sqlite3.OperationalError:
         rows = []
     finally:
         conn.close()
-    return [{"canonical_key": canonical_key("kb", "gejue", r["id"]), "category": str(r["category"] or ""), "score": 1.0, "source_priority": SOURCE_PRIORITY["gejue"]} for r in rows]
+    return [{"canonical_key": canonical_key("kb", "gejue", d["id"]), "category": str(d.get("category") or ""),
+             "score": 1.0, "source_priority": SOURCE_PRIORITY["gejue"]} for d in (dict(r) for r in rows)]
 
 
 def strategy_s3(term: str, top_n: int = 10) -> list[dict]:
-    """S3：双字滑窗——query 与条文 rule 的双字交集（bigram 命中数即 score）。"""
+    """S3：双字滑窗——query 与条文文本的双字交集（bigram 命中数即 score）。"""
     grams = {term[i:i + 2] for i in range(max(0, len(term) - 1))}
     conn = _connect_snapshot()
-    rows = conn.execute("SELECT * FROM gejue").fetchall()
+    rows = [dict(r) for r in conn.execute("SELECT * FROM gejue").fetchall()]
     conn.close()
     scored = []
-    for row in rows:
-        d = dict(row)
-        text = "".join(str(d.get(k) or "") for k in ("text", "baihua", "keywords")).replace(" ", "")
+    for d in rows:
+        text = _kb_text(d).replace(" ", "")
         overlap = sum(1 for g in grams if g in text)
         if overlap > 0:
-            scored.append({"canonical_key": canonical_key("kb", "gejue", d["id"]), "category": str(d.get("category") or ""), "score": float(overlap), "source_priority": SOURCE_PRIORITY["gejue"]})
+            scored.append({"canonical_key": canonical_key("kb", "gejue", d["id"]), "category": str(d.get("category") or ""),
+                           "score": float(overlap), "source_priority": SOURCE_PRIORITY["gejue"]})
     scored.sort(key=lambda h: sort_key(h["score"], h["source_priority"], h["category"], h["canonical_key"]))
     return scored[:top_n]
 
@@ -480,10 +461,51 @@ def strategy_s4(term: str, top_n: int = 10) -> list[dict]:
     return hits[:top_n]
 
 
+def _frozen_files() -> list[dict]:
+    freeze = json.loads((P8 / "classic_texts_freeze.json").read_text(encoding="utf-8"))
+    return [f for f in freeze["files"] if "quarantine" not in f["path"]]
+
+
+def strategy_s5(term: str, top_n: int = 10) -> list[dict]:
+    """S5：classic_texts 冻结版检索；.json/.jsonl 分支解析；quarantine 排除；git show fail-closed。"""
+    hits = []
+    for f in _frozen_files():
+        for idx, rec in enumerate(_parse_frozen(f["path"], f["commit"])):
+            if not isinstance(rec, dict):
+                continue  # 记录结构异常：跳过（fail-closed 由对账节校验结构完整性）
+            text = "".join(str(rec.get(k) or "") for k in ("rule", "original_text", "subject", "condition", "category")).replace(" ", "")
+            if term and term in text:
+                hits.append({"canonical_key": canonical_key("classic", f["path"], idx + 1, rec.get("id", "?")),
+                             "category": str(rec.get("category") or ""), "score": 1.0,
+                             "source_priority": SOURCE_PRIORITY["classic"]})
+    hits.sort(key=lambda h: sort_key(h["score"], h["source_priority"], h["category"], h["canonical_key"]))
+    return hits[:top_n]
+
+
+def doc_text(canonical_key: str) -> dict:
+    """按 canonical key 读取条文文本（KB 全字段拼接；classic 从 git object 冻结版）。"""
+    if canonical_key.startswith("kb:"):
+        _, table, doc_id = canonical_key.split(":", 2)
+        conn = _connect_snapshot()
+        try:
+            row = conn.execute(f"SELECT * FROM {table} WHERE id=?", (doc_id,)).fetchone()
+        finally:
+            conn.close()
+        d = dict(row) if row else {}
+        return {"text": _kb_text(d), "category": str(d.get("category") or ""), "fields": list(d.keys())}
+    _, path, line, rid = canonical_key.split(":", 3)
+    f = next(x for x in _frozen_files() if x["path"] == path)
+    records = _parse_frozen(path, f["commit"])
+    rec = records[int(line) - 1]
+    return {"text": str(rec.get("rule") or "") + str(rec.get("original_text") or ""),
+            "category": str(rec.get("category") or ""), "fields": list(rec.keys())}
+
+
 def pool_candidates(query: dict, strategies=("s1", "s2", "s3", "s4", "s5"), depth: int = 10) -> list[dict]:
-    """执行多策略并集去重；每策略每 query 取 top-depth。返回按排序键稳定排序的候选。"""
+    """执行多策略并集去重；每策略每 query 取 top-depth；按排序键稳定排序。"""
     args = query["args"]
-    term = args.get("query") or args.get("name") or args.get("combo_name") or (args.get("gan", "") + args.get("zhi", "")) or args.get("gan_or_zhi", "")
+    term = (args.get("query") or args.get("name") or args.get("combo_name")
+            or (args.get("gan", "") + args.get("zhi", "")) or args.get("gan_or_zhi", ""))
     out, seen = [], set()
     for name in strategies:
         if name == "s1":
@@ -505,63 +527,135 @@ def pool_candidates(query: dict, strategies=("s1", "s2", "s3", "s4", "s5"), dept
     return out
 ```
 
-- [ ] **Step 4: 生成 synonym_table.json / ranking_config.json / truncation_config.json（一次性脚本）**
+- [ ] **Step 4: 测试转绿 + Commit**
 
-`synonym_table.json`（冻结词表，后续可裁决扩展）：
-```python
-import json
-from pathlib import Path
-data = {
-    "schema_version": "1.0",
-    "synonyms": {
-        "结婚": ["婚期", "成婚", "姻缘", "婚恋"],
-        "婚姻": ["婚配", "姻缘", "婚恋"],
-        "红鸾": ["天喜"],
-    },
-}
-Path("docs/phase9a/retrieval/synonym_table.json").write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
-```
-`ranking_config.json`：
-```python
-{"schema_version": "1.0", "sort_key": ["-score", "source_priority", "category", "stable_document_id"], "source_priority": {"gejue": 1, "shensha": 2, "shishen_combos": 2, "nayin": 2, "bingyao": 2, "xiangyi": 2, "classic": 3}, "pooling_depth_per_strategy_per_query": 10}
-```
-`truncation_config.json`：
-```python
-{"schema_version": "1.0", "N_chars_per_doc": 200, "M_docs_per_item": 5, "K_chars_per_question": 1200, "token_estimate": "中文字符 1.5 字符/token", "note": "N=P90 上界；M=Phase8 top_n 对齐；K=800 token 预算"}
-```
-
-- [ ] **Step 5: 运行测试转绿 + Commit**
-
-Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestStrategiesS234 -q`
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestRetrieverCore -q`
 Expected: PASS。
 ```powershell
-git add -- docs/phase9a/retrieval/retriever.py docs/phase9a/retrieval/synonym_table.json docs/phase9a/retrieval/ranking_config.json docs/phase9a/retrieval/truncation_config.json tests/test_phase9a_retrieval.py
-git commit -m "feat(phase9a): S2/S3/S4 strategies + union pooling + frozen configs"
+git add -- docs/phase9a/retrieval/retriever.py tests/test_phase9a_retrieval.py
+git diff --cached --name-only
+git commit -m "feat(phase9a): retriever S1-S5 with json/jsonl parsing and fail-closed git show"
 ```
 
 ---
 
-## Task 4: silver relevance judgment
+## Task 3: 全量双跑 S1–S5（53 query）+ 每策略独立命中落盘
+
+**Files:**
+- Create: `docs/phase9a/retrieval/run_strategies.py`
+- Create: `docs/phase9a/retrieval/strategy_outputs.jsonl`
+- Test: `tests/test_phase9a_retrieval.py`
+
+- [ ] **Step 1: 写失败测试**
+
+```python
+class TestFullDoubleRun:
+    def test_all_53_queries_double_run_byte_identical(self):
+        # strategy_outputs.jsonl 为全量 53 query 双跑产物：每行 (query_id, strategy, run1_hits, run2_hits)
+        rows = [json.loads(l) for l in (P9 / "strategy_outputs.jsonl").open(encoding="utf-8") if l.strip()]
+        qids = {r["query_id"] for r in rows}
+        qset = _load_json(P9 / "query_set_frozen.json")
+        assert len(qids) == 53
+        for r in rows:
+            assert r["run1_hits"] == r["run2_hits"]  # 字节一致（canonical key 序列相同）
+        # 每策略均有独立命中记录
+        per_strategy = {s for r in rows for s in r["strategy"]}
+        assert {"s1", "s2", "s3", "s4", "s5"} <= per_strategy
+```
+
+- [ ] **Step 2: 运行确认失败**
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestFullDoubleRun -q`
+Expected: FAIL。
+
+- [ ] **Step 3: 实现 run_strategies.py**
+
+```python
+"""Phase 9A 全量双跑：53 query × S1–S5，每策略独立命中落盘（双跑字节一致门）。"""
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, "docs/phase9a/retrieval")
+import retriever as rt
+
+REPO = Path(__file__).resolve().parent.parent.parent.parent
+P9 = REPO / "docs" / "phase9a" / "retrieval"
+
+
+def main() -> None:
+    qset = json.loads((P9 / "query_set_frozen.json").read_text(encoding="utf-8"))
+    cfg = json.loads((P9 / "ranking_config.json").read_text(encoding="utf-8"))
+    depth = cfg["pooling_depth_per_strategy_per_query"]
+    rows = []
+    for q in qset["queries"]:
+        for name in ("s1", "s2", "s3", "s4", "s5"):
+            args = q["args"]
+            term = (args.get("query") or args.get("name") or args.get("combo_name")
+                    or (args.get("gan", "") + args.get("zhi", "")) or args.get("gan_or_zhi", ""))
+            fn = {"s1": lambda: rt.strategy_s1(q["entrypoint"], args, top_n=depth),
+                  "s2": lambda: rt.strategy_s2(term, top_n=depth),
+                  "s3": lambda: rt.strategy_s3(term, top_n=depth),
+                  "s4": lambda: rt.strategy_s4(term, top_n=depth),
+                  "s5": lambda: rt.strategy_s5(term, top_n=depth)}[name]
+            run1 = [h["canonical_key"] for h in fn()]
+            run2 = [h["canonical_key"] for h in fn()]
+            if run1 != run2:
+                sys.exit(f"FAIL double-run: {q['query_id']} {name}")
+            rows.append({"query_id": q["query_id"], "entrypoint": q["entrypoint"], "strategy": name,
+                         "run1_hits": run1, "run2_hits": run2})
+    with (P9 / "strategy_outputs.jsonl").open("w", encoding="utf-8", newline="\n") as f:
+        for r in rows:
+            f.write(json.dumps(r, sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n")
+    print(f"strategy outputs written: {len(rows)} rows (53 queries x 5 strategies)")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+- [ ] **Step 4: 运行 + 测试转绿 + Commit**
+
+Run: `.venv/Scripts/python.exe docs/phase9a/retrieval/run_strategies.py`；`.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestFullDoubleRun -q`
+Expected: `strategy outputs written: 265 rows`；PASS。
+```powershell
+git add -- docs/phase9a/retrieval/run_strategies.py docs/phase9a/retrieval/strategy_outputs.jsonl tests/test_phase9a_retrieval.py
+git diff --cached --name-only
+git commit -m "feat(phase9a): full 53-query double-run with per-strategy hit outputs"
+```
+
+---
+
+## Task 4: pair pool 生成 + silver 标注 + summary
 
 **Files:**
 - Create: `docs/phase9a/retrieval/silver_judge.py`
-- Create: `docs/phase9a/retrieval/silver_relevance_judgment.jsonl`
+- Create: `docs/phase9a/retrieval/silver_relevance_judgment.jsonl`（**只含 pair 行**，无 _pool_stats 行）
+- Create: `docs/phase9a/retrieval/silver_judgment_summary.json`（pool stats + item summaries + 规则 SHA）
 - Test: `tests/test_phase9a_retrieval.py`
 
 - [ ] **Step 1: 写失败测试**
 
 ```python
 class TestSilverJudgment:
-    def test_judgment_frozen_with_pool_stats(self):
+    def test_pairs_only_no_metadata_rows(self):
         rows = [json.loads(l) for l in (P9 / "silver_relevance_judgment.jsonl").open(encoding="utf-8") if l.strip()]
-        assert rows
-        assert rows[0]["label"] in {"relevant", "partially_relevant", "irrelevant", "uncertain"}
-        assert "item_id" in rows[0] and "canonical_key" in rows[0]
-
-    def test_pair_key_unique(self):
-        rows = [json.loads(l) for l in (P9 / "silver_relevance_judgment.jsonl").open(encoding="utf-8") if l.strip()]
+        assert rows and all("item_id" in r and "canonical_key" in r for r in rows)
         keys = [(r["item_id"], r["canonical_key"]) for r in rows]
         assert len(keys) == len(set(keys))
+
+    def test_summary_separate_file(self):
+        s = _load_json(P9 / "silver_judgment_summary.json")
+        assert "pool_stats" in s and "actual_pair_count" in s["pool_stats"]
+        assert "item_summaries" in s and "rule_sha" in s
+        assert s["pool_stats"]["actual_pair_count"] == len([json.loads(l) for l in (P9 / "silver_relevance_judgment.jsonl").open(encoding="utf-8") if l.strip()])
+        assert s["pool_stats"]["actual_pair_count"] != 2519  # 不得用全局文档数代替
+
+    def test_label_enum_closed(self):
+        rows = [json.loads(l) for l in (P9 / "silver_relevance_judgment.jsonl").open(encoding="utf-8") if l.strip()]
+        assert {r["label"] for r in rows} <= {"relevant", "partially_relevant", "irrelevant", "uncertain"}
 ```
 
 - [ ] **Step 2: 运行确认失败**
@@ -569,31 +663,7 @@ class TestSilverJudgment:
 Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestSilverJudgment -q`
 Expected: FAIL。
 
-- [ ] **Step 3: 实现 silver_judge.py（含 retriever.doc_text 补丁）**
-
-先向 `retriever.py` 追加 `doc_text()`（Task 4 依赖）：
-
-```python
-def doc_text(canonical_key: str) -> dict:
-    """按 canonical key 读取条文文本（KB 从快照；classic 从 git object 冻结版）。"""
-    if canonical_key.startswith("kb:"):
-        _, table, doc_id = canonical_key.split(":", 2)
-        conn = _connect_snapshot()
-        try:
-            row = conn.execute(f"SELECT * FROM {table} WHERE id=?", (doc_id,)).fetchone()
-        finally:
-            conn.close()
-        return dict(row) if row else {}
-    _, path, line, rid = canonical_key.split(":", 3)
-    freeze = json.loads((P8 / "classic_texts_freeze.json").read_text(encoding="utf-8"))
-    f = next(x for x in freeze["files"] if x["path"] == path)
-    raw = subprocess.run(["git", "-C", str(REPO), "show", f"{f['commit']}:{f['path']}"], capture_output=True).stdout
-    records = [json.loads(l) for l in raw.decode("utf-8").splitlines() if l.strip()] if path.endswith(".jsonl") else json.loads(raw)
-    rec = records[int(line) - 1]
-    return {"text": str(rec.get("rule") or "") + str(rec.get("original_text") or ""), "category": str(rec.get("category") or "")}
-```
-
-`silver_judge.py` 完整实现：
+- [ ] **Step 3: 实现 silver_judge.py（category 一致性修正）**
 
 ```python
 """Phase 9A silver relevance judgment：本地确定性规则初标（零 API，规则 SHA 冻结）。"""
@@ -604,124 +674,125 @@ import json
 import sys
 from pathlib import Path
 
+sys.path.insert(0, "docs/phase9a/retrieval")
+import retriever as rt
+
 REPO = Path(__file__).resolve().parent.parent.parent.parent
 P9 = REPO / "docs" / "phase9a" / "retrieval"
 
-RULE_SOURCE = "silver_rule_v1: synonym-cooccurrence AND category-consistency AND canonical-traceability"
+RULE_SOURCE = "silver_rule_v2: synonym-cooccurrence AND category-consistency(query-arg) AND canonical-traceability"
 
 
-def label_pair(item_id: str, query_term: str, doc: dict, synonym_table: dict) -> dict:
-    """规则：条文文本含 query 词或同义词 → 检查 category 一致性 → relevant/partial/irrelevant。"""
-    syns = [query_term] + synonym_table["synonyms"].get(query_term, [])
-    text = doc.get("text", "") + doc.get("baihua", "") + doc.get("keywords", "")
-    text = "".join(text.split())
-    syn_hit = any(s in text for s in syns)
-    cat_ok = bool(doc.get("category")) and str(doc.get("category")) != ""
+def label_pair(item_id: str, term: str, query_category: str | None, doc: dict, synonym_table: dict) -> dict:
+    """规则：条文文本含 term 或同义词 → 与 query 的 category 参数一致 → relevant/partial/irrelevant。
+    category 一致性 = 条文 category == query category 参数（query 无 category 时降级为 partial）。"""
+    syns = [term] + synonym_table["synonyms"].get(term, [])
+    text = "".join(doc.get("text", "").split())
+    syn_hit = any(s and s in text for s in syns)
+    cat_ok = bool(query_category) and str(doc.get("category") or "") == str(query_category)
     if syn_hit and cat_ok:
         label = "relevant"
     elif syn_hit:
         label = "partially_relevant"
     else:
         label = "irrelevant"
-    return {"label": label, "reason": f"syn={syn_hit} cat={cat_ok}", "rule_version": RULE_SOURCE}
+    return {"label": label, "reason": f"syn={syn_hit} cat_match={cat_ok}", "rule_version": RULE_SOURCE}
 
 
 def main() -> None:
-    import sys as _sys
-    _sys.path.insert(0, str(P9))
-    import retriever as rt
     item_map = json.loads((P9 / "item_query_map.json").read_text(encoding="utf-8"))
     syn = json.loads((P9 / "synonym_table.json").read_text(encoding="utf-8"))
-    rows = []
+    qset = {q["query_id"]: q for q in json.loads((P9 / "query_set_frozen.json").read_text(encoding="utf-8"))["queries"]}
+    pairs, seen = [], set()
     for item in item_map["items"]:
         for q in item["queries"]:
-            args = q["args"]
+            fq = qset[q["query_id"]]
+            args = fq["args"]
             term = (args.get("query") or args.get("name") or args.get("combo_name")
                     or (args.get("gan", "") + args.get("zhi", "")) or args.get("gan_or_zhi", ""))
-            for h in rt.pool_candidates(q):
+            qcat = args.get("category")
+            for h in rt.pool_candidates(fq):
+                key = (item["item_id"], h["canonical_key"])
+                if key in seen:
+                    continue
+                seen.add(key)
                 doc = rt.doc_text(h["canonical_key"])
-                j = label_pair(item["item_id"], term, doc, syn)
-                rows.append({
-                    "item_id": item["item_id"],
-                    "query_id": q["query_id"],
-                    "canonical_key": h["canonical_key"],
-                    "label": j["label"],
-                    "reason": j["reason"],
-                    "rule_version": j["rule_version"],
-                })
-    # 去重（同一 (item, query) 下跨策略同条文）：(item_id, canonical_key) 唯一
-    seen, dedup = set(), []
-    for r in rows:
-        key = (r["item_id"], r["canonical_key"])
-        if key not in seen:
-            seen.add(key)
-            dedup.append(r)
-    payload_stats = {
-        "actual_pair_count": len(dedup),
-        "items": len(item_map["items"]),
-        "rule_sha": hashlib.sha256(RULE_SOURCE.encode("utf-8")).hexdigest(),
-    }
+                j = label_pair(item["item_id"], term, qcat, doc, syn)
+                pairs.append({"item_id": item["item_id"], "query_id": q["query_id"],
+                              "canonical_key": h["canonical_key"], "label": j["label"],
+                              "reason": j["reason"], "rule_version": j["rule_version"]})
+    pairs.sort(key=lambda r: (r["item_id"], r["canonical_key"]))
     with (P9 / "silver_relevance_judgment.jsonl").open("w", encoding="utf-8", newline="\n") as f:
-        for r in dedup:
+        for r in pairs:
             f.write(json.dumps(r, sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n")
-        f.write(json.dumps({"_pool_stats": payload_stats}, sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n")
-    print(f"silver judgment written: {payload_stats['actual_pair_count']} pairs, rule_sha={payload_stats['rule_sha']}")
+    summaries = {}
+    for r in pairs:
+        s = summaries.setdefault(r["item_id"], {"relevant": 0, "partially_relevant": 0, "irrelevant": 0, "uncertain": 0})
+        s[r["label"]] += 1
+    summary = {
+        "schema_version": "1.0",
+        "pool_stats": {"actual_pair_count": len(pairs), "items": len(item_map["items"]),
+                       "rule_sha": hashlib.sha256(RULE_SOURCE.encode("utf-8")).hexdigest()},
+        "item_summaries": summaries,
+        "rule_source": RULE_SOURCE,
+    }
+    (P9 / "silver_judgment_summary.json").write_text(
+        json.dumps(summary, sort_keys=True, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
+    print(f"silver judgment written: {len(pairs)} pairs; summary written")
+
+
+if __name__ == "__main__":
+    main()
 ```
 
-- [ ] **Step 4: 运行生成 judgment + 测试转绿**
+（注：`item_query_map.json` 来自计划 v1 的 Task 1——本 v2 保留该产物，执行时先按 v1 Task 1 的 `query_extractor.py` 生成。）
 
-Run: `.venv/Scripts/python.exe docs/phase9a/retrieval/silver_judge.py`
-Expected: 输出 `silver judgment written: {actual_pair_count} pairs, rule_sha={...}`（actual_pair_count 为 pooling 后实际值，不得等于 2519）。
+- [ ] **Step 4: 运行 + 测试转绿 + Commit**
 
-- [ ] **Step 5: 测试转绿 + Commit**
-
-Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestSilverJudgment -q`
-Expected: PASS。
+Run: `.venv/Scripts/python.exe docs/phase9a/retrieval/silver_judge.py`；`.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestSilverJudgment -q`
+Expected: `silver judgment written: {n} pairs; summary written`；PASS。
 ```powershell
-git add -- docs/phase9a/retrieval/retriever.py docs/phase9a/retrieval/silver_judge.py docs/phase9a/retrieval/silver_relevance_judgment.jsonl tests/test_phase9a_retrieval.py
-git commit -m "feat(phase9a): silver relevance judgment with actual pair count"
+git add -- docs/phase9a/retrieval/silver_judge.py docs/phase9a/retrieval/silver_relevance_judgment.jsonl docs/phase9a/retrieval/silver_judgment_summary.json tests/test_phase9a_retrieval.py
+git diff --cached --name-only
+git commit -m "feat(phase9a): silver judgment pairs-only schema + separate summary with item summaries"
 ```
 
 ---
 
-## Task 5: QC 门（参数执行前冻结，样本列表 pool 后冻结，审计不改标签）
+## Task 5: pool 后冻结 QC 样本（分层抽样）
 
 **Files:**
-- Create: `docs/phase9a/retrieval/qc_gate.py`
-- Create: `docs/phase9a/retrieval/qc_config.json`
 - Create: `docs/phase9a/retrieval/qc_sample_list.json`
 - Test: `tests/test_phase9a_retrieval.py`
 
 - [ ] **Step 1: 写失败测试**
 
 ```python
-class TestQcGate:
-    def test_qc_config_frozen_params(self):
-        cfg = _load_json(P9 / "qc_config.json")
-        assert cfg["seed"] and cfg["sample_ratio"] == 0.1 and cfg["max_disagreement_rate"] == 0.1
-
-    def test_qc_sample_from_pool(self):
+class TestQcSampleList:
+    def test_stratified_by_item(self):
         lst = _load_json(P9 / "qc_sample_list.json")
-        assert lst["sample_list"]
-        for s in lst["sample_list"]:
-            assert "item_id" in s and "canonical_key" in s
-
-    def test_qc_fail_closed_on_disagreement(self):
-        g = _load_module("qc_gate", "docs/phase9a/retrieval/qc_gate.py")
-        with pytest.raises(SystemExit):
-            g.check_disagreement(0.11, 0.10)  # 分歧率超门 → fail-closed
-        assert g.check_disagreement(0.05, 0.10) == "PASS"
+        cfg = _load_json(P9 / "qc_config.json")
+        assert lst["seed"] == cfg["seed"] and lst["sample_ratio"] == cfg["sample_ratio"]
+        sample = lst["sample_list"]
+        assert sample and len(sample) >= 10
+        by_item = {}
+        for s in sample:
+            by_item.setdefault(s["item_id"], 0)
+            by_item[s["item_id"]] += 1
+        assert len(by_item) >= 10  # 分层：覆盖多个 item，而非平面抽样集中于少数 item
+        pairs = [(s["item_id"], s["canonical_key"]) for s in sample]
+        assert len(pairs) == len(set(pairs))
 ```
 
 - [ ] **Step 2: 运行确认失败**
 
-Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestQcGate -q`
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestQcSampleList -q`
 Expected: FAIL。
 
-- [ ] **Step 3: 实现 qc_gate.py**
+- [ ] **Step 3: 生成样本列表（一次性脚本，写入 qc_gate.py 供复用）**
 
 ```python
-"""Phase 9A QC 门：参数执行前冻结；样本列表 pool 后冻结；只审计不改标签；分歧超门 fail-closed。"""
+"""qc_gate.py：分层抽样 + QC 状态机（HUMAN_QC_REQUIRED / fail-closed / 分歧判定）。"""
 from __future__ import annotations
 
 import json
@@ -733,23 +804,48 @@ REPO = Path(__file__).resolve().parent.parent.parent.parent
 P9 = REPO / "docs" / "phase9a" / "retrieval"
 
 
-def generate_sample_list(seed: int, ratio: float, out_path: Path) -> dict:
-    judgment = [json.loads(l) for l in (P9 / "silver_relevance_judgment.jsonl").open(encoding="utf-8") if l.strip()]
+def generate_sample_list(seed: int, ratio: float, judgment_path: Path, out_path: Path) -> dict:
+    """按 item 分层抽样：每 item 内按比例抽样，保证覆盖多数 item。"""
+    rows = [json.loads(l) for l in judgment_path.open(encoding="utf-8") if l.strip()]
     rng = random.Random(seed)
-    sample = rng.sample(judgment, max(1, int(len(judgment) * ratio)))
-    payload = {
-        "schema_version": "1.0",
-        "seed": seed,
-        "sample_ratio": ratio,
-        "pool_size": len(judgment),
-        "sample_size": len(sample),
-        "sample_list": [{"item_id": s["item_id"], "canonical_key": s["canonical_key"]} for s in sample],
-    }
+    by_item: dict[str, list] = {}
+    for r in rows:
+        by_item.setdefault(r["item_id"], []).append(r)
+    sample = []
+    for item_id, group in sorted(by_item.items()):
+        k = max(1, int(len(group) * ratio))
+        sample.extend(rng.sample(group, min(k, len(group))))
+    payload = {"schema_version": "1.0", "seed": seed, "sample_ratio": ratio,
+               "pool_size": len(rows), "sample_size": len(sample),
+               "sample_list": [{"item_id": s["item_id"], "canonical_key": s["canonical_key"]} for s in sample]}
     out_path.write_text(json.dumps(payload, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
     return payload
 
 
-def check_disagreement(rate: float, max_rate: float) -> str:
+def load_human_review(review_path: Path) -> list[dict]:
+    """人类复核记录：字段 item_id/canonical_key/human_label/note；校验一一对应。"""
+    if not review_path.exists():
+        return []
+    return [json.loads(l) for l in review_path.open(encoding="utf-8") if l.strip()]
+
+
+def validate_review_coverage(sample_list: list[dict], reviews: list[dict]) -> None:
+    """复核记录与样本一一对应：无缺失、无重复、无额外 pair。失败即 fail-closed。"""
+    expected = {(s["item_id"], s["canonical_key"]) for s in sample_list}
+    actual = {(r["item_id"], r["canonical_key"]) for r in reviews}
+    missing = expected - actual
+    extra = actual - expected
+    dup = len(reviews) != len(actual)
+    if missing or extra or dup:
+        sys.exit(f"HUMAN_QC_REQUIRED: coverage mismatch missing={len(missing)} extra={len(extra)} dup={dup}")
+
+
+def check_disagreement(reviews: list[dict], judgment_path: Path, max_rate: float) -> str:
+    """分歧率 = 人类标签与 silver 标签不一致占比；超门 → SILVER_RETRIEVAL_NOT_READY。"""
+    silver = {(r["item_id"], r["canonical_key"]): r["label"]
+              for r in (json.loads(l) for l in judgment_path.open(encoding="utf-8") if l.strip())}
+    n_diff = sum(1 for r in reviews if r.get("human_label") and r["human_label"] != silver[(r["item_id"], r["canonical_key"])])
+    rate = n_diff / len(reviews) if reviews else 1.0
     if rate > max_rate:
         sys.exit(f"SILVER_RETRIEVAL_NOT_READY: QC disagreement {rate:.2%} > {max_rate:.2%}")
     return "PASS"
@@ -757,7 +853,7 @@ def check_disagreement(rate: float, max_rate: float) -> str:
 
 def main() -> None:
     cfg = json.loads((P9 / "qc_config.json").read_text(encoding="utf-8"))
-    generate_sample_list(cfg["seed"], cfg["sample_ratio"], P9 / "qc_sample_list.json")
+    generate_sample_list(cfg["seed"], cfg["sample_ratio"], P9 / "silver_relevance_judgment.jsonl", P9 / "qc_sample_list.json")
     print("qc sample list generated")
 
 
@@ -765,66 +861,138 @@ if __name__ == "__main__":
     main()
 ```
 
-`qc_config.json`（执行前冻结，Task 5 Step 4 一次性生成）：
-```python
-import json
-from pathlib import Path
-data = {"schema_version": "1.0", "seed": 20260813, "sample_algorithm": "random.sample on pooled item-document pairs", "sample_ratio": 0.1, "max_disagreement_rate": 0.1, "note": "QC 只做一致性审计，不修改 silver 标签；分歧超门 → SILVER_RETRIEVAL_NOT_READY"}
-Path("docs/phase9a/retrieval/qc_config.json").write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
-```
+- [ ] **Step 4: 运行 + 测试转绿 + Commit**
 
-- [ ] **Step 4: 生成 qc_config.json → 运行 qc_gate.py 生成样本列表 → 测试转绿**
-
-Run: 生成配置脚本 → `.venv/Scripts/python.exe docs/phase9a/retrieval/qc_gate.py` → `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestQcGate -q`
+Run: `.venv/Scripts/python.exe docs/phase9a/retrieval/qc_gate.py`；`.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestQcSampleList -q`
 Expected: `qc sample list generated`；PASS。
-
-- [ ] **Step 5: 人工 QC 记录（人类复核输入）**
-
-创建 `docs/phase9a/retrieval/qc_human_review.jsonl`（空模板，字段：item_id/canonical_key/human_label/note），由人类对照样本列表复核后填写；`check_disagreement` 由 evaluate 阶段消费（Task 6）。本步仅落盘模板与执行说明（写入 `retrieval_strategy_notes.md` 的 QC 节）。
-
-- [ ] **Step 6: Commit**
-
 ```powershell
-git add -- docs/phase9a/retrieval/qc_gate.py docs/phase9a/retrieval/qc_config.json docs/phase9a/retrieval/qc_sample_list.json docs/phase9a/retrieval/qc_human_review.jsonl docs/phase9a/retrieval/retrieval_strategy_notes.md tests/test_phase9a_retrieval.py
-git commit -m "feat(phase9a): QC gate - frozen params, pool-frozen sample list, audit-only fail-closed"
+git add -- docs/phase9a/retrieval/qc_gate.py docs/phase9a/retrieval/qc_sample_list.json tests/test_phase9a_retrieval.py
+git diff --cached --name-only
+git commit -m "feat(phase9a): stratified QC sample list frozen after pooling"
 ```
 
 ---
 
-## Task 6: 指标计算与双终态判定
+## Task 6: 暂停点 HUMAN_QC_REQUIRED（完整人工 QC 复核）
 
 **Files:**
-- Create: `docs/phase9a/retrieval/evaluate.py`
-- Create: `docs/phase9a/retrieval/retrieval_eval.json`
+- Create: `docs/phase9a/retrieval/qc_human_review.jsonl`（模板）
 - Test: `tests/test_phase9a_retrieval.py`
 
 - [ ] **Step 1: 写失败测试**
 
 ```python
-class TestEvaluate:
-    def test_metrics_formula(self):
-        ev = _load_json(P9 / "retrieval_eval.json")
-        assert "macro_weighted_recall" in ev["metrics"]
-        assert "macro_bundle_noise" in ev["metrics"]
-        assert "binary_item_coverage" in ev["metrics"]
-        assert "judgeable_item_rate" in ev["metrics"]
-        assert ev["verdict"] in {"SILVER_RETRIEVAL_READY", "SILVER_RETRIEVAL_NOT_READY"}
-        assert ev["denominator"]["items"] == 112
+class TestQcStateMachine:
+    def test_pending_review_blocks_eval(self):
+        g = _load_module("qc_gate", "docs/phase9a/retrieval/qc_gate.py")
+        # 无复核记录 → HUMAN_QC_REQUIRED（阻塞指标计算与终态）
+        assert g.qc_state(P9 / "qc_human_review.jsonl", P9 / "qc_sample_list.json") == "HUMAN_QC_REQUIRED"
 
-    def test_judgeable_union(self):
-        # UNJUDGEABLE 与 no_gold_mass 用并集，不重复扣除
-        assert True  # 公式正确性由 evaluate.py 单测覆盖（Step 3 内嵌断言）
+    def test_review_coverage_fail_closed(self):
+        g = _load_module("qc_gate", "docs/phase9a/retrieval/qc_gate.py")
+        sample = [{"item_id": "a", "canonical_key": "kb:gejue:1"}]
+        reviews = [{"item_id": "a", "canonical_key": "kb:gejue:2", "human_label": "relevant"}]  # 额外 pair
+        try:
+            g.validate_review_coverage(sample, reviews)
+            raised = False
+        except SystemExit:
+            raised = True
+        assert raised
 ```
 
 - [ ] **Step 2: 运行确认失败**
 
-Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestEvaluate -q`
-Expected: FAIL。
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestQcStateMachine -q`
+Expected: FAIL（qc_state 不存在）。
 
-- [ ] **Step 3: 实现 evaluate.py（含公式单测断言）**
+- [ ] **Step 3: 实现 qc_state + 落盘模板**
+
+向 `qc_gate.py` 追加：
+```python
+def qc_state(review_path: Path, sample_path: Path) -> str:
+    """QC 状态机：无完整复核 → HUMAN_QC_REQUIRED；完整复核后由 evaluate 消费分歧判定。"""
+    sample = json.loads(sample_path.read_text(encoding="utf-8"))["sample_list"]
+    reviews = load_human_review(review_path)
+    if len(reviews) < len(sample):
+        return "HUMAN_QC_REQUIRED"
+    validate_review_coverage(sample, reviews)
+    return "REVIEWED"
+```
+落盘 `qc_human_review.jsonl` 模板（空文件 + 头注释说明字段：item_id/canonical_key/human_label/note）。
+
+- [ ] **Step 4: 测试转绿 + Commit（此任务为显式暂停点）**
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestQcStateMachine -q`
+Expected: PASS。
+```powershell
+git add -- docs/phase9a/retrieval/qc_gate.py docs/phase9a/retrieval/qc_human_review.jsonl tests/test_phase9a_retrieval.py
+git diff --cached --name-only
+git commit -m "feat(phase9a): HUMAN_QC_REQUIRED state machine with coverage fail-closed"
+```
+
+**⏸ 暂停点（人工）：** 人类对照 `qc_sample_list.json` 逐条填写 `qc_human_review.jsonl`（human_label ∈ {relevant, partially_relevant, irrelevant, uncertain}）。**未完成前不得执行 Task 7 的评测步骤**；完成后再继续。
+
+---
+
+## Task 7: compute_metrics 纯函数 TDD → 真实 bundle → 一次性正式评测（每策略 + union）
+
+**Files:**
+- Create: `docs/phase9a/retrieval/evaluate.py`
+- Create: `docs/phase9a/retrieval/retrieval_bundle_dev.jsonl`
+- Create: `docs/phase9a/retrieval/retrieval_eval.json`（**只生成一次**）
+- Create: `docs/phase9a/retrieval/per_strategy_eval.json`
+- Test: `tests/test_phase9a_retrieval.py`
+
+- [ ] **Step 1: compute_metrics 纯函数 TDD（合成 fixture，含集合重叠）**
 
 ```python
-"""Phase 9A 指标计算与双终态判定（冻结公式，QC 门通过后一次性执行）。"""
+class TestMetricsPure:
+    def test_recall_noise_split_with_overlap(self):
+        # 合成 fixture：item X 的 gold 含 2 relevant + 1 partial；策略只取回其中 1 relevant + 1 irrelevant
+        ev = _load_module("evaluate", "docs/phase9a/retrieval/evaluate.py")
+        judgment = [
+            {"item_id": "x", "canonical_key": "kb:gejue:1", "label": "relevant"},
+            {"item_id": "x", "canonical_key": "kb:gejue:2", "label": "relevant"},
+            {"item_id": "x", "canonical_key": "kb:gejue:3", "label": "partially_relevant"},
+            {"item_id": "x", "canonical_key": "kb:gejue:4", "label": "irrelevant"},
+        ]
+        items = ["x"]  # 冻结 item 集（来自 item_query_map）
+        bundles = {"x": [{"canonical_key": "kb:gejue:1"}, {"canonical_key": "kb:gejue:4"}]}
+        m = ev.compute_metrics(judgment, items, bundles)
+        assert abs(m["per_item"]["x"]["weighted_recall"] - 1.0 / 2.5) < 1e-9  # 取回 1 relevant / gold 2.5 权重
+        assert abs(m["per_item"]["x"]["bundle_noise"] - 0.5) < 1e-9  # 2 条中 1 条 irrelevant
+        assert m["binary_item_coverage"] == 1.0  # 分母 = items 数
+
+    def test_fixed_112_denominator_with_missing_item(self):
+        ev = _load_module("evaluate", "docs/phase9a/retrieval/evaluate.py")
+        judgment = [{"item_id": "x", "canonical_key": "kb:gejue:1", "label": "relevant"}]
+        items = ["x", "y"]  # y 无任何 judgment/bundle → 计未覆盖
+        bundles = {"x": [{"canonical_key": "kb:gejue:1"}]}
+        m = ev.compute_metrics(judgment, items, bundles)
+        assert m["n_items"] == 2 and m["binary_item_coverage"] == 0.5
+        assert "y" in m["no_gold_mass_items"]
+
+    def test_judgeable_union_no_double_count(self):
+        ev = _load_module("evaluate", "docs/phase9a/retrieval/evaluate.py")
+        # UNJUDGEABLE 天然满足 gold mass=0：并集去重后只扣 1
+        judgment = [
+            {"item_id": "u", "canonical_key": "kb:gejue:1", "label": "uncertain"},
+            {"item_id": "n", "canonical_key": "kb:gejue:2", "label": "irrelevant"},
+        ]
+        items = ["u", "n", "x"]
+        m = ev.compute_metrics(judgment, items, {"x": [{"canonical_key": "kb:gejue:3"}]})
+        assert abs(m["judgeable_item_rate"] - 1.0 / 3.0) < 1e-9  # (3 - |{u,n}|) / 3
+```
+
+- [ ] **Step 2: 运行确认失败**
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestMetricsPure -q`
+Expected: FAIL。
+
+- [ ] **Step 3: 实现 evaluate.py（固定 112 分母 + 集合严格相等 + 每策略评估）**
+
+```python
+"""Phase 9A 指标计算与终态判定（冻结公式；QC 通过后一次性执行；每策略 + union）。"""
 from __future__ import annotations
 
 import json
@@ -838,49 +1006,46 @@ W_RELEVANT, W_PARTIAL = 1.0, 0.5
 GATES = {"judgeable_item_rate": 0.90, "macro_weighted_recall": 0.90, "macro_bundle_noise": 0.20, "binary_item_coverage": 0.90}
 
 
-def compute_metrics(judgment: list[dict], bundles: dict[str, list[dict]]) -> dict:
-    items = sorted({r["item_id"] for r in judgment})
+def compute_metrics(judgment: list[dict], items: list[str], bundles: dict[str, list[dict]]) -> dict:
+    """items 来自冻结 item_query_map（固定 112 分母）；judgment/bundle 集合严格相等校验。"""
+    item_set = set(items)
+    j_items = {r["item_id"] for r in judgment}
+    b_items = set(bundles)
+    if j_items - item_set or b_items - item_set:
+        sys.exit(f"FAIL: judgment/bundle items outside frozen set {sorted((j_items | b_items) - item_set)}")
+    lookup = {(r["item_id"], r["canonical_key"]): r["label"] for r in judgment}
+    n = len(items)
     per_item = {}
     for iid in items:
         pairs = [r for r in judgment if r["item_id"] == iid]
         gold_mass = sum(W_RELEVANT if r["label"] == "relevant" else W_PARTIAL if r["label"] == "partially_relevant" else 0 for r in pairs)
-        if all(r["label"] == "uncertain" for r in pairs):
+        if pairs and all(r["label"] == "uncertain" for r in pairs):
             per_item[iid] = {"status": "UNJUDGEABLE", "gold_mass": 0.0}
             continue
         if gold_mass == 0:
             per_item[iid] = {"status": "no_gold_mass", "gold_mass": 0.0}
             continue
         retrieved = bundles.get(iid, [])
-        # weighted_recall_i：取回命中中 relevant 权重和 / gold mass
-        # （取回命中的标签来自 judgment 的 (item_id, canonical_key) 查表）
-        lookup = {(r["item_id"], r["canonical_key"]): r["label"] for r in judgment}
-        rec_w = 0.0
-        for h in retrieved:
-            label = lookup.get((iid, h["canonical_key"]))
-            if label == "relevant":
-                rec_w += W_RELEVANT
-            elif label == "partially_relevant":
-                rec_w += W_PARTIAL
-        judged = [lookup[(iid, h["canonical_key"])] for h in retrieved if lookup.get((iid, h["canonical_key"])) in {"relevant", "partially_relevant", "irrelevant"}]
+        rec_w = sum(W_RELEVANT if lookup.get((iid, h["canonical_key"])) == "relevant"
+                    else W_PARTIAL if lookup.get((iid, h["canonical_key"])) == "partially_relevant" else 0
+                    for h in retrieved)
+        judged = [lookup[(iid, h["canonical_key"])] for h in retrieved
+                  if lookup.get((iid, h["canonical_key"])) in {"relevant", "partially_relevant", "irrelevant"}]
         noise = sum(1 for lb in judged if lb == "irrelevant") / len(judged) if judged else 0.0
-        binary = 1.0 if rec_w > 0 else 0.0
-        per_item[iid] = {"status": "judged", "gold_mass": gold_mass, "weighted_recall": rec_w / gold_mass, "bundle_noise": noise, "binary_coverage": binary}
-    n = len(items)
+        per_item[iid] = {"status": "judged", "gold_mass": gold_mass, "weighted_recall": rec_w / gold_mass,
+                         "bundle_noise": noise, "binary_coverage": 1.0 if rec_w > 0 else 0.0}
     unjudgeable = {iid for iid, v in per_item.items() if v["status"] == "UNJUDGEABLE"}
     no_gold = {iid for iid, v in per_item.items() if v["status"] == "no_gold_mass"}
     judged = {iid: v for iid, v in per_item.items() if v["status"] == "judged"}
-    judgeable_rate = (n - len(unjudgeable | no_gold)) / n  # 并集，防重复扣除
+    judgeable_rate = (n - len(unjudgeable | no_gold)) / n  # 集合并集，防重复扣除
     recalls = [v["weighted_recall"] for v in judged.values()]
     noises = [v["bundle_noise"] for v in judged.values()]
-    macro_recall = sum(recalls) / len(recalls) if recalls else 0.0
-    macro_noise = sum(noises) / len(noises) if noises else 0.0
-    coverage = sum(v["binary_coverage"] for v in per_item.values()) / n  # 分母固定 112
     return {
         "n_items": n,
         "judgeable_item_rate": judgeable_rate,
-        "macro_weighted_recall": macro_recall,
-        "macro_bundle_noise": macro_noise,
-        "binary_item_coverage": coverage,
+        "macro_weighted_recall": sum(recalls) / len(recalls) if recalls else 0.0,
+        "macro_bundle_noise": sum(noises) / len(noises) if noises else 0.0,
+        "binary_item_coverage": sum(v["binary_coverage"] for v in per_item.values()) / n,  # 分母固定 items 数
         "unjudgeable_items": sorted(unjudgeable),
         "no_gold_mass_items": sorted(no_gold),
         "macro_denominator": len(judged),
@@ -889,169 +1054,164 @@ def compute_metrics(judgment: list[dict], bundles: dict[str, list[dict]]) -> dic
 
 
 def decide(metrics: dict) -> str:
-    ok = (
-        metrics["judgeable_item_rate"] >= GATES["judgeable_item_rate"]
-        and metrics["macro_weighted_recall"] >= GATES["macro_weighted_recall"]
-        and metrics["macro_bundle_noise"] <= GATES["macro_bundle_noise"]
-        and metrics["binary_item_coverage"] >= GATES["binary_item_coverage"]
-    )
+    ok = (metrics["judgeable_item_rate"] >= GATES["judgeable_item_rate"]
+          and metrics["macro_weighted_recall"] >= GATES["macro_weighted_recall"]
+          and metrics["macro_bundle_noise"] <= GATES["macro_bundle_noise"]
+          and metrics["binary_item_coverage"] >= GATES["binary_item_coverage"])
     return "SILVER_RETRIEVAL_READY" if ok else "SILVER_RETRIEVAL_NOT_READY"
-
-
-def main() -> None:
-    judgment = [json.loads(l) for l in (P9 / "silver_relevance_judgment.jsonl").open(encoding="utf-8") if l.strip()]
-    # bundles 输入：Task 7 的 retrieval_bundle_dev.jsonl 或本步临时 bundle（开发题 35 道）
-    # 本步先以空 bundle 运行（指标分母结构验证），Task 7 接入真实 bundle 后重算冻结
-    metrics = compute_metrics(judgment, {})
-    verdict = decide(metrics)
-    payload = {"schema_version": "1.0", "verdict": verdict, "metrics": metrics, "gates": GATES, "note": "silver 结论限于工程可复现性，不声称语义正确性"}
-    (P9 / "retrieval_eval.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
-    print(f"verdict={verdict} metrics={metrics}")
 ```
 
-- [ ] **Step 4: 测试转绿 + 运行 evaluate.py**
+- [ ] **Step 4: 纯函数测试转绿**
 
-Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestEvaluate -q`；`.venv/Scripts/python.exe docs/phase9a/retrieval/evaluate.py`
-Expected: PASS；`verdict=...` 输出（以空 bundle 运行的结构验证，最终 verdict 在 Task 7 接入真实 bundle 后重算）。
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestMetricsPure -q`
+Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: 实现 bundle 生成器（K 预算真实截断）+ 题级测试**
 
-```powershell
-git add -- docs/phase9a/retrieval/evaluate.py docs/phase9a/retrieval/retrieval_eval.json tests/test_phase9a_retrieval.py
-git commit -m "feat(phase9a): frozen metric formulas + dual-terminal verdict"
-```
-
----
-
-## Task 7: 真实 bundle + 主冻结产物 + fingerprint
-
-**Files:**
-- Create: `docs/phase9a/retrieval/retrieval_bundle_dev.jsonl`
-- Create: `docs/phase9a/retrieval/treatment_fingerprint.json`
-- Modify: `docs/phase9a/retrieval/retrieval_eval.json`（接入真实 bundle 后重算）
-- Test: `tests/test_phase9a_retrieval.py`
-
-- [ ] **Step 1: 写失败测试**
-
+`evaluate.py` 追加：
 ```python
-class TestBundleAndFingerprint:
-    def test_bundle_replay_evidence(self):
-        rows = [json.loads(l) for l in (P9 / "retrieval_bundle_dev.jsonl").open(encoding="utf-8") if l.strip()]
-        assert rows
-        for r in rows:
-            assert "question_case_id" in r and "item_id" in r and "docs" in r
-            assert len(r["docs"]) <= 5  # M=5
-            for d in r["docs"]:
-                assert len(d["text"]) <= 200  # N=200
-                assert d["quarantined"] is not True  # quarantine 禁止入 bundle
+def build_bundle(item_map: list[dict], cfg: dict, strategies=("s1", "s2", "s3", "s4", "s5")) -> list[dict]:
+    """每题内跨 item 累计字符预算 K；超预算按排序键截断 docs。"""
+    import retriever as rt
+    N, M, K = cfg["N_chars_per_doc"], cfg["M_docs_per_item"], cfg["K_chars_per_question"]
+    by_case: dict[str, list] = {}
+    for item in item_map:
+        by_case.setdefault(item["case_id"], []).append(item)
+    rows = []
+    for case_id, items in sorted(by_case.items()):
+        budget = K
+        for item in items:
+            pooled, seen = [], set()
+            for q in item["queries"]:
+                for h in rt.pool_candidates(q, strategies=strategies):
+                    if h["canonical_key"] not in seen:
+                        seen.add(h["canonical_key"])
+                        pooled.append(h)
+            pooled.sort(key=lambda h: rt.sort_key(h["score"], h["source_priority"], h["category"], h["canonical_key"]))
+            docs = []
+            for h in pooled[:M]:
+                text = (rt.doc_text(h["canonical_key"]).get("text") or "")[:N]
+                if len(text) > budget:
+                    break  # 题级预算耗尽：按排序键截断剩余条文
+                docs.append({"canonical_key": h["canonical_key"], "source": h["canonical_key"].split(":", 1)[0],
+                             "text": text, "score": h["score"], "category": h["category"], "quarantined": False})
+                budget -= len(text)
+            rows.append({"question_case_id": case_id, "item_id": item["item_id"], "docs": docs})
+    return rows
 
-    def test_treatment_fingerprint(self):
-        fp = _load_json(P9 / "treatment_fingerprint.json")
-        assert fp["components"] and fp["sha256"]
+
+def build_bundles_for_eval(rows: list[dict]) -> dict[str, list[dict]]:
+    out: dict[str, list[dict]] = {}
+    for r in rows:
+        out.setdefault(r["item_id"], []).extend(r["docs"])
+    return out
 ```
 
-- [ ] **Step 2: 运行确认失败**
+题级测试（`TestMetricsPure` 追加）：
+```python
+    def test_bundle_k_budget_enforced(self):
+        ev = _load_module("evaluate", "docs/phase9a/retrieval/evaluate.py")
+        cfg = {"N_chars_per_doc": 200, "M_docs_per_item": 5, "K_chars_per_question": 1200}
+        item_map = [{"case_id": "c1", "item_id": "i1", "queries": []}, {"case_id": "c1", "item_id": "i2", "queries": []}]
+        # 注入大量伪条文：doc_text 由 monkeypatch 提供长文本（实施时用 monkeypatch 覆盖 rt.doc_text）
+        rows = ev.build_bundle(item_map, cfg, strategies=())
+        # 无 query 时 docs 为空；K 截断逻辑由 Task 7 Step 6 真实 bundle 测试断言
+        assert isinstance(rows, list)
+```
+（真实 K 断言在 Step 6 的 `test_real_bundle_budget` 中。）
 
-Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestBundleAndFingerprint -q`
-Expected: FAIL。
+- [ ] **Step 6: 真实 bundle 生成 + 一次性正式评测（QC 完成后）**
 
-- [ ] **Step 3: 生成 retrieval_bundle_dev.jsonl（一次性脚本）**
+追加测试：
+```python
+class TestRealEval:
+    def test_real_bundle_budget(self):
+        rows = [json.loads(l) for l in (P9 / "retrieval_bundle_dev.jsonl").open(encoding="utf-8") if l.strip()]
+        per_case: dict[str, int] = {}
+        for r in rows:
+            per_case[r["question_case_id"]] = per_case.get(r["question_case_id"], 0) + sum(len(d["text"]) for d in r["docs"])
+        for case_id, total in per_case.items():
+            assert total <= 1200, (case_id, total)  # K 预算题级强制
 
+    def test_eval_verdict_terminal(self):
+        ev = _load_json(P9 / "retrieval_eval.json")
+        assert ev["verdict"] in {"SILVER_RETRIEVAL_READY", "SILVER_RETRIEVAL_NOT_READY"}
+        assert ev["metrics"]["n_items"] == 112
+        assert ev["qc_state"] == "REVIEWED"
+```
+
+运行（一次性脚本 `.tmp/phase9a_run_eval.py`）：
 ```python
 import json, sys
-from pathlib import Path
 sys.path.insert(0, "docs/phase9a/retrieval")
-import retriever as rt
-
-REPO = Path("g:/project/agent")
-P9 = REPO / "docs" / "phase9a" / "retrieval"
-P8 = REPO / "docs" / "phase8" / "marriage-capability"
-item_map = json.loads((P9 / "item_query_map.json").read_text(encoding="utf-8"))
-cfg = json.loads((P9 / "truncation_config.json").read_text(encoding="utf-8"))
-N, M, K = cfg["N_chars_per_doc"], cfg["M_docs_per_item"], cfg["K_chars_per_question"]
-# 35 道开发题（case 集 = item_query_map 的 case_id 去重）
-by_case: dict[str, list] = {}
-for item in item_map["items"]:
-    by_case.setdefault(item["case_id"], []).append(item)
-rows = []
-for case_id, items in sorted(by_case.items()):
-    budget = 0
-    for item in items:
-        pooled = []
-        for q in item["queries"]:
-            pooled.extend(rt.pool_candidates(q))
-        seen = set()
-        uniq = []
-        for h in pooled:
-            if h["canonical_key"] not in seen:
-                seen.add(h["canonical_key"])
-                uniq.append(h)
-        uniq.sort(key=lambda h: rt.sort_key(h["score"], h["source_priority"], h["category"], h["canonical_key"]))
-        docs = []
-        for h in uniq[:M]:
-            text = (rt.doc_text(h["canonical_key"]).get("text") or "")[:N]
-            docs.append({"canonical_key": h["canonical_key"], "source": h["canonical_key"].split(":", 1)[0], "text": text, "score": h["score"], "category": h["category"], "quarantined": False})
-        rows.append({"question_case_id": case_id, "item_id": item["item_id"], "docs": docs})
-with (P9 / "retrieval_bundle_dev.jsonl").open("w", encoding="utf-8", newline="\n") as f:
-    for r in rows:
-        f.write(json.dumps(r, sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n")
-print(f"bundle written: {len(rows)} item-rows")
-```
-
-注：K=1200 预算检查由测试 `test_bundle_replay_evidence` 与 reconcile9a 增量校验（每题 docs 总字符 ≤ K）在 Task 8 覆盖；若超预算，按排序键截断 docs（保留高 score 条文）。
-
-- [ ] **Step 4: 重算 retrieval_eval.json（接入真实 bundle）**
-
-修改 evaluate.py 的 main()：从 `retrieval_bundle_dev.jsonl` 构造 bundles（key=item_id，docs 列表带 canonical_key）后调用 `compute_metrics`；QC 分歧率从 `qc_human_review.jsonl` 读取（若人类未完成复核，输出 `QC_PENDING` 占位并在 notes 注明，最终判定需人类复核后重跑）。
-
-Run: `.venv/Scripts/python.exe docs/phase9a/retrieval/evaluate.py`
-Expected: `verdict=SILVER_RETRIEVAL_READY|NOT_READY`（真实 bundle 口径）+ `judgeable_item_rate/macro_weighted_recall/macro_bundle_noise/binary_item_coverage`。
-
-- [ ] **Step 5: 生成 treatment_fingerprint.json（一次性脚本）**
-
-```python
-import hashlib, json
+import evaluate as ev
+import qc_gate as qc
 from pathlib import Path
-P9 = Path("docs/phase9a/retrieval")
-components = ["retriever.py", "query_extractor.py", "synonym_table.json", "ranking_config.json", "truncation_config.json", "source_snapshot_sha.json"]
-digest = hashlib.sha256()
-for c in components:
-    digest.update((P9 / c).read_bytes().replace(b"\r\n", b"\n"))
-    digest.update(b"\0")
-out = {"schema_version": "1.0", "components": components, "sha256": digest.hexdigest(), "note": "Phase 9B enhanced 臂 treatment fingerprint 依据"}
-(P9 / "treatment_fingerprint.json").write_text(json.dumps(out, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
+P9 = Path("docs/phase9a/retrieval").resolve()
+cfg = json.loads((P9 / "qc_config.json").read_text(encoding="utf-8"))
+state = qc.qc_state(P9 / "qc_human_review.jsonl", P9 / "qc_sample_list.json")
+if state != "REVIEWED":
+    sys.exit(f"HUMAN_QC_REQUIRED: state={state}")  # 未完成人工复核：阻断，不计算指标
+reviews = qc.load_human_review(P9 / "qc_human_review.jsonl")
+qc.validate_review_coverage(json.loads((P9 / "qc_sample_list.json").read_text(encoding="utf-8"))["sample_list"], reviews)
+qc.check_disagreement(reviews, P9 / "silver_relevance_judgment.jsonl", cfg["max_disagreement_rate"])
+item_map = json.loads((P9 / "item_query_map.json").read_text(encoding="utf-8"))["items"]
+items = [i["item_id"] for i in item_map]
+judgment = [json.loads(l) for l in (P9 / "silver_relevance_judgment.jsonl").open(encoding="utf-8") if l.strip()]
+# 每策略独立评估（strategy_outputs 派生每策略 bundle）→ per_strategy_eval.json
+# union bundle → retrieval_eval.json（只生成一次）
+print("one-shot eval executed; artifacts written")
 ```
 
-- [ ] **Step 6: 测试转绿 + Commit**
+实现要点：
+- **每策略评估**：对 s1..s5 各自构造该策略的 bundle（`pool_candidates(strategies=(name,))`），逐策略 `compute_metrics`，写入 `per_strategy_eval.json`（每策略 metrics + 命中数）。
+- **union 评估**：全策略 bundle → `compute_metrics` → `retrieval_eval.json`（`verdict` + `metrics` + `qc_state: "REVIEWED"` + `gates`）。
+- **策略选择规则（冻结于 ranking_config）**：union 为最终 bundle 基准；若 union 未过门，报告每策略指标供设计修订决策，**不得为过门修改策略或 judgment**。
 
-Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestBundleAndFingerprint -q`
+- [ ] **Step 7: 测试转绿 + Commit**
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestMetricsPure tests/test_phase9a_retrieval.py::TestRealEval -q`
 Expected: PASS。
 ```powershell
-git add -- docs/phase9a/retrieval/retrieval_bundle_dev.jsonl docs/phase9a/retrieval/treatment_fingerprint.json docs/phase9a/retrieval/retrieval_eval.json docs/phase9a/retrieval/evaluate.py tests/test_phase9a_retrieval.py
-git commit -m "feat(phase9a): dev bundle replay evidence + treatment fingerprint + real-bundle eval"
+git add -- docs/phase9a/retrieval/evaluate.py docs/phase9a/retrieval/retrieval_bundle_dev.jsonl docs/phase9a/retrieval/retrieval_eval.json docs/phase9a/retrieval/per_strategy_eval.json tests/test_phase9a_retrieval.py
+git diff --cached --name-only
+git commit -m "feat(phase9a): one-shot eval with per-strategy and union metrics after QC pass"
 ```
 
 ---
 
-## Task 8: provenance 对账与收尾
+## Task 8: 原子 provenance 对账（expected==actual）+ 篡改负向测试 + 关闭报告
 
 **Files:**
+- Modify: `docs/phase9a/retrieval/manifest.json`（终态追加条目）
 - Create: `docs/phase9a/retrieval/reconcile9a.py`
-- Create: `docs/phase9a/retrieval/retrieval_provenance.json`
 - Create: `docs/phase9a/CLOSURE.md`
 - Test: `tests/test_phase9a_retrieval.py`
 
-- [ ] **Step 1: 写失败测试**
+- [ ] **Step 1: 写失败测试（含篡改负向）**
 
 ```python
 class TestReconcile9a:
-    def test_reconcile_exit_zero(self):
-        proc = subprocess.run(
-            [sys.executable, str(P9 / "reconcile9a.py")], capture_output=True, text=True,
-            encoding="utf-8", cwd=REPO, env=dict(__import__("os").environ, PYTHONIOENCODING="utf-8"),
-        )
+    def test_reconcile_expected_equals_actual(self):
+        proc = subprocess.run([sys.executable, str(P9 / "reconcile9a.py")], capture_output=True, text=True,
+                              encoding="utf-8", cwd=REPO)
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "FAIL" not in proc.stdout
+
+    def test_tamper_detected(self, tmp_path):
+        # 篡改负向：改一个字节 → reconcile 必须 FAIL
+        import shutil
+        victim = P9 / "ranking_config.json"
+        backup = tmp_path / "bak"
+        shutil.copy2(victim, backup)
+        try:
+            victim.write_text(victim.read_text(encoding="utf-8").replace('"pooling_depth_per_strategy_per_query": 10', '"pooling_depth_per_strategy_per_query": 11'), encoding="utf-8")
+            proc = subprocess.run([sys.executable, str(P9 / "reconcile9a.py")], capture_output=True, text=True,
+                                  encoding="utf-8", cwd=REPO)
+            assert proc.returncode != 0
+            assert "FAIL" in proc.stdout
+        finally:
+            shutil.copy2(backup, victim)
 ```
 
 - [ ] **Step 2: 运行确认失败**
@@ -1059,10 +1219,13 @@ class TestReconcile9a:
 Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestReconcile9a -q`
 Expected: FAIL。
 
-- [ ] **Step 3: 实现 reconcile9a.py（复用 p8_freeze 口径）**
+- [ ] **Step 3: 终态 manifest 追加 + 实现 reconcile9a.py**
 
+先更新 manifest（一次性脚本）：追加 judgment/summary/qc 样本/QC review/strategy outputs/per-strategy eval/bundle/终态 eval/CLOSURE 的 expected SHA（json_canonical / jsonl_canonical / raw_bytes 按文件类型）。
+
+`reconcile9a.py`：
 ```python
-"""Phase 9A 对账：产物 SHA 四策略复算 + 分母/指标一致性。"""
+"""Phase 9A 原子对账：manifest expected SHA == 磁盘 actual SHA（逐项）；FAIL 即 exit 1。"""
 from __future__ import annotations
 
 import hashlib
@@ -1072,51 +1235,42 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent.parent.parent
 P9 = REPO / "docs" / "phase9a" / "retrieval"
-SHA_STRATEGIES = {
-    "retriever.py": "git_canonical_lf", "query_extractor.py": "git_canonical_lf", "silver_judge.py": "git_canonical_lf",
-    "qc_gate.py": "git_canonical_lf", "evaluate.py": "git_canonical_lf",
-    "item_query_map.json": "json_canonical", "synonym_table.json": "json_canonical", "ranking_config.json": "json_canonical",
-    "truncation_config.json": "json_canonical", "source_snapshot_sha.json": "json_canonical", "treatment_fingerprint.json": "json_canonical",
-    "retrieval_eval.json": "json_canonical", "qc_config.json": "json_canonical", "qc_sample_list.json": "json_canonical",
-    "silver_relevance_judgment.jsonl": "jsonl_canonical", "retrieval_bundle_dev.jsonl": "jsonl_canonical",
-}
 
 
-def sha_of(path: Path, strategy: str) -> str:
+def sha_of(p: Path, strategy: str) -> str:
+    if strategy == "raw_bytes":
+        return hashlib.sha256(p.read_bytes()).hexdigest()
     if strategy == "git_canonical_lf":
-        return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+        return hashlib.sha256(p.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
     if strategy == "json_canonical":
-        obj = json.loads(path.read_text(encoding="utf-8"))
+        obj = json.loads(p.read_text(encoding="utf-8"))
         return hashlib.sha256(json.dumps(obj, sort_keys=True, ensure_ascii=False, separators=(",", ":")) .encode() + b"\n").hexdigest()
     if strategy == "jsonl_canonical":
-        lines = [l for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+        lines = [l for l in p.read_text(encoding="utf-8").splitlines() if l.strip()]
         canonical = "".join(json.dumps(json.loads(l), sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n" for l in lines)
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     raise ValueError(strategy)
 
 
 def main() -> None:
-    results = []
-    for name, strategy in SHA_STRATEGIES.items():
-        p = P9 / name
-        results.append((f"{name} exists", p.exists(), ""))
-        if p.exists():
-            results.append((f"{name} sha", bool(sha_of(p, strategy)), strategy))
-    ev = json.loads((P9 / "retrieval_eval.json").read_text(encoding="utf-8"))
-    results.append(("verdict terminal", ev["verdict"] in {"SILVER_RETRIEVAL_READY", "SILVER_RETRIEVAL_NOT_READY"}, ev["verdict"]))
-    results.append(("denominator 112", ev["metrics"]["n_items"] == 112, str(ev["metrics"]["n_items"])))
+    manifest = json.loads((P9 / "manifest.json").read_text(encoding="utf-8"))
     all_ok = True
-    for name, ok, detail in results:
-        flag = "ok" if ok else "FAIL"
+    for name, entry in sorted(manifest["entries"].items()):
+        p = REPO / entry["path"]
+        if not p.exists():
+            print(f"  FAIL  {name}: missing")
+            all_ok = False
+            continue
+        actual = sha_of(p, entry["strategy"])
+        ok = actual == entry["sha256"]
         all_ok = all_ok and ok
-        print(f"  {flag}  {name}  ({detail})")
-    payload = {
-        "schema_version": "1.0",
-        "verdict": ev["verdict"],
-        "shas": {name: {"strategy": SHA_STRATEGIES[name], "sha256": sha_of(P9 / name, SHA_STRATEGIES[name])} for name in SHA_STRATEGIES if (P9 / name).exists()},
-        "reconcile_entry": "python docs/phase9a/retrieval/reconcile9a.py",
-    }
-    (P9 / "retrieval_provenance.json").write_text(json.dumps(payload, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
+        print(f"  {'ok' if ok else 'FAIL'}  {name}  ({entry['strategy']})")
+    ev = json.loads((P9 / "retrieval_eval.json").read_text(encoding="utf-8"))
+    terminal_ok = ev["verdict"] in {"SILVER_RETRIEVAL_READY", "SILVER_RETRIEVAL_NOT_READY"} and ev["qc_state"] == "REVIEWED"
+    denom_ok = ev["metrics"]["n_items"] == 112
+    all_ok = all_ok and terminal_ok and denom_ok
+    print(f"  {'ok' if terminal_ok else 'FAIL'}  terminal verdict ({ev['verdict']}, qc={ev['qc_state']})")
+    print(f"  {'ok' if denom_ok else 'FAIL'}  fixed-112 denominator")
     sys.exit(0 if all_ok else 1)
 
 
@@ -1124,36 +1278,37 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: 运行测试转绿 + 运行 reconcile9a.py**
+- [ ] **Step 4: 测试转绿 + 运行 reconcile**
 
 Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestReconcile9a -q`；`.venv/Scripts/python.exe docs/phase9a/retrieval/reconcile9a.py`
-Expected: PASS；exit 0，全部 ok。
+Expected: PASS；exit 0，全部 ok（篡改负向测试先 FAIL 后恢复）。
 
 - [ ] **Step 5: 写 `docs/phase9a/CLOSURE.md`**
 
-内容：终态（SILVER_RETRIEVAL_READY 或 NOT_READY）、verdict 依据（指标表 + QC 分歧率）、冻结产物清单与 SHA、结论限定（silver 工程可复现性，不声称语义正确性）、后续衔接（Phase 9B 待密封集 + 人工 gold 独立工作线）。
+内容：终态（SILVER_RETRIEVAL_READY / NOT_READY，QC 已完成）、verdict 依据（union + 每策略指标表）、QC 分歧率、冻结产物清单与 expected SHA、结论限定（silver 工程可复现性，不声称语义正确性；检索效果声明须依赖人工 gold 独立工作线）、后续衔接（Phase 9B 待密封集）。
 
 - [ ] **Step 6: Commit**
 
 ```powershell
-git add -- docs/phase9a/retrieval/reconcile9a.py docs/phase9a/retrieval/retrieval_provenance.json docs/phase9a/CLOSURE.md tests/test_phase9a_retrieval.py
-git commit -m "chore(phase9a): provenance + closure with dual-terminal verdict"
+git add -- docs/phase9a/retrieval/manifest.json docs/phase9a/retrieval/reconcile9a.py docs/phase9a/CLOSURE.md tests/test_phase9a_retrieval.py
+git diff --cached --name-only
+git commit -m "chore(phase9a): atomic provenance reconcile with tamper detection + closure"
 ```
 
 ---
 
 ## 完成定义（对齐设计 §8）
 
-1. 至少 2 个候选策略完成评估，双跑字节一致；FTS 漏检词在替代策略下无漏检。
-2. silver_relevance_judgment.jsonl 冻结（逐 item-document pair 盲标，pool_stats.actual_pair_count 为实际值；检索开发者未参与）。
-3. retriever 及全部配置冻结（Task 7 主冻结产物），treatment_fingerprint 可复算。
-4. 注入长度与噪声按冻结配置（N/M/K）落盘。
-5. 终态为 SILVER_RETRIEVAL_READY 或 SILVER_RETRIEVAL_NOT_READY 之一，结论闭合；QC 门（seed/算法/10%/分歧 10%）已执行，分歧超门即 NOT_READY。
-6. 全程零 API、零生产代码改动；reconcile9a.py 对账 exit 0。
+1. 至少 2 个候选策略完成评估（本计划全 5 个），**全量 53 query 双跑字节一致**。
+2. silver_relevance_judgment.jsonl 冻结（逐 item-document pair，`actual_pair_count` 于 summary；检索开发者未参与）。
+3. retriever 及全部配置在策略执行前冻结（Task 1 manifest）；treatment 指纹可复算（fingerprint 组件 SHA 由 manifest 提供）。
+4. N/M/K 冻结并在真实 bundle 中强制（题级 K 预算测试）。
+5. 终态 ∈ {SILVER_RETRIEVAL_READY, SILVER_RETRIEVAL_NOT_READY} 且 QC 状态 REVIEWED；**QC 未完成时状态 HUMAN_QC_REQUIRED，不得计算指标或发布终态**；分歧 >10% → NOT_READY。
+6. 全程零 API、零生产代码改动；reconcile9a.py 逐项 expected==actual 对账 exit 0（含篡改负向测试）。
 
 ## 反过拟合与纪律（冻结）
 
-- 不得为过门修改策略、silver 规则或 judgment；QC 只审计不改标签。
+- 不得为过门修改策略、silver 规则、judgment 或 manifest；QC 只审计不改标签；正式评测产物只生成一次。
 - 不在 44 道已知婚姻题上宣称准确率提升；SILVER_READY 只证明 silver 判据一致性与工程可复现性。
 - 不混入大运/流年注入、prompt 改写；不重启 C1。
 - 密封集数据不进入本任务；curator 数据位置只提供给独立受限 curator 任务。
