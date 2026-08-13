@@ -77,25 +77,40 @@ def _load_raw_corpus(p: Path) -> str:
     return _norm("".join(parts))
 
 
-def _chapter_list_count(p: Path) -> int | None:
+def _load_chapter_list(p: Path) -> list[str] | None:
+    """Return normalized chapter/section names from chapter_list.txt or section_list.txt."""
     for name in ("chapter_list.txt", "section_list.txt"):
         f = p / name
         if f.exists():
-            return sum(1 for ln in f.read_text(encoding="utf-8").splitlines() if ln.strip())
+            names = []
+            for ln in f.read_text(encoding="utf-8").splitlines():
+                ln = ln.strip()
+                if not ln:
+                    continue
+                # strip leading number + dot + whitespace, e.g. "1. 卷一·原造化之始" -> "卷一·原造化之始"
+                name_part = ln.split("\t", 1)[0]  # tab-separated: name\tURL
+                name_part = re.sub(r"^\d+[\.\s]*", "", name_part).strip()
+                names.append(name_part)
+            return names
     return None
 
 
-def _progress_done_count(p: Path) -> int:
+def _progress_done_list(p: Path) -> list[str]:
     f = p / "progress.json"
     if not f.exists():
-        return 0
+        return []
     prog = json.loads(f.read_text(encoding="utf-8"))
     done = prog.get("done", [])
-    return len(done) if isinstance(done, list) else 0
+    return done if isinstance(done, list) else []
 
 
-def validate_book(dir_key: str, name: str) -> dict:
-    p = BASE / dir_key
+def _progress_done_count(p: Path) -> int:
+    return len(_progress_done_list(p))
+
+
+def validate_book(dir_key: str, name: str, base_path: Path | None = None) -> dict:
+    base = base_path or BASE
+    p = base / dir_key
     report = {"book": name, "dir": dir_key, "gates": {}, "passed": True}
     if not p.is_dir():
         report["gates"]["__missing__"] = "directory not found"
@@ -181,14 +196,22 @@ def validate_book(dir_key: str, name: str) -> dict:
         "pass": not oob and invalid == 0,
     }
 
-    # G7 chapter completeness
-    list_cnt = _chapter_list_count(p)
-    done_cnt = _progress_done_count(p)
-    if list_cnt is not None:
+    # G7 chapter completeness (set equality, not just count)
+    expected_chapters = _load_chapter_list(p)
+    done_chapters = _progress_done_list(p)
+    if expected_chapters is not None:
+        # Normalize both lists: strip whitespace, normalize fullwidth/halfwidth
+        def _norm_ch(name: str) -> str:
+            return re.sub(r"\s+", "", name.strip())
+        expected_set = {_norm_ch(c) for c in expected_chapters if c}
+        done_set = {_norm_ch(c) for c in done_chapters if c}
+        missing = expected_set - done_set
+        extra = done_set - expected_set
         report["gates"]["G7_chapter_complete"] = {
-            "progress_done": done_cnt, "chapter_list": list_cnt,
-            "missing": max(0, list_cnt - done_cnt),
-            "pass": done_cnt >= list_cnt,
+            "expected": len(expected_set), "done": len(done_set),
+            "missing": sorted(missing)[:20], "missing_count": len(missing),
+            "extra": sorted(extra)[:20], "extra_count": len(extra),
+            "pass": not missing and not extra,
         }
     else:
         report["gates"]["G7_chapter_complete"] = {"pass": True, "reason": "no chapter_list"}
@@ -205,6 +228,33 @@ def validate_book(dir_key: str, name: str) -> dict:
             leaked.append(m.get("id", "?"))
     report["gates"]["G8_mcq_well_formed"] = {
         "malformed": len(leaked), "pass": not leaked,
+    }
+
+    # G9 content deduplication (global, normalized)
+    # Rule text dedup: same normalized rule text must not appear under multiple rule IDs.
+    # Cross-chapter duplicates must be merged into a single canonical rule with
+    # a source_chapters list (handled by remediation R7).
+    rule_text_map: dict[str, list[str]] = {}
+    for r in rules:
+        if not isinstance(r, dict):
+            continue
+        rt = _norm(r.get("rule", ""))
+        if not rt:
+            continue
+        rule_text_map.setdefault(rt, []).append(r.get("id", "?"))
+    rule_text_dup = {t: ids for t, ids in rule_text_map.items() if len(ids) > 1}
+    # MCQ question dedup (global, normalized)
+    mcq_questions = [_norm(m.get("question", "")) for m in mcqs
+                     if isinstance(m, dict) and not m.get("_parse_error")]
+    mcq_q_dup = len(mcq_questions) - len(set(mcq_questions))
+    report["gates"]["G9_content_dedup"] = {
+        "rule_text_duplicate_groups": len(rule_text_dup),
+        "rule_text_duplicate_count": sum(len(ids) - 1 for ids in rule_text_dup.values()),
+        "rule_text_duplicate_samples": {
+            t[:60]: ids for t, ids in list(rule_text_dup.items())[:5]
+        },
+        "mcq_question_duplicates": mcq_q_dup,
+        "pass": not rule_text_dup and mcq_q_dup == 0,
     }
 
     report["passed"] = all(g.get("pass", False) for g in report["gates"].values())
