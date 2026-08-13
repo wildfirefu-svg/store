@@ -124,7 +124,7 @@
   },
   {
    "path": "docs/phase8/marriage-capability/provenance.json",
-   "sha256": "c94bd38f83df0d0beb15765f1db5b9b3fa66610b5ffcb24f78ddc53a55dc883e",
+   "sha256": "92aa6c2497572c514d0a98c7375d913971479d7f3be1991edd34d937e4893b1a",
    "strategy": "json_canonical"
   },
   {
@@ -134,7 +134,7 @@
   },
   {
    "path": "docs/phase8/marriage-capability/sealed_marriageset_spec.md",
-   "sha256": "043ce38676dc51d725e4d5492e6d634c454293c42d85af85e5fe36aed82a92ff",
+   "sha256": "f61e20fd955bab7a1794d0ad283215ded89221d4de9673f293a7c2ad4017a57f",
    "strategy": "git_canonical_lf"
   },
   {

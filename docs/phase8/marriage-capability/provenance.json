@@ -31,7 +31,7 @@
    },
    {
     "path": "docs/phase8/marriage-capability/p8_audit.py",
-    "sha256": "d8ca5ad61d4788a943dc0bc875b916321e86274717102edaaa21a33e0039f621",
+    "sha256": "fdd60e8ef6e600b7cf06195b8151c64627afbc3a1baa89ea0ccf34a6fe82afc1",
     "strategy": "git_canonical_lf"
    },
    {
@@ -66,7 +66,7 @@
    },
    {
     "path": "docs/phase8/marriage-capability/sealed_marriageset_spec.md",
-    "sha256": "043ce38676dc51d725e4d5492e6d634c454293c42d85af85e5fe36aed82a92ff",
+    "sha256": "f61e20fd955bab7a1794d0ad283215ded89221d4de9673f293a7c2ad4017a57f",
     "strategy": "git_canonical_lf"
    }
   ],
