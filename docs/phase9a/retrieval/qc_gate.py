@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import os
 import random
 import sys
 from pathlib import Path
@@ -14,6 +13,8 @@ P9 = REPO / "docs" / "phase9a" / "retrieval"
 def generate_sample_list(seed: int, ratio: float, judgment_path: Path, out_path: Path) -> dict:
     """按 item 分层抽样（冻结算法）：总样本 = int(pool_size × ratio)；
     每 item 按比例 floor 分配，余数由 rng 从剩余 pool 补足，保证总样本数精确。"""
+    if not 0 < ratio <= 1:
+        sys.exit(f"FAIL: sample_ratio out of range: {ratio!r}")
     rows = [json.loads(l) for l in judgment_path.open(encoding="utf-8") if l.strip()]
     rng = random.Random(seed)
     by_item: dict[str, list] = {}
