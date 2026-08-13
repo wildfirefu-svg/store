@@ -1,0 +1,26 @@
+{
+ "files": {
+  "classic_texts_freeze_json": {
+   "sha256": "0dd288d413a304ae136a6b7851d251949f2cb131885c8be9616d3cac10f3c3b0",
+   "strategy": "json_canonical"
+  },
+  "kb_query_set_json": {
+   "sha256": "abf143f318acf1bef266a8213beb20b92a0a6d00d0cbbc177517f3d17cae6328",
+   "strategy": "json_canonical"
+  },
+  "kb_snapshot_db": {
+   "sha256": "071504d297610b0cd42cd2b7dc2d4ababe29da2ce3931bf2d456b708464c1266",
+   "strategy": "raw_bytes"
+  },
+  "knowledge_audit_jsonl": {
+   "sha256": "0cdc960951899d23cc8de0f972fbecb7b6eafff3b9fc602f2724360fd63264b0",
+   "strategy": "jsonl_canonical"
+  },
+  "required_knowledge_jsonl": {
+   "sha256": "48e44ff87be1acb4da123977b804e1aa7c311bc2652024599eb57fb4f1e94296",
+   "strategy": "jsonl_canonical"
+  }
+ },
+ "schema_version": "1.0",
+ "source": "phase8_freeze_manifest.json (canonical SHA 复用)"
+}
