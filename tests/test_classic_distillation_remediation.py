@@ -2313,6 +2313,39 @@ def test_fill_main_rejects_invalid_target_without_run_bindings(tmp_path, monkeyp
     assert calls == []
 
 
+def test_fill_main_rejects_mixed_valid_invalid_targets(tmp_path, monkeypatch):
+    """P0: mixed valid+invalid explicit targets reject the whole fill run
+    (never run the legal subset)."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import scripts.fill_missing_chapters as fmc
+    import distill_lib as dl
+    monkeypatch.setattr(fmc, "BASE", tmp_path)
+    monkeypatch.setitem(dl.VALID_TARGETS_BY_OPERATION, "fill", ("zipingzhenquan",))
+    calls = _spy_run_bindings(monkeypatch, fmc)
+    monkeypatch.setattr("sys.argv",
+                        ["fill_missing_chapters.py", "zipingzhenquan", "ghostbook"])
+    assert fmc.main() == 2
+    assert calls == []
+
+
+def test_fill_main_no_args_defaults_to_all_allowed(tmp_path, monkeypatch):
+    """P0: no explicit args still default to the full shared fill allowlist."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import scripts.fill_missing_chapters as fmc
+    import distill_lib as dl
+    monkeypatch.setattr(fmc, "BASE", tmp_path)
+    monkeypatch.setitem(dl.VALID_TARGETS_BY_OPERATION, "fill", ("zipingzhenquan",))
+    monkeypatch.setattr(dl, "_call", lambda *a, **k: "")
+    calls = []
+    def spy(dir_key, *a, **k):
+        calls.append(dir_key)
+        return {"error": "simulated"}  # 只验证 targets 展开，跳过完整执行
+    monkeypatch.setattr(fmc, "fill_book", spy)
+    monkeypatch.setattr("sys.argv", ["fill_missing_chapters.py"])
+    fmc.main()
+    assert calls == ["zipingzhenquan"]  # 无参数 → 默认全部（allowlist 仅 zipingzhenquan）
+
+
 def test_regen_main_rejects_mixed_valid_invalid_targets(tmp_path, monkeypatch):
     """P0: mixed valid+invalid explicit targets reject the whole run
     (never run the legal subset)."""
