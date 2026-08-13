@@ -321,11 +321,11 @@ pm.freeze(m, {
     "ranking_config": (P9 / "ranking_config.json", "json_canonical"),
     "truncation_config": (P9 / "truncation_config.json", "json_canonical"),
     "qc_config": (P9 / "qc_config.json", "json_canonical"),
-    "item_query_map": (P9 / "item_query_map.json", "json_canonical"),
+    # item_query_map 由 Step 6 生成后再冻结（P0 修订：不得冻结未生成文件）
 })
 print("manifest initialized at config_frozen:", len(json.loads((m).read_text(encoding="utf-8"))["entries"]), "entries")
 ```
-Expected: `manifest initialized at config_frozen: 7 entries`。
+Expected: `manifest initialized at config_frozen: 6 entries`。
 
 - [ ] **Step 6: 生成 item_query_map.json（分母映射，Task 4 依赖）**
 
@@ -374,6 +374,19 @@ if __name__ == "__main__":
 
 Run: `.venv/Scripts/python.exe docs/phase9a/retrieval/query_extractor.py`
 Expected: `item_query_map written: {'aggregate_queries': 53, 'items': 112, 'item_query_refs': 198}`。
+
+随后立即冻结该条目（P0 修订：生成后立即冻结，供 Task 4+ verify 使用）：
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, "docs/phase8/marriage-capability")
+sys.path.insert(0, "docs/phase9a/retrieval")
+import phase9a_manifest as pm
+P9 = Path("docs/phase9a/retrieval")
+pm.freeze(P9 / "manifest.json", {"item_query_map": (P9 / "item_query_map.json", "json_canonical")})
+print("item_query_map frozen; total entries:", len(json.loads((P9 / "manifest.json").read_text(encoding="utf-8"))["entries"]))
+```
+Expected: `item_query_map frozen; total entries: 7`。
 
 - [ ] **Step 7: 测试转绿 + Commit**
 
@@ -746,14 +759,30 @@ print("exec code frozen; stage=code_frozen")
 ```
 Expected: `exec code frozen; stage=code_frozen`。
 
-- [ ] **Step 5: 运行全量双跑 + 测试转绿 + Commit**
+- [ ] **Step 5: 运行全量双跑 → 冻结 strategy_outputs → 测试转绿 + Commit**
 
-Run: `.venv/Scripts/python.exe docs/phase9a/retrieval/run_strategies.py`；`.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestFullDoubleRun -q`
-Expected: `strategy outputs written: 265 rows`；PASS。
+Run: `.venv/Scripts/python.exe docs/phase9a/retrieval/run_strategies.py`
+Expected: `strategy outputs written: 265 rows (53 queries x 5 strategies)`。
+
+随后立即冻结该产物（P0 修订：生成后立即冻结，供 run_eval verify 使用）：
+```python
+import sys, json
+from pathlib import Path
+sys.path.insert(0, "docs/phase8/marriage-capability")
+sys.path.insert(0, "docs/phase9a/retrieval")
+import phase9a_manifest as pm
+P9 = Path("docs/phase9a/retrieval")
+pm.freeze(P9 / "manifest.json", {"strategy_outputs": (P9 / "strategy_outputs.jsonl", "jsonl_canonical")})
+print("strategy_outputs frozen")
+```
+Expected: `strategy_outputs frozen`。
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestFullDoubleRun -q`
+Expected: PASS。
 ```powershell
 git add -- docs/phase9a/retrieval/manifest.json docs/phase9a/retrieval/run_strategies.py docs/phase9a/retrieval/strategy_outputs.jsonl tests/test_phase9a_retrieval.py
 git diff --cached --name-only
-git commit -m "feat(phase9a): freeze exec code then full 53-query double-run"
+git commit -m "feat(phase9a): freeze exec code then full 53-query double-run, freeze strategy outputs"
 ```
 
 ---
@@ -831,6 +860,7 @@ def label_pair(item_id: str, term: str, query_category: str | None, doc: dict, s
 
 def main() -> None:
     sys.path.insert(0, str(P9))
+    sys.path.insert(0, str(REPO / "docs" / "phase8" / "marriage-capability"))
     import phase9a_manifest as pm
     pm.verify_frozen(P9 / "manifest.json", ["retriever_py", "synonym_table", "query_set_frozen", "item_query_map", "silver_judge_py"])
     item_map = json.loads((P9 / "item_query_map.json").read_text(encoding="utf-8"))
@@ -904,6 +934,20 @@ Expected: `silver_judge_py frozen`。
 
 Run: `.venv/Scripts/python.exe docs/phase9a/retrieval/silver_judge.py`；`.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestSilverJudgment -q`
 Expected: `silver judgment written: {n} pairs; summary written`（main() 内 verify_frozen 预检通过）；PASS。
+
+随后立即冻结 judgment 与 summary（P0 修订：生成后立即冻结，供 qc_gate/run_eval verify 使用）：
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, "docs/phase8/marriage-capability")
+sys.path.insert(0, "docs/phase9a/retrieval")
+import phase9a_manifest as pm
+P9 = Path("docs/phase9a/retrieval")
+pm.freeze(P9 / "manifest.json", {"silver_relevance_judgment": (P9 / "silver_relevance_judgment.jsonl", "jsonl_canonical"),
+                                 "silver_judgment_summary": (P9 / "silver_judgment_summary.json", "json_canonical")})
+print("judgment + summary frozen")
+```
+Expected: `judgment + summary frozen`。
 ```powershell
 git add -- docs/phase9a/retrieval/manifest.json docs/phase9a/retrieval/silver_judge.py docs/phase9a/retrieval/silver_relevance_judgment.jsonl docs/phase9a/retrieval/silver_judgment_summary.json tests/test_phase9a_retrieval.py
 git diff --cached --name-only
@@ -1013,9 +1057,10 @@ def validate_review_coverage(sample_list: list[dict], reviews: list[dict]) -> No
         sys.exit(f"HUMAN_QC_REQUIRED: coverage mismatch missing={len(missing)} extra={len(extra)} dup={dup}")
 
 
-def check_disagreement(reviews: list[dict], judgment_path: Path, max_rate: float, result_path: Path) -> str:
-    """分歧率 = 人类标签与 silver 标签不一致占比；结果原子落盘 qc_result.json（tmp + os.replace）；
-    超门 → 落盘 SILVER_RETRIEVAL_NOT_READY 证据（含原因），不计算检索指标。"""
+def check_disagreement(reviews: list[dict], judgment_path: Path, max_rate: float, result_path: Path) -> dict:
+    """分歧率 = 人类标签与 silver 标签不一致占比；结果原子落盘 qc_result.json（tmp + os.replace）。
+    返回 dict（verdict/disagreement_rate）供调用方分支；**不在此 sys.exit**——
+    QC_FAIL 正式终态由 run_eval.py 发布（P0 修订：失败分支必须形成完整终态链）。"""
     validate_human_review_schema(reviews)
     silver = {(r["item_id"], r["canonical_key"]): r["label"]
               for r in (json.loads(l) for l in judgment_path.open(encoding="utf-8") if l.strip())}
@@ -1028,13 +1073,12 @@ def check_disagreement(reviews: list[dict], judgment_path: Path, max_rate: float
     tmp.write_text(json.dumps(result, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
     json.loads(tmp.read_text(encoding="utf-8"))  # 写后校验
     os.replace(tmp, result_path)  # 原子落盘
-    if rate > max_rate:
-        sys.exit(f"SILVER_RETRIEVAL_NOT_READY: QC disagreement {rate:.2%} > {max_rate:.2%} (evidence in qc_result.json)")
-    return "PASS"
+    return result
 
 
 def main() -> None:
     sys.path.insert(0, str(P9))
+    sys.path.insert(0, str(REPO / "docs" / "phase8" / "marriage-capability"))
     import phase9a_manifest as pm
     pm.verify_frozen(P9 / "manifest.json", ["qc_config", "silver_relevance_judgment", "qc_gate_py"])
     cfg = json.loads((P9 / "qc_config.json").read_text(encoding="utf-8"))
@@ -1063,6 +1107,19 @@ Expected: `qc_gate_py frozen`。
 
 Run: `.venv/Scripts/python.exe docs/phase9a/retrieval/qc_gate.py`；`.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestQcSampleList -q`
 Expected: `qc sample list generated`（main() 内 verify_frozen 预检通过）；PASS。
+
+随后立即冻结样本列表（P0 修订：生成后立即冻结，供 run_eval verify 使用）：
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, "docs/phase8/marriage-capability")
+sys.path.insert(0, "docs/phase9a/retrieval")
+import phase9a_manifest as pm
+P9 = Path("docs/phase9a/retrieval")
+pm.freeze(P9 / "manifest.json", {"qc_sample_list": (P9 / "qc_sample_list.json", "json_canonical")})
+print("qc_sample_list frozen")
+```
+Expected: `qc_sample_list frozen`。
 ```powershell
 git add -- docs/phase9a/retrieval/manifest.json docs/phase9a/retrieval/qc_gate.py docs/phase9a/retrieval/qc_sample_list.json tests/test_phase9a_retrieval.py
 git diff --cached --name-only
@@ -1123,7 +1180,20 @@ def qc_state(review_path: Path, sample_path: Path) -> str:
 ```json
 {"schema_version": "1.0", "file": "qc_human_review.jsonl", "line_fields": ["item_id", "canonical_key", "human_label", "note"], "human_label_enum": ["relevant", "partially_relevant", "irrelevant", "uncertain"], "note_required": true, "rules": ["human_label 必填且属于枚举", "note 必填非空", "pair 与 qc_sample_list 一一对应（无缺失/重复/额外）"]}
 ```
-`qc_result.json` 由 Task 7 的 `check_disagreement` 原子生成（分歧超门 → 落盘 NOT_READY 证据后 sys.exit，不计算检索指标）。
+随后立即冻结零字节模板与 schema（P0 修订：生成后立即冻结，供 run_eval verify 使用）：
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, "docs/phase8/marriage-capability")
+sys.path.insert(0, "docs/phase9a/retrieval")
+import phase9a_manifest as pm
+P9 = Path("docs/phase9a/retrieval")
+pm.freeze(P9 / "manifest.json", {"qc_human_review": (P9 / "qc_human_review.jsonl", "jsonl_canonical"),
+                                 "qc_human_review_schema": (P9 / "qc_human_review_schema.json", "json_canonical")})
+print("qc_human_review + schema frozen")
+```
+Expected: `qc_human_review + schema frozen`。
+`qc_result.json` 由 Task 7 的 `check_disagreement` 原子生成（返回 dict；分歧超门时 QC_FAIL 正式终态由 run_eval.py 发布，不在此 sys.exit）。
 
 - [ ] **Step 4: 测试转绿 + Commit（此任务为显式暂停点）**
 
@@ -1403,12 +1473,18 @@ def _write_tmp(name: str, payload) -> Path:
 
 
 def _publish(tmp_files: dict[str, Path]) -> None:
-    """拒绝覆盖 + 全部校验后统一原子发布（避免半套产物）。"""
+    """拒绝覆盖 + 全部校验后统一原子发布（避免半套产物）。
+    .jsonl 逐行校验；.json 整文件校验（P0 修订：JSONL 不可整文件 json.loads）。"""
     for name in tmp_files:
         if (P9 / name).exists():
             sys.exit(f"FAIL: {name} already exists - one-shot violated")
-    for tmp in tmp_files.values():
-        json.loads(tmp.read_text(encoding="utf-8"))  # 发布前校验
+    for name, tmp in tmp_files.items():
+        if name.endswith(".jsonl"):
+            for line in tmp.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    json.loads(line)  # 逐行校验
+        else:
+            json.loads(tmp.read_text(encoding="utf-8"))
     for name, tmp in tmp_files.items():
         os.replace(tmp, P9 / name)
 
@@ -1486,7 +1562,7 @@ Expected（QC_FAIL 链）：`QC_FAIL chain published: SILVER_RETRIEVAL_NOT_READY
 Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_retrieval.py::TestMetricsPure tests/test_phase9a_retrieval.py::TestRealEval -q`
 Expected: PASS。
 ```powershell
-git add -- docs/phase9a/retrieval/manifest.json docs/phase9a/retrieval/evaluate.py docs/phase9a/retrieval/run_eval.py docs/phase9a/retrieval/retrieval_bundle_dev.jsonl docs/phase9a/retrieval/retrieval_eval.json docs/phase9a/retrieval/per_strategy_eval.json tests/test_phase9a_retrieval.py
+git add -- docs/phase9a/retrieval/manifest.json docs/phase9a/retrieval/evaluate.py docs/phase9a/retrieval/run_eval.py docs/phase9a/retrieval/qc_result.json docs/phase9a/retrieval/retrieval_bundle_dev.jsonl docs/phase9a/retrieval/retrieval_eval.json docs/phase9a/retrieval/per_strategy_eval.json tests/test_phase9a_retrieval.py
 git diff --cached --name-only
 git commit -m "feat(phase9a): persistent run_eval entry - atomic publish, no overwrite, dual terminal chains"
 ```
@@ -1539,14 +1615,12 @@ class TestTerminalChains:
         reviews = [{"item_id": "a", "canonical_key": "kb:gejue:1", "human_label": "relevant", "note": "x"}]
         judgment_path = tmp_path / "j.jsonl"
         judgment_path.write_text(json.dumps({"item_id": "a", "canonical_key": "kb:gejue:1", "label": "irrelevant"}, ensure_ascii=False) + "\n", encoding="utf-8")
-        try:
-            qc.check_disagreement(reviews, judgment_path, 0.1, tmp_path / "qc_result.json")
-            raised = False
-        except SystemExit:
-            raised = True
-        assert raised  # 分歧率 1.0 > 0.1 → fail-closed
-        result = json.loads((tmp_path / "qc_result.json").read_text(encoding="utf-8"))
-        assert result["verdict"] == "SILVER_RETRIEVAL_NOT_READY" and result["disagreement_rate"] == 1.0  # 证据已原子落盘
+        result = qc.check_disagreement(reviews, judgment_path, 0.1, tmp_path / "qc_result.json")
+        # 不 sys.exit：返回 dict 供 run_eval 发布正式 QC_FAIL 终态（P0 修订）
+        assert result["verdict"] == "SILVER_RETRIEVAL_NOT_READY" and result["disagreement_rate"] == 1.0
+        # 证据已原子落盘
+        disk = json.loads((tmp_path / "qc_result.json").read_text(encoding="utf-8"))
+        assert disk["verdict"] == "SILVER_RETRIEVAL_NOT_READY"
 
     def test_qc_pass_chain_metrics_not_computed_absent(self):
         ev = _load_json(P9 / "retrieval_eval.json")
@@ -1585,18 +1659,22 @@ print("treatment fingerprint written with per-component details")
 ```
 
 **Step 3b: 一次性生成最终 CLOSURE.md（终态产物必须先于 closure 存在）**
-`docs/phase9a/CLOSURE.md` 内容：终态（SILVER_RETRIEVAL_READY / NOT_READY；QC_PASS 或 QC_FAIL）、verdict 依据（union + 每策略指标表；QC_FAIL 时 metrics=not_computed + 分歧原因）、QC 分歧率、冻结产物清单与 expected SHA、结论限定（silver 工程可复现性，不声称语义正确性；检索效果声明须依赖人工 gold 独立工作线）、后续衔接（Phase 9B 待密封集）。**本文件在 seal 前一次性定稿，seal 后禁止修改**（如需修订 → 整文件版本化重封存，走 erratum 流程）。
+`docs/phase9a/CLOSURE.md` 内容：终态（SILVER_RETRIEVAL_READY / NOT_READY；QC_PASS 或 QC_FAIL）、verdict 依据（union + 每策略指标表；QC_FAIL 时 metrics=not_computed + 分歧原因）、QC 分歧率、冻结产物清单与 expected SHA、结论限定（silver 工程可复现性，不声称语义正确性；检索效果声明须依赖人工 gold 独立工作线）、后续衔接（Phase 9B 待密封集）。**本文件在 seal 前一次性定稿，seal 后禁止修改**（如需修订 → 以新版本号新建文件并重新走 seal 流程，旧版保留不动）。
 
 **Step 3c: 封存（reconcile9a.py 先落盘，CLOSURE 已定稿，随后 seal；不得 refresh/覆盖）**
+⚠️ 顺序注意：先创建 reconcile9a.py（下方代码块），再执行本 seal 脚本（seal 需计算其 SHA）。
 写 `.tmp/phase9a_seal.py` 并执行：
 ```python
+import json
 import sys
 from pathlib import Path
 sys.path.insert(0, "docs/phase8/marriage-capability")
 sys.path.insert(0, "docs/phase9a/retrieval")
 import phase9a_manifest as pm
 P9 = Path("docs/phase9a/retrieval")
-final_entries = {
+# 按终态分支冻结（P0 修订：QC_FAIL 只发布 retrieval_eval.json，不冻结缺失产物）
+eval_state = json.loads((P9 / "retrieval_eval.json").read_text(encoding="utf-8"))["qc_state"]
+common_entries = {
     "silver_judge_py": (P9 / "silver_judge.py", "git_canonical_lf"),
     "qc_gate_py": (P9 / "qc_gate.py", "git_canonical_lf"),
     "evaluate_py": (P9 / "evaluate.py", "git_canonical_lf"),
@@ -1605,18 +1683,20 @@ final_entries = {
     "silver_judgment_summary": (P9 / "silver_judgment_summary.json", "json_canonical"),
     "qc_sample_list": (P9 / "qc_sample_list.json", "json_canonical"),
     "qc_human_review": (P9 / "qc_human_review.jsonl", "jsonl_canonical"),
+    "qc_human_review_schema": (P9 / "qc_human_review_schema.json", "json_canonical"),
     "qc_result": (P9 / "qc_result.json", "json_canonical"),
     "strategy_outputs": (P9 / "strategy_outputs.jsonl", "jsonl_canonical"),
-    "per_strategy_eval": (P9 / "per_strategy_eval.json", "json_canonical"),
-    "retrieval_bundle_dev": (P9 / "retrieval_bundle_dev.jsonl", "jsonl_canonical"),
     "retrieval_eval": (P9 / "retrieval_eval.json", "json_canonical"),
     "treatment_fingerprint": (P9 / "treatment_fingerprint.json", "json_canonical"),
     "reconcile9a_py": (P9 / "reconcile9a.py", "git_canonical_lf"),
     "closure": (Path("docs/phase9a/CLOSURE.md"), "git_canonical_lf"),
 }
-pm.freeze(P9 / "manifest.json", final_entries)  # append-only：已存在项 SHA 变化即 fail-closed
+if eval_state != "QC_FAIL":  # QC_PASS 分支额外冻结诊断与 replay 产物
+    common_entries["per_strategy_eval"] = (P9 / "per_strategy_eval.json", "json_canonical")
+    common_entries["retrieval_bundle_dev"] = (P9 / "retrieval_bundle_dev.jsonl", "jsonl_canonical")
+pm.freeze(P9 / "manifest.json", common_entries)  # append-only：已存在项 SHA 变化即 fail-closed
 pm.set_stage(P9 / "manifest.json", "sealed")
-print("manifest sealed")
+print("manifest sealed; entries:", len(json.loads((P9 / "manifest.json").read_text(encoding="utf-8"))["entries"]))
 ```
 
 `reconcile9a.py`：
@@ -1698,7 +1778,7 @@ git commit -m "chore(phase9a): seal manifest (append-only), treatment fingerprin
 2. silver_relevance_judgment.jsonl 冻结（逐 item-document pair，`actual_pair_count` 于 summary；检索开发者未参与）。
 3. retriever 及全部配置在策略执行前冻结（Task 1/3 manifest）；`treatment_fingerprint.json` 生成并对账（Task 8，Phase 9B enhanced 臂依据）。
 4. N/M/K 冻结并在真实 bundle 中强制（题级 K 预算测试）。
-5. 终态 ∈ {SILVER_RETRIEVAL_READY, SILVER_RETRIEVAL_NOT_READY} 且 QC 状态 REVIEWED；**QC 未完成时状态 HUMAN_QC_REQUIRED，不得计算指标或发布终态**；分歧 >10% → NOT_READY。
+5. 终态 ∈ {SILVER_RETRIEVAL_READY, SILVER_RETRIEVAL_NOT_READY}；QC 状态为 REVIEWED（正常链）或 QC_FAIL（分歧超门，metrics=not_computed 但终态/原因/产物完整发布）；**QC 未完成时状态 HUMAN_QC_REQUIRED（暂停状态，不得计算指标或发布终态）**；分歧 >10% → QC_FAIL → SILVER_RETRIEVAL_NOT_READY。
 6. 全程零 API、零生产代码改动；reconcile9a.py 逐项 expected==actual 对账 exit 0（含篡改负向测试）。
 
 ## 反过拟合与纪律（冻结）
