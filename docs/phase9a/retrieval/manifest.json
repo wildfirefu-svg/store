@@ -65,7 +65,7 @@
   "silver_judge_py": {
    "path": "docs/phase9a/retrieval/silver_judge.py",
    "strategy": "git_canonical_lf",
-   "sha256": "47027c3ca100afa1181d80e996f9f7cc3af9bc47cdc8eb9645af3624f097137a"
+   "sha256": "e21051c92295f977499313477590974e00d92b24fbb88f2831136a890a31b3d3"
   },
   "silver_relevance_judgment": {
    "path": "docs/phase9a/retrieval/silver_relevance_judgment.jsonl",

@@ -15,7 +15,7 @@ P9 = REPO / "docs" / "phase9a" / "retrieval"
 RULE_SOURCE = "silver_rule_v2: synonym-cooccurrence AND category-consistency(query-arg) AND canonical-traceability"
 
 
-def label_pair(item_id: str, term: str, query_category: str | None, doc: dict, synonym_table: dict) -> dict:
+def label_pair(term: str, query_category: str | None, doc: dict, synonym_table: dict) -> dict:
     """规则：条文文本含 term 或同义词 → 与 query 的 category 参数一致 → relevant/partial/irrelevant。
     category 一致性 = 条文 category == query category 参数（query 无 category 时降级为 partial）。"""
     syns = [term] + synonym_table["synonyms"].get(term, [])
@@ -31,8 +31,16 @@ def label_pair(item_id: str, term: str, query_category: str | None, doc: dict, s
     return {"label": label, "reason": f"syn={syn_hit} cat_match={cat_ok}", "rule_version": RULE_SOURCE}
 
 
+def _atomic_write_text(path: Path, content: str) -> None:
+    """原子写（tmp → 校验 → os.replace），与 phase9a_manifest._atomic_write 对齐。"""
+    import os
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(content, encoding="utf-8", newline="\n")
+    json.loads(tmp.read_text(encoding="utf-8"))  # 写后校验
+    os.replace(tmp, path)
+
+
 def main() -> None:
-    sys.path.insert(0, str(P9))
     sys.path.insert(0, str(REPO / "docs" / "phase8" / "marriage-capability"))
     import phase9a_manifest as pm
     import strategy_store as ss
@@ -55,7 +63,7 @@ def main() -> None:
                 for h in hits:
                     key = (item["item_id"], h["canonical_key"])
                     doc = rt.doc_text(h["canonical_key"])
-                    j = label_pair(item["item_id"], term, qcat, doc, syn)
+                    j = label_pair(term, qcat, doc, syn)
                     cur = agg.get(key)
                     if cur is None:
                         agg[key] = {"item_id": item["item_id"], "query_ids": [q["query_id"]], "canonical_key": h["canonical_key"],
@@ -66,9 +74,13 @@ def main() -> None:
                         if RANK[j["label"]] > RANK[cur["label"]]:
                             cur["label"], cur["reason"], cur["rule_version"] = j["label"], j["reason"], j["rule_version"]
     pairs = sorted(agg.values(), key=lambda r: (r["item_id"], r["canonical_key"]))
-    with (P9 / "silver_relevance_judgment.jsonl").open("w", encoding="utf-8", newline="\n") as f:
+    # 原子写产物（Important 修复：防截断）
+    tmp_judgment = P9 / "silver_relevance_judgment.jsonl.tmp"
+    with tmp_judgment.open("w", encoding="utf-8", newline="\n") as f:
         for r in pairs:
             f.write(json.dumps(r, sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n")
+    import os
+    os.replace(tmp_judgment, P9 / "silver_relevance_judgment.jsonl")
     summaries = {}
     for r in pairs:
         s = summaries.setdefault(r["item_id"], {"relevant": 0, "partially_relevant": 0, "irrelevant": 0, "uncertain": 0})
@@ -81,8 +93,8 @@ def main() -> None:
         "item_summaries": summaries,
         "rule_source": RULE_SOURCE,
     }
-    (P9 / "silver_judgment_summary.json").write_text(
-        json.dumps(summary, sort_keys=True, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
+    _atomic_write_text(P9 / "silver_judgment_summary.json",
+                       json.dumps(summary, sort_keys=True, ensure_ascii=False, indent=1) + "\n")
     print(f"silver judgment written: {len(pairs)} pairs; summary written")
 
 
