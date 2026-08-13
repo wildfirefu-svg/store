@@ -86,6 +86,11 @@
    "path": "docs/phase9a/retrieval/qc_sample_list.json",
    "strategy": "json_canonical",
    "sha256": "4d2c8bccd22a4467a2fd6e75cb2945c8b57b9a9bdd2c0abf5277735dd565a29d"
+  },
+  "qc_human_review_schema": {
+   "path": "docs/phase9a/retrieval/qc_human_review_schema.json",
+   "strategy": "json_canonical",
+   "sha256": "5e70020c07c94fc488452b27e4dec0c6dbada6f7137643176c700e84ecbf9c96"
   }
  }
 }

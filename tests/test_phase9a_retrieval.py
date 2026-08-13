@@ -147,6 +147,24 @@ class TestPhase9aManifest:
         assert "sealed" in str(raised.code) or "cannot modify" in str(raised.code)
 
 
+class TestQcStateMachine:
+    def test_pending_review_blocks_eval(self):
+        g = _load_module("qc_gate", "docs/phase9a/retrieval/qc_gate.py")
+        # 无复核记录 → HUMAN_QC_REQUIRED（阻塞指标计算与终态）
+        assert g.qc_state(P9 / "qc_human_review.jsonl", P9 / "qc_sample_list.json") == "HUMAN_QC_REQUIRED"
+
+    def test_review_coverage_fail_closed(self):
+        g = _load_module("qc_gate", "docs/phase9a/retrieval/qc_gate.py")
+        sample = [{"item_id": "a", "canonical_key": "kb:gejue:1"}]
+        reviews = [{"item_id": "a", "canonical_key": "kb:gejue:2", "human_label": "relevant"}]  # 额外 pair
+        try:
+            g.validate_review_coverage(sample, reviews)
+            raised = False
+        except SystemExit:
+            raised = True
+        assert raised
+
+
 class TestQcSampleList:
     def test_stratified_by_item(self):
         lst = _load_json(P9 / "qc_sample_list.json")

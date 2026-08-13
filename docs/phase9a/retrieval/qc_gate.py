@@ -80,6 +80,17 @@ def check_disagreement(reviews: list[dict], judgment_path: Path, max_rate: float
             "verdict": "PASS" if rate <= max_rate else "SILVER_RETRIEVAL_NOT_READY"}
 
 
+def qc_state(review_path: Path, sample_path: Path) -> str:
+    """QC 状态机：无完整复核 → HUMAN_QC_REQUIRED；完整复核后由 evaluate 消费分歧判定。"""
+    sample = json.loads(sample_path.read_text(encoding="utf-8"))["sample_list"]
+    reviews = load_human_review(review_path)
+    if len(reviews) < len(sample):
+        return "HUMAN_QC_REQUIRED"
+    validate_review_coverage(sample, reviews)
+    validate_human_review_schema(reviews)
+    return "REVIEWED"
+
+
 def main() -> None:
     sys.path.insert(0, str(P9))
     sys.path.insert(0, str(REPO / "docs" / "phase8" / "marriage-capability"))
