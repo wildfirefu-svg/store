@@ -44,7 +44,7 @@ class TestFrozenConfigs:
 
     def test_manifest_frozen_before_strategy(self):
         m = _load_json(P9 / "manifest.json")
-        assert m["stage"] == "config_frozen"
+        assert m["stage"] in {"config_frozen", "code_frozen"}  # Task 1 初始化 config_frozen；Task 3 冻结代码后 code_frozen
         for name in ("query_set_frozen", "synonym_table", "ranking_config", "truncation_config", "qc_config", "upstream_inputs_sha"):
             assert name in m["entries"]
 
@@ -145,6 +145,29 @@ class TestPhase9aManifest:
             raised = e
         assert raised is not None  # sealed 后新增条目必须拒绝（幂等核验除外）
         assert "sealed" in str(raised.code) or "cannot modify" in str(raised.code)
+
+
+class TestFullDoubleRun:
+    def test_exec_code_frozen_before_run(self):
+        # freeze-before-use 门：策略执行代码必须先入 manifest，否则不允许真实运行
+        m = _load_json(P9 / "manifest.json")
+        for name in ("retriever_py", "run_strategies_py", "strategy_store_py"):
+            assert name in m["entries"], f"{name} not frozen before strategy execution"
+
+    def test_all_53_queries_double_run_byte_identical(self):
+        # strategy_outputs.jsonl 为全量 53 query 双跑产物：每行 (query_id, strategy, run1_hits, run2_hits)
+        rows = [json.loads(l) for l in (P9 / "strategy_outputs.jsonl").open(encoding="utf-8") if l.strip()]
+        qids = {r["query_id"] for r in rows}
+        qset = _load_json(P9 / "query_set_frozen.json")
+        assert len(qids) == 53
+        pairs = {(r["query_id"], r["strategy"]) for r in rows}
+        assert len(pairs) == 265  # 53 x 5 唯一 (query_id, strategy)
+        assert len(rows) == 265
+        for r in rows:
+            assert r["run1_hits"] == r["run2_hits"]  # 字节一致（canonical key 序列相同）
+            assert all({"canonical_key", "score", "source_priority", "category"} <= set(h) for h in r["run1_hits"])  # P0：完整命中信息供单源消费
+        per_strategy = {r["strategy"] for r in rows}
+        assert per_strategy == {"s1", "s2", "s3", "s4", "s5"}
 
 
 class TestRetrieverCore:
