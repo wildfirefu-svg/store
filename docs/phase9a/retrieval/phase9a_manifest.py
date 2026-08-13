@@ -37,13 +37,13 @@ def _atomic_write(path: Path, payload: dict) -> None:
 
 def _rel(p: Path) -> str:
     try:
-        return str(p.resolve().relative_to(REPO_ROOT))
+        return p.resolve().relative_to(REPO_ROOT).as_posix()  # 统一正斜杠，跨平台可移植
     except ValueError:
         return str(p)  # 目录外路径（如 tmp 镜像）原样保存
 
 
 def _abs(rel: str) -> Path:
-    p = Path(rel)
+    p = Path(rel.replace("\\", "/"))  # 归一已 committed 的反斜杠路径，避免重写 SHA
     return p if p.is_absolute() else REPO_ROOT / p
 
 

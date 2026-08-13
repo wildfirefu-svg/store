@@ -9,6 +9,9 @@ REPO = Path(__file__).resolve().parent.parent
 P9 = REPO / "docs" / "phase9a" / "retrieval"
 P8 = REPO / "docs" / "phase8" / "marriage-capability"
 
+sys.path.insert(0, str(P8))
+sys.path.insert(0, str(P9))  # 模块顶层注入：消除测试间顺序依赖，单跑任一测试均可 import
+
 
 def _load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
@@ -48,8 +51,6 @@ class TestFrozenConfigs:
 
 class TestPhase9aManifest:
     def test_append_only_rejects_change(self, tmp_path):
-        sys.path.insert(0, str(P8))
-        sys.path.insert(0, str(P9))  # 计划笔误修补：phase9a_manifest.py 位于 P9，需入 sys.path 才可 import
         import phase9a_manifest as pm
         m = tmp_path / "manifest.json"
         f = tmp_path / "a.json"
@@ -58,10 +59,11 @@ class TestPhase9aManifest:
         f.write_text('{"x": 2}', encoding="utf-8")  # 篡改
         try:
             pm.freeze(m, {"a": (f, "json_canonical")})
-            raised = False
-        except SystemExit:
-            raised = True
-        assert raised  # append-only：同名 SHA 变化必须 fail-closed
+            raised = None
+        except SystemExit as e:
+            raised = e
+        assert raised is not None  # append-only：同名 SHA 变化必须 fail-closed
+        assert "already frozen" in str(raised.code) or "append-only" in str(raised.code)
 
     def test_idempotent_same_sha(self, tmp_path):
         import phase9a_manifest as pm
@@ -79,10 +81,11 @@ class TestPhase9aManifest:
         pm.set_stage(m, "code_frozen")  # 中优：先推进至 code_frozen，排除 stage 不符干扰，真正覆盖缺条目被拒
         try:
             pm.verify_frozen(m, ["retriever_py"])
-            raised = False
-        except SystemExit:
-            raised = True
-        assert raised  # code_frozen 下缺条目（retriever_py 未冻结）→ fail-closed
+            raised = None
+        except SystemExit as e:
+            raised = e
+        assert raised is not None  # code_frozen 下缺条目（retriever_py 未冻结）→ fail-closed
+        assert "not frozen" in str(raised.code)
 
     def test_stage_machine_one_way(self, tmp_path):
         import phase9a_manifest as pm
@@ -90,13 +93,21 @@ class TestPhase9aManifest:
         pm.set_stage(m, "config_frozen")
         pm.set_stage(m, "code_frozen")
         pm.set_stage(m, "sealed")
-        for bad in ("code_frozen", "config_frozen", None):
+        for bad in ("code_frozen", "config_frozen"):
             try:
                 pm.set_stage(m, bad)
-                raised = False
-            except SystemExit:
-                raised = True
-            assert raised  # 回退与 None 均拒绝
+                raised = None
+            except SystemExit as e:
+                raised = e
+            assert raised is not None  # 回退拒绝
+            assert "forbidden" in str(raised.code) or "expected next" in str(raised.code)
+        try:
+            pm.set_stage(m, None)
+            raised = None
+        except SystemExit as e:
+            raised = e
+        assert raised is not None  # None 拒绝（unknown stage 分支）
+        assert "unknown stage" in str(raised.code)
 
     def test_stage_jump_rejected(self, tmp_path):
         """P0：禁跳级——None→sealed、config_frozen→sealed 必须失败。"""
@@ -105,17 +116,19 @@ class TestPhase9aManifest:
         for jump in ("sealed", "code_frozen"):
             try:
                 pm.set_stage(m, jump)
-                raised = False
-            except SystemExit:
-                raised = True
-            assert raised  # 跳级拒绝
+                raised = None
+            except SystemExit as e:
+                raised = e
+            assert raised is not None  # 跳级拒绝
+            assert "forbidden" in str(raised.code) or "expected next" in str(raised.code)
         pm.set_stage(m, "config_frozen")
         try:
             pm.set_stage(m, "sealed")
-            raised = False
-        except SystemExit:
-            raised = True
-        assert raised  # config_frozen→sealed 跳级拒绝
+            raised = None
+        except SystemExit as e:
+            raised = e
+        assert raised is not None  # config_frozen→sealed 跳级拒绝
+        assert "forbidden" in str(raised.code) or "expected next" in str(raised.code)
 
     def test_sealed_rejects_new_entry(self, tmp_path):
         import phase9a_manifest as pm
@@ -127,7 +140,8 @@ class TestPhase9aManifest:
         pm.set_stage(m, "sealed")
         try:
             pm.freeze(m, {"a": (f, "json_canonical")})
-            raised = False
-        except SystemExit:
-            raised = True
-        assert raised  # sealed 后新增条目必须拒绝（幂等核验除外）
+            raised = None
+        except SystemExit as e:
+            raised = e
+        assert raised is not None  # sealed 后新增条目必须拒绝（幂等核验除外）
+        assert "sealed" in str(raised.code) or "cannot modify" in str(raised.code)
