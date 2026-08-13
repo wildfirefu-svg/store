@@ -1335,13 +1335,17 @@ def _validate_phase1_receipt(receipt_path, manifest_path):
                 f"phase1 receipt dataset_sha256_by_year mismatch: "
                 f"year={year} receipt={receipt_ds.get(year)!r} "
                 f"manifest={sha!r}")
-    # Re-compute dataset SHA from current files and compare with receipt
+    # Re-compute dataset SHA from current files and compare with receipt.
+    # P0: use the LF-normalized canonical hash (see phase6_6d_offline_gate.
+    # compute_dataset_sha256) so CRLF worktrees and LF clean clones/CI hash
+    # the same git content identically; raw-byte hashing is checkout-dependent.
     datasets_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "benchmark", "datasets")
+    from scripts.phase6_6d_offline_gate import compute_dataset_sha256
     for year, expected_sha in receipt.get("dataset_sha256_by_year", {}).items():
         ds_path = os.path.join(datasets_dir, f"baziqa_contest8_{year}_holdout_enriched.jsonl")
         if not os.path.exists(ds_path):
             raise SystemExit(f"phase1 receipt validation: dataset missing: {ds_path}")
-        actual_sha = hashlib.sha256(open(ds_path, "rb").read()).hexdigest()
+        actual_sha = compute_dataset_sha256(ds_path)
         if actual_sha != expected_sha:
             raise SystemExit(
                 f"phase1 receipt dataset_sha256 mismatch: year={year} "

@@ -33,11 +33,19 @@ _RECEIPT_FILENAME = "phase1_receipt.json"
 
 
 def compute_dataset_sha256(path: str) -> str:
-    """Return SHA-256 hex digest of a dataset file's raw bytes."""
+    """Return SHA-256 hex digest of a dataset file's canonical bytes.
+
+    P0: dataset hashing MUST be checkout-independent. .gitattributes forces
+    ``eol=lf`` for tracked .jsonl, so a clean clone / CI has LF bytes while a
+    Windows worktree (core.autocrlf) has CRLF. Hashing raw worktree bytes made
+    the same git content produce different SHAs across checkouts and rejected
+    legal revalidation. Freeze the LF-normalized hash (== git blob content hash)
+    as the single canonical口径 for both generation and validation.
+    """
     h = hashlib.sha256()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(8192), b""):
-            h.update(chunk)
+            h.update(chunk.replace(b"\r\n", b"\n"))
     return h.hexdigest()
 
 

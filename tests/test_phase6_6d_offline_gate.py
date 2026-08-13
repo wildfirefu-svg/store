@@ -54,6 +54,22 @@ def test_offline_gate_dataset_sha_verified():
     assert len(sha) == 64
 
 
+def test_dataset_sha256_lf_normalized_crlf_lf_equivalent(tmp_path):
+    """P0: dataset SHA must be checkout-independent. A CRLF worktree (Windows
+    core.autocrlf) and an LF clean clone/CI must hash the same git content to
+    the SAME digest. Hashing raw worktree bytes produced different SHAs per
+    checkout and rejected legal revalidation."""
+    body = b'{"case_id":"x","question":"q","birth_year":1990}\n' * 3
+    crlf = tmp_path / "crlf.jsonl"
+    lf = tmp_path / "lf.jsonl"
+    crlf.write_bytes(body.replace(b"\n", b"\r\n"))
+    lf.write_bytes(body)
+    assert compute_dataset_sha256(str(crlf)) == compute_dataset_sha256(str(lf))
+    # The canonical value == hashing the LF bytes directly.
+    import hashlib as _h
+    assert compute_dataset_sha256(str(lf)) == _h.sha256(body).hexdigest()
+
+
 def test_offline_gate_n_31():
     entries, _, receipt = generate_routed_manifest(["2024", "2025"], _DATASETS_DIR)
     assert receipt["n_routed"] == 31
