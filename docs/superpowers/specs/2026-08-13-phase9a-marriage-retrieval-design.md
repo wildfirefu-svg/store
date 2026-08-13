@@ -1,7 +1,7 @@
 # Phase 9A 设计：婚姻知识检索可行性（零 API）
 
 **日期：** 2026-08-13
-**状态：** v1.3（NEEDS_REVISION 三轮修订：标注主键改为 item-document pair、指标拆分 weighted_recall/bundle_noise、实验顺序同步、silver relevance judgment 明确化）
+**状态：** v1.3.2（NEEDS_REVISION 四轮修订：终态改 SILVER_READY/限定结论、固定 112 分母 + judgeable_item_rate 硬门、QC 抽样/分歧门冻结）
 **前置：** Phase 8 已冻结（`docs/phase8/CLOSURE.md`，最终 HEAD `0f74de2`；缺口分布 112/39/19/1/0；C1_TERMINATED）
 **范围冻结：** 只解决"检索不可见 112"缺口；**不混入**大运/流年注入、prompt 改写；**不重启 C1**；**零 LLM API**；不评价答案准确率。
 
@@ -13,9 +13,9 @@
 
 | 编号 | 目标 | 验收口径 |
 |---|---|---|
-| 9A-G1 | 中文 FTS 替代检索策略 | 至少 2 个候选策略（含 FTS 替代方案）在固定 query 集上双跑字节一致、无漏检（对照 fts_behavior_probe.json 已知漏检词） |
+| 9A-G1 | 中文 FTS 替代检索策略 | 至少 2 个候选策略（含 FTS 替代方案）在固定 query 集上双跑字节一致、无漏检（对照 fts_behavior_probe.json 已知漏检词）；**结论限于工程可复现性，不声称语义相关性**（silver 同源限制，§4.3） |
 | 9A-G2 | relevance judgment 冻结 | 策略实现与配置冻结 → 执行 S1–S5 形成 pooled candidates → 隐去策略来源 → **逐 (item_id, canonical_document_key) pair 盲标**（silver judgment，规则 SHA 冻结 + 10% 人类质检）→ judgment 冻结 |
-| 9A-G3 | 召回覆盖率 | 按冻结 silver judgment 计算 **macro weighted_recall**（§5.1 口径）；目标 ≥90%（双终态见 §8）；binary item coverage 另行报告 |
+| 9A-G3 | 召回覆盖率 | 按冻结 silver judgment 计算 **macro weighted_recall**（§5.1 口径）；**分母固定为全部 112 项**（no_gold_mass/UNJUDGEABLE 计未覆盖）；目标 ≥90%（双终态见 §8）；binary item coverage 分母同为 112 |
 | 9A-G4 | 来源/去重/排序 | 每命中记录 canonical document key（KB=表+ID；classic=冻结路径+行号）；总排序键 `(-score, source_priority, category, stable_document_id)` 冻结；双跑一致 |
 | 9A-G5 | 注入长度与噪声 | 每题 bundle 注入文本长度（字符数 + 估算 token）落盘；噪声（无关命中）按 **bundle_noise**（§5.1 口径）计算 |
 | 9A-G6 | 冻结可迁移 retriever | retriever 实现 SHA + query extractor/schema + 同义词表 + ranking/truncation config + source snapshot SHA + treatment fingerprint（§6） |
@@ -85,7 +85,8 @@
 
 - **reviewer = 本地确定性规则初标（silver）**：基于冻结规则（同义词表共现 + category 一致性 + canonical key 溯源），规则代码 SHA 冻结；**不调用任何 LLM API**（零 API 硬约束）。
 - **产物性质**：本阶段产出称 **silver relevance judgment**，**不得暗示完整人工 gold**；10% 人类抽查仅质检校正。
-- 标注规则与检索策略同源风险：规则初标基于与检索同源的词表时，覆盖率会偏高——因此 **READY 判定同时要求 bundle_noise ≤20%**（precision 侧）与最坏题级护栏，且 RETRIEVAL_READY 结论只表明"检索可复现"，**不得基于 silver 标注宣称检索效果**。
+- **标注规则与检索策略同源风险（P0 修订）**：silver 规则与 S3/S4 检索策略依赖同类特征（同义词共现/类别一致性），因此本阶段终态**只证明检索器与冻结 silver 判据的一致性与工程可复现性，不得声称取回了语义正确的命理知识**；语义相关性声明必须依赖独立人工 gold（后续独立工作线）。
+- **人工 QC（执行前冻结）**：抽样 seed、样本列表（10%，按 (item_id, canonical key) pair 分层抽样）与**最大允许分歧率 10%**（人类复核与 silver 标签不一致占比）在策略执行前冻结于 QC 配置并 SHA 落盘；**QC 分歧率超过门槛 → 直接 `SILVER_RETRIEVAL_NOT_READY`，不得仅修正抽中标签后继续**。
 - 人工 gold 建立（如需）为独立后续工作线，不阻塞本阶段双终态判定。
 
 ---
@@ -102,10 +103,11 @@
 
 - **weighted_recall_i（召回侧，主指标）**：策略取回的该 item 命中中 relevant 权重总和 / 该 item 在冻结 silver judgment 中的全部 relevant 权重总和。
 - **bundle_noise_i（精确侧）**：该 item bundle 中 `irrelevant` 数 / bundle 中 relevant+partially_relevant+irrelevant 数。
-- **binary item coverage（另行报告）**：该 item 是否取回 ≥1 条 relevant 权重>0 的条文（0/1）。
-- **gold mass=0 处理（冻结）**：item 在 silver judgment 中 relevant+partial 权重总和 = 0 → 该 item 不计入 weighted_recall 分母，单独报告为 `no_gold_mass`；若其取回命中全为 unlabeled/irrelevant，计入 NOT_READY 理由。
-- **uncertain 与 UNJUDGEABLE（冻结）**：item 的标注中 relevant+partial+irrelevant 数为 0（全部 uncertain）→ 该 item 进入 `UNJUDGEABLE`，不计入任何指标分母，单独报告。
-- **macro 口径**：macro weighted_recall = 非 UNJUDGEABLE 且 gold mass>0 的 item 的 weighted_recall_i 等权平均（有效分母 = 该类 item 数，落盘）。
+- **binary item coverage（分母固定 112，P0 修订）**：该 item 是否取回 ≥1 条 relevant 权重>0 的条文（0/1）；**分母 = 全部 112 项**，no_gold_mass / UNJUDGEABLE 一律计 0（未覆盖），不得从分母剔除。
+- **judgeable_item_rate（P0 修订，硬门）**：`(112 − UNJUDGEABLE 数 − no_gold_mass 数) / 112`，作为 READY 独立硬门（≥90%），防止不可判定项缩小有效分母。
+- **gold mass=0 处理（冻结）**：item 在 silver judgment 中 relevant+partial 权重总和 = 0 → 该 item 不计入 weighted_recall 分子分母（其 binary coverage 计 0，见上），单独报告为 `no_gold_mass`。
+- **uncertain 与 UNJUDGEABLE（冻结）**：item 的标注中 relevant+partial+irrelevant 数为 0（全部 uncertain）→ 该 item 进入 `UNJUDGEABLE`（其 binary coverage 计 0，见上），单独报告。
+- **macro 口径**：macro weighted_recall = 非 UNJUDGEABLE 且 gold mass>0 的 item 的 weighted_recall_i 等权平均；**有效分母与 judgeable_item_rate 同时落盘**。
 - **未标注新命中处理（冻结）**：策略执行后新命中但不在 pooled candidates 的条文标注为 `unlabeled`，不参与指标计算但计数落盘；若某 item 的取回命中全部为 unlabeled（≥1 条）则按 fail-closed 计该 item 未取回。
 - **quarantine 命中（冻结）**：classic quarantine 文件命中**禁止进入最终 bundle**（只作佐证，与 Phase 8 语义一致）。
 
@@ -148,22 +150,25 @@
 
 ## 8. 终态与完成定义（双终态 + 门槛冻结）
 
-**终态（两种都允许 Phase 9A 完成）**：
+**终态（两种都允许 Phase 9A 完成；P0 修订：命名限定 silver）**：
 
-- `RETRIEVAL_READY`：同时满足——
+- `SILVER_RETRIEVAL_READY`：同时满足——
+  - **judgeable_item_rate ≥ 90%**（§5.1 口径，防分母逃逸）；
   - **macro weighted_recall ≥ 90%**（§5.1 口径：非 UNJUDGEABLE 且 gold mass>0 的 item 等权平均）；
   - **macro bundle_noise ≤ 20%**（§5.1 口径）；
-  - **binary item coverage ≥ 90%**（另行报告且纳入门）；
+  - **binary item coverage ≥ 90%**（分母固定 112，no_gold_mass/UNJUDGEABLE 计 0）；
   - 题级最坏护栏：任一 item 的 bundle 若全部命中均为 irrelevant，则该 item 计失败（计入未取回）；
+  - 人工 QC 分歧率 ≤ 10%（§4.3 冻结门槛）；
   - 排序/去重/指纹全部对账通过。
-- `RETRIEVAL_NOT_READY`：未达上述任一门槛——保留完整评估结果与失败原因（逐项未取回清单 + UNJUDGEABLE/no_gold_mass 明细），**不得为过门而修改策略或 judgment**；结论闭合，转入设计修订。
+  **结论限定**：SILVER_RETRIEVAL_READY 只证明检索器与冻结 silver 判据的一致性和工程可复现性，**不构成语义相关性或检索效果的声明**。
+- `SILVER_RETRIEVAL_NOT_READY`：未达上述任一门槛——保留完整评估结果与失败原因（逐项未取回清单 + UNJUDGEABLE/no_gold_mass/QC 分歧明细），**不得为过门而修改策略或 judgment**；结论闭合，转入设计修订。
 
 **完成定义**：
 1. 至少 2 个候选策略完成评估，双跑字节一致；FTS 漏检词在替代策略下无漏检。
 2. silver_relevance_judgment.jsonl 冻结（逐 item-document pair 盲标，`pool_stats.actual_pair_count` 记录实际值，SHA 落盘；检索开发者未参与）。
 3. retriever 及全部配置冻结（§6 主冻结产物），treatment_fingerprint 可复算。
 4. 注入长度与噪声按冻结配置落盘，给出与预算的权衡结论。
-5. 终态为 RETRIEVAL_READY 或 RETRIEVAL_NOT_READY 之一，结论闭合。
+5. 终态为 SILVER_RETRIEVAL_READY 或 SILVER_RETRIEVAL_NOT_READY 之一，结论闭合。
 6. 全程零 API、零生产代码改动。
 
 ---
