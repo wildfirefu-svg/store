@@ -74,7 +74,7 @@
   },
   {
    "path": "docs/phase8/marriage-capability/provenance.json",
-   "sha256": "57c72b7252e71bd4f42b3d3ae9a54164e8c96c6183d15b620b95af11955b783c",
+   "sha256": "9a3fb7f220237702c1cd5cf2361b727615024d3d2f36093846d32a6cdc58ed68",
    "strategy": "json_canonical"
   },
   {

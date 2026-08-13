@@ -98,5 +98,6 @@
   ]
  },
  "reconcile_entry": "python docs/phase8/marriage-capability/p8_reconcile.py",
- "total_entries": 16
+ "total_entries": 16,
+ "note": "total_entries 为冻结产物数（不含 provenance.json 自身，避免自引用）"
 }
