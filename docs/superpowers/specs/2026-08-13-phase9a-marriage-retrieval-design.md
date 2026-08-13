@@ -1,7 +1,7 @@
 # Phase 9A 设计：婚姻知识检索可行性（零 API）
 
 **日期：** 2026-08-13
-**状态：** v1.3.2（NEEDS_REVISION 四轮修订：终态改 SILVER_READY/限定结论、固定 112 分母 + judgeable_item_rate 硬门、QC 抽样/分歧门冻结）
+**状态：** v1.3.3（NEEDS_REVISION 五轮修订：judgeable 并集防重复扣除、QC 样本列表冻结时机移至 pool 后、QC 只审计不改标签、目标措辞对齐 silver）
 **前置：** Phase 8 已冻结（`docs/phase8/CLOSURE.md`，最终 HEAD `0f74de2`；缺口分布 112/39/19/1/0；C1_TERMINATED）
 **范围冻结：** 只解决"检索不可见 112"缺口；**不混入**大运/流年注入、prompt 改写；**不重启 C1**；**零 LLM API**；不评价答案准确率。
 
@@ -9,7 +9,7 @@
 
 ## 1. 目标与验收口径
 
-**目标**：验证婚姻知识检索能否**稳定取回正确知识**——对 35 道开发题中 112 项"检索不可见"doctrine 知识项，基于**独立 relevance judgment**评估候选检索策略的召回、排序、注入长度与噪声，并冻结**可迁移的 retriever**（而非开发题预计算 bundle）。
+**目标**：验证婚姻知识检索能否**稳定复现与冻结 silver 判据一致的检索结果**（结论限于工程可复现性，不声称语义正确性，§4.3）——对 35 道开发题中 112 项"检索不可见"doctrine 知识项，基于冻结的 **silver relevance judgment** 评估候选检索策略的召回、排序、注入长度与噪声，并冻结**可迁移的 retriever**（而非开发题预计算 bundle）。
 
 | 编号 | 目标 | 验收口径 |
 |---|---|---|
@@ -71,22 +71,22 @@
 - **pair 规模**：Phase 8 原始 pool 的唯一 item-document pair = **11,411**；S1–S5 top-10 pooling 后实际 pair 数**重新计算并记录**于 `silver_relevance_judgment.jsonl` 的 `pool_stats.actual_pair_count`（不得用全局 2,519 文档数代替）。
 - 两源都参与评价（S1–S5 均可能命中两源），故按合并 pool 冻结。
 
-### 4.2 盲标闭环流程（P0-3 修订：顺序文内一致）
+### 4.2 盲标闭环流程（P0 修订：QC 样本冻结时机与顺序可执行）
 
-1. **先冻结**全部策略代码、query 集、同义词表、ranking/truncation 配置及其 SHA（§6 主冻结产物）。
+1. **先冻结**全部策略代码、query 集、同义词表、ranking/truncation 配置及其 SHA（§6 主冻结产物）；**同时冻结 QC 参数**（抽样 seed、抽样算法、10% 比例、最大允许分歧率 10%）。
 2. **执行 S1–S5**，取所有策略候选**并集**；pooling depth 冻结（**每策略每 (item,query) 取 top-10**，执行前确定，落盘于 ranking_config）；**重算实际 item-document pair 数并记录**。
 3. **隐去候选来源策略**（reviewer 看不到命中来自哪个策略），对 pooled candidates 逐 **(item_id, canonical_document_key) pair 盲标**；检索开发者不得参与。
    **标签闭合枚举（冻结）**：`relevant / partially_relevant / irrelevant / uncertain`；`hard_negative` 是 `irrelevant` 的额外属性（仅标注于字面命中的无关候选，防策略仅靠字面匹配过门），不单列类别；每条标注附理由 + 标注规则版本 + 日期。
 4. **冻结** `silver_relevance_judgment.jsonl`（逐 pair 标注 + 每 item 汇总 + `pool_stats.actual_pair_count`，SHA 落盘）。
-5. **一次性计算**各策略指标（§5 weighted_recall / bundle_noise），**禁止看到结果后修改策略或 judgment**。
-6. 10% 人类抽查仅作质检（校正误标），不代替 gold 建立。
+5. **QC 门（pool 生成后立即执行，早于指标计算）**：基于 pooled pairs 按已冻结 seed/算法/比例**立即生成并冻结 QC 样本列表**（SHA 落盘）；人类复核执行**一致性审计**——**QC 只审计，不修改 silver 标签**；分歧率 >10% → 直接 `SILVER_RETRIEVAL_NOT_READY`。
+6. **一次性计算**各策略指标（§5 weighted_recall / bundle_noise）——**仅在 QC 门通过后执行一次**，禁止看到结果后修改策略或 judgment。
 
 ### 4.3 reviewer 身份（执行条件冻结）
 
 - **reviewer = 本地确定性规则初标（silver）**：基于冻结规则（同义词表共现 + category 一致性 + canonical key 溯源），规则代码 SHA 冻结；**不调用任何 LLM API**（零 API 硬约束）。
 - **产物性质**：本阶段产出称 **silver relevance judgment**，**不得暗示完整人工 gold**；10% 人类抽查仅质检校正。
 - **标注规则与检索策略同源风险（P0 修订）**：silver 规则与 S3/S4 检索策略依赖同类特征（同义词共现/类别一致性），因此本阶段终态**只证明检索器与冻结 silver 判据的一致性与工程可复现性，不得声称取回了语义正确的命理知识**；语义相关性声明必须依赖独立人工 gold（后续独立工作线）。
-- **人工 QC（执行前冻结）**：抽样 seed、样本列表（10%，按 (item_id, canonical key) pair 分层抽样）与**最大允许分歧率 10%**（人类复核与 silver 标签不一致占比）在策略执行前冻结于 QC 配置并 SHA 落盘；**QC 分歧率超过门槛 → 直接 `SILVER_RETRIEVAL_NOT_READY`，不得仅修正抽中标签后继续**。
+- **人工 QC（P0 修订：执行前冻结参数，样本列表 pool 后冻结）**：抽样 seed、抽样算法、10% 比例与**最大允许分歧率 10%**（人类复核与 silver 标签不一致占比）在策略执行前冻结于 QC 配置并 SHA 落盘；**QC 样本列表在 pool 生成后立即生成并冻结**（早于 silver 结果检查和指标计算）；**QC 只做一致性审计，不修改 silver 标签**；分歧率超过门槛 → 直接 `SILVER_RETRIEVAL_NOT_READY`，不得仅修正抽中标签后继续。
 - 人工 gold 建立（如需）为独立后续工作线，不阻塞本阶段双终态判定。
 
 ---
@@ -104,7 +104,7 @@
 - **weighted_recall_i（召回侧，主指标）**：策略取回的该 item 命中中 relevant 权重总和 / 该 item 在冻结 silver judgment 中的全部 relevant 权重总和。
 - **bundle_noise_i（精确侧）**：该 item bundle 中 `irrelevant` 数 / bundle 中 relevant+partially_relevant+irrelevant 数。
 - **binary item coverage（分母固定 112，P0 修订）**：该 item 是否取回 ≥1 条 relevant 权重>0 的条文（0/1）；**分母 = 全部 112 项**，no_gold_mass / UNJUDGEABLE 一律计 0（未覆盖），不得从分母剔除。
-- **judgeable_item_rate（P0 修订，硬门）**：`(112 − UNJUDGEABLE 数 − no_gold_mass 数) / 112`，作为 READY 独立硬门（≥90%），防止不可判定项缩小有效分母。
+- **judgeable_item_rate（P0 修订，硬门）**：`(112 − |UNJUDGEABLE ∪ no_gold_mass|) / 112`（**集合并集**——UNJUDGEABLE 天然满足 gold mass=0，不得重复扣除），作为 READY 独立硬门（≥90%），防止不可判定项缩小有效分母。
 - **gold mass=0 处理（冻结）**：item 在 silver judgment 中 relevant+partial 权重总和 = 0 → 该 item 不计入 weighted_recall 分子分母（其 binary coverage 计 0，见上），单独报告为 `no_gold_mass`。
 - **uncertain 与 UNJUDGEABLE（冻结）**：item 的标注中 relevant+partial+irrelevant 数为 0（全部 uncertain）→ 该 item 进入 `UNJUDGEABLE`（其 binary coverage 计 0，见上），单独报告。
 - **macro 口径**：macro weighted_recall = 非 UNJUDGEABLE 且 gold mass>0 的 item 的 weighted_recall_i 等权平均；**有效分母与 judgeable_item_rate 同时落盘**。
