@@ -1523,23 +1523,29 @@ def build_bundles_for_eval(rows: list[dict]) -> dict[str, list[dict]]:
 
 题级测试（`TestMetricsPure` 追加）：
 ```python
-    def test_bundle_k_budget_enforced(self, monkeypatch):
-        """monkeypatch 多条长文本：真实触发跨 item 题级 K 截断（非空 query 占位）。"""
+    def test_bundle_k_budget_enforced(self, tmp_path, monkeypatch):
+        """monkeypatch 冻结 strategy_outputs 与 doc_text：真实触发跨 item 题级 K 截断
+        （合成 fixture 独立于真实 53 query，终审标注修复）。"""
         ev = _load_module("evaluate", "docs/phase9a/retrieval/evaluate.py")
         import retriever as rt
+        monkeypatch.setattr(ev, "P9", tmp_path)  # 指向合成冻结输出目录
+        (tmp_path / "strategy_outputs.jsonl").write_text("\n".join([
+            json.dumps({"query_id": "q1", "strategy": "s1", "run1_hits": [
+                {"canonical_key": "kb:gejue:1", "score": 1.0, "source_priority": 1, "category": "婚姻"},
+                {"canonical_key": "kb:gejue:2", "score": 1.0, "source_priority": 1, "category": "婚姻"},
+                {"canonical_key": "kb:gejue:3", "score": 1.0, "source_priority": 1, "category": "婚姻"}]}),
+            json.dumps({"query_id": "q2", "strategy": "s1", "run1_hits": [
+                {"canonical_key": "kb:gejue:1", "score": 1.0, "source_priority": 1, "category": "婚姻"}]}),
+        ]) + "\n", encoding="utf-8")
         cfg = {"N_chars_per_doc": 200, "M_docs_per_item": 5, "K_chars_per_question": 300}
-        long_text = "婚" * 200
-        fake_docs = {"kb:gejue:1": {"text": long_text, "category": "婚姻"},
-                     "kb:gejue:2": {"text": long_text, "category": "婚姻"},
-                     "kb:gejue:3": {"text": long_text, "category": "婚姻"}}
+        fake_docs = {k: {"text": "婚" * 200, "category": "婚姻"} for k in ("kb:gejue:1", "kb:gejue:2", "kb:gejue:3")}
         monkeypatch.setattr(rt, "doc_text", lambda key: fake_docs[key])
-        monkeypatch.setattr(rt, "pool_candidates", lambda q, **kw: [{"canonical_key": k, "score": 1.0, "source_priority": 1, "category": "婚姻"} for k in fake_docs])
-        item_map = [{"case_id": "c1", "item_id": "i1", "queries": [{"query_id": "q1", "entrypoint": "search_gejue", "args": {"query": "婚", "category": "婚姻"}, "top_n": 5}]},
-                    {"case_id": "c1", "item_id": "i2", "queries": [{"query_id": "q2", "entrypoint": "search_gejue", "args": {"query": "婚", "category": "婚姻"}, "top_n": 5}]}]
+        item_map = [{"case_id": "c1", "item_id": "i1", "queries": [{"query_id": "q1"}]},
+                    {"case_id": "c1", "item_id": "i2", "queries": [{"query_id": "q2"}]}]
         rows = ev.build_bundle(item_map, cfg, strategies=("s1",))
         total = sum(len(d["text"]) for r in rows for d in r["docs"])
         assert total <= 300  # 跨 item 题级预算：K=300 强制
-        assert any(len(r["docs"]) < 3 for r in rows)  # 至少一处被截断
+        assert any(len(r["docs"]) < 3 for r in rows)  # 至少一处被截断（i1 的 3 条 × 200 字符超预算）
 ```
 
 - [ ] **Step 6: 真实 bundle 生成 + 一次性正式评测（持久化 run_eval.py，QC 完成后）**
