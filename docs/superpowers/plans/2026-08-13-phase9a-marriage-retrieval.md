@@ -324,12 +324,13 @@ class TestPhase9aManifest:
         import phase9a_manifest as pm
         m = tmp_path / "manifest.json"
         pm.set_stage(m, "config_frozen")
+        pm.set_stage(m, "code_frozen")  # 中优：先推进至 code_frozen，排除 stage 不符干扰，真正覆盖缺条目被拒
         try:
             pm.verify_frozen(m, ["retriever_py"])
             raised = False
         except SystemExit:
             raised = True
-        assert raised  # 未冻结即使用 → fail-closed
+        assert raised  # code_frozen 下缺条目（retriever_py 未冻结）→ fail-closed
 
     def test_stage_machine_one_way(self, tmp_path):
         import phase9a_manifest as pm
@@ -1673,6 +1674,7 @@ def main() -> None:
     args = parser.parse_args()
     root = Path(args.root)
     pm.verify_frozen(root / "manifest.json", ["evaluate_py", "qc_gate_py", "retriever_py", "run_eval_py",
+                                               "strategy_store_py",  # P0：evaluate 实际导入并执行 loader，必须冻结
                                                "silver_relevance_judgment", "item_query_map", "truncation_config",
                                                "ranking_config", "qc_config", "qc_sample_list", "qc_human_review",
                                                "strategy_outputs"])
@@ -1863,6 +1865,59 @@ class TestTerminalChains:
         assert proc.returncode != 0  # SHA drift → fail-closed（校验即消费的同一份镜像字节）
         assert "strategy_outputs" in (proc.stdout + proc.stderr)
 
+    def test_mirror_content_consumed_positive(self, tmp_path):
+        """中优正验证：篡改镜像 strategy_outputs 后重建镜像 manifest（SHA 重新匹配）→
+        run_eval 成功，且 bundle 必须反映修改后的镜像内容（证明消费的是镜像而非真实 P9）。"""
+        import sys as _sys
+        _sys.path.insert(0, str(P8))
+        _sys.path.insert(0, str(P9))
+        import phase9a_manifest as pm
+        mirror = self._make_mirror(tmp_path, disagree=False)
+        # 清空某个 query 的全部命中（q1 在镜像 strategy_outputs 中为第一行 query_id）
+        so_path = mirror / "strategy_outputs.jsonl"
+        rows = [json.loads(l) for l in so_path.open(encoding="utf-8") if l.strip()]
+        target_qid = rows[0]["query_id"]
+        new_rows = []
+        for r in rows:
+            if r["query_id"] == target_qid:
+                r["run1_hits"] = []
+                r["run2_hits"] = []
+            new_rows.append(r)
+        so_path.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in new_rows) + "\n", encoding="utf-8", newline="\n")
+        # 重建镜像 manifest 中 strategy_outputs 条目（SHA 重新匹配）
+        pm.freeze(mirror / "manifest.json", {"strategy_outputs": (so_path, "jsonl_canonical")})
+        proc = subprocess.run([sys.executable, str(P9 / "run_eval.py"), "--root", str(mirror)],
+                              capture_output=True, text=True, encoding="utf-8", cwd=REPO)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        # bundle 必须反映镜像修改：target_qid 相关 item 的 docs 清空（消费的是镜像而非真实 P9）
+        bundle = [json.loads(l) for l in (mirror / "retrieval_bundle_dev.jsonl").open(encoding="utf-8") if l.strip()]
+        affected = [r for r in bundle if self._item_uses_query(mirror, r["item_id"], target_qid)]
+        assert affected and all(len(r["docs"]) == 0 for r in affected), "mirror content not consumed"
+
+    @staticmethod
+    def _item_uses_query(mirror, item_id: str, query_id: str) -> bool:
+        item_map = json.loads((mirror / "item_query_map.json").read_text(encoding="utf-8"))["items"]
+        for item in item_map:
+            if item["item_id"] == item_id and any(q["query_id"] == query_id for q in item["queries"]):
+                return True
+        return False
+
+    def test_strategy_store_drift_negative(self, tmp_path):
+        """P0 负向：strategy_store.py 冻结后漂移 → run_eval 必须拒绝（evaluate 实际导入执行它）。"""
+        import shutil
+        mirror = self._make_mirror(tmp_path, disagree=False)
+        ss_path = mirror / "strategy_store.py"
+        backup = tmp_path / "ss_bak"
+        shutil.copy2(ss_path, backup)
+        try:
+            ss_path.write_text(ss_path.read_text(encoding="utf-8") + "\n# drift\n", encoding="utf-8")
+            proc = subprocess.run([sys.executable, str(P9 / "run_eval.py"), "--root", str(mirror)],
+                                  capture_output=True, text=True, encoding="utf-8", cwd=REPO)
+            assert proc.returncode != 0  # SHA drift → fail-closed
+            assert "strategy_store_py" in (proc.stdout + proc.stderr)
+        finally:
+            shutil.copy2(backup, ss_path)
+
     def test_qc_fail_chain_e2e(self, tmp_path):
         mirror = self._make_mirror(tmp_path, disagree=True)
         proc = subprocess.run([sys.executable, str(P9 / "run_eval.py"), "--root", str(mirror)],
@@ -1897,7 +1952,7 @@ P9 = Path("docs/phase9a/retrieval")
 manifest = json.loads((P9 / "manifest.json").read_text(encoding="utf-8"))
 components_detail = []
 digest = hashlib.sha256()
-for name in ("retriever_py", "query_extractor_py", "synonym_table", "ranking_config", "truncation_config", "upstream_inputs_sha"):
+for name in ("retriever_py", "run_strategies_py", "strategy_store_py", "query_extractor_py", "synonym_table", "ranking_config", "truncation_config", "upstream_inputs_sha"):
     entry = manifest["entries"].get(name)
     if entry is None:
         sys.exit(f"FAIL: {name} not in manifest - fingerprint cannot be single-sourced")
