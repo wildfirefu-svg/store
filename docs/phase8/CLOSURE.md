@@ -10,7 +10,7 @@
 | 设计 | `docs/superpowers/specs/2026-08-11-phase8-marriage-capability-design.md` v1.3.2（commit `90c536b` 起多轮修订） |
 | 计划 | `docs/superpowers/plans/2026-08-11-phase8-marriage-capability.md` v3.2（commit `edfd3af`） |
 | 结论冻结 commit | `084a25f`（NEEDS_FIX 三轮修复：结构化事实/学理注入分离） |
-| Phase 8 最终 HEAD | `77b643b`（P2 span-aware 限制记录） |
+| Phase 8 最终 HEAD | `0f74de2`（closure erratum：sealed spec v1.3.2 版本号修订后重冻结 manifest/provenance SHA） |
 | 任务链 | Task 0–8 全部完成，阶段间对账通过 |
 | C1 终态 | **C1_TERMINATED**（replay_count=1，160 题四态和=160；0018 changed_wrong_to_wrong、0034/0073 improved、harmed=3） |
 | 最终缺口分布（171 知识项） | **检索不可见 112 / 注入缺失 39 / 计算缺失 19 / 知识缺失 1 / 模型未利用 0** |
@@ -40,6 +40,7 @@
 - `phase8_freeze_manifest.json`：见文件内 entries（28 项，四策略：git_canonical_lf 12 / json_canonical 9 / jsonl_canonical 5 / raw_bytes 2）
 - `provenance.json`：total_entries=27，entries_by_strategy 分列
 - 复核方式：`p8_reconcile.py manifest_disk` 节逐项复算（独立实现三种 canonical 口径）
+- **closure erratum（2026-08-13，commit `0f74de2`）**：`9822d59` 修订 sealed_marriageset_spec.md 版本号引用（v1.3.1→v1.3.2）后未同步 manifest/provenance，reconcile 一度 FAIL（exit 1）；已重冻结该文件 SHA 并重生成 provenance，reconcile 恢复 exit 0。最终 HEAD 以本 erratum 提交为准。
 
 ## 4. 工程发现（供 Phase 9A 引用）
 
