@@ -42,11 +42,12 @@ def compute_dataset_sha256(path: str) -> str:
     legal revalidation. Freeze the LF-normalized hash (== git blob content hash)
     as the single canonical口径 for both generation and validation.
     """
-    h = hashlib.sha256()
+    # P0: normalize CRLF->LF on the FULL byte string (not per-8192-chunk), so a
+    # "\r" at the end of one read chunk and "\n" at the start of the next is
+    # still normalized. Datasets are ~400KB, so a full read is safe.
     with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            h.update(chunk.replace(b"\r\n", b"\n"))
-    return h.hexdigest()
+        data = f.read()
+    return hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest()
 
 
 def _resolve_birth_year(case: dict) -> int | None:

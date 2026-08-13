@@ -70,6 +70,21 @@ def test_dataset_sha256_lf_normalized_crlf_lf_equivalent(tmp_path):
     assert compute_dataset_sha256(str(lf)) == _h.sha256(body).hexdigest()
 
 
+def test_dataset_sha256_crlf_cross_chunk_boundary(tmp_path):
+    """P0 regression: a CRLF sequence whose CR falls at the end of one 8192-byte
+    read chunk and LF at the start of the next must still be normalized. The
+    previous per-chunk replace() implementation dropped such boundary CRLFs."""
+    # Build a body where the ONLY CRLF straddles the 8192-byte chunk boundary.
+    prefix = b"a" * 8191  # 8192nd byte = b"\r"
+    data = prefix + b"\r\n" + b'b{"k":"v"}\n' * 2
+    crlf = tmp_path / "cross_crlf.jsonl"
+    crlf.write_bytes(data)
+    lf_body = prefix + b"\n" + b'b{"k":"v"}\n' * 2
+    import hashlib as _h
+    assert compute_dataset_sha256(str(crlf)) == _h.sha256(lf_body).hexdigest()
+    assert compute_dataset_sha256(str(crlf)) != _h.sha256(data).hexdigest()
+
+
 def test_offline_gate_n_31():
     entries, _, receipt = generate_routed_manifest(["2024", "2025"], _DATASETS_DIR)
     assert receipt["n_routed"] == 31
