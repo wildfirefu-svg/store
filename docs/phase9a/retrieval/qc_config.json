@@ -1,0 +1,8 @@
+{
+ "schema_version": "1.0",
+ "seed": 20260813,
+ "sampling": "stratified_by_item",
+ "sample_ratio": 0.1,
+ "max_disagreement_rate": 0.1,
+ "note": "执行前冻结；样本列表在 pool 生成后冻结；QC 只审计不改标签；分歧超门 → SILVER_RETRIEVAL_NOT_READY；总样本数 = int(pool_size × 0.1)，按 item 比例 floor 分配，余数由 rng 从剩余 pool 补足"
+}

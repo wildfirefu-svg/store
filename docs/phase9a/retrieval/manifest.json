@@ -1,0 +1,46 @@
+{
+ "schema_version": "1.0",
+ "stage": "config_frozen",
+ "entries": {
+  "upstream_inputs_sha": {
+   "path": "docs\\phase9a\\retrieval\\upstream_inputs_sha.json",
+   "strategy": "json_canonical",
+   "sha256": "64f1f5e7156afdd25009bf796eaa97befaf7bad54e9213b8acaf86c8fd8f80a1"
+  },
+  "query_set_frozen": {
+   "path": "docs\\phase9a\\retrieval\\query_set_frozen.json",
+   "strategy": "json_canonical",
+   "sha256": "8e14d7b90de6b042a70e13960d76d179fe65b2f0380f14c90f82982e02f71e5f"
+  },
+  "synonym_table": {
+   "path": "docs\\phase9a\\retrieval\\synonym_table.json",
+   "strategy": "json_canonical",
+   "sha256": "43849c8988683f222b4aefa8d3cdeab7f7374b3d6c7ac5fe7583ac4941ef4558"
+  },
+  "ranking_config": {
+   "path": "docs\\phase9a\\retrieval\\ranking_config.json",
+   "strategy": "json_canonical",
+   "sha256": "29224b5f7cb95d996ad03b8dc77da557573f6310f4fc084c545e543a3b3db9ae"
+  },
+  "truncation_config": {
+   "path": "docs\\phase9a\\retrieval\\truncation_config.json",
+   "strategy": "json_canonical",
+   "sha256": "d6d7592eeb25afab4d550201eb3261740b206267efea1d3f7ac501e5d55d6055"
+  },
+  "qc_config": {
+   "path": "docs\\phase9a\\retrieval\\qc_config.json",
+   "strategy": "json_canonical",
+   "sha256": "f8d94513cbcd40341f3090c6a82c172552c52b257fc3766d3125660f4ecc8c46"
+  },
+  "item_query_map": {
+   "path": "docs\\phase9a\\retrieval\\item_query_map.json",
+   "strategy": "json_canonical",
+   "sha256": "563106030c7819f3ec9b245fc92d08afdc603fe038e35e1b322ecbaceb0a5b01"
+  },
+  "query_extractor_py": {
+   "path": "docs\\phase9a\\retrieval\\query_extractor.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "a8d5133724c396f878025c43a295501b437fa7d7f28ad544c851f1420cd57de0"
+  }
+ }
+}

@@ -1,0 +1,20 @@
+{
+ "schema_version": "1.0",
+ "sort_key": [
+  "-score",
+  "source_priority",
+  "category",
+  "stable_document_id"
+ ],
+ "source_priority": {
+  "gejue": 1,
+  "shensha": 2,
+  "shishen_combos": 2,
+  "nayin": 2,
+  "bingyao": 2,
+  "xiangyi": 2,
+  "classic": 3
+ },
+ "pooling_depth_per_strategy_per_query": 10,
+ "strategy_selection_rule": "FIXED: union of S1-S5 is the final bundle baseline; per-strategy metrics are diagnostic only, never used to choose the bundle after seeing results"
+}

@@ -1,0 +1,8 @@
+{
+ "schema_version": "1.0",
+ "N_chars_per_doc": 200,
+ "M_docs_per_item": 5,
+ "K_chars_per_question": 1200,
+ "token_estimate": "中文字符 1.5 字符/token",
+ "note": "N=P90 上界；M=Phase8 top_n 对齐；K=800 token 预算"
+}
