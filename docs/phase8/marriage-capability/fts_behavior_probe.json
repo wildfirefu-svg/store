@@ -1,0 +1,18 @@
+{
+ "schema_version": "1.0",
+ "scope": "gejue_fts FTS5 中文检索行为记录（Phase 8 审计期间发现，冻结）",
+ "snapshot_db": "docs/phase8/marriage-capability/kb_snapshot.db",
+ "tokenizer": {
+  "name": "FTS5 默认 unicode61（未指定 tokenize 选项，见 kb_snapshot.db sqlite_master gejue_fts 定义）",
+  "behavior": "连续汉字序列被当作一个 token（无中文分词）",
+  "consequence": "多字词 MATCH 查询按整体 token 匹配，子串词漏检"
+ },
+ "probe_queries": [
+  {"term": "红鸾", "match_hits": 0, "like_hits": 2, "note": "文本中'红鸾'常与'天喜'连续出现形成 token'红鸾天喜'，MATCH'红鸾'漏检"},
+  {"term": "婚姻", "match_hits": 37, "like_hits": 49, "note": "MATCH 命中为含 token'婚姻'的文档；LIKE 子串命中更广"},
+  {"term": "姻缘", "match_hits": 0, "like_hits": 2, "note": "多字词 MATCH 漏检示例"}
+ ],
+ "conclusion": "审计/检索语义选择必须区分 FTS 路径与 LIKE 路径；本 Phase 8 审计查询全部带 category 走 LIKE 子串匹配（bazi_kb.py search_gejue category 分支），不受 FTS token 化漏检影响",
+ "recorded_at": "2026-08-13",
+ "verified_by": "对 kb_snapshot.db 只读复验（MATCH 与 LIKE 计数一致）"
+}

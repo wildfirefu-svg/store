@@ -21,17 +21,47 @@
    },
    {
     "path": "docs/phase8/marriage-capability/classic_texts_search.py",
-    "sha256": "6deb936ec919eb6d0de1d0f18305ae00b6819fc1e08dd183fe4adadd31440985",
+    "sha256": "2c85c9ebdb97ecaa35ba5d5c1d6435b9c4bbc4e44f92deab5b5d01fe524deb0d",
     "strategy": "git_canonical_lf"
    },
    {
     "path": "docs/phase8/marriage-capability/knowledge_audit_summary.md",
-    "sha256": "1d0b50bc24a05fe04ffb1aa2044a3f9747bc9d37ce3807b0dfce85e4ede4c982",
+    "sha256": "5ec20e9ce75562e7c5c65eacc1d693ca01cf4b1aa47d3e82109be01731803176",
     "strategy": "git_canonical_lf"
    },
    {
     "path": "docs/phase8/marriage-capability/p8_audit.py",
-    "sha256": "8c4f7d330ef997c4439c7f319f65d249957f9595111377004415c6fb415eee5f",
+    "sha256": "b49b0f78a4d659cbbb02a7add54b9fdae784773bd5c46cd05d9083b429b0eff4",
+    "strategy": "git_canonical_lf"
+   },
+   {
+    "path": "docs/phase8/marriage-capability/p8_freeze.py",
+    "sha256": "6c81f9f64a85b0a13a82c4f5ec7d9de39bf5b81b99358a8bc477c0f93ec922b8",
+    "strategy": "git_canonical_lf"
+   },
+   {
+    "path": "docs/phase8/marriage-capability/p8_kb_snapshot.py",
+    "sha256": "c855d83eb6a43f6bbdf544c224089b4878f261527e19b412e41aa157605b6a82",
+    "strategy": "git_canonical_lf"
+   },
+   {
+    "path": "docs/phase8/marriage-capability/p8_probe.py",
+    "sha256": "2eb983ad12457ea743b784a5e19b713e2574408988440d4dde9070b7481b0242",
+    "strategy": "git_canonical_lf"
+   },
+   {
+    "path": "docs/phase8/marriage-capability/p8_provenance.py",
+    "sha256": "c61f13930f1ad27ca90a130e3e5b0ef4ca02c65536db841e0e17b98ee0eec52e",
+    "strategy": "git_canonical_lf"
+   },
+   {
+    "path": "docs/phase8/marriage-capability/p8_reconcile.py",
+    "sha256": "e0b058ea772185596d2d444121a51d498e4f24bd620eb9002aebafdde6c65372",
+    "strategy": "git_canonical_lf"
+   },
+   {
+    "path": "docs/phase8/marriage-capability/p8_subtype_split.py",
+    "sha256": "9fe5aeda7c4824c9ce9926e013ee43cf0ab3eb05d84708d3be2705b50e7b82d1",
     "strategy": "git_canonical_lf"
    },
    {
@@ -62,6 +92,11 @@
     "strategy": "json_canonical"
    },
    {
+    "path": "docs/phase8/marriage-capability/fts_behavior_probe.json",
+    "sha256": "34478732ebfec83c3a6dc5001cf1c4337e4cb81b631579023856a6453d80d010",
+    "strategy": "json_canonical"
+   },
+   {
     "path": "docs/phase8/marriage-capability/kb_equivalence.json",
     "sha256": "0203cc742e6b93d4a47b4cbf7333bf6a6405f624bfeb08388e27d344aa4ebf09",
     "strategy": "json_canonical"
@@ -79,8 +114,23 @@
   ],
   "jsonl_canonical": [
    {
+    "path": "docs/phase7/error-analysis/error_classification.jsonl",
+    "sha256": "c9bfa280f4141f74e7cc1bb5023d71c3caaf209c05f4d61bd0e93c7b071164ae",
+    "strategy": "jsonl_canonical"
+   },
+   {
+    "path": "docs/phase7/phase7-mingli-v4flash-nt-20260811-r2/merged_details.jsonl",
+    "sha256": "7130377dde9e3528e9c33b6c85a36970256d49d851b3ae2887f0bf64a6de0a61",
+    "strategy": "jsonl_canonical"
+   },
+   {
+    "path": "docs/phase7/phase7-mingli-v4flash-nt-20260811-r2/mingli_160.jsonl",
+    "sha256": "d9ee469349af952c3620d9fcc575ff01f6d6febb0241db09e1e2ce0a91377a84",
+    "strategy": "jsonl_canonical"
+   },
+   {
     "path": "docs/phase8/marriage-capability/knowledge_audit.jsonl",
-    "sha256": "3ba17d6855ab148b734f4cfc6fe7ab76d29c3ae577cc4f78aa60c345400291e4",
+    "sha256": "2b56dbf36cffd77362b9cb6e83796b87780a331e283970879822bc701f605ca9",
     "strategy": "jsonl_canonical"
    },
    {
@@ -92,12 +142,17 @@
   "raw_bytes": [
    {
     "path": "docs/phase8/marriage-capability/kb_snapshot.db",
-    "sha256": "17a3ee6d1381d9d80625b880a6fe8f9fd38a39f8d4160bb265c5bbc9996a76d6",
+    "sha256": "071504d297610b0cd42cd2b7dc2d4ababe29da2ce3931bf2d456b708464c1266",
+    "strategy": "raw_bytes"
+   },
+   {
+    "path": "knowledge-base/bazi_kb.db",
+    "sha256": "115bace4efa66fd82455dc4e8c79610d7f6c751585e47769583caaf1ab7fb83e",
     "strategy": "raw_bytes"
    }
   ]
  },
  "reconcile_entry": "python docs/phase8/marriage-capability/p8_reconcile.py",
- "total_entries": 16,
+ "total_entries": 27,
  "note": "total_entries 为冻结产物数（不含 provenance.json 自身，避免自引用）"
 }

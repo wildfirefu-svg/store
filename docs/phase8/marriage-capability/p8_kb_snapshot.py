@@ -55,6 +55,8 @@ def snapshot_db(src: Path, dst: Path, tables: list[str], excluded: list[str]) ->
         s.backup(d)
         for table in excluded:
             d.execute(f"DROP TABLE IF EXISTS {table}")
+        # 切回 DELETE journal 模式：快照为冻结只读数据，避免 WAL/shm 运行时残留
+        d.execute("PRAGMA journal_mode=DELETE")
         d.commit()
     with sqlite3.connect(dst) as d:
         present = sorted(
@@ -249,6 +251,10 @@ def _git(args: list[str]) -> str:
 
 
 def build_classic_texts_freeze(out_path: Path, head: str | None = None) -> dict:
+    """幂等生成：已存在时复用原 frozen_commit（冻结时点不随重跑漂移）。"""
+    if out_path.exists() and head is None:
+        existing = json.loads(out_path.read_text(encoding="utf-8"))
+        head = existing["frozen_commit"]
     head = head or _git(["rev-parse", "HEAD"])
     files = []
     for book in CLASSIC_TEXT_BOOKS:

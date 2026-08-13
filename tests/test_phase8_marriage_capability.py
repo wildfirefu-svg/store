@@ -823,12 +823,57 @@ class TestPromptRebuild:
         )
 
     def test_prompt_evidence_recorded(self):
+        """case 级 prompt_evidence：字段路径 + 逐字摘录。"""
         audit = json.loads(
             (_P8_DIR / "knowledge_audit.jsonl").open(encoding="utf-8").readline()
         )
         assert "prompt_evidence" in audit
         ev = audit["prompt_evidence"]
         assert ev and all("field_path" in e and "excerpt" in e for e in ev)
+
+    def test_item_prompt_evidence_recorded(self):
+        """逐知识项 prompt_evidence：required_term + found + excerpt（不得硬编码）。"""
+        rows = [
+            json.loads(l)
+            for l in (_P8_DIR / "knowledge_audit.jsonl").open(encoding="utf-8")
+            if l.strip()
+        ]
+        for row in rows:
+            for item in row["items"]:
+                pe = item["prompt_evidence"]
+                assert "required_term" in pe and "found" in pe, item["item_id"]
+                assert isinstance(pe["found"], bool)
+                if pe["found"]:
+                    assert pe["excerpt"]
+
+    def test_model_not_utilized_reachable(self):
+        """逐项 prompt 检查后'模型未利用'必须可达（prompt 含红鸾/桃花等星曜名或年份）。"""
+        rows = [
+            json.loads(l)
+            for l in (_P8_DIR / "knowledge_audit.jsonl").open(encoding="utf-8")
+            if l.strip()
+        ]
+        classes = {i["gap_class"] for row in rows for i in row["items"]}
+        assert "模型未利用" in classes
+
+    def test_doctrine_evidence_query_ids(self):
+        """doctrine evidence 落盘 query_id + classic 定位/摘录。"""
+        rows = [
+            json.loads(l)
+            for l in (_P8_DIR / "knowledge_audit.jsonl").open(encoding="utf-8")
+            if l.strip()
+        ]
+        for row in rows:
+            for item in row["items"]:
+                if item["item_type"] != "doctrine":
+                    continue
+                ev = item["evidence"]
+                assert ev["kb_queries"] and all("query_id" in q and "hit_ids" in q for q in ev["kb_queries"])
+                assert ev["classic_queries"]
+                for q in ev["classic_queries"]:
+                    assert "query_id" in q and "term" in q
+                    for h in q["hits"]:
+                        assert "json_pointer" in h and "excerpt" in h
 
 
 class TestKnowledgeAudit:

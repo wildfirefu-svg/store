@@ -1,7 +1,7 @@
 # Phase 8 设计：婚姻类能力改进前提分析（零 API）
 
 **日期：** 2026-08-11
-**状态：** v1.3（局部复审修订：KB 冻结改最小 SQLite 快照（方案 A，查询前全量导出 + 等价性测试）、`missing_input` 改判 undetermined+reason、P8-2A 分析纪律、classic_texts 文件级 allowlist、SHA 四策略）→ v1.3.1（NEEDS_FIX 修订：P8-5 配对契约重写为同 case/同顺序/单 treatment factor + 允许不同/必须相同字段集合；P8-1.5 探针排除 `current_*` wall-clock 字段 + 双跑字节一致性测试）
+**状态：** v1.3（局部复审修订：KB 冻结改最小 SQLite 快照（方案 A，查询前全量导出 + 等价性测试）、`missing_input` 改判 undetermined+reason、P8-2A 分析纪律、classic_texts 文件级 allowlist、SHA 四策略）→ v1.3.1（NEEDS_FIX 修订：P8-5 配对契约重写为同 case/同顺序/单 treatment factor + 允许不同/必须相同字段集合；P8-1.5 探针排除 `current_*` wall-clock 字段 + 双跑字节一致性测试）→ v1.3.2（NEEDS_FIX 修订：KB 快照范围与计划 v3.2 六入口映射对齐——`ziwei_patterns` 无公开查询入口，不进快照不进审计；`nayin`/`bingyao`/`xiangyi` 纳入快照；输入文件 SHA 与生成/验证脚本 SHA 纳入冻结清单（§6））
 **输入：** Phase 7 基线归档（`docs/phase7/phase7-mingli-v4flash-nt-20260811-r2/`）+ 错误归因 v2.1（`docs/phase7/error-analysis/`，commit `28aacf0`）
 **核心原则（用户冻结）：先确定婚姻错误究竟缺什么，再决定改知识库、排盘引擎还是 prompt。直接添加婚姻规则很容易对 44 道已知题过拟合。**
 
@@ -51,7 +51,7 @@ Phase 7 错误归因已冻结的稳固结论：
 **输入可得性约束（P8-2 前置，冻结）**：
 
 - `knowledge-base/bazi_kb.db` 被 `.gitignore` 排除，fresh clone 不可得；`knowledge_base/classic_texts/` 存在并行未提交变更。因此：
-  - **KB 冻结方式（选定方案 A：最小冻结 SQLite 快照）**：审计开始时、**任何查询之前**，把全部相关表（`gejue` 及 `gejue_fts` FTS5 虚表与索引、`shishen_combos`、`ziwei_patterns`、`shensha`）按**原表结构 + 全部行 + 全部可搜索字段**导出为 `docs/phase8/marriage-capability/kb_snapshot.db`（SQLite 文件，raw-byte SHA 落盘）；检索对该快照执行，与原库同 query 函数同语义（gejue 走 FTS5 MATCH，其余表为普通表查询——不得统称 FTS）。**禁止按查询结果只导出"相关字段/相关行"**——快照先于查询、全量导出。**快照等价性测试（冻结）**：固定查询集（审计用全部查询词）在原库与快照上分别执行，命中条文 ID、顺序、行数必须完全一致；同时核对 FTS shadow tables、表 schema 与行数，测试脚本与结果落盘。
+  - **KB 冻结方式（选定方案 A：最小冻结 SQLite 快照）**：审计开始时、**任何查询之前**，把六入口映射覆盖的全部相关表（`gejue` 及 `gejue_fts` FTS5 虚表与索引、`shishen_combos`、`shensha`、`nayin`、`bingyao`、`xiangyi`；`ziwei_patterns` 无公开查询入口，不进快照不进审计，见计划 v3.2 六入口映射冻结）按**原表结构 + 全部行 + 全部可搜索字段**导出为 `docs/phase8/marriage-capability/kb_snapshot.db`（SQLite 文件，raw-byte SHA 落盘）；检索对该快照执行，与原库同 query 函数同语义（gejue 走 FTS5 MATCH，其余表为普通表查询——不得统称 FTS）。**禁止按查询结果只导出"相关字段/相关行"**——快照先于查询、全量导出。**快照等价性测试（冻结）**：固定查询集（审计用全部查询词）在原库与快照上分别执行，命中条文 ID、顺序、行数必须完全一致；同时核对 FTS shadow tables、表 schema 与行数，测试脚本与结果落盘。
   - **classic_texts 冻结方式**：冻结**文件 allowlist + 每文件 blob SHA + 可达 commit**（审计开始时落盘；`git show <commit>:<path>` 只能读具体文件，故冻结到文件粒度），读取一律走 git object，**禁止读工作区漂移版本**。
 
 ## 4. 任务分解（三阶段链 + 对账）

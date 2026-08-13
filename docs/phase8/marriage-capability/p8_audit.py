@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -20,6 +21,49 @@ P8_DIR = REPO / "docs" / "phase8" / "marriage-capability"
 GAP_CLASSES = ["知识缺失", "检索不可见", "计算缺失", "注入缺失", "模型未利用", "undetermined"]
 PRIMARY_GAP_PRIORITY = ["计算缺失", "注入缺失", "检索不可见", "知识缺失", "模型未利用"]
 EXPECTED_PROMPT_FINGERPRINT = "e136106a8e8730020eb3631b32b6c24424beaf73f5f0fcbc82a274e2120cb22d"
+
+# 各计算类型在 prompt 中的产物标志词（逐项检查用，冻结）
+COMPUTATION_MARKERS = {
+    "liunian": ["流年"],
+    "dayun": ["大运"],
+    "sihua": ["四化", "化禄", "化权", "化科", "化忌"],
+    "other": [],  # 年龄换算：检查 prompt 是否含公历年份（birth_info.raw）
+}
+
+
+def _computation_injected(prompt: str, item: dict) -> tuple[bool, list[str]]:
+    """逐项检查 prompt 是否包含该计算项的产物标志词。返回 (injected, 命中词)。"""
+    ctype = item["computation_type"]
+    markers = COMPUTATION_MARKERS.get(ctype, [])
+    hits = [m for m in markers if m in prompt]
+    if ctype == "other":
+        m = re.search(r"\d{4}", prompt)
+        return bool(m), [m.group(0)] if m else []
+    return bool(hits), hits
+
+
+def _qs_term(args: dict) -> str:
+    """从入口 args 提取检索词（nayin 为 gan+zhi）。"""
+    for key in ("query", "name", "combo_name"):
+        if args.get(key):
+            return args[key]
+    if args.get("gan") and args.get("zhi"):
+        return args["gan"] + args["zhi"]
+    if args.get("gan_or_zhi"):
+        return args["gan_or_zhi"]
+    return ""
+
+
+def _doctrine_terms(item: dict) -> list[str]:
+    """该 doctrine 项的检索词（逐词检查）。"""
+    return [t for t in (_qs_term(qs["args"]) for qs in item["query_specs"]) if t]
+
+
+def _prompt_excerpt(prompt: str, term: str) -> str | None:
+    idx = prompt.find(term)
+    if idx < 0:
+        return None
+    return prompt[max(0, idx - 20): idx + len(term) + 30].replace("\n", " ")
 
 
 def _load(name: str, relpath: str):
@@ -147,52 +191,85 @@ def run_audit(rk_path: Path, probe_path: Path, cases160_path: Path, out_path: Pa
     conn = sqlite3.connect(snap.resolve().as_uri() + "?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
 
-    # classic_texts 冻结检索（逐项核查用，不落盘）
+    # classic_texts 冻结检索（逐项核查用，不落盘；term 级缓存避免重复 git show）
     classic_mod = _load(
         "classic_texts_search", "docs/phase8/marriage-capability/classic_texts_search.py"
     )
     freeze_path = P8_DIR / "classic_texts_freeze.json"
+    classic_cache: dict[str, list[dict]] = {}
+
+    def classic_search(term: str) -> list[dict]:
+        if term not in classic_cache:
+            result = classic_mod.search_frozen([[term]], freeze_path, None)
+            classic_cache[term] = result["results"]
+        return classic_cache[term]
 
     audit_rows = []
     for row in rk_rows:
         cid = row["case_id"]
         case = norm[cid]
         prompt = rebuild_prompt(case)
-        prompt_evidence = _prompt_evidence(prompt)
+        case_prompt_evidence = _prompt_evidence(prompt)
         items = []
         for item in row["items"]:
             if item["item_type"] == "computation":
                 status = status_by_id[item["item_id"]]
-                # 注入判定：prompt 是否含该计算结果。官方 prompt 只含 birth_info + astro 块
-                # （chinese_date/time/五行局/生肖/十二宫星曜），无大运序列/流年映射/四化表
-                # （设计 §3 已核实）→ computable 项一律未注入。
-                injected = False
+                # 逐项检查 prompt 是否含该计算项产物标志词（不得硬编码）
+                injected, hits = _computation_injected(prompt, item)
                 cls = _classify_computation(item, status, injected)
+                item_prompt_evidence = {
+                    "required_term": " | ".join(COMPUTATION_MARKERS.get(item["computation_type"], [])) or "公历年份",
+                    "found": injected,
+                    "excerpt": _prompt_excerpt(prompt, hits[0]) if hits else None,
+                }
             else:
-                # doctrine：KB 快照检索（命中条文 ID 落盘）+ classic_texts 逐项冻结核查 + prompt 现存字段
-                kb_hit_ids: list[str] = []
+                # doctrine：KB 快照逐 query_spec 检索（query_id + 命中 ID 落盘）
+                kb_queries = []
                 for qs in item["query_specs"]:
-                    kb_hit_ids.extend(_kb_query(conn, qs["entrypoint"], qs["args"]))
-                kb_hits = len(kb_hit_ids)
-                # 逐项 classic_texts 核查（用该项 query 词组，git object 冻结版）
-                classic_groups = [[qs["args"].get("query") or qs["args"].get("name") or qs["args"].get("combo_name") or ""] for qs in item["query_specs"]]
-                classic_groups = [g for g in classic_groups if g[0]]
-                classic_result = classic_mod.search_frozen(classic_groups, freeze_path, None) if classic_groups else {"results": []}
-                classic_hits = len(classic_result["results"])
-                # prompt 现存字段：官方 prompt 只含 birth_info + astro 块，无婚姻规则/断语
-                # （设计 §3 已核实：零婚姻规则、零大运流年序列、零四化表）→ doctrine 知识一律未注入。
-                prompt_has = False
+                    kb_queries.append(
+                        {
+                            "query_id": qs["query_id"],
+                            "entrypoint": qs["entrypoint"],
+                            "args": qs["args"],
+                            "hit_ids": _kb_query(conn, qs["entrypoint"], qs["args"]),
+                        }
+                    )
+                kb_hits = sum(len(q["hit_ids"]) for q in kb_queries)
+                # classic_texts 逐 query_spec 核查（query_id + 定位/摘录落盘，term 级缓存）
+                classic_queries = []
+                for qs in item["query_specs"]:
+                    term = _qs_term(qs["args"])
+                    if not term:
+                        continue
+                    classic_queries.append(
+                        {
+                            "query_id": qs["query_id"],
+                            "term": term,
+                            "hits": classic_search(term),
+                        }
+                    )
+                classic_hits = sum(len(q["hits"]) for q in classic_queries)
+                # 逐项检查 prompt 是否含该 doctrine 项检索词（不得硬编码）
+                terms = _doctrine_terms(item)
+                found_terms = [t for t in terms if t in prompt]
+                prompt_has = bool(found_terms)
                 cls = _classify_doctrine(item, kb_hits, classic_hits, prompt_has)
+                item_prompt_evidence = {
+                    "required_term": " | ".join(terms),
+                    "found": prompt_has,
+                    "excerpt": _prompt_excerpt(prompt, found_terms[0]) if found_terms else None,
+                }
                 evidence = {
-                    "kb_hit_ids": sorted(set(kb_hit_ids)),
-                    "classic_hits": classic_hits,
-                    "not_found_by_frozen_search": kb_hits == 0,
+                    "kb_queries": kb_queries,
+                    "classic_queries": classic_queries,
+                    "not_found_by_frozen_search": kb_hits == 0 and classic_hits == 0,
                 }
             record = {
                 "item_id": item["item_id"],
                 "item_type": item["item_type"],
                 "gap_class": cls["gap_class"],
                 "undetermined_reason": cls["undetermined_reason"],
+                "prompt_evidence": item_prompt_evidence,
             }
             if item["item_type"] == "doctrine":
                 record["evidence"] = evidence
@@ -211,7 +288,7 @@ def run_audit(rk_path: Path, probe_path: Path, cases160_path: Path, out_path: Pa
                 "gap_classes": sorted({i["gap_class"] for i in items}),
                 "primary_gap": primary_gap,
                 "primary_gap_reason": primary_gap_reason,
-                "prompt_evidence": prompt_evidence,
+                "prompt_evidence": case_prompt_evidence,
             }
         )
     conn.close()

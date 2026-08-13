@@ -100,10 +100,11 @@ def search_frozen(groups: list[list[str]], freeze_path: Path, out_path: Path | N
     """
     freeze = json.loads(freeze_path.read_text(encoding="utf-8"))
     results = []
+    tmp_dir = P8_DIR / ".classic_tmp"
+    tmp_dir.mkdir(parents=True, exist_ok=True)
     for f in freeze["files"]:
         raw = _git_show(f["commit"], f["path"])
-        tmp = P8_DIR / ".classic_tmp" / f["path"].split("/")[-1]
-        tmp.parent.mkdir(parents=True, exist_ok=True)
+        tmp = tmp_dir / f["path"].split("/")[-1]
         tmp.write_bytes(raw)
         quarantined = "quarantine" in f["path"]
         hits = search_file(tmp, groups, quarantined=quarantined)
@@ -111,6 +112,7 @@ def search_frozen(groups: list[list[str]], freeze_path: Path, out_path: Path | N
             h["file"] = f["path"]
         results.extend(hits)
         tmp.unlink()
+    tmp_dir.rmdir()  # 清理空临时目录，避免运行残留
     # 去重：同一 (file, line) 只记一次；排序 = 文件序 + 行序
     seen: set[tuple[str, int]] = set()
     deduped = []
