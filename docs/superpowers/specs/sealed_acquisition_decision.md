@@ -62,7 +62,7 @@ curator 一审 → 人类复核 → 分歧裁决记录 → 真值冻结（SHA �
 
 ## 5. 待办（curator 启动时）
 
-- [ ] 建立独立 curator 工作区与权限边界（§2.1）
+- [ ] 建立独立 curator 工作区与权限边界（§2.1）；**启动前验证运行环境确实提供文件权限隔离（独立 sandbox/受限 worktree），而非普通共享 worktree（中优先级 4）**
 - [ ] 盘点自有命盘数据位置与数量（≥20 盘可用性确认）——**数据路径仅提供给 curator 任务**
 - [ ] A2 归属盘点（PENDING_VERIFICATION → VERIFIED/BLOCKED）
 - [ ] 执行 A6 出生信息级去重比对

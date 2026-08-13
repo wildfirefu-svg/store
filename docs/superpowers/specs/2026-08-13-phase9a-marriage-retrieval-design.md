@@ -1,7 +1,7 @@
 # Phase 9A 设计：婚姻知识检索可行性（零 API）
 
 **日期：** 2026-08-13
-**状态：** v1.1（NEEDS_REVISION 修订：独立 relevance judgment、retriever 主冻结、双终态、规模/排序/截断数值化）
+**状态：** v1.2（NEEDS_REVISION 二轮修订：合并 candidate_pool 口径、盲标闭环、READY 门阈值冻结、标签枚举/S2 待证伪/curator 环境验证）
 **前置：** Phase 8 已冻结（`docs/phase8/CLOSURE.md`，最终 HEAD `0f74de2`；缺口分布 112/39/19/1/0；C1_TERMINATED）
 **范围冻结：** 只解决"检索不可见 112"缺口；**不混入**大运/流年注入、prompt 改写；**不重启 C1**；**零 LLM API**；不评价答案准确率。
 
@@ -49,7 +49,7 @@
 | 策略 | 描述 | 已知风险 |
 |---|---|---|
 | S1 LIKE | 带 category 的 LIKE 子串匹配（bazi_kb.py search_gejue category 分支语义，现审计路径） | 无排序；单字词噪声 |
-| S2 FTS5 单字展开 | 多字检索词拆为单字 token 的 FTS MATCH 组合，修复 unicode61 多字漏检 | 召回膨胀；rank 语义变化 |
+| S2 FTS5 单字展开 | 多字检索词拆为单字 token 的 FTS MATCH 组合（**待证伪**：unicode61 把连续中文作整体 token，单字 MATCH 通常同样不命中——实测'红鸾'与'鸾' MATCH 均为 0；保留为候选策略，描述不作预称修复） | 大概率无效；rank 语义变化 |
 | S3 双字滑窗 | 中文字符 bigram 子串召回（query 与条文做双字交集打分） | 实现成本；打分口径需冻结 |
 | S4 同义词扩展 | 冻结词表（结婚/婚期/成婚/姻缘/婚恋；红鸾/天喜 等）组合 S1 并查 | 词表需人工裁决并冻结 |
 | S5 classic 联合 | S1 结果 + classic_texts 冻结版检索（已有 search_frozen 实现）合并去重 | 来源混合的排序口径 |
@@ -58,32 +58,40 @@
 
 ---
 
-## 4. relevance judgment（P0-2 修订：独立于策略的黄金标准）
+## 4. relevance judgment（P0-2 修订：盲标闭环，独立于任何单一策略）
 
-**Phase 8 命中只称 `candidate_pool`**（112 项 198 query_specs 的 hit_ids 总和 **2902** 条，含跨 query 重复；唯一条文 **537** 条），不得称黄金标准——它们由 S1 类 LIKE 生成，与被评策略同源即循环。
+**Phase 8 命中只称 `candidate_pool`，不得称黄金标准**（它们由 S1 类 LIKE 生成，与被评策略同源即循环）。
 
-建立独立 relevance judgment 的流程（**策略执行前冻结**）：
+### 4.1 candidate_pool 口径（P0-1 修订：KB + classic 合并）
 
-1. **独立 reviewer**：relevance judgment 由独立 reviewer 完成，**检索开发者不得参与**（角色分离：开发者实现策略，reviewer 只裁决相关性）。
-2. **逐项裁决**：112 项 × candidate_pool 去重后的候选条文，reviewer 逐条标注：
-   - `relevant`：该条文确实回答/支撑该知识项所需学理；
-   - `hard_negative`：明确无关但字面命中（防止策略仅靠字面匹配过门）；
-   - 判断理由（一句话）；
-   - reviewer 标识 + 裁决日期。
-3. **冻结**：`relevance_judgment.jsonl`（JSONL canonical，SHA 落盘；含 112 项 × 候选的完整标注 + 每项 relevant/hard_negative 汇总）。
-4. **质检**：10% 人类抽查仅作质检（核对 reviewer 标注质量），**不代替黄金标准建立**。
-5. 覆盖率计算只依据冻结的 relevance_judgment.jsonl；未取回项清单附 `not_found_by_frozen_search` 标记与原因。
+- **KB 源**：112 项 198 query_specs 的 `evidence.kb_queries[].hit_ids`，含重复 **2,902**，唯一条文 **537**（canonical key = 表名 + ID，如 `gejue:ss2_021`）。
+- **classic 源**：`evidence.classic_queries[].hits`，含重复 **8,655**，唯一条文 **1,973**（canonical key = 冻结路径 + 行号 + record_id）。
+- **合并 pool**：含重复 **11,557**，唯一 canonical key **2,510**（去重规则：同一 canonical key 只标一次）。
+- 两源都参与评价（S1–S5 均可能命中两源），故按合并 pool 冻结。
+
+### 4.2 盲标闭环流程（P0-2 修订：策略先冻结，judgment 后于全部策略执行）
+
+1. **先冻结**全部策略代码、query 集、同义词表、ranking/truncation 配置及其 SHA（§6 主冻结产物）。
+2. **执行 S1–S5**，取所有策略候选**并集**；pooling depth 冻结（**每策略每 (item,query) 取 top-10**，执行前确定，落盘于 ranking_config）。
+3. **隐去候选来源策略**（reviewer 看不到命中来自哪个策略），由独立 reviewer 对 pooled candidates **盲标**；检索开发者不得参与。
+   **标签闭合枚举（冻结）**：`relevant / partially_relevant / irrelevant / uncertain`；`hard_negative` 是 `irrelevant` 的额外属性（仅标注于字面命中的无关候选，防策略仅靠字面匹配过门），不单列类别；每条标注附理由 + reviewer 标识 + 日期。
+4. **冻结** `relevance_judgment.jsonl`（canonical key 全量标注 + 每项汇总，SHA 落盘）。
+5. **一次性计算**各策略指标（召回/覆盖率/噪声），**禁止看到结果后修改策略或 judgment**。
+6. 10% 人类抽查仅作质检，不代替黄金标准建立。
 
 ---
 
-## 5. 注入长度与噪声（数值化，P0-2/中优先级修订）
+## 5. 注入长度与噪声（数值化）
 
 - **截断配置（冻结数值）**：
   - N（每条文截断）：**200 字符**（rule/original_text 前 200 字符；选择规则：断诀条文长度分布 P90 上界，实施时按实际分布复核并记录于 config）
   - M（每知识项最多条文数）：**5 条**（与 Phase 8 KB 入口 top_n 默认对齐）
   - K（每题注入总字符预算）：**1200 字符**（≈800 token，按中文字符 1.5 字符/token 估算；实施时按每题目数 × M × 平均条文长复核，超预算时按排序键截断）
 - 长度落盘：每 bundle 字符数 + 估算 token 数（口径：中文字符 1.5 字符/token，落盘声明）。
-- 噪声率：按 relevance_judgment 统计每 item bundle 中 non-relevant 比例；噪声率与预算冲突时给出权衡建议（截断/排序/阈值），作为 RETRIEVAL_READY 判定的输入之一。
+- **噪声率口径（冻结，P0-3 修订）**：macro-item（每 item 噪声率等权平均）；噪声率 = 该 item 标注中 `irrelevant` 数 / 该 item 标注总数；`uncertain` 不计入分子分母；`hard_negative` 是 `irrelevant` 的额外属性（仅标注于字面命中的无关候选，防过门），不单列类别。
+- **partial 计分（冻结）**：覆盖率分子 = relevant 数 + 0.5 × partially_relevant 数；分母 = 该 item 的 relevant + partially_relevant + irrelevant 标注总数。
+- **未标注新命中处理（冻结）**：策略执行后新命中但不在 pooled candidates 的条文（pooling 截断导致）标注为 `unlabeled`，不参与指标计算但计数落盘；若某 item 的取回命中全部为 unlabeled（≥1 条）则按 fail-closed 计该 item 未取回。
+- **quarantine 命中（冻结）**：classic quarantine 文件命中**禁止进入最终 bundle**（只作佐证，与 Phase 8 语义一致）。
 
 ---
 
@@ -122,16 +130,20 @@
 
 ---
 
-## 8. 终态与完成定义（中优先级修订：双终态）
+## 8. 终态与完成定义（双终态 + 门槛设计阶段冻结）
 
 **终态（两种都允许 Phase 9A 完成）**：
 
-- `RETRIEVAL_READY`：112 项 relevance-judged 覆盖率 ≥90%，且噪声率 ≤ 预算阈值（预算阈值在实施开始前冻结于 truncation_config 的附注），排序/去重/指纹全部对账通过。
-- `RETRIEVAL_NOT_READY`：未达上述门——保留完整评估结果与失败原因（逐项未取回清单），**不得为过门而修改策略或 relevance judgment**；结论闭合，转入设计修订。
+- `RETRIEVAL_READY`：同时满足——
+  - 112 项 relevance-judged 覆盖率（partial 计分口径，§5）≥ **90%**（macro-item 等权平均）；
+  - 噪声率（macro-item，§5 口径）≤ **20%**；
+  - 题级最坏护栏：任一 item 的 bundle 若全部命中均为 irrelevant，则该 item 计失败（计入未取回）；
+  - 排序/去重/指纹全部对账通过。
+- `RETRIEVAL_NOT_READY`：未达上述任一门槛——保留完整评估结果与失败原因（逐项未取回清单），**不得为过门而修改策略或 relevance judgment**；结论闭合，转入设计修订。
 
 **完成定义**：
 1. 至少 2 个候选策略完成评估，双跑字节一致；FTS 漏检词在替代策略下无漏检。
-2. relevance_judgment.jsonl 冻结（112 项全量，SHA 落盘；检索开发者未参与）。
+2. relevance_judgment.jsonl 冻结（112 项合并 pool 全量盲标，SHA 落盘；检索开发者未参与）。
 3. retriever 及全部配置冻结（§6 主冻结产物），treatment_fingerprint 可复算。
 4. 注入长度与噪声按冻结配置落盘，给出与预算的权衡结论。
 5. 终态为 RETRIEVAL_READY 或 RETRIEVAL_NOT_READY 之一，结论闭合。
