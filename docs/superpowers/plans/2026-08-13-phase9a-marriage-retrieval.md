@@ -1866,41 +1866,50 @@ class TestTerminalChains:
         assert "strategy_outputs" in (proc.stdout + proc.stderr)
 
     def test_mirror_content_consumed_positive(self, tmp_path):
-        """中优正验证：篡改镜像 strategy_outputs 后重建镜像 manifest（SHA 重新匹配）→
-        run_eval 成功，且 bundle 必须反映修改后的镜像内容（证明消费的是镜像而非真实 P9）。"""
+        """中优正验证（v2.5.4 修订）：选定目标 item（真实 strategy_outputs 中确有命中的）→
+        清空其全部 query × 5 策略命中 → 删除镜像 manifest 后按 config_frozen→code_frozen 完整重建
+        （新 SHA 合法，不违反 append-only）→ run_eval 成功 → 仅断言目标 item docs 为空，
+        且真实 P9 对应 item 原本非空（证明消费的是镜像而非真实 P9）。"""
         import sys as _sys
         _sys.path.insert(0, str(P8))
         _sys.path.insert(0, str(P9))
         import phase9a_manifest as pm
         mirror = self._make_mirror(tmp_path, disagree=False)
-        # 清空某个 query 的全部命中（q1 在镜像 strategy_outputs 中为第一行 query_id）
+        # 1. 选定目标 item：其任一 query 在真实 strategy_outputs 中有命中（确保真实侧非空的前提成立）
+        item_map = json.loads((mirror / "item_query_map.json").read_text(encoding="utf-8"))["items"]
+        real_so = [json.loads(l) for l in (P9 / "strategy_outputs.jsonl").open(encoding="utf-8") if l.strip()]
+        hit_qids = {r["query_id"] for r in real_so if r["run1_hits"]}
+        target = next(item for item in item_map if any(q["query_id"] in hit_qids for q in item["queries"]))
+        target_qids = {q["query_id"] for q in target["queries"]}
+        # 2. 清空该 item 全部 query 在五个策略下的命中
         so_path = mirror / "strategy_outputs.jsonl"
         rows = [json.loads(l) for l in so_path.open(encoding="utf-8") if l.strip()]
-        target_qid = rows[0]["query_id"]
-        new_rows = []
         for r in rows:
-            if r["query_id"] == target_qid:
+            if r["query_id"] in target_qids:
                 r["run1_hits"] = []
                 r["run2_hits"] = []
-            new_rows.append(r)
-        so_path.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in new_rows) + "\n", encoding="utf-8", newline="\n")
-        # 重建镜像 manifest 中 strategy_outputs 条目（SHA 重新匹配）
-        pm.freeze(mirror / "manifest.json", {"strategy_outputs": (so_path, "jsonl_canonical")})
+        so_path.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n", encoding="utf-8", newline="\n")
+        # 3-4. 删除镜像 manifest 并按相邻链完整重建（新 SHA 合法）
+        (mirror / "manifest.json").unlink()
+        pm.set_stage(mirror / "manifest.json", "config_frozen")
+        pm.set_stage(mirror / "manifest.json", "code_frozen")
+        targets = {}
+        for name, entry in json.loads((P9 / "manifest.json").read_text(encoding="utf-8"))["entries"].items():
+            src = REPO / entry["path"]
+            if src.exists() and src.parent == P9:
+                targets[name] = (mirror / src.name, entry["strategy"])
+        pm.freeze(mirror / "manifest.json", targets)
+        # 5. 运行 run_eval
         proc = subprocess.run([sys.executable, str(P9 / "run_eval.py"), "--root", str(mirror)],
                               capture_output=True, text=True, encoding="utf-8", cwd=REPO)
         assert proc.returncode == 0, proc.stdout + proc.stderr
-        # bundle 必须反映镜像修改：target_qid 相关 item 的 docs 清空（消费的是镜像而非真实 P9）
+        # 6. 仅断言目标 item docs 为空；真实 P9 对应 item 原本非空
         bundle = [json.loads(l) for l in (mirror / "retrieval_bundle_dev.jsonl").open(encoding="utf-8") if l.strip()]
-        affected = [r for r in bundle if self._item_uses_query(mirror, r["item_id"], target_qid)]
-        assert affected and all(len(r["docs"]) == 0 for r in affected), "mirror content not consumed"
-
-    @staticmethod
-    def _item_uses_query(mirror, item_id: str, query_id: str) -> bool:
-        item_map = json.loads((mirror / "item_query_map.json").read_text(encoding="utf-8"))["items"]
-        for item in item_map:
-            if item["item_id"] == item_id and any(q["query_id"] == query_id for q in item["queries"]):
-                return True
-        return False
+        target_row = next(r for r in bundle if r["item_id"] == target["item_id"])
+        assert target_row["docs"] == [], "mirror content not consumed"
+        real_bundle = [json.loads(l) for l in (P9 / "retrieval_bundle_dev.jsonl").open(encoding="utf-8") if l.strip()]
+        real_row = next(r for r in real_bundle if r["item_id"] == target["item_id"])
+        assert real_row["docs"], "real P9 item unexpectedly empty (test premise broken)"
 
     def test_strategy_store_drift_negative(self, tmp_path):
         """P0 负向：strategy_store.py 冻结后漂移 → run_eval 必须拒绝（evaluate 实际导入执行它）。"""
