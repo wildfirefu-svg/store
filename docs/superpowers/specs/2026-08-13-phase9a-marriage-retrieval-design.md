@@ -60,7 +60,7 @@
 
 ## 4. relevance judgment（P0-2 修订：独立于策略的黄金标准）
 
-**Phase 8 命中只称 `candidate_pool`**（11557 条跨 query 候选，含重复），不得称黄金标准——它们由 S1 类 LIKE 生成，与被评策略同源即循环。
+**Phase 8 命中只称 `candidate_pool`**（112 项 198 query_specs 的 hit_ids 总和 **2902** 条，含跨 query 重复；唯一条文 **537** 条），不得称黄金标准——它们由 S1 类 LIKE 生成，与被评策略同源即循环。
 
 建立独立 relevance judgment 的流程（**策略执行前冻结**）：
 
