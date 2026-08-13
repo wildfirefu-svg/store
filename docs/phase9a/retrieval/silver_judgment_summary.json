@@ -1,0 +1,234 @@
+{
+ "item_summaries": {
+  "mingli_ftb_0002#k4": {
+   "irrelevant": 0,
+   "partially_relevant": 16,
+   "relevant": 8,
+   "uncertain": 0
+  },
+  "mingli_ftb_0002#k5": {
+   "irrelevant": 0,
+   "partially_relevant": 21,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0002#k6": {
+   "irrelevant": 2,
+   "partially_relevant": 43,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0007#k5": {
+   "irrelevant": 0,
+   "partially_relevant": 4,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0007#k6": {
+   "irrelevant": 0,
+   "partially_relevant": 31,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0013#k1": {
+   "irrelevant": 0,
+   "partially_relevant": 2,
+   "relevant": 17,
+   "uncertain": 0
+  },
+  "mingli_ftb_0013#k2": {
+   "irrelevant": 0,
+   "partially_relevant": 5,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0013#k4": {
+   "irrelevant": 0,
+   "partially_relevant": 63,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0017#k4": {
+   "irrelevant": 0,
+   "partially_relevant": 22,
+   "relevant": 10,
+   "uncertain": 0
+  },
+  "mingli_ftb_0017#k6": {
+   "irrelevant": 0,
+   "partially_relevant": 12,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0026#k1": {
+   "irrelevant": 0,
+   "partially_relevant": 1,
+   "relevant": 1,
+   "uncertain": 0
+  },
+  "mingli_ftb_0026#k2": {
+   "irrelevant": 7,
+   "partially_relevant": 7,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0044#k2": {
+   "irrelevant": 7,
+   "partially_relevant": 7,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0044#k4": {
+   "irrelevant": 4,
+   "partially_relevant": 6,
+   "relevant": 3,
+   "uncertain": 0
+  },
+  "mingli_ftb_0054#k1": {
+   "irrelevant": 0,
+   "partially_relevant": 5,
+   "relevant": 1,
+   "uncertain": 0
+  },
+  "mingli_ftb_0058#k1": {
+   "irrelevant": 0,
+   "partially_relevant": 1,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0058#k4": {
+   "irrelevant": 0,
+   "partially_relevant": 36,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0077#k4": {
+   "irrelevant": 0,
+   "partially_relevant": 3,
+   "relevant": 1,
+   "uncertain": 0
+  },
+  "mingli_ftb_0083#k1": {
+   "irrelevant": 0,
+   "partially_relevant": 30,
+   "relevant": 10,
+   "uncertain": 0
+  },
+  "mingli_ftb_0083#k2": {
+   "irrelevant": 4,
+   "partially_relevant": 16,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0085#k5": {
+   "irrelevant": 0,
+   "partially_relevant": 12,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0085#k6": {
+   "irrelevant": 1,
+   "partially_relevant": 11,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0085#k7": {
+   "irrelevant": 4,
+   "partially_relevant": 9,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0096#k3": {
+   "irrelevant": 0,
+   "partially_relevant": 21,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0098#k1": {
+   "irrelevant": 2,
+   "partially_relevant": 11,
+   "relevant": 13,
+   "uncertain": 0
+  },
+  "mingli_ftb_0099#k4": {
+   "irrelevant": 0,
+   "partially_relevant": 1,
+   "relevant": 1,
+   "uncertain": 0
+  },
+  "mingli_ftb_0100#k1": {
+   "irrelevant": 0,
+   "partially_relevant": 13,
+   "relevant": 2,
+   "uncertain": 0
+  },
+  "mingli_ftb_0100#k2": {
+   "irrelevant": 1,
+   "partially_relevant": 47,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0100#k3": {
+   "irrelevant": 2,
+   "partially_relevant": 20,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0108#k4": {
+   "irrelevant": 0,
+   "partially_relevant": 1,
+   "relevant": 12,
+   "uncertain": 0
+  },
+  "mingli_ftb_0122#k1": {
+   "irrelevant": 0,
+   "partially_relevant": 13,
+   "relevant": 1,
+   "uncertain": 0
+  },
+  "mingli_ftb_0124#k6": {
+   "irrelevant": 0,
+   "partially_relevant": 12,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0125#k4": {
+   "irrelevant": 0,
+   "partially_relevant": 20,
+   "relevant": 6,
+   "uncertain": 0
+  },
+  "mingli_ftb_0125#k5": {
+   "irrelevant": 0,
+   "partially_relevant": 16,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0125#k6": {
+   "irrelevant": 1,
+   "partially_relevant": 11,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0129#k2": {
+   "irrelevant": 0,
+   "partially_relevant": 2,
+   "relevant": 0,
+   "uncertain": 0
+  },
+  "mingli_ftb_0139#k2": {
+   "irrelevant": 0,
+   "partially_relevant": 1,
+   "relevant": 0,
+   "uncertain": 0
+  }
+ },
+ "pool_stats": {
+  "actual_pair_count": 673,
+  "cross_query_aggregation": "max label rank, all contributing query_ids recorded",
+  "items": 112,
+  "rule_sha": "b301c1bac49fae3ba6c31e74aba9fc43d4cb1fbda117aa3aeb44e25f02141b0c"
+ },
+ "rule_source": "silver_rule_v2: synonym-cooccurrence AND category-consistency(query-arg) AND canonical-traceability",
+ "schema_version": "1.0"
+}

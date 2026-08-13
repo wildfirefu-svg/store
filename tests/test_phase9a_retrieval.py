@@ -147,6 +147,25 @@ class TestPhase9aManifest:
         assert "sealed" in str(raised.code) or "cannot modify" in str(raised.code)
 
 
+class TestSilverJudgment:
+    def test_pairs_only_no_metadata_rows(self):
+        rows = [json.loads(l) for l in (P9 / "silver_relevance_judgment.jsonl").open(encoding="utf-8") if l.strip()]
+        assert rows and all("item_id" in r and "canonical_key" in r for r in rows)
+        keys = [(r["item_id"], r["canonical_key"]) for r in rows]
+        assert len(keys) == len(set(keys))
+
+    def test_summary_separate_file(self):
+        s = _load_json(P9 / "silver_judgment_summary.json")
+        assert "pool_stats" in s and "actual_pair_count" in s["pool_stats"]
+        assert "item_summaries" in s and "rule_sha" in s["pool_stats"]  # rule_sha 在 pool_stats 内
+        assert s["pool_stats"]["actual_pair_count"] == len([json.loads(l) for l in (P9 / "silver_relevance_judgment.jsonl").open(encoding="utf-8") if l.strip()])
+        assert s["pool_stats"]["actual_pair_count"] != 2519  # 不得用全局文档数代替
+
+    def test_label_enum_closed(self):
+        rows = [json.loads(l) for l in (P9 / "silver_relevance_judgment.jsonl").open(encoding="utf-8") if l.strip()]
+        assert {r["label"] for r in rows} <= {"relevant", "partially_relevant", "irrelevant", "uncertain"}
+
+
 class TestFullDoubleRun:
     def test_exec_code_frozen_before_run(self):
         # freeze-before-use 门：真实门调用（stage+条目+SHA drift 全过才不抛），非仅断言条目存在

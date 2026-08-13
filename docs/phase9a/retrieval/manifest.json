@@ -61,6 +61,21 @@
    "path": "docs/phase9a/retrieval/strategy_outputs.jsonl",
    "strategy": "jsonl_canonical",
    "sha256": "57125ecc9f6738bfcaaad7160db1b5d56061b69200884817641554fa0f3c2418"
+  },
+  "silver_judge_py": {
+   "path": "docs/phase9a/retrieval/silver_judge.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "47027c3ca100afa1181d80e996f9f7cc3af9bc47cdc8eb9645af3624f097137a"
+  },
+  "silver_relevance_judgment": {
+   "path": "docs/phase9a/retrieval/silver_relevance_judgment.jsonl",
+   "strategy": "jsonl_canonical",
+   "sha256": "48e40580be0cddad22fc85cff4c8f5ce0adfc65dd6e6ff086be3c4dfa9da8dc6"
+  },
+  "silver_judgment_summary": {
+   "path": "docs/phase9a/retrieval/silver_judgment_summary.json",
+   "strategy": "json_canonical",
+   "sha256": "d1ca1d74d71d2ee0bfa5469fa8603922146b00289f20fa27b7cd7e95212df001"
   }
  }
 }
