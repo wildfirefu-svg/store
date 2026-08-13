@@ -149,10 +149,11 @@ class TestPhase9aManifest:
 
 class TestFullDoubleRun:
     def test_exec_code_frozen_before_run(self):
-        # freeze-before-use 门：策略执行代码必须先入 manifest，否则不允许真实运行
-        m = _load_json(P9 / "manifest.json")
-        for name in ("retriever_py", "run_strategies_py", "strategy_store_py"):
-            assert name in m["entries"], f"{name} not frozen before strategy execution"
+        # freeze-before-use 门：真实门调用（stage+条目+SHA drift 全过才不抛），非仅断言条目存在
+        import phase9a_manifest as pm
+        names = ["retriever_py", "run_strategies_py", "strategy_store_py",
+                 "query_set_frozen", "ranking_config", "synonym_table", "upstream_inputs_sha"]
+        pm.verify_frozen(P9 / "manifest.json", names)
 
     def test_all_53_queries_double_run_byte_identical(self):
         # strategy_outputs.jsonl 为全量 53 query 双跑产物：每行 (query_id, strategy, run1_hits, run2_hits)
