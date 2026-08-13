@@ -1060,7 +1060,7 @@ class TestC1ReplayResult:
 
 
 class TestReconcileSubtype:
-    """p8_reconcile.py 首项：亚型 35 题对账。"""
+    """p8_reconcile.py 对账（首项亚型 + 全量总对账）。"""
 
     def test_reconcile_subtype_passes(self):
         proc = subprocess.run(
@@ -1073,3 +1073,21 @@ class TestReconcileSubtype:
         )
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "subtype" in proc.stdout
+
+    def test_reconcile_full_sections(self):
+        """Task 8 全量对账：七节全 ok 且 manifest_disk 覆盖全部产物。"""
+        proc = subprocess.run(
+            [sys.executable, str(_P8_DIR / "p8_reconcile.py")],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            cwd=_REPO,
+            env=dict(os.environ, PYTHONIOENCODING="utf-8"),
+        )
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        for section in (
+            "subtype_split", "required_knowledge", "computability_probe",
+            "knowledge_audit", "c1_replay", "kb_equivalence", "manifest_disk",
+        ):
+            assert f"[{section}]" in proc.stdout, section
+        assert "FAIL" not in proc.stdout

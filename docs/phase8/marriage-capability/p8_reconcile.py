@@ -88,9 +88,104 @@ def probe_check() -> list[tuple[str, bool, str]]:
     return results
 
 
+def required_knowledge_check() -> list[tuple[str, bool, str]]:
+    """required_knowledge 35 行链对账。"""
+    rows = [
+        json.loads(l)
+        for l in (P8_DIR / "required_knowledge.jsonl").open(encoding="utf-8")
+        if l.strip()
+    ]
+    split = json.loads((P8_DIR / "subtype_split.json").read_text(encoding="utf-8"))
+    expected = [c["case_id"] for c in split["cases"]]
+    actual = [r["case_id"] for r in rows]
+    n_items = sum(len(r["items"]) for r in rows)
+    return [
+        ("required_knowledge 35 行 == subtype_split 35 题", actual == expected, f"{len(actual)} vs {len(expected)}"),
+        ("知识项总数 > 0", n_items > 0, f"{n_items} items"),
+    ]
+
+
+def audit_check() -> list[tuple[str, bool, str]]:
+    """knowledge_audit 35 行链 + 分母对账。"""
+    rows = [
+        json.loads(l)
+        for l in (P8_DIR / "knowledge_audit.jsonl").open(encoding="utf-8")
+        if l.strip()
+    ]
+    split = json.loads((P8_DIR / "subtype_split.json").read_text(encoding="utf-8"))
+    expected = [c["case_id"] for c in split["cases"]]
+    actual = [r["case_id"] for r in rows]
+    n_items = sum(len(r["items"]) for r in rows)
+    gap_counts: dict[str, int] = {}
+    for row in rows:
+        for item in row["items"]:
+            gap_counts[item["gap_class"]] = gap_counts.get(item["gap_class"], 0) + 1
+    return [
+        ("knowledge_audit 35 行 == subtype_split 35 题", actual == expected, f"{len(actual)} vs {len(expected)}"),
+        ("知识项总数 = 五类 + undetermined", sum(gap_counts.values()) == n_items, json.dumps(gap_counts, ensure_ascii=False)),
+    ]
+
+
+def c1_check() -> list[tuple[str, bool, str]]:
+    """C1 160 行对账。"""
+    data = json.loads((P8_DIR / "c1_detector_eval.json").read_text(encoding="utf-8"))
+    return [
+        ("C1 replay_count == 1", data["replay_count"] == 1, ""),
+        ("C1 total == 160", data["total"] == 160, ""),
+        ("C1 四态和 == 160", sum(data["counts"].values()) == 160, json.dumps(data["counts"])),
+        ("C1 verdict 为双终态之一", data["verdict"] in {"C1_PASS", "C1_TERMINATED"}, data["verdict"]),
+    ]
+
+
+def kb_equivalence_check() -> list[tuple[str, bool, str]]:
+    """KB 等价性对账。"""
+    eq = json.loads((P8_DIR / "kb_equivalence.json").read_text(encoding="utf-8"))
+    return [
+        ("KB 等价性 total == ok", eq["summary"]["total"] == eq["summary"]["ok"], json.dumps(eq["summary"])),
+        ("KB 等价性 fallback_used == 0", eq["summary"]["fallback_used"] == 0, ""),
+    ]
+
+
+def manifest_disk_check() -> list[tuple[str, bool, str]]:
+    """manifest 与磁盘产物 SHA 一致（四策略分列复算）。"""
+    import hashlib
+
+    manifest = json.loads((P8_DIR / "phase8_freeze_manifest.json").read_text(encoding="utf-8"))
+    results = []
+    for e in manifest["entries"]:
+        path = REPO / e["path"]
+        if not path.exists():
+            results.append((f"{e['path']} 存在", False, "missing"))
+            continue
+        if e["strategy"] == "json_canonical":
+            obj = json.loads(path.read_text(encoding="utf-8"))
+            canonical = json.dumps(obj, sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n"
+            sha = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        elif e["strategy"] == "jsonl_canonical":
+            lines = [l for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+            canonical = "".join(
+                json.dumps(json.loads(l), sort_keys=True, ensure_ascii=False, separators=(",", ":")) + "\n"
+                for l in lines
+            )
+            sha = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        elif e["strategy"] == "raw_bytes":
+            sha = hashlib.sha256(path.read_bytes()).hexdigest()
+        elif e["strategy"] == "git_canonical_lf":
+            sha = hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+        else:
+            sha = ""
+        results.append((f"{e['path']} SHA 一致", sha == e["sha256"], e["strategy"]))
+    return results
+
+
 CHECKS: dict[str, list[tuple[str, bool, str]]] = {
     "subtype_split": subtype_check(),
+    "required_knowledge": required_knowledge_check(),
     "computability_probe": probe_check(),
+    "knowledge_audit": audit_check(),
+    "c1_replay": c1_check(),
+    "kb_equivalence": kb_equivalence_check(),
+    "manifest_disk": manifest_disk_check(),
 }
 
 
