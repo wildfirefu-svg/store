@@ -1,9 +1,11 @@
 # Phase 9A-R1 设计：silver relevance 标签校准（零 API）
 
 **日期：** 2026-08-14
-**状态：** v1.0（草案，待用户过审）
+**状态：** v1.1（NEEDS_REVISION 修订：终态收窄为标签校准验证、版本化产物、独立验证口径冻结、归因证据入库）
 **前置：** Phase 9A 已冻结（QC_FAIL 终态，分歧 53.73% > 10%；manifest_v4 sealed；reconcile exit 0）
 **范围冻结：** 只改 silver judge 的标签边界；**retriever、ranking、truncation、query 集、strategy_outputs 全部不变**；零 LLM API；不评价答案准确率。
+
+**关键约束（P0 修订）**：Phase 9A 的 673 个 judgment pair 只覆盖 37 个 item（冻结分母 112 个中的 75 个零候选）。在 retriever/query/strategy_outputs 不变的前提下，judgeable_item_rate 理论上限 = 37/112 = **33.04%**，远低于 READY 门 90%。因此 **R1 终态不是 SILVER_RETRIEVAL_READY，而是 SILVER_LABEL_CALIBRATED / SILVER_LABEL_NOT_CALIBRATED**——只验证标签规则校准是否有效；检索 READY 需另立 R2 解决候选覆盖。
 
 ---
 
@@ -30,17 +32,17 @@
 
 ## 2. 校准目标与验收口径
 
-**目标**：校准 silver 标签边界，使独立验证集上人工 QC 分歧率 ≤10%，然后重新计算召回与噪声。
+**目标**：校准 silver 标签边界，使独立验证集上人工 QC 分歧率 ≤10%，证明标签规则修复有效。
 
 | 编号 | 目标 | 验收口径 |
 |---|---|---|
 | R1-G1 | 标签边界校准规则冻结 | 新 RULE_SOURCE 在查看验证标签前冻结（SHA 落盘）；规则只改 cat_ok 边界，不改 syn_hit |
 | R1-G2 | 独立验证集分层抽取 | 从剩余 606 条（673 - 67 开发校准集）中重新分层抽取；seed/算法/比例冻结；与开发校准集无重叠 |
-| R1-G3 | 验证集 QC 分歧率 ≤10% | 人工复核验证集；分歧率 ≤10% 才允许计算指标 |
-| R1-G4 | 重新计算召回与噪声 | 用校准后 judgment 重新计算 weighted_recall/bundle_noise/binary coverage/judgeable_rate；终态 SILVER_RETRIEVAL_READY 或 NOT_READY |
-| R1-G5 | 产物与指纹 | 校准后 judgment/summary/eval 产物冻结；treatment_fingerprint 更新（新 silver_judge_py SHA） |
+| R1-G3 | 验证集 QC 分歧率 ≤10% | 人工复核验证集；分歧率 ≤10% 才允许判定校准有效 |
+| R1-G4 | 校准后 judgment 生成 | 用校准后规则重新生成全部 673 条 judgment + summary；冻结 |
+| R1-G5 | 产物与指纹 | 校准后 judgment/summary 产物冻结；**calibration_fingerprint.json**（新增，非 treatment fingerprint）；原 treatment_fingerprint 字节不变断言 |
 
-**本阶段不评价**：答案准确率、模型行为变化、任何增强效果声明。
+**本阶段不评价**：答案准确率、模型行为变化、检索召回/噪声（R2 阶段）、任何增强效果声明。
 
 ---
 
@@ -80,16 +82,18 @@ else:
 
 ---
 
-## 4. 验证集抽取（独立分层）
+## 4. 验证集抽取（独立分层，口径冻结）
 
 **开发校准集**：Phase 9A 的 67 条（已人工复核，用于校准规则设计）。
 
-**独立验证集**：从剩余 606 条（673 - 67）中重新分层抽取：
-- **分层维度**：item_id（与开发校准集相同的 37 个 item 的剩余 pair）
-- **抽样比例**：10%（约 60 条）
-- **seed**：新 seed（不同于开发校准集的 20260813，避免过拟合）
-- **算法**：与开发校准集相同的分层抽样（每 item floor 分配 + 余数补足）
+**独立验证集**（从剩余 606 条中分层抽取，口径全部冻结）：
+- **sample_size = 61**（精确值，非"约 60"）
+- **seed = 20260814**（新 seed，不同于开发校准集的 20260813）
+- **最大允许分歧数 = floor(61 × 0.10) = 6**（离散阈值，非百分比）
+- **uncertain 计数**：uncertain 不计入分歧（分歧 = human_label ≠ silver_label 且两者均非 uncertain）
+- **分层维度**：item_id；37 个 item 至少各覆盖 1 条（若某 item 剩余 pair 不足则从其他 item 补足）
 - **无重叠**：验证集与开发校准集无交集（按 (item_id, canonical_key) 排除）
+- **reviewer 盲法**：reviewer 不得看到 silver label、开发集标签、归因结论；只提供条文文本 + item 描述
 
 **冻结**：验证集样本列表在 silver 校准规则冻结后、查看验证标签前生成并冻结（SHA 落盘）。
 
@@ -97,32 +101,32 @@ else:
 
 ## 5. 执行顺序（冻结）
 
-1. **归因冻结**：本设计 §1 的归因结论落盘（36 条分歧的完整归因表）。
-2. **校准规则冻结**：新 RULE_SOURCE（v3）冻结（SHA 落盘）；silver_judge.py 修改后重冻结。
-3. **校准 judgment 生成**：用新规则重新生成 silver_relevance_judgment.jsonl（全部 673 条）+ summary；冻结。
-4. **验证集抽取**：从剩余 606 条分层抽取 ~60 条；冻结样本列表。
-5. **人工 QC 复核**：验证集人工复核（分歧率 ≤10% 才继续）。
-6. **指标重算**：用校准后 judgment 重新计算 weighted_recall/bundle_noise/binary coverage/judgeable_rate。
-7. **终态判定**：SILVER_RETRIEVAL_READY（分歧 ≤10% 且指标过门）或 SILVER_RETRIEVAL_NOT_READY。
-8. **产物封存**：校准后 judgment/summary/eval/指纹冻结；manifest_v5 封存。
+1. **归因冻结**：归因脚本 + 36 条分歧完整结果入库（`docs/phase9a/r1/attribution.json` + `attribution.py`，SHA 落盘）。
+2. **校准规则冻结**：新 RULE_SOURCE（v3）冻结（SHA 落盘）；`silver_judge_v3.py`（版本化新文件，非修改 sealed 的 silver_judge.py）冻结。
+3. **校准 judgment 生成**：用新规则重新生成 `silver_relevance_judgment_v3.jsonl`（全部 673 条）+ `silver_judgment_summary_v3.json`；冻结。
+4. **验证集抽取**：从剩余 606 条分层抽取 61 条；冻结 `qc_sample_list_v2.json`。
+5. **人工 QC 复核**：验证集人工复核（盲法）；分歧数 ≤6 才继续。
+6. **终态判定**：SILVER_LABEL_CALIBRATED（分歧 ≤6）或 SILVER_LABEL_NOT_CALIBRATED。
+7. **产物封存**：校准后 judgment/summary/验证集/指纹冻结；manifest_v5 封存。
 
 ---
 
-## 6. 产物与指纹
+## 6. 产物与指纹（版本化，非覆盖 sealed）
 
-**主冻结产物**：
-- `silver_judge.py`（v3 规则，新 SHA）
-- `silver_relevance_judgment.jsonl`（校准后，新 SHA）
-- `silver_judgment_summary.json`（校准后，新 SHA）
+**主冻结产物**（全部版本化新文件，不修改 Phase 9A sealed 产物）：
+- `silver_judge_v3.py`（v3 规则，新 SHA）
+- `silver_relevance_judgment_v3.jsonl`（校准后，新 SHA）
+- `silver_judgment_summary_v3.json`（校准后，新 SHA）
 - `qc_sample_list_v2.json`（验证集，新 SHA）
 - `qc_human_review_v2.jsonl`（验证集人工复核，新 SHA）
 - `qc_result_v2.json`（验证集分歧判定，新 SHA）
-- `retrieval_eval_v2.json`（校准后终态，新 SHA）
-- `treatment_fingerprint_v2.json`（更新 silver_judge_py SHA）
+- `calibration_fingerprint.json`（新增：silver_judge_v3_py + judgment_v3 + summary_v3 + 验证集 + 归因证据的 SHA）
 - `manifest_v5.json`（校准后封存）
 
+**treatment_fingerprint 不变**：retriever/query/strategy_outputs 全部不变，原 treatment_fingerprint.json 字节不变（断言）。
+
 **replay 证据**：
-- `retrieval_bundle_dev_v2.jsonl`（校准后 bundle，仅供复现）
+- `retrieval_bundle_dev_v3.jsonl`（校准后 bundle，仅供复现）
 
 ---
 
@@ -140,17 +144,21 @@ else:
 
 **终态（两种都允许 Phase 9A-R1 完成）**：
 
-- `SILVER_RETRIEVAL_READY`：验证集 QC 分歧率 ≤10%，且校准后指标过门（judgeable_item_rate ≥90%、macro weighted_recall ≥90%、macro bundle_noise ≤20%、binary item coverage ≥90%）。
-- `SILVER_RETRIEVAL_NOT_READY`：验证集分歧率 >10% 或指标未过门——保留完整评估结果与失败原因，不得为过门修改规则或 judgment。
+- `SILVER_LABEL_CALIBRATED`：验证集 QC 分歧数 ≤6（floor(61×0.10)），校准规则有效。
+- `SILVER_LABEL_NOT_CALIBRATED`：验证集分歧数 >6——保留完整评估结果与失败原因，不得为过门修改规则或 judgment。
 
 **完成定义**：
-1. 归因结论冻结（36 条分歧完整归因表）。
+1. 归因结论冻结（归因脚本 + 36 条分歧完整结果入库，SHA 落盘）。
 2. 校准规则（v3）在查看验证标签前冻结。
-3. 独立验证集分层抽取并冻结（与开发校准集无重叠）。
-4. 验证集人工 QC 分歧率 ≤10%（QC_PASS）或 >10%（QC_FAIL）。
-5. 校准后指标重算（QC_PASS 时）或 not_computed（QC_FAIL 时）。
-6. 终态为 SILVER_RETRIEVAL_READY 或 SILVER_RETRIEVAL_NOT_READY 之一，结论闭合。
+3. 独立验证集分层抽取并冻结（61 条，seed=20260814，与开发校准集无重叠，37 个 item 至少各覆盖 1 条）。
+4. 验证集人工 QC 分歧数 ≤6（CALIBRATED）或 >6（NOT_CALIBRATED）。
+5. 校准后 judgment/summary 生成并冻结（版本化新文件）。
+6. 终态为 SILVER_LABEL_CALIBRATED 或 SILVER_LABEL_NOT_CALIBRATED 之一，结论闭合。
 7. 全程零 API、零生产代码改动。
+
+**后续衔接**：
+- **R2**（候选覆盖）：若 R1 校准有效，另立 R2 解决 75 个零候选 item 的覆盖问题（需改 retriever/query/strategy_outputs，超出本阶段范围）。
+- **Phase 9B**：待 R1 + R2 均完成且密封婚姻集就绪后，才进入配对实验 spec。
 
 ---
 
