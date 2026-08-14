@@ -1,4 +1,4 @@
-# Phase 9A-R1 silver relevance 标签校准 Implementation Plan（v2.3）
+# Phase 9A-R1 silver relevance 标签校准 Implementation Plan（v2.4）
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -805,6 +805,8 @@ class TestTerminalV2:
         m = _load_json(P9R1 / "manifest_v5.json")
         assert receipt["manifest_sha256"] == hashlib.sha256(json.dumps(m, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode() + b"\n").hexdigest()
         assert "receipt_r1" not in m["entries"]  # RECEIPT 不加入 manifest（避免循环）
+        # P0 修订：RECEIPT artifact 集合精确相等（防空集合/缺项通过）
+        assert set(receipt["artifacts"]) == {"qc_result_v2.json", "calibration_fingerprint.json", "CLOSURE.md"}
         # RECEIPT artifact 集合/SHA/size/strategy/verdict
         for name, meta in receipt["artifacts"].items():
             raw = (P9R1 / name).read_bytes()
@@ -821,6 +823,68 @@ class TestTerminalV2:
         proc = subprocess.run([sys.executable, str(P9R1 / "reconcile_r1.py")], capture_output=True, text=True, encoding="utf-8", cwd=REPO)
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "FAIL" not in proc.stdout
+
+
+class TestFinalizeResumeProtocol:
+    """P0 修订：4 个生产路径测试（镜像，验证恢复协议与异常 RECEIPT 拒绝）。"""
+
+    def _make_r1_mirror(self, tmp_path):
+        """构建包含 P9R1 + P9 的镜像（finalize 依赖）。"""
+        import shutil
+        root = tmp_path / "repo"
+        (root / "docs" / "phase9a").mkdir(parents=True)
+        shutil.copytree(P9R1, root / "docs" / "phase9a" / "r1")
+        shutil.copytree(P9, root / "docs" / "phase9a" / "retrieval")
+        (root / "docs" / "phase8" / "marriage-capability").mkdir(parents=True)
+        for name in ("phase9a_manifest.py", "p8_freeze.py"):
+            shutil.copy(P8 / name, root / "docs" / "phase8" / "marriage-capability" / name)
+        return root
+
+    def _reset_manifest_to_code_frozen(self, mirror_r1):
+        """镜像 manifest 重置为 code_frozen（模拟未 seal 状态）。"""
+        m = mirror_r1 / "manifest_v5.json"
+        data = json.loads(m.read_text(encoding="utf-8"))
+        data["stage"] = "code_frozen"
+        m.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
+
+    def test_resume_partial_same_products_completes(self, tmp_path):
+        # code_frozen + 部分相同产物：允许恢复并完成
+        root = self._make_r1_mirror(tmp_path)
+        mirror_r1 = root / "docs" / "phase9a" / "r1"
+        self._reset_manifest_to_code_frozen(mirror_r1)
+        (mirror_r1 / "RECEIPT_r1.json").unlink()
+        (mirror_r1 / "CLOSURE.md").unlink()  # 删除一项产物，模拟部分发布
+        proc = subprocess.run([sys.executable, str(mirror_r1 / "finalize_r1.py")], capture_output=True, text=True, encoding="utf-8", cwd=root)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert (mirror_r1 / "CLOSURE.md").exists() and (mirror_r1 / "RECEIPT_r1.json").exists()
+
+    def test_resume_byte_mismatch_rejected(self, tmp_path):
+        # code_frozen + 任一产物字节不一致：拒绝
+        root = self._make_r1_mirror(tmp_path)
+        mirror_r1 = root / "docs" / "phase9a" / "r1"
+        self._reset_manifest_to_code_frozen(mirror_r1)
+        (mirror_r1 / "RECEIPT_r1.json").unlink()
+        (mirror_r1 / "qc_result_v2.json").write_text("tampered", encoding="utf-8")  # 字节不一致
+        proc = subprocess.run([sys.executable, str(mirror_r1 / "finalize_r1.py")], capture_output=True, text=True, encoding="utf-8", cwd=root)
+        assert proc.returncode != 0 and "byte mismatch" in (proc.stdout + proc.stderr)
+
+    def test_sealed_no_receipt_republishes(self, tmp_path):
+        # sealed + 无 RECEIPT：校验后补发
+        root = self._make_r1_mirror(tmp_path)
+        mirror_r1 = root / "docs" / "phase9a" / "r1"
+        (mirror_r1 / "RECEIPT_r1.json").unlink()  # 删除 RECEIPT（manifest 仍 sealed）
+        proc = subprocess.run([sys.executable, str(mirror_r1 / "finalize_r1.py")], capture_output=True, text=True, encoding="utf-8", cwd=root)
+        assert proc.returncode == 0 and (mirror_r1 / "RECEIPT_r1.json").exists()
+
+    def test_code_frozen_receipt_exists_rejected(self, tmp_path):
+        # code_frozen + RECEIPT 已存在：拒绝且不得覆盖
+        root = self._make_r1_mirror(tmp_path)
+        mirror_r1 = root / "docs" / "phase9a" / "r1"
+        self._reset_manifest_to_code_frozen(mirror_r1)
+        receipt_before = (mirror_r1 / "RECEIPT_r1.json").read_bytes()
+        proc = subprocess.run([sys.executable, str(mirror_r1 / "finalize_r1.py")], capture_output=True, text=True, encoding="utf-8", cwd=root)
+        assert proc.returncode != 0 and "already exists" in (proc.stdout + proc.stderr)
+        assert (mirror_r1 / "RECEIPT_r1.json").read_bytes() == receipt_before  # RECEIPT 未被覆盖
 ```
 
 - [ ] **Step 2: 运行确认失败**
@@ -848,8 +912,7 @@ P9R1 = REPO / "docs" / "phase9a" / "r1"
 STAGING = P9R1 / ".staging_r1"
 sys.path.insert(0, str(P9))
 sys.path.insert(0, str(REPO / "docs" / "phase8" / "marriage-capability"))
-import phase9a_manifest as pm
-import qc_gate as qc
+import phase9a_manifest as pm  # 仅顶层导入 manifest helper；qc_gate 延迟导入（P0 修订：先验证后导入）
 
 
 def _count_disagreement(reviews, silver):
@@ -883,6 +946,13 @@ def _publish_receipt(m5, verdict):
 def main() -> None:
     m5 = P9R1 / "manifest_v5.json"
     manifest = json.loads(m5.read_text(encoding="utf-8")) if m5.exists() else None
+    # P0 修订：先验证 upstream + qc_gate 冻结 SHA，然后才延迟导入 qc_gate（防漂移代码执行）
+    entry = manifest["entries"]["upstream_manifest_v4"]
+    actual_upstream = pm.STRATEGY_FN[entry["strategy"]](P9 / "manifest_v4.json")
+    if actual_upstream != entry["sha256"]:
+        sys.exit("FAIL: upstream_manifest_v4 SHA drift")
+    pm.verify_frozen(P9 / "manifest_v4.json", ["qc_gate_py", "qc_gate_py_v2", "phase9a_manifest_py", "retriever_py"], required_stage="sealed")
+    import qc_gate as qc  # 延迟导入（验证后）
     # 受控 resume：manifest 已 sealed 但 RECEIPT 未发布 → 校验产物后补发 RECEIPT
     if manifest and manifest.get("stage") == "sealed":
         if (P9R1 / "RECEIPT_r1.json").exists():
@@ -898,6 +968,9 @@ def main() -> None:
         print(f"finalize_r1: RECEIPT补发完成（manifest 已 sealed，verdict={verdict}）")
         return
     # 正常流程：manifest 未 sealed
+    # P0 修订：正常分支先拒绝异常 RECEIPT（不得覆盖）
+    if (P9R1 / "RECEIPT_r1.json").exists():
+        sys.exit("FAIL: RECEIPT_r1.json already exists but manifest not sealed - one-shot violated")
     pm.verify_frozen(m5, ["silver_relevance_judgment_v3", "qc_sample_list_v2", "qc_human_review_v2", "finalize_r1_py", "reconcile_r1_py"], required_stage="code_frozen")
     state = qc.qc_state(P9R1 / "qc_human_review_v2.jsonl", P9R1 / "qc_sample_list_v2.json")
     if state != "REVIEWED":
@@ -928,11 +1001,15 @@ def main() -> None:
     _atomic_json(staging / "calibration_fingerprint.json", fp)
     closure = (
         f"# Phase 9A-R1 Closure：silver relevance 标签校准（{verdict}）\n\n"
-        f"终态：**{verdict}**\n"
-        f"effective_disagreement：{effective}/61（max_allowed=6）\n"
-        f"disagreement_count={n_diff}, uncertain_count={n_uncertain}\n\n"
+        f"verdict: {verdict}\n"
+        f"effective_disagreement: {effective}/61\n"
+        f"disagreement_count: {n_diff}\n"
+        f"uncertain_count: {n_uncertain}\n"
+        f"max_allowed: 6\n"
+        f"sample_size: 61\n"
+        f"item_coverage: 37\n"
+        f"seed: 20260814\n\n"
         f"校准规则变更点：cat_ok 可选（query 无 category 时不降级）。\n"
-        f"验证集构成：61 条 / 37 item / seed=20260814。\n\n"
         f"后续衔接：R2（候选覆盖）。\n"
     )
     (staging / "CLOSURE.md").write_text(closure, encoding="utf-8", newline="\n")
@@ -960,27 +1037,7 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: 冻结 finalize_r1_py + reconcile_r1_py（seal 前，freeze-before-use）→ 运行终态发布**
-
-先冻结两个脚本（manifest_v5 code_frozen 阶段追加，P0 修订：reconcile_r1.py 也必须在 seal 前冻结）：
-```python
-import sys
-from pathlib import Path
-sys.path.insert(0, "docs/phase8/marriage-capability")
-sys.path.insert(0, "docs/phase9a/retrieval")
-import phase9a_manifest as pm
-P9R1 = Path("docs/phase9a/r1")
-pm.freeze(P9R1 / "manifest_v5.json", {
-    "finalize_r1_py": (P9R1 / "finalize_r1.py", "git_canonical_lf"),
-    "reconcile_r1_py": (P9R1 / "reconcile_r1.py", "git_canonical_lf"),
-})
-print("finalize_r1_py + reconcile_r1_py frozen")
-```
-
-Run: `.venv/Scripts/python.exe docs/phase9a/r1/finalize_r1.py`
-Expected: `finalize_r1: verdict=SILVER_LABEL_CALIBRATED|NOT_CALIBRATED, effective_disagreement=N/61, manifest_v5 sealed, RECEIPT published`。
-
-- [ ] **Step 5: 实现 reconcile_r1.py（R1 最终对账，seal 前创建）+ 测试转绿 + Commit**
+- [ ] **Step 4: 实现 reconcile_r1.py（R1 最终对账，先实现后冻结，P0 修订）**
 
 reconcile_r1.py（sealed 后执行，验证 sealed manifest + RECEIPT + 产物 + fingerprint；treatment fingerprint 路径从 manifest 条目解析）：
 ```python
@@ -1063,9 +1120,11 @@ def main() -> None:
                  (qr["verdict"] == "SILVER_LABEL_NOT_CALIBRATED" and qr["effective_disagreement"] > 6)
     all_ok = all_ok and verdict_ok
     print(f"  {'ok' if verdict_ok else 'FAIL'}  verdict matches effective_disagreement")
-    # RECEIPT 校验（artifact 集合/SHA/size/strategy/verdict + 绑定 sealed manifest SHA）
+    # RECEIPT 校验（P0 修订：artifact 集合精确相等 + SHA/size/strategy/verdict + 绑定 sealed manifest SHA）
     receipt = json.loads((r1_dir / "RECEIPT_r1.json").read_text(encoding="utf-8"))
     receipt_ok = True
+    if set(receipt["artifacts"]) != {"qc_result_v2.json", "calibration_fingerprint.json", "CLOSURE.md"}:
+        receipt_ok = False  # artifact 集合必须精确等于三项正式产物
     if receipt["verdict"] != qr["verdict"]:
         receipt_ok = False
     if receipt["manifest_sha256"] != pm.STRATEGY_FN["json_canonical"](manifest_path):
@@ -1076,9 +1135,19 @@ def main() -> None:
             receipt_ok = False
     all_ok = all_ok and receipt_ok
     print(f"  {'ok' if receipt_ok else 'FAIL'}  RECEIPT (artifacts + sealed manifest binding)")
-    # closure 与 qc_result 一致（字段级校验）
+    # closure 与 qc_result 一致（P0/中优修订：严格行解析，非子串 in）
     closure = (r1_dir / "CLOSURE.md").read_text(encoding="utf-8")
-    closure_ok = qr["verdict"] in closure and f"effective_disagreement：{qr['effective_disagreement']}/61" in closure
+    fields = {}
+    for line in closure.splitlines():
+        if ": " in line and not line.startswith("#"):
+            k, v = line.split(": ", 1)
+            fields[k.strip()] = v.strip()
+    closure_ok = (
+        fields.get("verdict") == qr["verdict"]
+        and fields.get("effective_disagreement") == f"{qr['effective_disagreement']}/61"
+        and fields.get("disagreement_count") == str(qr["disagreement_count"])
+        and fields.get("uncertain_count") == str(qr["uncertain_count"])
+    )
     all_ok = all_ok and closure_ok
     print(f"  {'ok' if closure_ok else 'FAIL'}  closure matches qc_result")
     sys.exit(0 if all_ok else 1)
@@ -1088,7 +1157,30 @@ if __name__ == "__main__":
     main()
 ```
 
-Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_r1.py::TestTerminalV2 -q`
+- [ ] **Step 5: 同时冻结两个脚本 → 运行 finalize → 运行 reconcile → 测试转绿 + Commit**
+
+先冻结两个脚本（两文件均已实现，manifest_v5 code_frozen 阶段追加，P0 修订：先实现后冻结）：
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, "docs/phase8/marriage-capability")
+sys.path.insert(0, "docs/phase9a/retrieval")
+import phase9a_manifest as pm
+P9R1 = Path("docs/phase9a/r1")
+pm.freeze(P9R1 / "manifest_v5.json", {
+    "finalize_r1_py": (P9R1 / "finalize_r1.py", "git_canonical_lf"),
+    "reconcile_r1_py": (P9R1 / "reconcile_r1.py", "git_canonical_lf"),
+})
+print("finalize_r1_py + reconcile_r1_py frozen")
+```
+
+Run: `.venv/Scripts/python.exe docs/phase9a/r1/finalize_r1.py`
+Expected: `finalize_r1: verdict=SILVER_LABEL_CALIBRATED|NOT_CALIBRATED, effective_disagreement=N/61, manifest_v5 sealed, RECEIPT published`。
+
+Run: `.venv/Scripts/python.exe docs/phase9a/r1/reconcile_r1.py`
+Expected: exit 0 无 FAIL。
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_r1.py::TestTerminalV2 tests/test_phase9a_r1.py::TestFinalizeResumeProtocol -q`
 Expected: PASS。
 ```powershell
 git add -- docs/phase9a/r1/manifest_v5.json docs/phase9a/r1/finalize_r1.py docs/phase9a/r1/reconcile_r1.py docs/phase9a/r1/qc_result_v2.json docs/phase9a/r1/calibration_fingerprint.json docs/phase9a/r1/CLOSURE.md docs/phase9a/r1/RECEIPT_r1.json docs/phase9a/r1/qc_human_review_v2.jsonl tests/test_phase9a_r1.py
