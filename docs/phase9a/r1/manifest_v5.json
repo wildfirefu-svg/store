@@ -26,6 +26,21 @@
    "path": "docs/phase9a/r1/attribution.json",
    "strategy": "json_canonical",
    "sha256": "09eb18d099dc1339e2da931cf737a82b9da5cb2fb62c07b0af26546dc3df169f"
+  },
+  "generate_validation_sample_py": {
+   "path": "docs/phase9a/r1/generate_validation_sample.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "d8c813c170d70cd5bb1d4356c620dbed79bf5af1e9e521453cd8c52721703785"
+  },
+  "qc_sample_list_v2": {
+   "path": "docs/phase9a/r1/qc_sample_list_v2.json",
+   "strategy": "json_canonical",
+   "sha256": "b5f01ebedad1736d3a2f5d9111b06e6679a64834dafc4472592f81c7e505c54a"
+  },
+  "qc_review_packet_v2": {
+   "path": "docs/phase9a/r1/qc_review_packet_v2.jsonl",
+   "strategy": "jsonl_canonical",
+   "sha256": "27fa9bcf9420edae9a9398745031cffd733278102e2d1f0fe77fb59cd9b72a6b"
   }
  }
 }
