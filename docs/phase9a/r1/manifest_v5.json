@@ -1,6 +1,6 @@
 {
  "schema_version": "1.0",
- "stage": "code_frozen",
+ "stage": "sealed",
  "entries": {
   "upstream_manifest_v4": {
    "path": "docs/phase9a/retrieval/manifest_v4.json",
@@ -61,6 +61,31 @@
    "path": "docs/phase9a/r1/qc_human_review_v2.jsonl",
    "strategy": "jsonl_canonical",
    "sha256": "ad611adf7e7fee7558de08f7de2df6b5598e832cdae72afcb31847dec256349a"
+  },
+  "finalize_r1_py": {
+   "path": "docs/phase9a/r1/finalize_r1.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "b811599c04731697cbce0383f18e86e65c64f00a6529156aab7e8bbb2cc93bf0"
+  },
+  "reconcile_r1_py": {
+   "path": "docs/phase9a/r1/reconcile_r1.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "fdff514ab02aa56712189b09f4e6d1107b5ca938eb0a681027aebaa30dd087d6"
+  },
+  "qc_result_v2": {
+   "path": "docs/phase9a/r1/qc_result_v2.json",
+   "strategy": "json_canonical",
+   "sha256": "3a716246b558d697ca66863e861e1681b48de6bbc5d94a97e3ec02b6dece9182"
+  },
+  "calibration_fingerprint": {
+   "path": "docs/phase9a/r1/calibration_fingerprint.json",
+   "strategy": "json_canonical",
+   "sha256": "7fa836c1c4c99bbccfdf3b9e0cd857889b77bc14dc740c0f5f286ce60d4f435c"
+  },
+  "closure": {
+   "path": "docs/phase9a/r1/CLOSURE.md",
+   "strategy": "git_canonical_lf",
+   "sha256": "2a650c65bf886dad0bce16130dccf1767317b7943f1b6850ebbdc7df6d36b069"
   }
  }
 }

@@ -1,0 +1,23 @@
+{
+ "schema_version": "1.0",
+ "verdict": "SILVER_LABEL_NOT_CALIBRATED",
+ "artifacts": {
+  "qc_result_v2.json": {
+   "sha256": "b6eb09e79d2eeacdb1e0ae797cedce8d554ee101fe9f59f4be220df15137acd7",
+   "strategy": "raw_bytes",
+   "size": 275
+  },
+  "calibration_fingerprint.json": {
+   "sha256": "d033ae70d12f5e746175bb9106e8befdba24b85f586a82e1e6204455ba8fa12c",
+   "strategy": "raw_bytes",
+   "size": 1338
+  },
+  "CLOSURE.md": {
+   "sha256": "2a650c65bf886dad0bce16130dccf1767317b7943f1b6850ebbdc7df6d36b069",
+   "strategy": "raw_bytes",
+   "size": 379
+  }
+ },
+ "manifest_sha256": "6334de0221e4e03630d4afd20f867d1f8da902e6fe966b783aa7de1a3971b282",
+ "note": "Phase 9A-R1 finalize receipt"
+}

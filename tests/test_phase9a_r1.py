@@ -31,7 +31,8 @@ def _load_module(name: str, rel: str):
 class TestR1ManifestInit:
     def test_manifest_v5_code_frozen(self):
         m = _load_json(P9R1 / "manifest_v5.json")
-        assert m["stage"] == "code_frozen"
+        # Task 4 终态：finalize 后 stage 单向迁移至 sealed（TestTerminalV2 交叉验证）
+        assert m["stage"] == "sealed"
         # 冻结上游 manifest_v4 + 原 treatment fingerprint + manifest helper + 归因证据
         for name in ("upstream_manifest_v4", "upstream_treatment_fingerprint", "phase9a_manifest_py", "attribution_py", "attribution_json"):
             assert name in m["entries"], f"{name} not frozen"
@@ -151,3 +152,153 @@ class TestQcStateMachineV2:
         except SystemExit:
             raised = True
         assert raised
+
+
+class TestTerminalV2:
+    def test_effective_disagreement_gate(self):
+        result = _load_json(P9R1 / "qc_result_v2.json")
+        assert "effective_disagreement" in result
+        assert result["effective_disagreement"] == result["disagreement_count"] + result["uncertain_count"]
+        assert result["verdict"] in {"SILVER_LABEL_CALIBRATED", "SILVER_LABEL_NOT_CALIBRATED"}
+        if result["effective_disagreement"] <= 6:
+            assert result["verdict"] == "SILVER_LABEL_CALIBRATED"
+        else:
+            assert result["verdict"] == "SILVER_LABEL_NOT_CALIBRATED"
+
+    def test_uncertain_not_double_counted(self):
+        # 单条 uncertain 贡献恰好 1，不是 2
+        fin = _load_module("finalize_r1", "docs/phase9a/r1/finalize_r1.py")
+        reviews = [{"item_id": "a", "canonical_key": "kb:gejue:1", "human_label": "uncertain", "note": "x"}]
+        silver = {("a", "kb:gejue:1"): "relevant"}
+        n_diff, n_uncertain = fin._count_disagreement(reviews, silver)
+        assert n_diff == 0 and n_uncertain == 1  # uncertain 不计入 diff，只计 1 次
+
+    def test_calibration_fingerprint(self):
+        fp = _load_json(P9R1 / "calibration_fingerprint.json")
+        assert fp["components"] and fp["sha256"]
+        names = {c["logical_name"] for c in fp["components"]}
+        assert {"silver_judge_v3_py", "silver_relevance_judgment_v3", "silver_judgment_summary_v3", "qc_sample_list_v2", "attribution_json"} <= names
+
+    def test_treatment_fingerprint_unchanged(self):
+        # 原 treatment_fingerprint 字节不变（双 SHA 口径分离：文件 canonical SHA vs 内部组件摘要）
+        orig = _load_json(P9 / "treatment_fingerprint.json")
+        m4 = _load_json(P9 / "manifest_v4.json")
+        expected_file_sha = m4["entries"]["treatment_fingerprint"]["sha256"]
+        actual_file_sha = hashlib.sha256(json.dumps(orig, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode() + b"\n").hexdigest()
+        assert actual_file_sha == expected_file_sha  # 文件字节不变
+        assert orig["sha256"]  # 内部摘要存在（与文件 SHA 语义不同，不混用）
+
+    def test_manifest_v5_sealed(self):
+        m = _load_json(P9R1 / "manifest_v5.json")
+        assert m["stage"] == "sealed"
+        assert "closure" in m["entries"]
+        assert "upstream_manifest_v4" in m["entries"]
+
+    def test_receipt_binds_sealed_manifest(self):
+        # RECEIPT 绑定 sealed manifest SHA + 产物元数据，不加入 manifest
+        receipt = _load_json(P9R1 / "RECEIPT_r1.json")
+        m = _load_json(P9R1 / "manifest_v5.json")
+        assert receipt["manifest_sha256"] == hashlib.sha256(json.dumps(m, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode() + b"\n").hexdigest()
+        assert "receipt_r1" not in m["entries"]  # RECEIPT 不加入 manifest（避免循环）
+        assert set(receipt["artifacts"]) == {"qc_result_v2.json", "calibration_fingerprint.json", "CLOSURE.md"}
+        for name, meta in receipt["artifacts"].items():
+            raw = (P9R1 / name).read_bytes()
+            assert hashlib.sha256(raw).hexdigest() == meta["sha256"]
+            assert len(raw) == meta["size"] and meta["strategy"] == "raw_bytes"
+
+    def test_no_overwrite_on_rerun(self):
+        # 正式终态产物已存在时 finalize_r1 必须 fail-closed
+        proc = subprocess.run([sys.executable, str(P9R1 / "finalize_r1.py")], capture_output=True, text=True, encoding="utf-8", cwd=REPO)
+        assert proc.returncode != 0 and "already exists" in (proc.stdout + proc.stderr)
+
+    def test_reconcile_r1_exit_zero(self):
+        # R1 最终对账入口：sealed 后 reconcile_r1.py 必须 exit 0
+        proc = subprocess.run([sys.executable, str(P9R1 / "reconcile_r1.py")], capture_output=True, text=True, encoding="utf-8", cwd=REPO)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert "FAIL" not in proc.stdout
+
+
+class TestFinalizeResumeProtocol:
+    """4 个生产路径测试（镜像从 code_frozen 输入构造，不依赖正式终态产物，可在正式发布前运行）。"""
+
+    def _make_r1_mirror(self, tmp_path):
+        """从 code_frozen 输入构造镜像：复制冻结输入 + 代码，不含正式终态产物。"""
+        import shutil
+        root = tmp_path / "repo"
+        mirror_r1 = root / "docs" / "phase9a" / "r1"
+        mirror_r1.mkdir(parents=True)
+        for name in ("manifest_v5.json", "finalize_r1.py", "reconcile_r1.py", "silver_relevance_judgment_v3.jsonl",
+                     "silver_judgment_summary_v3.json", "qc_sample_list_v2.json", "qc_human_review_v2.jsonl",
+                     "silver_judge_v3.py", "attribution.py", "attribution.json", "generate_validation_sample.py"):
+            shutil.copy(P9R1 / name, mirror_r1 / name)
+        # P9 copytree（qc_gate 等依赖，已含 phase9a_manifest.py）
+        shutil.copytree(P9, root / "docs" / "phase9a" / "retrieval")
+        (root / "docs" / "phase8" / "marriage-capability").mkdir(parents=True)
+        shutil.copy(P8 / "p8_freeze.py", root / "docs" / "phase8" / "marriage-capability" / "p8_freeze.py")
+        # 净化镜像 manifest 至 code_frozen 输入态：正式发布后真实 manifest 已 sealed 且含三项终态条目，
+        # 镜像从 code_frozen 输入构造（不含终态产物），需剥离终态条目并回退 stage（可重复执行前提）
+        m_path = mirror_r1 / "manifest_v5.json"
+        data = json.loads(m_path.read_text(encoding="utf-8"))
+        data["stage"] = "code_frozen"
+        for terminal in ("qc_result_v2", "calibration_fingerprint", "closure"):
+            data["entries"].pop(terminal, None)
+        m_path.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
+        return root
+
+    def _run_finalize(self, root):
+        mirror_r1 = root / "docs" / "phase9a" / "r1"
+        return subprocess.run([sys.executable, str(mirror_r1 / "finalize_r1.py")], capture_output=True, text=True, encoding="utf-8", cwd=root)
+
+    def _reset_manifest_to_code_frozen(self, mirror_r1):
+        m = mirror_r1 / "manifest_v5.json"
+        data = json.loads(m.read_text(encoding="utf-8"))
+        data["stage"] = "code_frozen"
+        m.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
+
+    def test_resume_partial_same_products_completes(self, tmp_path):
+        # 模拟真实窗口——发布一项后、freeze 前崩溃（fresh 镜像不含三项终态 manifest 条目）
+        control_root = self._make_r1_mirror(tmp_path / "control")
+        assert self._run_finalize(control_root).returncode == 0
+        control_r1 = control_root / "docs" / "phase9a" / "r1"
+        closure_bytes = (control_r1 / "CLOSURE.md").read_bytes()
+        fresh_root = self._make_r1_mirror(tmp_path / "fresh")
+        fresh_r1 = fresh_root / "docs" / "phase9a" / "r1"
+        (fresh_r1 / "CLOSURE.md").write_bytes(closure_bytes)  # 只复制一项已发布产物
+        proc = self._run_finalize(fresh_root)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        assert (fresh_r1 / "CLOSURE.md").read_bytes() == closure_bytes  # 既有产物字节未变
+        assert (fresh_r1 / "qc_result_v2.json").exists() and (fresh_r1 / "calibration_fingerprint.json").exists()
+        assert json.loads((fresh_r1 / "manifest_v5.json").read_text(encoding="utf-8"))["stage"] == "sealed"
+        assert (fresh_r1 / "RECEIPT_r1.json").exists()
+
+    def test_resume_byte_mismatch_rejected(self, tmp_path):
+        # fresh 镜像 + 磁盘上留下损坏的已发布产物（真实窗口：发布后字节损坏）→ 拒绝
+        control_root = self._make_r1_mirror(tmp_path / "control")
+        assert self._run_finalize(control_root).returncode == 0
+        control_r1 = control_root / "docs" / "phase9a" / "r1"
+        corrupted = (control_r1 / "qc_result_v2.json").read_bytes() + b"tampered"
+        fresh_root = self._make_r1_mirror(tmp_path / "fresh")
+        fresh_r1 = fresh_root / "docs" / "phase9a" / "r1"
+        (fresh_r1 / "qc_result_v2.json").write_bytes(corrupted)
+        proc = self._run_finalize(fresh_root)
+        assert proc.returncode != 0 and "byte mismatch" in (proc.stdout + proc.stderr)
+
+    def test_sealed_no_receipt_republishes(self, tmp_path):
+        # sealed + 无 RECEIPT：校验后补发
+        root = self._make_r1_mirror(tmp_path)
+        mirror_r1 = root / "docs" / "phase9a" / "r1"
+        assert self._run_finalize(root).returncode == 0
+        (mirror_r1 / "RECEIPT_r1.json").unlink()  # 删除 RECEIPT（manifest 仍 sealed）
+        proc = self._run_finalize(root)
+        assert proc.returncode == 0 and (mirror_r1 / "RECEIPT_r1.json").exists()
+
+    def test_code_frozen_receipt_exists_rejected(self, tmp_path):
+        # code_frozen + RECEIPT 已存在：拒绝且不得覆盖
+        root = self._make_r1_mirror(tmp_path)
+        mirror_r1 = root / "docs" / "phase9a" / "r1"
+        assert self._run_finalize(root).returncode == 0
+        self._reset_manifest_to_code_frozen(mirror_r1)  # 保留 RECEIPT，重置 stage
+        receipt_before = (mirror_r1 / "RECEIPT_r1.json").read_bytes()
+        proc = self._run_finalize(root)
+        assert proc.returncode != 0 and "already exists" in (proc.stdout + proc.stderr)
+        assert (mirror_r1 / "RECEIPT_r1.json").read_bytes() == receipt_before

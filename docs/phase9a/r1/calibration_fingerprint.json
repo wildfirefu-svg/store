@@ -1,0 +1,37 @@
+{
+ "schema_version": "1.0",
+ "components": [
+  {
+   "logical_name": "silver_judge_v3_py",
+   "path": "docs/phase9a/r1/silver_judge_v3.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "f858a2053176f3b4a5f117e8c2cdc2882643f45d3c67814636d123482a8be654"
+  },
+  {
+   "logical_name": "silver_relevance_judgment_v3",
+   "path": "docs/phase9a/r1/silver_relevance_judgment_v3.jsonl",
+   "strategy": "jsonl_canonical",
+   "sha256": "52ad084502fd2f71bd9eba04a846581f8dc90161dda51258f702f4b8f95dbeee"
+  },
+  {
+   "logical_name": "silver_judgment_summary_v3",
+   "path": "docs/phase9a/r1/silver_judgment_summary_v3.json",
+   "strategy": "json_canonical",
+   "sha256": "a766a09ac34d41c1189a2ecbd2c9eb7f7e9e2e93e560e86a6c721bd3c7c1a16c"
+  },
+  {
+   "logical_name": "qc_sample_list_v2",
+   "path": "docs/phase9a/r1/qc_sample_list_v2.json",
+   "strategy": "json_canonical",
+   "sha256": "b5f01ebedad1736d3a2f5d9111b06e6679a64834dafc4472592f81c7e505c54a"
+  },
+  {
+   "logical_name": "attribution_json",
+   "path": "docs/phase9a/r1/attribution.json",
+   "strategy": "json_canonical",
+   "sha256": "09eb18d099dc1339e2da931cf737a82b9da5cb2fb62c07b0af26546dc3df169f"
+  }
+ ],
+ "sha256": "37d37640983742ccdd11c5bf84c271ebaa862a3c4f6a87329e02bf08e6b32ca9",
+ "note": "Phase 9A-R1 calibration fingerprint；treatment fingerprint 不变（retriever 未改）"
+}

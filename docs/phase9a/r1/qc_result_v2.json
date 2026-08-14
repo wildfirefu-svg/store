@@ -1,0 +1,10 @@
+{
+ "schema_version": "1.0",
+ "verdict": "SILVER_LABEL_NOT_CALIBRATED",
+ "disagreement_count": 25,
+ "uncertain_count": 0,
+ "effective_disagreement": 25,
+ "max_allowed": 6,
+ "n_reviewed": 61,
+ "note": "effective_disagreement = disagreement + uncertain；≤6 才 CALIBRATED"
+}
