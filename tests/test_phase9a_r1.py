@@ -117,3 +117,37 @@ class TestCalibratedJudgment:
                 changed += 1
                 assert v2[key] == "partially_relevant" and v3[key] == "relevant", f"unexpected transition {v2[key]} -> {v3[key]} for {key}"
         assert changed > 0  # 至少发生一项允许的变化（防 v3 输出与 v2 完全相同的失效实现）
+
+
+class TestQcStateMachineV2:
+    def test_r1_template_and_schema_exist(self):
+        # R1 模板/schema/盲评 packet 必须存在（新增契约）
+        assert (P9R1 / "qc_human_review_v2.jsonl").exists()
+        assert (P9R1 / "qc_human_review_schema_v2.json").exists()
+        assert (P9R1 / "qc_review_packet_v2.jsonl").exists()
+
+    def test_packet_no_label_leak(self):
+        # packet 不含任何 label/reason/开发集标签/归因结论
+        packet = [json.loads(l) for l in (P9R1 / "qc_review_packet_v2.jsonl").open(encoding="utf-8") if l.strip()]
+        for p in packet:
+            assert "silver_label" not in p and "reason" not in p and "human_label" not in p
+            assert "note" not in p  # 开发集标签字段
+
+    def test_packet_matches_sample(self):
+        # packet 与 sample 61 条一一对应
+        packet = [json.loads(l) for l in (P9R1 / "qc_review_packet_v2.jsonl").open(encoding="utf-8") if l.strip()]
+        sample = _load_json(P9R1 / "qc_sample_list_v2.json")
+        packet_keys = {(p["item_id"], p["canonical_key"]) for p in packet}
+        sample_keys = {(s["item_id"], s["canonical_key"]) for s in sample["sample_list"]}
+        assert packet_keys == sample_keys
+
+    def test_review_coverage_fail_closed(self):
+        g = _load_module("qc_gate", "docs/phase9a/retrieval/qc_gate.py")
+        sample = [{"item_id": "a", "canonical_key": "kb:gejue:1"}]
+        reviews = [{"item_id": "a", "canonical_key": "kb:gejue:2", "human_label": "relevant"}]
+        try:
+            g.validate_review_coverage(sample, reviews)
+            raised = False
+        except SystemExit:
+            raised = True
+        assert raised

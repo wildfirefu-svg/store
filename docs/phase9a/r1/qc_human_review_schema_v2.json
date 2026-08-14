@@ -1,0 +1,23 @@
+{
+ "schema_version": "1.0",
+ "file": "qc_human_review_v2.jsonl",
+ "line_fields": [
+  "item_id",
+  "canonical_key",
+  "human_label",
+  "note"
+ ],
+ "human_label_enum": [
+  "relevant",
+  "partially_relevant",
+  "irrelevant",
+  "uncertain"
+ ],
+ "note_required": true,
+ "rules": [
+  "human_label 必填且属于枚举",
+  "note 必填非空",
+  "pair 与 qc_sample_list_v2 一一对应（无缺失/重复/额外）",
+  "reviewer 盲法：不得看到 silver label/开发集标签/归因结论"
+ ]
+}
