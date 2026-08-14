@@ -1,7 +1,7 @@
 # Phase 9A-R1 设计：silver relevance 标签校准（零 API）
 
 **日期：** 2026-08-14
-**状态：** v1.1（NEEDS_REVISION 修订：终态收窄为标签校准验证、版本化产物、独立验证口径冻结、归因证据入库）
+**状态：** v1.2（NEEDS_REVISION 二轮修订：effective_disagreement 门、确定性抽样算法、归因证据状态明确）
 **前置：** Phase 9A 已冻结（QC_FAIL 终态，分歧 53.73% > 10%；manifest_v4 sealed；reconcile exit 0）
 **范围冻结：** 只改 silver judge 的标签边界；**retriever、ranking、truncation、query 集、strategy_outputs 全部不变**；零 LLM API；不评价答案准确率。
 
@@ -11,7 +11,7 @@
 
 ---
 
-## 1. 归因结论（零 API，已冻结）
+## 1. 归因结论（零 API，临时结果待 Task 1 正式冻结）
 
 对 Phase 9A 的 36 条 QC 分歧做归因分析（`.tmp/phase9a_r1_attribution.py`）：
 
@@ -89,20 +89,24 @@ else:
 **开发校准集**：Phase 9A 的 67 条（已人工复核，用于校准规则设计）。
 
 **独立验证集**（从剩余 606 条中分层抽取，口径全部冻结）：
-- **sample_size = 61**（精确值，非"约 60"）
+- **sample_size = 61**（精确值，必须精确抽取 61 条，不允许"实际可抽取数"降级）
 - **seed = 20260814**（新 seed，不同于开发校准集的 20260813）
 - **最大允许分歧数 = floor(61 × 0.10) = 6**（离散阈值，非百分比）
 - **uncertain 计数（P0 修订）**：**effective_disagreement = disagreement_count + uncertain_count**（uncertain 计入失败预算，防全 uncertain 绕过门禁）；SILVER_LABEL_CALIBRATED 当且仅当 effective_disagreement ≤ 6
-- **分层维度**：item_id；37 个 item 至少各覆盖 1 条（若某 item 剩余 pair 不足则从其他 item 补足——**该补足规则会破坏 37 item 覆盖硬约束，故改为：若某 item 剩余 pair 为 0 则该 item 不覆盖，总样本数相应减少；37 item 覆盖是目标而非硬约束**）
+- **分层维度**：item_id；**必须覆盖全部 37 个 item**（冻结数据实算：剩余 606 pair 覆盖全部 37 item，每 item 至少 1 条剩余 pair，零候选 item = 0）
 - **无重叠**：验证集与开发校准集无交集（按 (item_id, canonical_key) 排除）
 - **reviewer 盲法**：reviewer 不得看到 silver label、开发集标签、归因结论；只提供条文文本 + item 描述
+- **fail-closed**：任一 item 无候选或总候选不足 61 → `BLOCKED_INPUT_DRIFT`（不允许继续判定）
 
-**抽样算法（P0 修订，确定性无放回）**：
-1. 全部候选 pair 按 `(item_id, canonical_document_key)` 排序；
-2. 使用 `random.Random(20260814)`；
-3. 每个 item 无放回抽取 1 条（共 37 条，若某 item 剩余 pair 为 0 则跳过）；
-4. 剩余候选合并排序后，无放回抽取 24 条（或补足至 61 条，若 37 item 覆盖后剩余不足 24 则全取）；
-5. 断言：总数 = 61（或实际可抽取数）、item 数 ≤ 37、与开发集交集为零。
+**抽样算法（P0 修订，确定性无放回，函数级冻结）**：
+```python
+rng = random.Random(20260814)
+first = [rng.choice(sorted(pairs_by_item[item_id], key=pair_key)) for item_id in sorted(pairs_by_item)]
+remaining = sorted(all_remaining_pairs - set(first), key=pair_key)
+extra = rng.sample(remaining, 24)
+sample = first + extra
+# 断言：len(sample) == 61；len({row.item_id for row in sample}) == 37；sample ∩ development_set == ∅；len(unique_pair_keys) == 61
+```
 
 **冻结**：验证集样本列表在 silver 校准规则冻结后、查看验证标签前生成并冻结（SHA 落盘）。
 
@@ -111,11 +115,11 @@ else:
 ## 5. 执行顺序（冻结）
 
 1. **归因冻结**：归因脚本 + 36 条分歧完整结果入库（`docs/phase9a/r1/attribution.py` + `attribution.json`，SHA 落盘；**当前未入库，实施阶段生成**）。
-2. **校准规则冻结**：新 RULE_SOURCE（v3）冻结（SHA 落盘）；`silver_judge_v3.py`（版本化新文件，非修改 sealed 的 silver_judge.py）冻结。
-3. **校准 judgment 生成**：用新规则重新生成 `silver_relevance_judgment_v3.jsonl`（全部 673 条）+ `silver_judgment_summary_v3.json`；冻结。
-4. **验证集抽取**：从剩余 606 条分层抽取 61 条；冻结 `qc_sample_list_v2.json`。
-5. **人工 QC 复核**：验证集人工复核（盲法）；分歧数 ≤6 才继续。
-6. **终态判定**：SILVER_LABEL_CALIBRATED（分歧 ≤6）或 SILVER_LABEL_NOT_CALIBRATED。
+2. **验证集样本冻结**：从 Phase 9A sealed 的原始 606 pair 生成并冻结 `qc_sample_list_v2.json`（**在生成或查看任何 v3 label 前**，P0 修订：消除选择偏差）。
+3. **校准规则冻结**：新 RULE_SOURCE（v3）冻结（SHA 落盘）；`silver_judge_v3.py`（版本化新文件，非修改 sealed 的 silver_judge.py）冻结。
+4. **校准 judgment 生成**：用新规则重新生成 `silver_relevance_judgment_v3.jsonl`（全部 673 条）+ `silver_judgment_summary_v3.json`；冻结。
+5. **人工 QC 复核**：验证集人工复核（盲法）。
+6. **终态判定**：SILVER_LABEL_CALIBRATED（effective_disagreement ≤6）或 SILVER_LABEL_NOT_CALIBRATED（>6）；**无论是否超过 6，都继续发布对应终态与证据**（P0 修订：失败分支完整封存）。
 7. **产物封存**：校准后 judgment/summary/验证集/指纹冻结；manifest_v5 封存。
 
 ---
