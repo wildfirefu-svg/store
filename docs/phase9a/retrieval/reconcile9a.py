@@ -16,7 +16,7 @@ import phase9a_manifest as pm
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--manifest", default=str(P9 / "manifest_v3.json"))
+    parser.add_argument("--manifest", default=str(P9 / "manifest_v4.json"))
     args = parser.parse_args()
     manifest_path = Path(args.manifest)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -67,10 +67,11 @@ def main() -> None:
         if receipt.get("verdict") != ev["verdict"]:
             receipt_ok = False
     fp_ok = (retrieval_dir / "treatment_fingerprint.json").exists()
-    # 迁移链校验（P1 修订）：supersedes 引用的前代 manifest 存在且 SHA 与记录策略一致
+    # 迁移链校验（P0/P1 修订）：逐代核对 SHA + stage + entries 数；强制当前 manifest 含 closure 条目
     migration_ok = True
     migration = manifest.get("migration")
     if migration:
+        # 1. immediate predecessor SHA + strategy
         pred_path = retrieval_dir / migration["supersedes"]
         if not pred_path.exists():
             migration_ok = False
@@ -78,12 +79,25 @@ def main() -> None:
             strategy = migration.get("supersedes_sha256_strategy", "json_canonical")
             actual_pred_sha = pm.STRATEGY_FN[strategy](pred_path)
             migration_ok = actual_pred_sha == migration["supersedes_sha256"]
+        # 2. 逐代核对 chain 节点的 entries/stage（P0：防虚假链元数据）
+        for node in migration.get("chain", []):
+            node_path = retrieval_dir / node["version"]
+            if not node_path.exists():
+                migration_ok = False
+                break
+            node_data = json.loads(node_path.read_text(encoding="utf-8"))
+            if len(node_data["entries"]) != node["entries"] or node_data["stage"] != node["stage"]:
+                migration_ok = False
+                break
+        # 3. 强制当前 manifest 含 closure 条目（P0：防 closure 缺失）
+        if "closure" not in manifest["entries"] and "closure_v2" not in manifest["entries"]:
+            migration_ok = False
     all_ok = all_ok and terminal_ok and denom_ok and receipt_ok and fp_ok and migration_ok
     print(f"  {'ok' if terminal_ok else 'FAIL'}  terminal verdict ({ev['verdict']}, qc={ev['qc_state']})")
     print(f"  {'ok' if denom_ok else 'FAIL'}  fixed-112 denominator")
     print(f"  {'ok' if receipt_ok else 'FAIL'}  RECEIPT evidence chain")
     print(f"  {'ok' if fp_ok else 'FAIL'}  treatment fingerprint")
-    print(f"  {'ok' if migration_ok else 'FAIL'}  migration chain (supersedes SHA + strategy)")
+    print(f"  {'ok' if migration_ok else 'FAIL'}  migration chain (SHA + stage + entries + closure)")
     sys.exit(0 if all_ok else 1)
 
 
