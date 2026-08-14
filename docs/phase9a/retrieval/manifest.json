@@ -96,6 +96,31 @@
    "path": "docs/phase9a/retrieval/qc_human_review.jsonl",
    "strategy": "jsonl_canonical",
    "sha256": "eb32ede8435bc86e110841e3c781c1385b8d679141ec643487afcc432c03d7af"
+  },
+  "evaluate_py": {
+   "path": "docs/phase9a/retrieval/evaluate.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "a156b49470cfb98f04fc6ce7b9c34bd59d774e0afeae045f09b372bf6944ee11"
+  },
+  "run_eval_py": {
+   "path": "docs/phase9a/retrieval/run_eval.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "d38ddd42d389ef5e1845ecea43e7e53a2e6971a54d51d2a912d0bf7cbd488825"
+  },
+  "qc_gate_py_v2": {
+   "path": "docs/phase9a/retrieval/qc_gate.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "bbeee9f8232a4fdad7e893ccb44a192387dfbd7c45d5d1b8b79a5f34c7adb877"
+  },
+  "run_eval_py_v2": {
+   "path": "docs/phase9a/retrieval/run_eval.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "e8034bd45dafeb4c1f7c7bfe085a55fe34cee9d23e630d514993b411ae35a5d3"
+  },
+  "run_eval_py_v3": {
+   "path": "docs/phase9a/retrieval/run_eval.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "e84ddd23c0bb0fdaa6402448466806a883003b510f39ac446651bc46f6841f48"
   }
  }
 }

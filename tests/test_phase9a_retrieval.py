@@ -265,3 +265,110 @@ class TestRetrieverCore:
             if "blob_sha" in f:  # 声明了 blob_sha 则必须与 git rev-parse 一致
                 rev = sp.run(["git", "-C", str(REPO), "rev-parse", f"{f['commit']}:{f['path']}"], capture_output=True, text=True)
                 assert rev.returncode == 0 and rev.stdout.strip() == f["blob_sha"], f"blob sha mismatch: {f['path']}"
+
+
+class TestMetricsPure:
+    def test_recall_noise_split_with_overlap(self):
+        ev = _load_module("evaluate", "docs/phase9a/retrieval/evaluate.py")
+        judgment = [
+            {"item_id": "x", "canonical_key": "kb:gejue:1", "label": "relevant"},
+            {"item_id": "x", "canonical_key": "kb:gejue:2", "label": "relevant"},
+            {"item_id": "x", "canonical_key": "kb:gejue:3", "label": "partially_relevant"},
+            {"item_id": "x", "canonical_key": "kb:gejue:4", "label": "irrelevant"},
+        ]
+        bundles = {"x": [{"canonical_key": "kb:gejue:1"}, {"canonical_key": "kb:gejue:4"}]}
+        metrics = ev.compute_metrics(judgment, ["x"], bundles)
+        assert abs(metrics["per_item"]["x"]["weighted_recall"] - 1.0 / 2.5) < 1e-9
+        assert abs(metrics["per_item"]["x"]["bundle_noise"] - 0.5) < 1e-9
+        assert metrics["binary_item_coverage"] == 1.0
+
+    def test_fixed_denominator_with_missing_item(self):
+        ev = _load_module("evaluate", "docs/phase9a/retrieval/evaluate.py")
+        judgment = [{"item_id": "x", "canonical_key": "kb:gejue:1", "label": "relevant"}]
+        metrics = ev.compute_metrics(judgment, ["x", "y"], {"x": [{"canonical_key": "kb:gejue:1"}]})
+        assert metrics["n_items"] == 2
+        assert metrics["binary_item_coverage"] == 0.5
+        assert "y" in metrics["no_gold_mass_items"]
+
+    def test_judgeable_union_no_double_count(self):
+        ev = _load_module("evaluate", "docs/phase9a/retrieval/evaluate.py")
+        judgment = [
+            {"item_id": "u", "canonical_key": "kb:gejue:1", "label": "uncertain"},
+            {"item_id": "n", "canonical_key": "kb:gejue:2", "label": "irrelevant"},
+        ]
+        metrics = ev.compute_metrics(judgment, ["u", "n", "x"], {"x": [{"canonical_key": "kb:gejue:3"}]})
+        assert metrics["judgeable_item_rate"] == 0.0
+        assert set(metrics["no_gold_mass_items"]) == {"n", "x"}
+        assert metrics["unjudgeable_items"] == ["u"]
+        assert metrics["binary_item_coverage"] == 0.0
+
+    def test_no_keyerror_on_unjudgeable_summary(self):
+        ev = _load_module("evaluate", "docs/phase9a/retrieval/evaluate.py")
+        judgment = [{"item_id": "u", "canonical_key": "kb:gejue:1", "label": "uncertain"}]
+        assert ev.compute_metrics(judgment, ["u"], {})["binary_item_coverage"] == 0.0
+
+    def test_bundle_k_budget_enforced(self, tmp_path, monkeypatch):
+        ev = _load_module("evaluate", "docs/phase9a/retrieval/evaluate.py")
+        import retriever as rt
+
+        strategy_outputs = tmp_path / "strategy_outputs.jsonl"
+        strategy_outputs.write_text(
+            "\n".join(
+                [
+                    json.dumps({"query_id": "q1", "strategy": "s1", "run1_hits": [
+                        {"canonical_key": "kb:gejue:1", "score": 1.0, "source_priority": 1, "category": "婚姻"},
+                        {"canonical_key": "kb:gejue:2", "score": 1.0, "source_priority": 1, "category": "婚姻"},
+                        {"canonical_key": "kb:gejue:3", "score": 1.0, "source_priority": 1, "category": "婚姻"},
+                    ]}),
+                    json.dumps({"query_id": "q2", "strategy": "s1", "run1_hits": [
+                        {"canonical_key": "kb:gejue:1", "score": 1.0, "source_priority": 1, "category": "婚姻"},
+                    ]}),
+                ]
+            ) + "\n",
+            encoding="utf-8",
+        )
+        fake_docs = {key: {"text": "婚" * 200, "category": "婚姻"} for key in ("kb:gejue:1", "kb:gejue:2", "kb:gejue:3")}
+        monkeypatch.setattr(rt, "doc_text", lambda key: fake_docs[key])
+        item_map = [
+            {"case_id": "c1", "item_id": "i1", "queries": [{"query_id": "q1"}]},
+            {"case_id": "c1", "item_id": "i2", "queries": [{"query_id": "q2"}]},
+        ]
+        rows = ev.build_bundle(
+            item_map,
+            {"N_chars_per_doc": 200, "M_docs_per_item": 5, "K_chars_per_question": 300},
+            strategies=("s1",),
+            strategy_outputs_path=strategy_outputs,
+        )
+        assert sum(len(doc["text"]) for row in rows for doc in row["docs"]) <= 300
+        assert any(len(row["docs"]) < 3 for row in rows)
+
+
+class TestRealEval:
+    def test_qc_fail_terminal_artifacts(self):
+        result = _load_json(P9 / "retrieval_eval.json")
+        receipt = _load_json(P9 / "RECEIPT.json")
+        assert result["verdict"] == "SILVER_RETRIEVAL_NOT_READY"
+        assert result["qc_state"] == "QC_FAIL"
+        assert result["metrics"] == "not_computed"
+        assert set(receipt["artifacts"]) == {"qc_result.json", "retrieval_eval.json"}
+        assert not (P9 / "retrieval_bundle_dev.jsonl").exists()
+        assert not (P9 / "per_strategy_eval.json").exists()
+
+    def test_receipt_matches_published_artifacts(self):
+        receipt = _load_json(P9 / "RECEIPT.json")
+        for name, metadata in receipt["artifacts"].items():
+            raw = (P9 / name).read_bytes()
+            assert hashlib.sha256(raw).hexdigest() == metadata["sha256"]
+            assert len(raw) == metadata["size"]
+            assert metadata["strategy"] == "raw_bytes"
+
+    def test_no_overwrite_on_rerun(self):
+        proc = subprocess.run(
+            [sys.executable, str(P9 / "run_eval.py")],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            cwd=REPO,
+        )
+        assert proc.returncode != 0
+        assert "already exists" in proc.stdout + proc.stderr

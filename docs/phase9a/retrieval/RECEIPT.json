@@ -1,0 +1,17 @@
+{
+ "schema_version": "1.0",
+ "verdict": "SILVER_RETRIEVAL_NOT_READY",
+ "artifacts": {
+  "qc_result.json": {
+   "sha256": "606d01f371f794379a54664c6b028c159d4d8dbe9467505e4c15a4decf2dc2ae",
+   "strategy": "raw_bytes",
+   "size": 178
+  },
+  "retrieval_eval.json": {
+   "sha256": "9673b793f598119b13407e29dbe3b1c9af18005c34dacf9b20c124ba533389fd",
+   "strategy": "raw_bytes",
+   "size": 404
+  }
+ },
+ "published_at": "sealed"
+}

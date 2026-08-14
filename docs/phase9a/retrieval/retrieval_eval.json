@@ -1,0 +1,15 @@
+{
+ "schema_version": "1.0",
+ "verdict": "SILVER_RETRIEVAL_NOT_READY",
+ "metrics": "not_computed",
+ "qc_state": "QC_FAIL",
+ "qc_result": {
+  "schema_version": "1.0",
+  "disagreement_rate": 0.5373134328358209,
+  "n_reviewed": 67,
+  "n_diff": 36,
+  "max_disagreement_rate": 0.1,
+  "verdict": "SILVER_RETRIEVAL_NOT_READY"
+ },
+ "note": "QC disagreement exceeded the frozen gate; metrics were not computed."
+}
