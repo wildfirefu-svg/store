@@ -1,4 +1,4 @@
-# Phase 9A-R1 silver relevance 标签校准 Implementation Plan（v2.5）
+# Phase 9A-R1 silver relevance 标签校准 Implementation Plan（v2.6）
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -861,29 +861,34 @@ class TestFinalizeResumeProtocol:
         m.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
 
     def test_resume_partial_same_products_completes(self, tmp_path):
-        # code_frozen + 部分相同产物：允许恢复并完成
-        root = self._make_r1_mirror(tmp_path)
-        mirror_r1 = root / "docs" / "phase9a" / "r1"
-        assert self._run_finalize(root).returncode == 0  # 首次完整发布
-        closure_bytes = (mirror_r1 / "CLOSURE.md").read_bytes()
-        # 模拟中断：重置 code_frozen + 删 RECEIPT + 删一项产物
-        self._reset_manifest_to_code_frozen(mirror_r1)
-        (mirror_r1 / "RECEIPT_r1.json").unlink()
-        (mirror_r1 / "CLOSURE.md").unlink()
-        proc = self._run_finalize(root)  # 恢复：重新生成 CLOSURE（字节一致）并发布 RECEIPT
+        # P0 修订：模拟真实窗口——发布一项后、freeze 前崩溃（fresh 镜像不含三项终态 manifest 条目）
+        # control 镜像：完整运行一次，取得规范产物字节
+        control_root = self._make_r1_mirror(tmp_path / "control")
+        assert self._run_finalize(control_root).returncode == 0
+        control_r1 = control_root / "docs" / "phase9a" / "r1"
+        closure_bytes = (control_r1 / "CLOSURE.md").read_bytes()
+        # fresh 镜像：code_frozen，不含三项终态 manifest 条目（原始 manifest 尚未冻结它们）
+        fresh_root = self._make_r1_mirror(tmp_path / "fresh")
+        fresh_r1 = fresh_root / "docs" / "phase9a" / "r1"
+        # 只从 control 复制一项已发布产物（模拟发布一项后崩溃）
+        (fresh_r1 / "CLOSURE.md").write_bytes(closure_bytes)
+        proc = self._run_finalize(fresh_root)
         assert proc.returncode == 0, proc.stdout + proc.stderr
-        assert (mirror_r1 / "CLOSURE.md").read_bytes() == closure_bytes
-        assert (mirror_r1 / "RECEIPT_r1.json").exists()
+        assert (fresh_r1 / "CLOSURE.md").read_bytes() == closure_bytes  # 既有产物字节未变
+        assert (fresh_r1 / "qc_result_v2.json").exists() and (fresh_r1 / "calibration_fingerprint.json").exists()  # 其余产物生成
+        assert json.loads((fresh_r1 / "manifest_v5.json").read_text(encoding="utf-8"))["stage"] == "sealed"  # manifest sealed
+        assert (fresh_r1 / "RECEIPT_r1.json").exists()  # RECEIPT 发布
 
     def test_resume_byte_mismatch_rejected(self, tmp_path):
-        # code_frozen + 任一产物字节不一致：拒绝
-        root = self._make_r1_mirror(tmp_path)
-        mirror_r1 = root / "docs" / "phase9a" / "r1"
-        assert self._run_finalize(root).returncode == 0
-        self._reset_manifest_to_code_frozen(mirror_r1)
-        (mirror_r1 / "RECEIPT_r1.json").unlink()
-        (mirror_r1 / "qc_result_v2.json").write_text("tampered", encoding="utf-8")  # 字节不一致
-        proc = self._run_finalize(root)
+        # P0 修订：fresh 镜像 + 磁盘上留下损坏的已发布产物（真实窗口：发布后字节损坏）→ 拒绝
+        control_root = self._make_r1_mirror(tmp_path / "control")
+        assert self._run_finalize(control_root).returncode == 0
+        control_r1 = control_root / "docs" / "phase9a" / "r1"
+        corrupted = (control_r1 / "qc_result_v2.json").read_bytes() + b"tampered"
+        fresh_root = self._make_r1_mirror(tmp_path / "fresh")
+        fresh_r1 = fresh_root / "docs" / "phase9a" / "r1"
+        (fresh_r1 / "qc_result_v2.json").write_bytes(corrupted)  # 字节不一致的已发布产物
+        proc = self._run_finalize(fresh_root)
         assert proc.returncode != 0 and "byte mismatch" in (proc.stdout + proc.stderr)
 
     def test_sealed_no_receipt_republishes(self, tmp_path):
@@ -972,11 +977,15 @@ def main() -> None:
     if actual_upstream != entry["sha256"]:
         sys.exit("FAIL: upstream_manifest_v4 SHA drift")
     # P0 修订：真实 manifest_v4 不含 phase9a_manifest_py，helper 从 R1 manifest_v5 验证
-    pm.verify_frozen(m5, ["phase9a_manifest_py"], required_stage="code_frozen")
+    # P0 修订：verify_frozen 是精确 stage 相等，先读 stage 再按实际 stage 验证（否则 sealed 分支永远不可达）
+    stage = manifest.get("stage")
+    if stage not in {"code_frozen", "sealed"}:
+        sys.exit(f"FAIL: unexpected manifest_v5 stage {stage}")
+    pm.verify_frozen(m5, ["phase9a_manifest_py"], required_stage=stage)
     pm.verify_frozen(P9 / "manifest_v4.json", ["qc_gate_py", "qc_gate_py_v2", "retriever_py"], required_stage="sealed")
     import qc_gate as qc  # 延迟导入（验证后）
-    # 受控 resume：manifest 已 sealed 但 RECEIPT 未发布 → 校验产物后补发 RECEIPT
-    if manifest and manifest.get("stage") == "sealed":
+    # stage == sealed：受控 resume，manifest 已 sealed 但 RECEIPT 未发布 → 校验产物后补发 RECEIPT
+    if stage == "sealed":
         if (P9R1 / "RECEIPT_r1.json").exists():
             sys.exit("FAIL: RECEIPT_r1.json already exists - one-shot violated")
         entry_map = {"qc_result_v2.json": "qc_result_v2", "calibration_fingerprint.json": "calibration_fingerprint", "CLOSURE.md": "closure"}
@@ -989,7 +998,7 @@ def main() -> None:
         _publish_receipt(m5, verdict)
         print(f"finalize_r1: RECEIPT补发完成（manifest 已 sealed，verdict={verdict}）")
         return
-    # 正常流程：manifest 未 sealed
+    # 正常流程：stage == code_frozen
     # P0 修订：正常分支先拒绝异常 RECEIPT（不得覆盖）
     if (P9R1 / "RECEIPT_r1.json").exists():
         sys.exit("FAIL: RECEIPT_r1.json already exists but manifest not sealed - one-shot violated")
