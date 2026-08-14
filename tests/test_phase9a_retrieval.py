@@ -148,10 +148,12 @@ class TestPhase9aManifest:
 
 
 class TestQcStateMachine:
-    def test_pending_review_blocks_eval(self):
+    def test_pending_review_blocks_eval(self, tmp_path):
         g = _load_module("qc_gate", "docs/phase9a/retrieval/qc_gate.py")
         # 无复核记录 → HUMAN_QC_REQUIRED（阻塞指标计算与终态）
-        assert g.qc_state(P9 / "qc_human_review.jsonl", P9 / "qc_sample_list.json") == "HUMAN_QC_REQUIRED"
+        empty_review = tmp_path / "qc_human_review.jsonl"
+        empty_review.write_text("", encoding="utf-8")
+        assert g.qc_state(empty_review, P9 / "qc_sample_list.json") == "HUMAN_QC_REQUIRED"
 
     def test_review_coverage_fail_closed(self):
         g = _load_module("qc_gate", "docs/phase9a/retrieval/qc_gate.py")

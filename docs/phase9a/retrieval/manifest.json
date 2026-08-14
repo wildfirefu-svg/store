@@ -91,6 +91,11 @@
    "path": "docs/phase9a/retrieval/qc_human_review_schema.json",
    "strategy": "json_canonical",
    "sha256": "5e70020c07c94fc488452b27e4dec0c6dbada6f7137643176c700e84ecbf9c96"
+  },
+  "qc_human_review": {
+   "path": "docs/phase9a/retrieval/qc_human_review.jsonl",
+   "strategy": "jsonl_canonical",
+   "sha256": "eb32ede8435bc86e110841e3c781c1385b8d679141ec643487afcc432c03d7af"
   }
  }
 }
