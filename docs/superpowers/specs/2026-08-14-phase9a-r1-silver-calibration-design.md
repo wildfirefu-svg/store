@@ -1,7 +1,7 @@
 # Phase 9A-R1 设计：silver relevance 标签校准（零 API）
 
 **日期：** 2026-08-14
-**状态：** v1.2（NEEDS_REVISION 二轮修订：effective_disagreement 门、确定性抽样算法、归因证据状态明确）
+**状态：** v1.2（APPROVED，可进入 writing-plans）
 **前置：** Phase 9A 已冻结（QC_FAIL 终态，分歧 53.73% > 10%；manifest_v4 sealed；reconcile exit 0）
 **范围冻结：** 只改 silver judge 的标签边界；**retriever、ranking、truncation、query 集、strategy_outputs 全部不变**；零 LLM API；不评价答案准确率。
 
