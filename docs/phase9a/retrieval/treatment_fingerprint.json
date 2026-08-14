@@ -1,0 +1,55 @@
+{
+ "schema_version": "1.0",
+ "components": [
+  {
+   "logical_name": "retriever_py",
+   "path": "docs/phase9a/retrieval/retriever.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "1ee9907c3ca4a3cf82146380b30aa9b42d5cf2c48c9421937dff797a68bc7062"
+  },
+  {
+   "logical_name": "run_strategies_py",
+   "path": "docs/phase9a/retrieval/run_strategies.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "cc282b02bf09213678bc9d58912b30e953c25db16c6a1de8faede95eaf5bfd16"
+  },
+  {
+   "logical_name": "strategy_store_py",
+   "path": "docs/phase9a/retrieval/strategy_store.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "2d9507b05ab4122a3eea79c141a9541527c648ccd6da1fbb769a3cf2b15ccd30"
+  },
+  {
+   "logical_name": "query_extractor_py",
+   "path": "docs/phase9a/retrieval/query_extractor.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "a8d5133724c396f878025c43a295501b437fa7d7f28ad544c851f1420cd57de0"
+  },
+  {
+   "logical_name": "synonym_table",
+   "path": "docs/phase9a/retrieval/synonym_table.json",
+   "strategy": "json_canonical",
+   "sha256": "43849c8988683f222b4aefa8d3cdeab7f7374b3d6c7ac5fe7583ac4941ef4558"
+  },
+  {
+   "logical_name": "ranking_config",
+   "path": "docs/phase9a/retrieval/ranking_config.json",
+   "strategy": "json_canonical",
+   "sha256": "29224b5f7cb95d996ad03b8dc77da557573f6310f4fc084c545e543a3b3db9ae"
+  },
+  {
+   "logical_name": "truncation_config",
+   "path": "docs/phase9a/retrieval/truncation_config.json",
+   "strategy": "json_canonical",
+   "sha256": "d6d7592eeb25afab4d550201eb3261740b206267efea1d3f7ac501e5d55d6055"
+  },
+  {
+   "logical_name": "upstream_inputs_sha",
+   "path": "docs/phase9a/retrieval/upstream_inputs_sha.json",
+   "strategy": "json_canonical",
+   "sha256": "64f1f5e7156afdd25009bf796eaa97befaf7bad54e9213b8acaf86c8fd8f80a1"
+  }
+ ],
+ "sha256": "4a055a8ec752829209e8b76a7b746c8f5fb2958df38b4c094d4f07a5a8051703",
+ "note": "Phase 9B enhanced 臂 treatment fingerprint 依据；SHA 单源取自 manifest_v2（P0 修订：避免第二套口径）"
+}

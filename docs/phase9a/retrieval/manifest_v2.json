@@ -1,0 +1,162 @@
+{
+ "schema_version": "1.0",
+ "stage": "sealed",
+ "entries": {
+  "upstream_inputs_sha": {
+   "path": "docs/phase9a/retrieval/upstream_inputs_sha.json",
+   "strategy": "json_canonical",
+   "sha256": "64f1f5e7156afdd25009bf796eaa97befaf7bad54e9213b8acaf86c8fd8f80a1"
+  },
+  "query_set_frozen": {
+   "path": "docs/phase9a/retrieval/query_set_frozen.json",
+   "strategy": "json_canonical",
+   "sha256": "8e14d7b90de6b042a70e13960d76d179fe65b2f0380f14c90f82982e02f71e5f"
+  },
+  "synonym_table": {
+   "path": "docs/phase9a/retrieval/synonym_table.json",
+   "strategy": "json_canonical",
+   "sha256": "43849c8988683f222b4aefa8d3cdeab7f7374b3d6c7ac5fe7583ac4941ef4558"
+  },
+  "ranking_config": {
+   "path": "docs/phase9a/retrieval/ranking_config.json",
+   "strategy": "json_canonical",
+   "sha256": "29224b5f7cb95d996ad03b8dc77da557573f6310f4fc084c545e543a3b3db9ae"
+  },
+  "truncation_config": {
+   "path": "docs/phase9a/retrieval/truncation_config.json",
+   "strategy": "json_canonical",
+   "sha256": "d6d7592eeb25afab4d550201eb3261740b206267efea1d3f7ac501e5d55d6055"
+  },
+  "qc_config": {
+   "path": "docs/phase9a/retrieval/qc_config.json",
+   "strategy": "json_canonical",
+   "sha256": "f8d94513cbcd40341f3090c6a82c172552c52b257fc3766d3125660f4ecc8c46"
+  },
+  "item_query_map": {
+   "path": "docs/phase9a/retrieval/item_query_map.json",
+   "strategy": "json_canonical",
+   "sha256": "563106030c7819f3ec9b245fc92d08afdc603fe038e35e1b322ecbaceb0a5b01"
+  },
+  "query_extractor_py": {
+   "path": "docs/phase9a/retrieval/query_extractor.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "a8d5133724c396f878025c43a295501b437fa7d7f28ad544c851f1420cd57de0"
+  },
+  "retriever_py": {
+   "path": "docs/phase9a/retrieval/retriever.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "1ee9907c3ca4a3cf82146380b30aa9b42d5cf2c48c9421937dff797a68bc7062"
+  },
+  "run_strategies_py": {
+   "path": "docs/phase9a/retrieval/run_strategies.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "cc282b02bf09213678bc9d58912b30e953c25db16c6a1de8faede95eaf5bfd16"
+  },
+  "strategy_store_py": {
+   "path": "docs/phase9a/retrieval/strategy_store.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "2d9507b05ab4122a3eea79c141a9541527c648ccd6da1fbb769a3cf2b15ccd30"
+  },
+  "strategy_outputs": {
+   "path": "docs/phase9a/retrieval/strategy_outputs.jsonl",
+   "strategy": "jsonl_canonical",
+   "sha256": "57125ecc9f6738bfcaaad7160db1b5d56061b69200884817641554fa0f3c2418"
+  },
+  "silver_judge_py": {
+   "path": "docs/phase9a/retrieval/silver_judge.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "e21051c92295f977499313477590974e00d92b24fbb88f2831136a890a31b3d3"
+  },
+  "silver_relevance_judgment": {
+   "path": "docs/phase9a/retrieval/silver_relevance_judgment.jsonl",
+   "strategy": "jsonl_canonical",
+   "sha256": "48e40580be0cddad22fc85cff4c8f5ce0adfc65dd6e6ff086be3c4dfa9da8dc6"
+  },
+  "silver_judgment_summary": {
+   "path": "docs/phase9a/retrieval/silver_judgment_summary.json",
+   "strategy": "json_canonical",
+   "sha256": "d1ca1d74d71d2ee0bfa5469fa8603922146b00289f20fa27b7cd7e95212df001"
+  },
+  "qc_gate_py": {
+   "path": "docs/phase9a/retrieval/qc_gate.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "bbeee9f8232a4fdad7e893ccb44a192387dfbd7c45d5d1b8b79a5f34c7adb877"
+  },
+  "qc_sample_list": {
+   "path": "docs/phase9a/retrieval/qc_sample_list.json",
+   "strategy": "json_canonical",
+   "sha256": "4d2c8bccd22a4467a2fd6e75cb2945c8b57b9a9bdd2c0abf5277735dd565a29d"
+  },
+  "qc_human_review_schema": {
+   "path": "docs/phase9a/retrieval/qc_human_review_schema.json",
+   "strategy": "json_canonical",
+   "sha256": "5e70020c07c94fc488452b27e4dec0c6dbada6f7137643176c700e84ecbf9c96"
+  },
+  "qc_human_review": {
+   "path": "docs/phase9a/retrieval/qc_human_review.jsonl",
+   "strategy": "jsonl_canonical",
+   "sha256": "eb32ede8435bc86e110841e3c781c1385b8d679141ec643487afcc432c03d7af"
+  },
+  "evaluate_py": {
+   "path": "docs/phase9a/retrieval/evaluate.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "a156b49470cfb98f04fc6ce7b9c34bd59d774e0afeae045f09b372bf6944ee11"
+  },
+  "run_eval_py": {
+   "path": "docs/phase9a/retrieval/run_eval.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "e84ddd23c0bb0fdaa6402448466806a883003b510f39ac446651bc46f6841f48"
+  },
+  "qc_gate_py_v2": {
+   "path": "docs/phase9a/retrieval/qc_gate.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "bbeee9f8232a4fdad7e893ccb44a192387dfbd7c45d5d1b8b79a5f34c7adb877"
+  },
+  "run_eval_py_v2": {
+   "path": "docs/phase9a/retrieval/run_eval.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "e84ddd23c0bb0fdaa6402448466806a883003b510f39ac446651bc46f6841f48"
+  },
+  "run_eval_py_v3": {
+   "path": "docs/phase9a/retrieval/run_eval.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "e84ddd23c0bb0fdaa6402448466806a883003b510f39ac446651bc46f6841f48"
+  },
+  "qc_result": {
+   "path": "docs/phase9a/retrieval/qc_result.json",
+   "strategy": "json_canonical",
+   "sha256": "8ad110652a3dc4d2458656321f9a074fd06ed5dc56294b90a446e7c0dc8ffef6"
+  },
+  "retrieval_eval": {
+   "path": "docs/phase9a/retrieval/retrieval_eval.json",
+   "strategy": "json_canonical",
+   "sha256": "05347c8fdbb18db2116402843d636639914a957fa9d7d2cc88eeec7a9320bfeb"
+  },
+  "receipt": {
+   "path": "docs/phase9a/retrieval/RECEIPT.json",
+   "strategy": "json_canonical",
+   "sha256": "32aa2388b4f13294523791ce45555c6edccd300f71b2f5701f1ac76032390d59"
+  },
+  "treatment_fingerprint": {
+   "path": "docs/phase9a/retrieval/treatment_fingerprint.json",
+   "strategy": "json_canonical",
+   "sha256": "719df46fc1bf84d94d97e93383dbf3f4b60d0ec0244adac21bdd2f357a46e200"
+  },
+  "reconcile9a_py": {
+   "path": "docs/phase9a/retrieval/reconcile9a.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "727eddc28e2db139f23651109d9ce46b62b010f6f8913a207b600caf98f45aa7"
+  },
+  "closure": {
+   "path": "docs/phase9a/CLOSURE.md",
+   "strategy": "git_canonical_lf",
+   "sha256": "5ec8bd23c9c616004e6657e39afc73eedf5e462be835a959f663daa786834764"
+  }
+ },
+ "migration": {
+  "supersedes": "manifest.json",
+  "supersedes_sha256": "c048db03afa326374901dd1ea9828c0311d5210a2e6a3fbfeff4ddd50b777396",
+  "reason": "Task 6 追加 qc_state() 后 qc_gate_py 漂移；Task 7 run_eval.py 迭代产生 run_eval_py/run_eval_py_v2 漂移；按 append-only 纪律新建 v2 封存",
+  "migrated_at": "2026-08-14"
+ }
+}
