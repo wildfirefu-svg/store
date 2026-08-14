@@ -1,6 +1,6 @@
 {
  "schema_version": "1.0",
- "stage": "config_frozen",
+ "stage": "code_frozen",
  "entries": {
   "upstream_manifest_v4": {
    "path": "docs/phase9a/retrieval/manifest_v4.json",
@@ -41,6 +41,21 @@
    "path": "docs/phase9a/r1/qc_review_packet_v2.jsonl",
    "strategy": "jsonl_canonical",
    "sha256": "27fa9bcf9420edae9a9398745031cffd733278102e2d1f0fe77fb59cd9b72a6b"
+  },
+  "silver_judge_v3_py": {
+   "path": "docs/phase9a/r1/silver_judge_v3.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "f858a2053176f3b4a5f117e8c2cdc2882643f45d3c67814636d123482a8be654"
+  },
+  "silver_relevance_judgment_v3": {
+   "path": "docs/phase9a/r1/silver_relevance_judgment_v3.jsonl",
+   "strategy": "jsonl_canonical",
+   "sha256": "52ad084502fd2f71bd9eba04a846581f8dc90161dda51258f702f4b8f95dbeee"
+  },
+  "silver_judgment_summary_v3": {
+   "path": "docs/phase9a/r1/silver_judgment_summary_v3.json",
+   "strategy": "json_canonical",
+   "sha256": "a766a09ac34d41c1189a2ecbd2c9eb7f7e9e2e93e560e86a6c721bd3c7c1a16c"
   }
  }
 }

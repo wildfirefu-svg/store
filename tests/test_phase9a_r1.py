@@ -29,11 +29,14 @@ def _load_module(name: str, rel: str):
 
 
 class TestR1ManifestInit:
-    def test_manifest_v5_config_frozen(self):
+    def test_manifest_v5_code_frozen(self):
         m = _load_json(P9R1 / "manifest_v5.json")
-        assert m["stage"] == "config_frozen"
+        assert m["stage"] == "code_frozen"
         # 冻结上游 manifest_v4 + 原 treatment fingerprint + manifest helper + 归因证据
         for name in ("upstream_manifest_v4", "upstream_treatment_fingerprint", "phase9a_manifest_py", "attribution_py", "attribution_json"):
+            assert name in m["entries"], f"{name} not frozen"
+        # Task 2 新增：校准规则脚本 + v3 产物已冻结
+        for name in ("silver_judge_v3_py", "silver_relevance_judgment_v3", "silver_judgment_summary_v3"):
             assert name in m["entries"], f"{name} not frozen"
 
 
@@ -82,3 +85,35 @@ class TestValidationSample:
             assert "silver_label" not in p and "reason" not in p and "human_label" not in p
             assert p["item_description"]  # 非空（从 required_knowledge/knowledge_audit 构造）
             assert len(p["document_text"]) > 0  # 完整文本（非截断）
+
+
+class TestCalibratedJudgment:
+    def test_v3_rule_frozen(self):
+        j = _load_module("silver_judge_v3", "docs/phase9a/r1/silver_judge_v3.py")
+        # 注：同义词列表含"婚姻"以命中 doc 文本；测试目标是 cat_ok 边界而非同义词匹配本身
+        syn = {"synonyms": {"结婚": ["婚期", "成婚", "婚姻"]}}
+        # query 无 category → relevant（不降级）
+        result = j.label_pair("结婚", None, {"text": "婚姻美满", "category": ""}, syn)
+        assert result["label"] == "relevant"
+        # query 有 category 且匹配 → relevant
+        result2 = j.label_pair("结婚", "婚姻", {"text": "婚姻美满", "category": "婚姻"}, syn)
+        assert result2["label"] == "relevant"
+        # query 有 category 但不匹配 → partial
+        result3 = j.label_pair("结婚", "事业", {"text": "婚姻美满", "category": "婚姻"}, syn)
+        assert result3["label"] == "partially_relevant"
+
+    def test_v3_judgment_generated(self):
+        rows = [json.loads(l) for l in (P9R1 / "silver_relevance_judgment_v3.jsonl").open(encoding="utf-8") if l.strip()]
+        assert len(rows) == 673
+
+    def test_v2_v3_pair_diff_only_allowed_transition(self):
+        # 逐 pair 比较：只有冻结规则允许的 partial→relevant 可以变化，其余 label 必须一致
+        v2 = {r["item_id"] + "|" + r["canonical_key"]: r["label"] for r in (json.loads(l) for l in (P9 / "silver_relevance_judgment.jsonl").open(encoding="utf-8") if l.strip())}
+        v3 = {r["item_id"] + "|" + r["canonical_key"]: r["label"] for r in (json.loads(l) for l in (P9R1 / "silver_relevance_judgment_v3.jsonl").open(encoding="utf-8") if l.strip())}
+        assert set(v2.keys()) == set(v3.keys())
+        changed = 0
+        for key in v2:
+            if v2[key] != v3[key]:
+                changed += 1
+                assert v2[key] == "partially_relevant" and v3[key] == "relevant", f"unexpected transition {v2[key]} -> {v3[key]} for {key}"
+        assert changed > 0  # 至少发生一项允许的变化（防 v3 输出与 v2 完全相同的失效实现）
