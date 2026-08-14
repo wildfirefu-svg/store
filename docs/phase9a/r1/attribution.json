@@ -1,0 +1,415 @@
+{
+ "disagreements": [
+  {
+   "canonical_key": "kb:gejue:hy_006",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0002#k4",
+   "note": "条文直接解释桃花在不同柱位对婚姻和配偶的影响，属于该项婚姻/桃花知识。",
+   "query_ids": [
+    "mingli_ftb_0002#k4#q3"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:shensha:3",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0002#k5",
+   "note": "条文完整给出桃花查法及柱位婚恋含义。",
+   "query_ids": [
+    "mingli_ftb_0002#k5#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:gejue:xm_011",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0002#k5",
+   "note": "条文说明日坐桃花与配偶相貌，能支持桃花婚恋含义。",
+   "query_ids": [
+    "mingli_ftb_0002#k5#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:421:dts_033_004",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0002#k6",
+   "note": "条文直接论财星、妻与官星通关，支持财星婚姻含义。",
+   "query_ids": [
+    "mingli_ftb_0002#k6#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:426:dts_033_009",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0002#k6",
+   "note": "条文直接将财旺身强与妻妾联系，属于财星婚姻断法。",
+   "query_ids": [
+    "mingli_ftb_0002#k6#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:424:dts_033_007",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0002#k6",
+   "note": "条文同时涉及财星合库与妻缘稳定，直接支持该知识项。",
+   "query_ids": [
+    "mingli_ftb_0002#k6#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:gejue:lq_025",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0007#k6",
+   "note": "条文明确女命以官星看夫，直接支持官星配偶判断。",
+   "query_ids": [
+    "mingli_ftb_0007#k6#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "classic:knowledge_base/classic_texts/qiongtongbaojian/all_rules.json:11:qtbj_000_011",
+   "human": "irrelevant",
+   "item_id": "mingli_ftb_0017#k6",
+   "note": "文本中的子是子色/子关系，不是地支子或其相宜关系，属于词面误命中。",
+   "query_ids": [
+    "mingli_ftb_0017#k6#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:shensha:14",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0026#k2",
+   "note": "完整说明孤辰查法及日柱婚姻孤单含义。",
+   "query_ids": [
+    "mingli_ftb_0026#k2#q3"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:gejue:ss2_006",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0044#k2",
+   "note": "直接解释孤辰寡宿与婚姻孤独，覆盖所需神煞知识。",
+   "query_ids": [
+    "mingli_ftb_0044#k2#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:gejue:hy_009",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0058#k4",
+   "note": "直接说明女命官星为夫及官杀混杂的婚姻影响。",
+   "query_ids": [
+    "mingli_ftb_0058#k4#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:434:dts_033_017",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0058#k4",
+   "note": "将官杀旺与妻病联系，属于官杀参与婚姻关系的断法。",
+   "query_ids": [
+    "mingli_ftb_0058#k4#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:shishen_combos:272",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0083#k2",
+   "note": "直接给出财官相生和身旺能任的组合含义。",
+   "query_ids": [
+    "mingli_ftb_0083#k2#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:762:smth_034_003",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0085#k5",
+   "note": "直接解释咸池与配偶类型，属于桃花/咸池婚姻知识。",
+   "query_ids": [
+    "mingli_ftb_0085#k5#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:109:smth_006_026",
+   "human": "irrelevant",
+   "item_id": "mingli_ftb_0085#k6",
+   "note": "甲寅纳音木的季节喜忌不是地支寅的相宜关系。",
+   "query_ids": [
+    "mingli_ftb_0085#k6#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:gejue:hy_002",
+   "human": "partially_relevant",
+   "item_id": "mingli_ftb_0085#k7",
+   "note": "提到女命官星合入时的婚期，但不是官星被合后性质的完整解释。",
+   "query_ids": [
+    "mingli_ftb_0085#k7#q1"
+   ],
+   "reason": "syn=False cat_match=False",
+   "silver": "irrelevant"
+  },
+  {
+   "canonical_key": "kb:gejue:hy_007",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0096#k3",
+   "note": "直接给出比劫夺财导致妻被争和婚姻不稳。",
+   "query_ids": [
+    "mingli_ftb_0096#k3#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:shishen_combos:138",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0096#k3",
+   "note": "直接说明比劫夺财及食神泄比生财的化解。",
+   "query_ids": [
+    "mingli_ftb_0096#k3#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:448:dts_034_003",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0098#k1",
+   "note": "直接用命局组合判断子女多且有才能。",
+   "query_ids": [
+    "mingli_ftb_0098#k1#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:shishen_combos:10",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0100#k2",
+   "note": "直接定义官杀混杂并给出感情复杂等结果。",
+   "query_ids": [
+    "mingli_ftb_0100#k2#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:shishen_combos:287",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0100#k2",
+   "note": "直接解释身弱条件下伤官见官及其后果。",
+   "query_ids": [
+    "mingli_ftb_0100#k2#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:gejue:jb_025",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0100#k3",
+   "note": "明确说明羊刃逢冲与血光风险。",
+   "query_ids": [
+    "mingli_ftb_0100#k3#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:1192:smth_046_029",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0100#k3",
+   "note": "直接给出戊午伏神羊刃禄及凶性。",
+   "query_ids": [
+    "mingli_ftb_0100#k3#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:556:dts_038_030",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0122#k1",
+   "note": "直接给出官弱、无财、身旺印重导致欺夫克夫的断法。",
+   "query_ids": [
+    "mingli_ftb_0122#k1#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "classic:knowledge_base/classic_texts/qiongtongbaojian/all_rules.json:18:qtbj_001_004",
+   "human": "irrelevant",
+   "item_id": "mingli_ftb_0124#k6",
+   "note": "讨论甲申乙酉木受克，不是地支申的相宜/相冲关系检索需求。",
+   "query_ids": [
+    "mingli_ftb_0124#k6#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:1516:smth_068_006",
+   "human": "irrelevant",
+   "item_id": "mingli_ftb_0125#k4",
+   "note": "文本中的夫只是文言发语词，内容为五行子为父母复仇，不涉及丈夫。",
+   "query_ids": [
+    "mingli_ftb_0125#k4#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:gejue:hy_003",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0125#k4",
+   "note": "直接说明夫星、夫宫与配偶性情。",
+   "query_ids": [
+    "mingli_ftb_0125#k4#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:450:dts_034_005",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0013#k4",
+   "note": "直接说明食伤过重无印与无子女的关系。",
+   "query_ids": [
+    "mingli_ftb_0013#k4#q1",
+    "mingli_ftb_0013#k4#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:761:smth_034_002",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0085#k5",
+   "note": "直接解释咸池在死绝状态下的行为和桃花性质。",
+   "query_ids": [
+    "mingli_ftb_0085#k5#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:shishen_combos:10",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0058#k4",
+   "note": "直接解释官杀混杂及感情复杂，支持官杀婚姻判断。",
+   "query_ids": [
+    "mingli_ftb_0058#k4#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "classic:knowledge_base/classic_texts/ditiansui/all_rules.json:445:dts_034_000",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0013#k4",
+   "note": "直接说明食伤与子女数量的关系。",
+   "query_ids": [
+    "mingli_ftb_0013#k4#q1",
+    "mingli_ftb_0013#k4#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:gejue:ln_032",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0100#k3",
+   "note": "直接解释羊刃流年、身旺身弱和争斗风险。",
+   "query_ids": [
+    "mingli_ftb_0100#k3#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:gejue:ln_010",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0002#k4",
+   "note": "直接给出桃花贵人流年对应婚嫁的应期知识。",
+   "query_ids": [
+    "mingli_ftb_0002#k4#q3"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:gejue:lq_025",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0058#k4",
+   "note": "明确女命以官星看夫，直接支持官杀配偶判断。",
+   "query_ids": [
+    "mingli_ftb_0058#k4#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:gejue:lq_018",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0007#k6",
+   "note": "直接说明夫星为官及官星强弱对应丈夫状况。",
+   "query_ids": [
+    "mingli_ftb_0007#k6#q1"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  },
+  {
+   "canonical_key": "kb:shishen_combos:336",
+   "human": "relevant",
+   "item_id": "mingli_ftb_0100#k2",
+   "note": "直接解释伤官见官在伤强官弱条件下的表现。",
+   "query_ids": [
+    "mingli_ftb_0100#k2#q2"
+   ],
+   "reason": "syn=True cat_match=False",
+   "silver": "partially_relevant"
+  }
+ ],
+ "distribution": {
+  "irrelevant_to_partially_relevant": 1,
+  "partially_relevant_to_irrelevant": 4,
+  "partially_relevant_to_relevant": 31
+ },
+ "key_finding": {
+  "cat_match_false_count": 31,
+  "conclusion": "silver 规则在 query 无 category 参数时强制降级为 partial，但人工判断认为同义词命中即足够",
+  "query_no_category_count": 26
+ },
+ "schema_version": "1.0",
+ "source": "Phase 9A qc_human_review.jsonl + silver_relevance_judgment.jsonl + item_query_map.json",
+ "total_disagreements": 36
+}

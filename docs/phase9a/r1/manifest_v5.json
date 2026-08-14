@@ -1,0 +1,31 @@
+{
+ "schema_version": "1.0",
+ "stage": "config_frozen",
+ "entries": {
+  "upstream_manifest_v4": {
+   "path": "docs/phase9a/retrieval/manifest_v4.json",
+   "strategy": "json_canonical",
+   "sha256": "1cb07f343e2f007ec5712c0fc0ea03478119ee1f203d5d40aff5f9292735ef12"
+  },
+  "upstream_treatment_fingerprint": {
+   "path": "docs/phase9a/retrieval/treatment_fingerprint.json",
+   "strategy": "json_canonical",
+   "sha256": "719df46fc1bf84d94d97e93383dbf3f4b60d0ec0244adac21bdd2f357a46e200"
+  },
+  "phase9a_manifest_py": {
+   "path": "docs/phase9a/retrieval/phase9a_manifest.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "bc78ab97bace2d5acf67c79f19bcda00685dac8451373494c06f5053e5dbadeb"
+  },
+  "attribution_py": {
+   "path": "docs/phase9a/r1/attribution.py",
+   "strategy": "git_canonical_lf",
+   "sha256": "48fce7c2fd80dba6fa984e8fe33f556da03d89b6f64da98b0eec0ae56bfb6ab9"
+  },
+  "attribution_json": {
+   "path": "docs/phase9a/r1/attribution.json",
+   "strategy": "json_canonical",
+   "sha256": "09eb18d099dc1339e2da931cf737a82b9da5cb2fb62c07b0af26546dc3df169f"
+  }
+ }
+}
