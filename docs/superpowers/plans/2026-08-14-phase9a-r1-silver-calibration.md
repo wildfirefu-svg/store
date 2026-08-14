@@ -1,4 +1,4 @@
-# Phase 9A-R1 silver relevance 标签校准 Implementation Plan（v2.4）
+# Phase 9A-R1 silver relevance 标签校准 Implementation Plan（v2.5）
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -90,8 +90,9 @@ class TestR1ManifestInit:
     def test_manifest_v5_config_frozen(self):
         m = _load_json(P9R1 / "manifest_v5.json")
         assert m["stage"] == "config_frozen"
-        # 冻结上游 manifest_v4 + 原 treatment fingerprint + 归因证据
-        for name in ("upstream_manifest_v4", "upstream_treatment_fingerprint", "attribution_py", "attribution_json"):
+        # 冻结上游 manifest_v4 + 原 treatment fingerprint + manifest helper + 归因证据
+        # P0 修订：真实 manifest_v4 不含 phase9a_manifest_py 条目，helper 冻结到 R1 manifest_v5
+        for name in ("upstream_manifest_v4", "upstream_treatment_fingerprint", "phase9a_manifest_py", "attribution_py", "attribution_json"):
             assert name in m["entries"], f"{name} not frozen"
 
 
@@ -210,8 +211,10 @@ pm.set_stage(m, "config_frozen")
 pm.freeze(m, {
     "upstream_manifest_v4": (P9 / "manifest_v4.json", "json_canonical"),
     "upstream_treatment_fingerprint": (P9 / "treatment_fingerprint.json", "json_canonical"),
+    # P0 修订：真实 manifest_v4 不含 phase9a_manifest_py 条目，helper 冻结到 R1 manifest_v5 并从其验证
+    "phase9a_manifest_py": (P9 / "phase9a_manifest.py", "git_canonical_lf"),
 })
-print("manifest_v5 initialized at config_frozen (upstream frozen)")
+print("manifest_v5 initialized at config_frozen (upstream + helper frozen)")
 ```
 
 然后冻结 attribution 代码（P0 修订：attribution.py 内部也调 verify_frozen，防绕过）：
@@ -826,19 +829,29 @@ class TestTerminalV2:
 
 
 class TestFinalizeResumeProtocol:
-    """P0 修订：4 个生产路径测试（镜像，验证恢复协议与异常 RECEIPT 拒绝）。"""
+    """P0 修订：4 个生产路径测试（镜像从 code_frozen 输入构造，不依赖正式终态产物，可在正式发布前运行）。"""
 
     def _make_r1_mirror(self, tmp_path):
-        """构建包含 P9R1 + P9 的镜像（finalize 依赖）。"""
+        """从 code_frozen 输入构造镜像：复制冻结输入 + 代码，不含正式终态产物（此时尚未生成）。
+        P0 修订：phase9a_manifest.py 位于 P9（copytree 已覆盖），此处只额外复制 p8_freeze.py。"""
         import shutil
         root = tmp_path / "repo"
-        (root / "docs" / "phase9a").mkdir(parents=True)
-        shutil.copytree(P9R1, root / "docs" / "phase9a" / "r1")
+        mirror_r1 = root / "docs" / "phase9a" / "r1"
+        mirror_r1.mkdir(parents=True)
+        # 冻结输入 + 代码（manifest_v5 此时仍为 code_frozen；正式终态产物尚不存在，不复制）
+        for name in ("manifest_v5.json", "finalize_r1.py", "reconcile_r1.py", "silver_relevance_judgment_v3.jsonl",
+                     "silver_judgment_summary_v3.json", "qc_sample_list_v2.json", "qc_human_review_v2.jsonl",
+                     "silver_judge_v3.py", "attribution.py", "attribution.json", "generate_validation_sample.py"):
+            shutil.copy(P9R1 / name, mirror_r1 / name)
+        # P9 copytree（qc_gate 等依赖，已含 phase9a_manifest.py）
         shutil.copytree(P9, root / "docs" / "phase9a" / "retrieval")
         (root / "docs" / "phase8" / "marriage-capability").mkdir(parents=True)
-        for name in ("phase9a_manifest.py", "p8_freeze.py"):
-            shutil.copy(P8 / name, root / "docs" / "phase8" / "marriage-capability" / name)
+        shutil.copy(P8 / "p8_freeze.py", root / "docs" / "phase8" / "marriage-capability" / "p8_freeze.py")
         return root
+
+    def _run_finalize(self, root):
+        mirror_r1 = root / "docs" / "phase9a" / "r1"
+        return subprocess.run([sys.executable, str(mirror_r1 / "finalize_r1.py")], capture_output=True, text=True, encoding="utf-8", cwd=root)
 
     def _reset_manifest_to_code_frozen(self, mirror_r1):
         """镜像 manifest 重置为 code_frozen（模拟未 seal 状态）。"""
@@ -851,38 +864,45 @@ class TestFinalizeResumeProtocol:
         # code_frozen + 部分相同产物：允许恢复并完成
         root = self._make_r1_mirror(tmp_path)
         mirror_r1 = root / "docs" / "phase9a" / "r1"
+        assert self._run_finalize(root).returncode == 0  # 首次完整发布
+        closure_bytes = (mirror_r1 / "CLOSURE.md").read_bytes()
+        # 模拟中断：重置 code_frozen + 删 RECEIPT + 删一项产物
         self._reset_manifest_to_code_frozen(mirror_r1)
         (mirror_r1 / "RECEIPT_r1.json").unlink()
-        (mirror_r1 / "CLOSURE.md").unlink()  # 删除一项产物，模拟部分发布
-        proc = subprocess.run([sys.executable, str(mirror_r1 / "finalize_r1.py")], capture_output=True, text=True, encoding="utf-8", cwd=root)
+        (mirror_r1 / "CLOSURE.md").unlink()
+        proc = self._run_finalize(root)  # 恢复：重新生成 CLOSURE（字节一致）并发布 RECEIPT
         assert proc.returncode == 0, proc.stdout + proc.stderr
-        assert (mirror_r1 / "CLOSURE.md").exists() and (mirror_r1 / "RECEIPT_r1.json").exists()
+        assert (mirror_r1 / "CLOSURE.md").read_bytes() == closure_bytes
+        assert (mirror_r1 / "RECEIPT_r1.json").exists()
 
     def test_resume_byte_mismatch_rejected(self, tmp_path):
         # code_frozen + 任一产物字节不一致：拒绝
         root = self._make_r1_mirror(tmp_path)
         mirror_r1 = root / "docs" / "phase9a" / "r1"
+        assert self._run_finalize(root).returncode == 0
         self._reset_manifest_to_code_frozen(mirror_r1)
         (mirror_r1 / "RECEIPT_r1.json").unlink()
         (mirror_r1 / "qc_result_v2.json").write_text("tampered", encoding="utf-8")  # 字节不一致
-        proc = subprocess.run([sys.executable, str(mirror_r1 / "finalize_r1.py")], capture_output=True, text=True, encoding="utf-8", cwd=root)
+        proc = self._run_finalize(root)
         assert proc.returncode != 0 and "byte mismatch" in (proc.stdout + proc.stderr)
 
     def test_sealed_no_receipt_republishes(self, tmp_path):
         # sealed + 无 RECEIPT：校验后补发
         root = self._make_r1_mirror(tmp_path)
         mirror_r1 = root / "docs" / "phase9a" / "r1"
+        assert self._run_finalize(root).returncode == 0
         (mirror_r1 / "RECEIPT_r1.json").unlink()  # 删除 RECEIPT（manifest 仍 sealed）
-        proc = subprocess.run([sys.executable, str(mirror_r1 / "finalize_r1.py")], capture_output=True, text=True, encoding="utf-8", cwd=root)
+        proc = self._run_finalize(root)
         assert proc.returncode == 0 and (mirror_r1 / "RECEIPT_r1.json").exists()
 
     def test_code_frozen_receipt_exists_rejected(self, tmp_path):
         # code_frozen + RECEIPT 已存在：拒绝且不得覆盖
         root = self._make_r1_mirror(tmp_path)
         mirror_r1 = root / "docs" / "phase9a" / "r1"
-        self._reset_manifest_to_code_frozen(mirror_r1)
+        assert self._run_finalize(root).returncode == 0
+        self._reset_manifest_to_code_frozen(mirror_r1)  # 保留 RECEIPT，重置 stage
         receipt_before = (mirror_r1 / "RECEIPT_r1.json").read_bytes()
-        proc = subprocess.run([sys.executable, str(mirror_r1 / "finalize_r1.py")], capture_output=True, text=True, encoding="utf-8", cwd=root)
+        proc = self._run_finalize(root)
         assert proc.returncode != 0 and "already exists" in (proc.stdout + proc.stderr)
         assert (mirror_r1 / "RECEIPT_r1.json").read_bytes() == receipt_before  # RECEIPT 未被覆盖
 ```
@@ -951,7 +971,9 @@ def main() -> None:
     actual_upstream = pm.STRATEGY_FN[entry["strategy"]](P9 / "manifest_v4.json")
     if actual_upstream != entry["sha256"]:
         sys.exit("FAIL: upstream_manifest_v4 SHA drift")
-    pm.verify_frozen(P9 / "manifest_v4.json", ["qc_gate_py", "qc_gate_py_v2", "phase9a_manifest_py", "retriever_py"], required_stage="sealed")
+    # P0 修订：真实 manifest_v4 不含 phase9a_manifest_py，helper 从 R1 manifest_v5 验证
+    pm.verify_frozen(m5, ["phase9a_manifest_py"], required_stage="code_frozen")
+    pm.verify_frozen(P9 / "manifest_v4.json", ["qc_gate_py", "qc_gate_py_v2", "retriever_py"], required_stage="sealed")
     import qc_gate as qc  # 延迟导入（验证后）
     # 受控 resume：manifest 已 sealed 但 RECEIPT 未发布 → 校验产物后补发 RECEIPT
     if manifest and manifest.get("stage") == "sealed":
@@ -1157,9 +1179,11 @@ if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 5: 同时冻结两个脚本 → 运行 finalize → 运行 reconcile → 测试转绿 + Commit**
+- [ ] **Step 5: 冻结两脚本 → 先跑恢复协议测试（镜像）→ 正式发布 → 正式对账 → 终态测试 → Commit**
 
-先冻结两个脚本（两文件均已实现，manifest_v5 code_frozen 阶段追加，P0 修订：先实现后冻结）：
+P0 修订：不可逆 one-shot 正式发布必须在恢复协议测试全绿之后。
+
+5a. 冻结两个脚本（两文件均已实现，manifest_v5 code_frozen 阶段追加）：
 ```python
 import sys
 from pathlib import Path
@@ -1174,13 +1198,24 @@ pm.freeze(P9R1 / "manifest_v5.json", {
 print("finalize_r1_py + reconcile_r1_py frozen")
 ```
 
+5b. 先跑恢复协议测试（镜像从 code_frozen 输入构造，不依赖正式终态产物，在正式发布前证明恢复路径）：
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_r1.py::TestFinalizeResumeProtocol -q`
+Expected: PASS（4 个生产路径测试全绿后才允许正式发布）。
+
+5c. 执行正式发布：
+
 Run: `.venv/Scripts/python.exe docs/phase9a/r1/finalize_r1.py`
 Expected: `finalize_r1: verdict=SILVER_LABEL_CALIBRATED|NOT_CALIBRATED, effective_disagreement=N/61, manifest_v5 sealed, RECEIPT published`。
+
+5d. 执行正式对账：
 
 Run: `.venv/Scripts/python.exe docs/phase9a/r1/reconcile_r1.py`
 Expected: exit 0 无 FAIL。
 
-Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_r1.py::TestTerminalV2 tests/test_phase9a_r1.py::TestFinalizeResumeProtocol -q`
+5e. 运行终态测试验证正式产物：
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_r1.py::TestTerminalV2 -q`
 Expected: PASS。
 ```powershell
 git add -- docs/phase9a/r1/manifest_v5.json docs/phase9a/r1/finalize_r1.py docs/phase9a/r1/reconcile_r1.py docs/phase9a/r1/qc_result_v2.json docs/phase9a/r1/calibration_fingerprint.json docs/phase9a/r1/CLOSURE.md docs/phase9a/r1/RECEIPT_r1.json docs/phase9a/r1/qc_human_review_v2.jsonl tests/test_phase9a_r1.py
