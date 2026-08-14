@@ -1,4 +1,4 @@
-# Phase 9A-R1 silver relevance 标签校准 Implementation Plan（v2.2）
+# Phase 9A-R1 silver relevance 标签校准 Implementation Plan（v2.3）
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -744,17 +744,19 @@ print("qc_human_review_v2 frozen after full human QC")
 
 ---
 
-## Task 4: 一次性终态判定（原子发布）+ 产物封存（sealed）
+## Task 4: 一次性终态发布（finalize_r1 staging+RECEIPT）+ 产物封存（sealed）
 
 **Files:**
-- Create: `docs/phase9a/r1/run_calibration_eval.py`
+- Create: `docs/phase9a/r1/finalize_r1.py`（单一终态发布脚本，seal 前创建并冻结）
+- Create: `docs/phase9a/r1/reconcile_r1.py`（R1 最终对账，seal 前创建并冻结）
 - Create: `docs/phase9a/r1/qc_result_v2.json`
 - Create: `docs/phase9a/r1/calibration_fingerprint.json`
 - Create: `docs/phase9a/r1/CLOSURE.md`
+- Create: `docs/phase9a/r1/RECEIPT_r1.json`（完成标记，绑定 sealed manifest SHA，不加入 manifest）
 - Modify: `docs/phase9a/r1/manifest_v5.json`（sealed）
 - Test: `tests/test_phase9a_r1.py`
 
-- [ ] **Step 1: 写失败测试（含 one-shot 拒绝覆盖）**
+- [ ] **Step 1: 写失败测试（全部真实调用 finalize_r1.py）**
 
 ```python
 class TestTerminalV2:
@@ -770,16 +772,15 @@ class TestTerminalV2:
 
     def test_uncertain_not_double_counted(self):
         # 单条 uncertain 贡献恰好 1，不是 2
-        ev = _load_module("run_calibration_eval", "docs/phase9a/r1/run_calibration_eval.py")
+        fin = _load_module("finalize_r1", "docs/phase9a/r1/finalize_r1.py")
         reviews = [{"item_id": "a", "canonical_key": "kb:gejue:1", "human_label": "uncertain", "note": "x"}]
         silver = {("a", "kb:gejue:1"): "relevant"}
-        n_diff, n_uncertain = ev._count_disagreement(reviews, silver)
+        n_diff, n_uncertain = fin._count_disagreement(reviews, silver)
         assert n_diff == 0 and n_uncertain == 1  # uncertain 不计入 diff，只计 1 次
 
     def test_calibration_fingerprint(self):
         fp = _load_json(P9R1 / "calibration_fingerprint.json")
         assert fp["components"] and fp["sha256"]
-        # 组件覆盖：silver_judge_v3 + judgment_v3 + summary_v3 + 验证集 + 归因证据
         names = {c["logical_name"] for c in fp["components"]}
         assert {"silver_judge_v3_py", "silver_relevance_judgment_v3", "silver_judgment_summary_v3", "qc_sample_list_v2", "attribution_json"} <= names
 
@@ -787,23 +788,32 @@ class TestTerminalV2:
         # 原 treatment_fingerprint 字节不变（双 SHA 口径分离：文件 canonical SHA vs 内部组件摘要）
         orig = _load_json(P9 / "treatment_fingerprint.json")
         m4 = _load_json(P9 / "manifest_v4.json")
-        # 口径 1：整文件 canonical SHA（manifest entry）
         expected_file_sha = m4["entries"]["treatment_fingerprint"]["sha256"]
         actual_file_sha = hashlib.sha256(json.dumps(orig, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode() + b"\n").hexdigest()
         assert actual_file_sha == expected_file_sha  # 文件字节不变
-        # 口径 2：内部组件摘要（fingerprint 自身 sha256 字段）
-        assert orig["sha256"]  # 存在即可（内部摘要与文件 SHA 语义不同，不混用）
+        assert orig["sha256"]  # 内部摘要存在（与文件 SHA 语义不同，不混用）
 
     def test_manifest_v5_sealed(self):
         m = _load_json(P9R1 / "manifest_v5.json")
         assert m["stage"] == "sealed"
         assert "closure" in m["entries"]
-        # 前代链记录
         assert "upstream_manifest_v4" in m["entries"]
 
+    def test_receipt_binds_sealed_manifest(self):
+        # RECEIPT 绑定 sealed manifest SHA + 产物元数据，不加入 manifest
+        receipt = _load_json(P9R1 / "RECEIPT_r1.json")
+        m = _load_json(P9R1 / "manifest_v5.json")
+        assert receipt["manifest_sha256"] == hashlib.sha256(json.dumps(m, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode() + b"\n").hexdigest()
+        assert "receipt_r1" not in m["entries"]  # RECEIPT 不加入 manifest（避免循环）
+        # RECEIPT artifact 集合/SHA/size/strategy/verdict
+        for name, meta in receipt["artifacts"].items():
+            raw = (P9R1 / name).read_bytes()
+            assert hashlib.sha256(raw).hexdigest() == meta["sha256"]
+            assert len(raw) == meta["size"] and meta["strategy"] == "raw_bytes"
+
     def test_no_overwrite_on_rerun(self):
-        # 正式终态产物已存在时 run_calibration_eval 必须 fail-closed
-        proc = subprocess.run([sys.executable, str(P9R1 / "run_calibration_eval.py")], capture_output=True, text=True, encoding="utf-8", cwd=REPO)
+        # 正式终态产物已存在时 finalize_r1 必须 fail-closed
+        proc = subprocess.run([sys.executable, str(P9R1 / "finalize_r1.py")], capture_output=True, text=True, encoding="utf-8", cwd=REPO)
         assert proc.returncode != 0 and "already exists" in (proc.stdout + proc.stderr)
 
     def test_reconcile_r1_exit_zero(self):
@@ -818,11 +828,12 @@ class TestTerminalV2:
 Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_r1.py::TestTerminalV2 -q`
 Expected: FAIL。
 
-- [ ] **Step 3: 实现 finalize_r1.py（单一终态发布脚本，staging + RECEIPT，P0 闭环）**
+- [ ] **Step 3: 实现 finalize_r1.py（单一终态发布，RECEIPT 绑定 sealed manifest 最后发布）**
 
 ```python
-"""Phase 9A-R1 终态发布：单一 finalize 脚本完成终态计算 + fingerprint + closure + staging 原子发布 + seal。
-成功/失败终态走同一脚本；中断后受控 resume（校验已有中间产物后继续），不依赖人工删除。"""
+"""Phase 9A-R1 终态发布：单一 finalize 脚本完成终态计算 + fingerprint + closure + 发布 + seal + RECEIPT。
+RECEIPT 在 seal manifest 后发布（绑定 sealed manifest SHA），不加入 manifest（避免循环）。
+受控 resume：manifest 已 sealed 但 RECEIPT 未发布时，校验产物后补发 RECEIPT。"""
 from __future__ import annotations
 
 import hashlib
@@ -855,14 +866,39 @@ def _atomic_json(path, payload):
     os.replace(tmp, path)
 
 
+def _publish_receipt(m5, verdict):
+    """RECEIPT 绑定 sealed manifest SHA，最后原子发布（不加入 manifest）。"""
+    manifest_sha = pm.STRATEGY_FN["json_canonical"](m5)
+    receipt_artifacts = {}
+    for name in ("qc_result_v2.json", "calibration_fingerprint.json", "CLOSURE.md"):
+        raw = (P9R1 / name).read_bytes()
+        receipt_artifacts[name] = {"sha256": hashlib.sha256(raw).hexdigest(), "strategy": "raw_bytes", "size": len(raw)}
+    receipt = {"schema_version": "1.0", "verdict": verdict, "artifacts": receipt_artifacts,
+               "manifest_sha256": manifest_sha, "note": "Phase 9A-R1 finalize receipt"}
+    STAGING.mkdir(parents=True, exist_ok=True)
+    _atomic_json(STAGING / "RECEIPT_r1.json", receipt)
+    os.replace(STAGING / "RECEIPT_r1.json", P9R1 / "RECEIPT_r1.json")
+
+
 def main() -> None:
-    # 受控 resume：已 sealed 即拒绝；已有 RECEIPT 即拒绝；已有 qc_result 但未 sealed 允许 resume
     m5 = P9R1 / "manifest_v5.json"
-    if m5.exists() and json.loads(m5.read_text(encoding="utf-8")).get("stage") == "sealed":
-        sys.exit("FAIL: manifest_v5 already sealed - one-shot violated")
-    if (P9R1 / "RECEIPT_r1.json").exists():
-        sys.exit("FAIL: RECEIPT_r1.json already exists - one-shot violated")
-    pm.verify_frozen(m5, ["silver_relevance_judgment_v3", "qc_sample_list_v2", "qc_human_review_v2"], required_stage="code_frozen")
+    manifest = json.loads(m5.read_text(encoding="utf-8")) if m5.exists() else None
+    # 受控 resume：manifest 已 sealed 但 RECEIPT 未发布 → 校验产物后补发 RECEIPT
+    if manifest and manifest.get("stage") == "sealed":
+        if (P9R1 / "RECEIPT_r1.json").exists():
+            sys.exit("FAIL: RECEIPT_r1.json already exists - one-shot violated")
+        entry_map = {"qc_result_v2.json": "qc_result_v2", "calibration_fingerprint.json": "calibration_fingerprint", "CLOSURE.md": "closure"}
+        for name, entry_name in entry_map.items():
+            entry = manifest["entries"][entry_name]
+            actual = pm.STRATEGY_FN[entry["strategy"]](P9R1 / name)
+            if actual != entry["sha256"]:
+                sys.exit(f"FAIL: {name} SHA mismatch with manifest - manual intervention required")
+        verdict = json.loads((P9R1 / "qc_result_v2.json").read_text(encoding="utf-8"))["verdict"]
+        _publish_receipt(m5, verdict)
+        print(f"finalize_r1: RECEIPT补发完成（manifest 已 sealed，verdict={verdict}）")
+        return
+    # 正常流程：manifest 未 sealed
+    pm.verify_frozen(m5, ["silver_relevance_judgment_v3", "qc_sample_list_v2", "qc_human_review_v2", "finalize_r1_py", "reconcile_r1_py"], required_stage="code_frozen")
     state = qc.qc_state(P9R1 / "qc_human_review_v2.jsonl", P9R1 / "qc_sample_list_v2.json")
     if state != "REVIEWED":
         sys.exit(f"HUMAN_QC_REQUIRED: state={state}")
@@ -877,15 +913,10 @@ def main() -> None:
     qc_result = {"schema_version": "1.0", "verdict": verdict, "disagreement_count": n_diff,
                  "uncertain_count": n_uncertain, "effective_disagreement": effective, "max_allowed": 6,
                  "n_reviewed": len(reviews), "note": "effective_disagreement = disagreement + uncertain；≤6 才 CALIBRATED"}
-    # 受控 resume：已有 qc_result 则校验内容一致，否则写入 staging
+    # 生成三项数据产物到 staging
     staging = STAGING
     staging.mkdir(parents=True, exist_ok=True)
-    if (P9R1 / "qc_result_v2.json").exists():
-        existing = json.loads((P9R1 / "qc_result_v2.json").read_text(encoding="utf-8"))
-        if existing != qc_result:
-            sys.exit("FAIL: existing qc_result_v2.json content mismatch - manual intervention required")
     _atomic_json(staging / "qc_result_v2.json", qc_result)
-    # calibration_fingerprint（从 manifest_v5 条目单源读取）
     manifest = json.loads(m5.read_text(encoding="utf-8"))
     components, digest = [], hashlib.sha256()
     for name in ("silver_judge_v3_py", "silver_relevance_judgment_v3", "silver_judgment_summary_v3", "qc_sample_list_v2", "attribution_json"):
@@ -895,7 +926,6 @@ def main() -> None:
     fp = {"schema_version": "1.0", "components": components, "sha256": digest.hexdigest(),
           "note": "Phase 9A-R1 calibration fingerprint；treatment fingerprint 不变（retriever 未改）"}
     _atomic_json(staging / "calibration_fingerprint.json", fp)
-    # CLOSURE.md（自动生成，非人工编写）
     closure = (
         f"# Phase 9A-R1 Closure：silver relevance 标签校准（{verdict}）\n\n"
         f"终态：**{verdict}**\n"
@@ -906,35 +936,33 @@ def main() -> None:
         f"后续衔接：R2（候选覆盖）。\n"
     )
     (staging / "CLOSURE.md").write_text(closure, encoding="utf-8", newline="\n")
-    # RECEIPT（完成标记，最后原子发布）
-    receipt_artifacts = {}
+    # 发布三项数据产物（逐项存在则字节一致校验，防覆盖）
     for name in ("qc_result_v2.json", "calibration_fingerprint.json", "CLOSURE.md"):
-        raw = (staging / name).read_bytes()
-        receipt_artifacts[name] = {"sha256": hashlib.sha256(raw).hexdigest(), "strategy": "raw_bytes", "size": len(raw)}
-    receipt = {"schema_version": "1.0", "verdict": verdict, "artifacts": receipt_artifacts,
-               "published_at": "sealed", "note": "Phase 9A-R1 finalize receipt"}
-    _atomic_json(staging / "RECEIPT_r1.json", receipt)
-    # 原子发布 staging → 正式路径
-    for name in ("qc_result_v2.json", "calibration_fingerprint.json", "CLOSURE.md", "RECEIPT_r1.json"):
-        os.replace(staging / name, P9R1 / name)
-    # seal manifest
+        target = P9R1 / name
+        if target.exists():
+            if target.read_bytes() != (staging / name).read_bytes():
+                sys.exit(f"FAIL: existing {name} byte mismatch - manual intervention required")
+            continue
+        os.replace(staging / name, target)
+    # 冻结数据产物 + seal manifest
     pm.freeze(m5, {
         "qc_result_v2": (P9R1 / "qc_result_v2.json", "json_canonical"),
         "calibration_fingerprint": (P9R1 / "calibration_fingerprint.json", "json_canonical"),
         "closure": (P9R1 / "CLOSURE.md", "git_canonical_lf"),
-        "receipt_r1": (P9R1 / "RECEIPT_r1.json", "json_canonical"),
     })
     pm.set_stage(m5, "sealed")
-    print(f"finalize_r1: verdict={verdict}, effective_disagreement={effective}/61, manifest_v5 sealed")
+    # RECEIPT 绑定 sealed manifest SHA，最后原子发布（不加入 manifest）
+    _publish_receipt(m5, verdict)
+    print(f"finalize_r1: verdict={verdict}, effective_disagreement={effective}/61, manifest_v5 sealed, RECEIPT published")
 
 
 if __name__ == "__main__":
     main()
 ```
 
-- [ ] **Step 4: 冻结 finalize 代码（freeze-before-use）→ 运行终态发布**
+- [ ] **Step 4: 冻结 finalize_r1_py + reconcile_r1_py（seal 前，freeze-before-use）→ 运行终态发布**
 
-先冻结代码（manifest_v5 code_frozen 阶段追加）：
+先冻结两个脚本（manifest_v5 code_frozen 阶段追加，P0 修订：reconcile_r1.py 也必须在 seal 前冻结）：
 ```python
 import sys
 from pathlib import Path
@@ -942,16 +970,19 @@ sys.path.insert(0, "docs/phase8/marriage-capability")
 sys.path.insert(0, "docs/phase9a/retrieval")
 import phase9a_manifest as pm
 P9R1 = Path("docs/phase9a/r1")
-pm.freeze(P9R1 / "manifest_v5.json", {"finalize_r1_py": (P9R1 / "finalize_r1.py", "git_canonical_lf")})
-print("finalize_r1_py frozen")
+pm.freeze(P9R1 / "manifest_v5.json", {
+    "finalize_r1_py": (P9R1 / "finalize_r1.py", "git_canonical_lf"),
+    "reconcile_r1_py": (P9R1 / "reconcile_r1.py", "git_canonical_lf"),
+})
+print("finalize_r1_py + reconcile_r1_py frozen")
 ```
 
 Run: `.venv/Scripts/python.exe docs/phase9a/r1/finalize_r1.py`
-Expected: `finalize_r1: verdict=SILVER_LABEL_CALIBRATED|NOT_CALIBRATED, effective_disagreement=N/61, manifest_v5 sealed`。
+Expected: `finalize_r1: verdict=SILVER_LABEL_CALIBRATED|NOT_CALIBRATED, effective_disagreement=N/61, manifest_v5 sealed, RECEIPT published`。
 
-- [ ] **Step 5: 实现 reconcile_r1.py（R1 最终对账入口）+ 测试转绿 + Commit**
+- [ ] **Step 5: 实现 reconcile_r1.py（R1 最终对账，seal 前创建）+ 测试转绿 + Commit**
 
-reconcile_r1.py（sealed 后执行，验证 fingerprint 总摘要 + upstream 必需 + 组件集合精确相等）：
+reconcile_r1.py（sealed 后执行，验证 sealed manifest + RECEIPT + 产物 + fingerprint；treatment fingerprint 路径从 manifest 条目解析）：
 ```python
 """Phase 9A-R1 原子对账：manifest_v5 expected SHA == 磁盘 actual SHA（逐项）；FAIL 即 exit 1。"""
 from __future__ import annotations
@@ -977,7 +1008,6 @@ def main() -> None:
     args = parser.parse_args()
     manifest_path = Path(args.manifest)
     r1_dir = Path(args.r1_dir)
-    p9_dir = manifest_path.parent.parent  # manifest_v5.json 位于 docs/phase9a/r1/，parent.parent = docs/phase9a
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if manifest.get("stage") != "sealed":
         sys.exit("FAIL: manifest not sealed")
@@ -993,7 +1023,7 @@ def main() -> None:
         ok = actual == entry["sha256"]
         all_ok = all_ok and ok
         print(f"  {'ok' if ok else 'FAIL'}  {name}  ({entry['strategy']})")
-    # upstream manifest_v4 校验（必需，不能用 if upstream 静默跳过）
+    # upstream manifest_v4 校验（必需）
     upstream = manifest["entries"].get("upstream_manifest_v4")
     if upstream is None:
         print("  FAIL  upstream_manifest_v4 missing")
@@ -1004,21 +1034,22 @@ def main() -> None:
         upstream_ok = upstream_data["stage"] == "sealed" and pm.STRATEGY_FN[upstream["strategy"]](upstream_path) == upstream["sha256"]
         all_ok = all_ok and upstream_ok
         print(f"  {'ok' if upstream_ok else 'FAIL'}  upstream manifest_v4 (stage=sealed, SHA match)")
-    # treatment fingerprint 双 SHA 校验
-    tf = json.loads((p9_dir / "treatment_fingerprint.json").read_text(encoding="utf-8"))
+    # treatment fingerprint 双 SHA 校验（P0 修订：路径从 manifest 条目解析，非 parent.parent）
+    tf_entry = manifest["entries"]["upstream_treatment_fingerprint"]
+    tf_path = base / tf_entry["path"]
+    tf = json.loads(tf_path.read_text(encoding="utf-8"))
     tf_file_sha = hashlib.sha256(json.dumps(tf, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode() + b"\n").hexdigest()
-    tf_ok = tf_file_sha == manifest["entries"]["upstream_treatment_fingerprint"]["sha256"]
+    tf_ok = tf_file_sha == tf_entry["sha256"]
     all_ok = all_ok and tf_ok
     print(f"  {'ok' if tf_ok else 'FAIL'}  treatment fingerprint unchanged")
     # calibration fingerprint 组件与 manifest 条目一致（组件集合精确相等 + 顺序冻结 + 总摘要重算）
     cf = json.loads((r1_dir / "calibration_fingerprint.json").read_text(encoding="utf-8"))
     expected_names = ["silver_judge_v3_py", "silver_relevance_judgment_v3", "silver_judgment_summary_v3", "qc_sample_list_v2", "attribution_json"]
     cf_names = [c["logical_name"] for c in cf["components"]]
-    cf_ok = cf_names == expected_names  # 组件集合精确相等 + 顺序冻结
+    cf_ok = cf_names == expected_names
     for c in cf["components"]:
         if manifest["entries"].get(c["logical_name"], {}).get("sha256") != c["sha256"]:
             cf_ok = False
-    # 重算 aggregate SHA
     digest = hashlib.sha256()
     for c in cf["components"]:
         digest.update(c["sha256"].encode() + b"\0")
@@ -1032,7 +1063,20 @@ def main() -> None:
                  (qr["verdict"] == "SILVER_LABEL_NOT_CALIBRATED" and qr["effective_disagreement"] > 6)
     all_ok = all_ok and verdict_ok
     print(f"  {'ok' if verdict_ok else 'FAIL'}  verdict matches effective_disagreement")
-    # closure 与 qc_result 一致（字段级校验，非子串误命中）
+    # RECEIPT 校验（artifact 集合/SHA/size/strategy/verdict + 绑定 sealed manifest SHA）
+    receipt = json.loads((r1_dir / "RECEIPT_r1.json").read_text(encoding="utf-8"))
+    receipt_ok = True
+    if receipt["verdict"] != qr["verdict"]:
+        receipt_ok = False
+    if receipt["manifest_sha256"] != pm.STRATEGY_FN["json_canonical"](manifest_path):
+        receipt_ok = False
+    for name, meta in receipt["artifacts"].items():
+        raw = (r1_dir / name).read_bytes()
+        if hashlib.sha256(raw).hexdigest() != meta["sha256"] or len(raw) != meta["size"] or meta["strategy"] != "raw_bytes":
+            receipt_ok = False
+    all_ok = all_ok and receipt_ok
+    print(f"  {'ok' if receipt_ok else 'FAIL'}  RECEIPT (artifacts + sealed manifest binding)")
+    # closure 与 qc_result 一致（字段级校验）
     closure = (r1_dir / "CLOSURE.md").read_text(encoding="utf-8")
     closure_ok = qr["verdict"] in closure and f"effective_disagreement：{qr['effective_disagreement']}/61" in closure
     all_ok = all_ok and closure_ok
@@ -1047,7 +1091,7 @@ if __name__ == "__main__":
 Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_r1.py::TestTerminalV2 -q`
 Expected: PASS。
 ```powershell
-git add -- docs/phase9a/r1/manifest_v5.json docs/phase9a/r1/finalize_r1.py docs/phase9a/r1/qc_result_v2.json docs/phase9a/r1/calibration_fingerprint.json docs/phase9a/r1/CLOSURE.md docs/phase9a/r1/RECEIPT_r1.json docs/phase9a/r1/qc_human_review_v2.jsonl tests/test_phase9a_r1.py
+git add -- docs/phase9a/r1/manifest_v5.json docs/phase9a/r1/finalize_r1.py docs/phase9a/r1/reconcile_r1.py docs/phase9a/r1/qc_result_v2.json docs/phase9a/r1/calibration_fingerprint.json docs/phase9a/r1/CLOSURE.md docs/phase9a/r1/RECEIPT_r1.json docs/phase9a/r1/qc_human_review_v2.jsonl tests/test_phase9a_r1.py
 git diff --cached --name-only
 git commit -m "chore(phase9a-r1): finalize_r1 single-shot publish + reconcile_r1 final audit"
 ```
