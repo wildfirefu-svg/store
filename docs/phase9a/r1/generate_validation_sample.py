@@ -20,7 +20,6 @@ def pair_key(row):
 
 
 def main() -> None:
-    sys.path.insert(0, str(P9))
     sys.path.insert(0, str(REPO / "docs" / "phase8" / "marriage-capability"))
     import phase9a_manifest as pm
     # 脚本内部 verify_frozen，防绕过门禁
@@ -35,8 +34,8 @@ def main() -> None:
     pairs_by_item: dict[str, list] = {}
     for r in remaining:
         pairs_by_item.setdefault(r["item_id"], []).append(r)
-    if len(pairs_by_item) < 37:
-        sys.exit(f"BLOCKED_INPUT_DRIFT: remaining items {len(pairs_by_item)} < 37")
+    if len(pairs_by_item) != 37:
+        sys.exit(f"BLOCKED_INPUT_DRIFT: remaining items {len(pairs_by_item)} != 37")
     rng = random.Random(20260814)
     first = [rng.choice(sorted(pairs_by_item[item_id], key=pair_key)) for item_id in sorted(pairs_by_item)]
     selected_keys = {pair_key(row) for row in first}

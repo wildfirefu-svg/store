@@ -64,14 +64,14 @@ class TestValidationSample:
         assert len(keys) == len(set(keys))
 
     def test_dev_set_isolation_negative(self):
-        # 负向：故意注入开发集 pair 必须被检测
+        # 负向：把隔离检查作用于"注入开发集 pair 的污染样本"必须命中；作用于正式样本必须为空
         dev_keys = {(r["item_id"], r["canonical_key"]) for r in (json.loads(l) for l in (P9 / "qc_human_review.jsonl").open(encoding="utf-8") if l.strip())}
         sample = _load_json(P9R1 / "qc_sample_list_v2.json")
-        injected = next(iter(dev_keys))
-        assert injected in dev_keys  # 注入成功
-        # 若样本含开发集 pair，隔离断言必须失败
         sample_keys = {(s["item_id"], s["canonical_key"]) for s in sample["sample_list"]}
-        assert injected not in sample_keys  # 实际样本无泄漏
+        injected = min(dev_keys)  # 确定性选择（非 set 迭代顺序）
+        polluted = sample_keys | {injected}
+        assert polluted & dev_keys, "注入污染样本必须被交集检测命中"  # 检测逻辑正向生效
+        assert not (sample_keys & dev_keys), "实际样本无泄漏"  # 实际样本负向
 
     def test_review_packet_frozen(self):
         # 盲评 packet：含 item_id/canonical_key/item_description/document_text/source_location；不含 label/reason/开发集标签/归因结论
