@@ -56,6 +56,11 @@
    "path": "docs/phase9a/r1/silver_judgment_summary_v3.json",
    "strategy": "json_canonical",
    "sha256": "a766a09ac34d41c1189a2ecbd2c9eb7f7e9e2e93e560e86a6c721bd3c7c1a16c"
+  },
+  "qc_human_review_v2": {
+   "path": "docs/phase9a/r1/qc_human_review_v2.jsonl",
+   "strategy": "jsonl_canonical",
+   "sha256": "ad611adf7e7fee7558de08f7de2df6b5598e832cdae72afcb31847dec256349a"
   }
  }
 }

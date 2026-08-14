@@ -1,0 +1,61 @@
+{"canonical_key":"kb:gejue:hydj_006","human_label":"relevant","item_id":"mingli_ftb_0002#k4","note":"条文直接讲婚期/结婚应期（大运合日柱是婚期）"}
+{"canonical_key":"kb:shensha:43","human_label":"relevant","item_id":"mingli_ftb_0002#k5","note":"直接讲墙内桃花（桃花在年月柱）"}
+{"canonical_key":"classic:knowledge_base/classic_texts/ditiansui/all_rules.json:420:dts_033_003","human_label":"partially_relevant","item_id":"mingli_ftb_0002#k6","note":"讲财星旺而日主弱的格局喜忌，非 item 要的“财星被合”"}
+{"canonical_key":"kb:gejue:ss2_021","human_label":"relevant","item_id":"mingli_ftb_0007#k5","note":"直接讲红鸾天喜"}
+{"canonical_key":"kb:shishen_combos:404","human_label":"relevant","item_id":"mingli_ftb_0007#k6","note":"直接讲官星（被合）的应事——适合公务员"}
+{"canonical_key":"kb:gejue:hy_022","human_label":"partially_relevant","item_id":"mingli_ftb_0013#k1","note":"讲晚婚应期，非 item 要的“离异”"}
+{"canonical_key":"kb:shensha:59","human_label":"relevant","item_id":"mingli_ftb_0013#k2","note":"直接讲阴差阳错（婚姻不顺、夫妻失和）"}
+{"canonical_key":"classic:knowledge_base/classic_texts/ditiansui/all_rules.json:223:dts_018_004","human_label":"relevant","item_id":"mingli_ftb_0013#k4","note":"讲伤官（劫财）在月柱主父母破败，直接涉及伤官"}
+{"canonical_key":"kb:gejue:ln_009","human_label":"partially_relevant","item_id":"mingli_ftb_0017#k4","note":"讲太岁压日诸事不顺，非 item 要的“结婚”"}
+{"canonical_key":"kb:gejue:hy_019","human_label":"irrelevant","item_id":"mingli_ftb_0017#k6","note":"讲合婚地支六合，“子”仅字面列举，非“子”地支知识点"}
+{"canonical_key":"kb:gejue:hydj_006","human_label":"relevant","item_id":"mingli_ftb_0026#k1","note":"直接讲姻缘（晚来姻缘别样欢）"}
+{"canonical_key":"kb:gejue:ss2_006","human_label":"relevant","item_id":"mingli_ftb_0026#k2","note":"直接讲孤辰（孤辰入命六亲疏）"}
+{"canonical_key":"classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:1485:smth_064_008","human_label":"relevant","item_id":"mingli_ftb_0044#k2","note":"直接讲寡宿/孤寡的贵贱应事"}
+{"canonical_key":"kb:gejue:B2_009","human_label":"relevant","item_id":"mingli_ftb_0044#k4","note":"直接讲文昌（文昌坐命文星开）"}
+{"canonical_key":"classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:1244:smth_047_002","human_label":"relevant","item_id":"mingli_ftb_0054#k1","note":"直接讲婚姻感情（金舆多妻妾、感情丰富）"}
+{"canonical_key":"kb:gejue:ln_008","human_label":"relevant","item_id":"mingli_ftb_0058#k1","note":"直接讲已婚者桃花（已婚逢之要警惕）"}
+{"canonical_key":"kb:shishen_combos:376","human_label":"relevant","item_id":"mingli_ftb_0058#k4","note":"直接讲官杀混杂"}
+{"canonical_key":"kb:gejue:hy_021","human_label":"relevant","item_id":"mingli_ftb_0077#k4","note":"直接讲再婚/二婚"}
+{"canonical_key":"classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:1012:smth_041_044","human_label":"partially_relevant","item_id":"mingli_ftb_0083#k1","note":"讲冬木无火调候凶象，“富贵”仅顺带作结局对比，非主题"}
+{"canonical_key":"kb:gejue:ss_017","human_label":"relevant","item_id":"mingli_ftb_0083#k2","note":"直接讲财官相生（财官相生富贵双）"}
+{"canonical_key":"classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:659:smth_026_008","human_label":"irrelevant","item_id":"mingli_ftb_0085#k5","note":"讲太岁当头诸凶煞祸患，“咸池”仅字面列举"}
+{"canonical_key":"kb:xiangyi:13","human_label":"relevant","item_id":"mingli_ftb_0085#k6","note":"直接讲寅地支的象义"}
+{"canonical_key":"kb:gejue:cgdj_006","human_label":"irrelevant","item_id":"mingli_ftb_0085#k7","note":"讲“财星被合”，item 要“官星被合”，主体不同"}
+{"canonical_key":"kb:gejue:hydj_008","human_label":"relevant","item_id":"mingli_ftb_0096#k3","note":"直接讲比劫夺财（他人妇）"}
+{"canonical_key":"classic:knowledge_base/classic_texts/ditiansui/all_rules.json:450:dts_034_005","human_label":"relevant","item_id":"mingli_ftb_0098#k1","note":"直接讲子女（食伤重印绶无则无子）"}
+{"canonical_key":"kb:gejue:hy_011","human_label":"relevant","item_id":"mingli_ftb_0099#k4","note":"直接讲离婚/婚变（冲刑）"}
+{"canonical_key":"classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:243:smth_008_023","human_label":"irrelevant","item_id":"mingli_ftb_0100#k1","note":"讲木女金夫正体、不为刑，“刑”仅字面提及"}
+{"canonical_key":"kb:gejue:syjej_006","human_label":"relevant","item_id":"mingli_ftb_0100#k2","note":"直接讲官杀混杂（精神乱）"}
+{"canonical_key":"kb:gejue:xm_011","human_label":"relevant","item_id":"mingli_ftb_0100#k3","note":"直接讲羊刃（日坐羊刃配偶刚）"}
+{"canonical_key":"kb:gejue:xm_007","human_label":"irrelevant","item_id":"mingli_ftb_0108#k4","note":"讲壬癸水性格，与 item 的配偶/相貌无关"}
+{"canonical_key":"classic:knowledge_base/classic_texts/ditiansui/all_rules.json:554:dts_038_028","human_label":"relevant","item_id":"mingli_ftb_0122#k1","note":"直接讲克夫（官微伤官重必克夫）"}
+{"canonical_key":"classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:128:smth_006_045","human_label":"irrelevant","item_id":"mingli_ftb_0124#k6","note":"讲纳音己酉土喜申酉，“申”仅字面顺带"}
+{"canonical_key":"kb:gejue:hy_007","human_label":"partially_relevant","item_id":"mingli_ftb_0125#k4","note":"讲婚姻冲刑二婚，“夫”仅字面出现，非讲“流年/夫”"}
+{"canonical_key":"classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:1484:smth_064_007","human_label":"relevant","item_id":"mingli_ftb_0125#k5","note":"直接讲丧门、吊客（父母相继而亡）"}
+{"canonical_key":"kb:gejue:hy_019","human_label":"irrelevant","item_id":"mingli_ftb_0125#k6","note":"讲合婚六合，“酉”仅字面列举，非“酉”地支知识点"}
+{"canonical_key":"kb:gejue:ss2_025","human_label":"relevant","item_id":"mingli_ftb_0129#k2","note":"直接讲八专"}
+{"canonical_key":"kb:shensha:70","human_label":"relevant","item_id":"mingli_ftb_0139#k2","note":"直接讲红艳煞（桃花）"}
+{"canonical_key":"kb:gejue:hy_019","human_label":"irrelevant","item_id":"mingli_ftb_0085#k6","note":"讲合婚六合，“寅”仅字面列举，非“寅”地支知识点"}
+{"canonical_key":"kb:gejue:gjgj_001","human_label":"relevant","item_id":"mingli_ftb_0100#k2","note":"直接讲伤官见官（格便损）"}
+{"canonical_key":"kb:gejue:gy_001","human_label":"relevant","item_id":"mingli_ftb_0007#k6","note":"直接讲官星（有根仕途顺、无根虚职名）"}
+{"canonical_key":"kb:shishen_combos:229","human_label":"relevant","item_id":"mingli_ftb_0096#k3","note":"直接讲比劫夺财"}
+{"canonical_key":"kb:gejue:hydj_001","human_label":"relevant","item_id":"mingli_ftb_0002#k6","note":"直接讲财星被合（男命财星被合年）"}
+{"canonical_key":"kb:gejue:gy_004","human_label":"irrelevant","item_id":"mingli_ftb_0002#k6","note":"讲“官星被合”，item 要“财星被合”，主体不同"}
+{"canonical_key":"kb:shensha:41","human_label":"relevant","item_id":"mingli_ftb_0013#k2","note":"直接讲孤鸾（婚姻孤独、克夫克妻）"}
+{"canonical_key":"kb:gejue:hy_009","human_label":"relevant","item_id":"mingli_ftb_0013#k1","note":"直接讲婚姻质量（官杀混杂婚难固）"}
+{"canonical_key":"kb:gejue:hy_025","human_label":"partially_relevant","item_id":"mingli_ftb_0007#k6","note":"讲婚期应期，“官星”仅作为婚期条件顺带出现"}
+{"canonical_key":"kb:shishen_combos:403","human_label":"relevant","item_id":"mingli_ftb_0007#k6","note":"直接讲官星（无根适合国企管理）"}
+{"canonical_key":"kb:gejue:hy_006","human_label":"relevant","item_id":"mingli_ftb_0002#k5","note":"直接讲桃花（四柱桃花）"}
+{"canonical_key":"kb:gejue:yjzd_001","human_label":"relevant","item_id":"mingli_ftb_0002#k4","note":"直接讲婚期应期（双合之年婚必至）"}
+{"canonical_key":"kb:gejue:lq_024","human_label":"relevant","item_id":"mingli_ftb_0098#k1","note":"直接讲夫妻/子女（日上夫妻和、时上子女福）"}
+{"canonical_key":"kb:gejue:hydj_005","human_label":"relevant","item_id":"mingli_ftb_0100#k2","note":"直接讲官杀混杂、伤官见官"}
+{"canonical_key":"kb:gejue:ss_027","human_label":"relevant","item_id":"mingli_ftb_0083#k1","note":"直接讲配偶（正印在日配偶贤）"}
+{"canonical_key":"classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:1008:smth_041_040","human_label":"relevant","item_id":"mingli_ftb_0083#k1","note":"直接讲富贵双全"}
+{"canonical_key":"kb:gejue:cgdj_002","human_label":"relevant","item_id":"mingli_ftb_0083#k2","note":"直接讲官星、财生官（财官相生）"}
+{"canonical_key":"kb:gejue:dylnj_007","human_label":"partially_relevant","item_id":"mingli_ftb_0054#k1","note":"讲天克地冲岁运动荡，“感情”仅是受影响的一面"}
+{"canonical_key":"kb:gejue:ss2_005","human_label":"relevant","item_id":"mingli_ftb_0002#k4","note":"直接讲桃花/咸池"}
+{"canonical_key":"kb:shishen_combos:29","human_label":"relevant","item_id":"mingli_ftb_0002#k6","note":"直接讲财星被合"}
+{"canonical_key":"classic:knowledge_base/classic_texts/ditiansui/all_rules.json:506:dts_036_021","human_label":"relevant","item_id":"mingli_ftb_0100#k3","note":"直接讲羊刃（劫财羊刃太旺）"}
+{"canonical_key":"classic:knowledge_base/classic_texts/sanmingtonghui/all_rules.json:1484:smth_064_007","human_label":"partially_relevant","item_id":"mingli_ftb_0026#k2","note":"讲丧门吊客父母亡，“孤寡(孤辰)”仅字面并临，非主题"}
+{"canonical_key":"kb:gejue:mjyj_015","human_label":"relevant","item_id":"mingli_ftb_0007#k5","note":"直接讲红鸾、天喜"}
+{"canonical_key":"kb:shishen_combos:26","human_label":"partially_relevant","item_id":"mingli_ftb_0002#k6","note":"讲财星入墓有库，非 item 要的“财星被合”"}
