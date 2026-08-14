@@ -100,15 +100,22 @@ else:
 
 **抽样算法（P0 修订，确定性无放回，函数级冻结）**：
 ```python
+def pair_key(row):
+    return (row["item_id"], row["canonical_key"])
+
 rng = random.Random(20260814)
 first = [rng.choice(sorted(pairs_by_item[item_id], key=pair_key)) for item_id in sorted(pairs_by_item)]
-remaining = sorted(all_remaining_pairs - set(first), key=pair_key)
+selected_keys = {pair_key(row) for row in first}
+remaining = sorted(
+    (row for row in all_remaining_pairs if pair_key(row) not in selected_keys),
+    key=pair_key,
+)
 extra = rng.sample(remaining, 24)
 sample = first + extra
-# 断言：len(sample) == 61；len({row.item_id for row in sample}) == 37；sample ∩ development_set == ∅；len(unique_pair_keys) == 61
+# 断言：len(sample) == 61；len({row["item_id"] for row in sample}) == 37；sample ∩ development_set == ∅；len({pair_key(row) for row in sample}) == 61
 ```
 
-**冻结**：验证集样本列表在 silver 校准规则冻结后、查看验证标签前生成并冻结（SHA 落盘）。
+**冻结**：验证集样本列表在 silver 校准规则与任何 v3 label 生成前冻结（SHA 落盘；P0 修订：与执行顺序统一——样本先冻结，规则后冻结）。
 
 ---
 
