@@ -1,7 +1,7 @@
 # Phase 9A-Gold 设计：item-centered 人工 Gold 数据规约（零 API 采集协议）
 
 **日期：** 2026-08-15
-**状态：** v1.7（NEEDS_REVISION 七轮修订：positive_control 契约闭合、verification 空集产物、receipt 同构）
+**状态：** v1.7（APPROVED，可进入 writing-plans）
 **裁决依据：** R1.5 关闭；路线为 **Gold 规约与采集 → Gold 密封 → R2 候选覆盖实验**（选项 2+3 组合）
 **前置冻结：** Phase 9A（manifest_v4 sealed，QC_FAIL）+ Phase 9A-R1（manifest_v5 sealed，SILVER_LABEL_NOT_CALIBRATED，25/61）
 
@@ -162,7 +162,7 @@ Phase 9A-R1 证明：词面 silver 规则与人类判断分歧 25/61（41%），
 - **类型与结果语义**：`proposal_type = positive_control`；派生结果 = **diagnostic_only**（不参与终态判定）；**不修改原 positive 的 resolution**（B 再次标为 partial/irrelevant 不推翻已确认正例）；**不进入 A/B 分歧或 Gold 计数**；control 的标签分布仅进入 GOLD_CLOSURE 诊断
 - **确定性抽取**：control pool = 已 confirmed 的 positive 条目按 `(item_id, canonical_key)` 字典序排序；**优先无放回抽取**；若 confirmed positive 数量 < 本轮真实 HN 条数 → **允许有放回循环抽取**（按序循环，非随机重抽；记录 `reused=true` 标记）；若 confirmed positive 数量为 0（r2 发生在任何 positive confirmed 之前）→ `BLOCKED_BLIND_PACKET_INPUT`
 - **引用与复用**：每条 control 记录 `source_positive_ref`（指向原 positive 的 canonical_key + item_id）；**同一轮内同一 control 可重复出现**（有放回循环时）；**跨轮复用允许**（r2/r3 可从同一 control pool 抽取）
-- **诊断语义**：control 的 B 标签分布（relevant 比例）仅作盲审质量信号记录于 closure；不是质量门，无阈值无失败行为
+- **诊断语义**：control 的 B 标签分布（relevant 比例）仅作盲审质量信号记录于 closure；不是质量门，无阈值无失败行为；**closure 必须如实记录 control 的唯一数、重复数和复用率**（有放回循环产生重复 control 时 B 可能识别重复条目，避免过度声称盲审强度）
 
 **轮次生成器 fail-closed 校验**（中优修订）：r2/r3 生成器必须校验前一轮 label receipt 存在且 SHA 匹配 + 触发条件真实成立（r2：r1 抽查有 rejected/uncertain；r3：扩审后有 rejected 且 replacement 条目存在），否则拒绝生成。
 
