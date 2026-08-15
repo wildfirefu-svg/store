@@ -58,11 +58,13 @@
     "MemoryError / HF 网络超时 / 线程超时均为既有测试在受限环境的 flaky，非本计划引入。"
   ],
   "known_failure_exemption": {
-    "status": "pending_approval",
+    "status": "APPROVED",
     "approved_by": "fu",
     "approved_at": "2026-08-15",
     "approval_input_sha256": "a6298fbec0fdc1062f89897d945d49ddddbafa363bb8d0ae06e828cad8fc2cc9",
     "approval_input_rel": "docs/superpowers/plans/notes/approvals/2026-08-15-sanming-approval-bazi_kb-exemption.txt",
-    "approval_source": "awaiting user direct chat-body confirmation"
+    "approval_source": "user direct confirmation in TRAE chat message body (2026-08-15)",
+    "approval_confirmation_sha256": "4fabe5a17df96aa2a951dd4772e8fd7c3b94c986742829da1cace4d979b16534",
+    "approval_confirmation_rel": "docs/superpowers/plans/notes/approvals/2026-08-15-sanming-approval-confirmation.txt"
   }
 }

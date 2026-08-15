@@ -4,7 +4,9 @@
   "artifact_manifest_sha256": "26775a0ef8ca52100e6d80bb8d056648a0e6c96f0d6ea707a3c5a42c452ff0d6",
   "approval_input_sha256": "72906fc1c8bd6c491973517c3fe554cbfdea046d1e487c02f1827b94bcb9f582",
   "approval_input_rel": "docs/superpowers/plans/notes/approvals/2026-08-15-sanming-approval-E.txt",
-  "approval_source": "WAITING_FOR_INDEPENDENT_APPROVAL (user chat-body confirmation not independently verifiable)",
+  "approval_source": "user direct confirmation in TRAE chat message body (2026-08-15)",
   "approver": "fu",
-  "approved_at": "2026-08-15"
+  "approved_at": "2026-08-15",
+  "approval_confirmation_sha256": "4fabe5a17df96aa2a951dd4772e8fd7c3b94c986742829da1cace4d979b16534",
+  "approval_confirmation_rel": "docs/superpowers/plans/notes/approvals/2026-08-15-sanming-approval-confirmation.txt"
 }
