@@ -1,7 +1,7 @@
 # Phase 9A-Gold 设计：item-centered 人工 Gold 数据规约（零 API 采集协议）
 
 **日期：** 2026-08-15
-**状态：** v1.6（NEEDS_REVISION 六轮修订：B verification plan 全量预冻结、r2/r3 混入 positive controls 保持类型盲审、stable_hash 精确定义）
+**状态：** v1.7（NEEDS_REVISION 七轮修订：positive_control 契约闭合、verification 空集产物、receipt 同构）
 **裁决依据：** R1.5 关闭；路线为 **Gold 规约与采集 → Gold 密封 → R2 候选覆盖实验**（选项 2+3 组合）
 **前置冻结：** Phase 9A（manifest_v4 sealed，QC_FAIL）+ Phase 9A-R1（manifest_v5 sealed，SILVER_LABEL_NOT_CALIBRATED，25/61）
 
@@ -88,6 +88,8 @@ Phase 9A-R1 证明：词面 silver 规则与人类判断分歧 25/61（41%），
 **B verification 执行与标签**（P0 修订：schema 与聚合规则冻结）：
 
 1. 冻结执行器机械运行 `gold_b_verification_plans.json` 的 no-positive 子集 → 结果落盘 gold_search_results.jsonl（`_bv` 步骤）→ 生成独立 `gold_b_verification_packet.jsonl`（仅 item 定义 + 候选条文全文，不含 A 结论）→ **冻结 packet SHA** → **发布器顺序门**（中优修订：校验 `B_VERIFICATION_PACKET_RECEIPT.json` 存在且 SHA 匹配后才复制进 B 目录，与混合盲审包同构）→ B 只审核该 packet
+   - **空集产物**（同步项）：若无 item 声明 no_positive，仍生成空的 `gold_b_verification_packet.jsonl`（0 行）+ 空的 `gold_b_verification_labels.jsonl`（0 行）+ 对应 receipt（行数=0），否则固定基础 artifact 集合无法满足
+   - **receipt 同构**（同步项）：`B_VERIFICATION_PACKET_RECEIPT.json` 字段与盲审 packet receipt 同构：`packet_sha256` + `packet_lines`（行数）+ `candidate_keys_sha256`（该 packet 全部候选 key 集合的 canonical SHA）
 2. **B verification 标签 schema**（冻结，写入 `gold_b_verification_labels.jsonl`）：每行 `{step_id, item_id, canonical_key, verification_label, note, evidence_quote}`；`verification_label ∈ {relevant, partially_relevant, irrelevant, uncertain}`；note 必填；**evidence_quote 条件必填**（中优修订：verification_label ∈ {relevant, partially_relevant} 时必填，irrelevant/uncertain 时可空）
 3. **覆盖约束**：标签必须恰好覆盖该 `_bv` 步骤的全部候选（无缺失/重复/额外）；违反 → 该 item BLOCKED
 4. **聚合规则**（冻结）：**仅当该 item 全部 `_bv` 候选均为 `irrelevant`** 才允许确认 `no_relevant_document_found_under_frozen_plan`；出现任何 relevant/partially_relevant/uncertain → 进入 A/B 分歧（C 裁决或 BLOCKED）；B 找到疑似正例时必须引用 `canonical_key + evidence_quote`（写入标签行）
@@ -123,7 +125,7 @@ Phase 9A-R1 证明：词面 silver 规则与人类判断分歧 25/61（41%），
       "b_review_result": "not_sampled"
     }
   ],
-  "hard_negative_status": "found | no_hard_negative_found",
+  "hard_negative_status": "found | no_hard_negative_found | not_applicable",
   "no_positive_evidence": {
     "executed_step_ids": ["0002k4_s1", "0002k4_s2"],
     "search_plan_sha256": "...",
@@ -155,6 +157,13 @@ Phase 9A-R1 证明：词面 silver 规则与人类判断分歧 25/61（41%），
 
 **r2/r3 类型盲审保持**（P0 修订）：r2/r3 混入的 positive controls 从已 confirmed 的 positive 中确定性抽取（数量 = 该轮真实 HN 条数，seed 按轮次派生），filler 算法同 r1；B 仅凭轮次无法推出条目类型。
 
+**positive_control 契约**（P0 修订：闭合）：
+
+- **类型与结果语义**：`proposal_type = positive_control`；派生结果 = **diagnostic_only**（不参与终态判定）；**不修改原 positive 的 resolution**（B 再次标为 partial/irrelevant 不推翻已确认正例）；**不进入 A/B 分歧或 Gold 计数**；control 的标签分布仅进入 GOLD_CLOSURE 诊断
+- **确定性抽取**：control pool = 已 confirmed 的 positive 条目按 `(item_id, canonical_key)` 字典序排序；**优先无放回抽取**；若 confirmed positive 数量 < 本轮真实 HN 条数 → **允许有放回循环抽取**（按序循环，非随机重抽；记录 `reused=true` 标记）；若 confirmed positive 数量为 0（r2 发生在任何 positive confirmed 之前）→ `BLOCKED_BLIND_PACKET_INPUT`
+- **引用与复用**：每条 control 记录 `source_positive_ref`（指向原 positive 的 canonical_key + item_id）；**同一轮内同一 control 可重复出现**（有放回循环时）；**跨轮复用允许**（r2/r3 可从同一 control pool 抽取）
+- **诊断语义**：control 的 B 标签分布（relevant 比例）仅作盲审质量信号记录于 closure；不是质量门，无阈值无失败行为
+
 **轮次生成器 fail-closed 校验**（中优修订）：r2/r3 生成器必须校验前一轮 label receipt 存在且 SHA 匹配 + 触发条件真实成立（r2：r1 抽查有 rejected/uncertain；r3：扩审后有 rejected 且 replacement 条目存在），否则拒绝生成。
 
 每轮独立产物：`gold_blind_review_packet_rN.jsonl` / `gold_b_labels_rN.jsonl` / `gold_blind_unblind_map_rN.json` / `BLIND_PACKET_RECEIPT_rN.json` / `B_LABEL_RECEIPT_rN.json`。
@@ -181,6 +190,7 @@ Phase 9A-R1 证明：词面 silver 规则与人类判断分歧 25/61（41%），
 | hard negative | irrelevant | confirmed |
 | hard negative | relevant / partially_relevant | rejected |
 | hard negative | uncertain | uncertain |
+| positive_control | 任意 | diagnostic_only（不修改原 resolution，不参与终态） |
 | filler | 任意 | diagnostic_only（不参与终态） |
 
 **解盲证据链**（每轮独立）：
