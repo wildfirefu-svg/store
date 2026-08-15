@@ -1,7 +1,7 @@
 # Phase 9A-Gold 设计：item-centered 人工 Gold 数据规约（零 API 采集协议）
 
 **日期：** 2026-08-15
-**状态：** v1.5（NEEDS_REVISION 五轮修订：盲审轮次版本化、四态映射冻结、HN 分层抽样可复算、B verification 标签 schema 与聚合规则）
+**状态：** v1.6（NEEDS_REVISION 六轮修订：B verification plan 全量预冻结、r2/r3 混入 positive controls 保持类型盲审、stable_hash 精确定义）
 **裁决依据：** R1.5 关闭；路线为 **Gold 规约与采集 → Gold 密封 → R2 候选覆盖实验**（选项 2+3 组合）
 **前置冻结：** Phase 9A（manifest_v4 sealed，QC_FAIL）+ Phase 9A-R1（manifest_v5 sealed，SILVER_LABEL_NOT_CALIBRATED，25/61）
 
@@ -61,7 +61,7 @@ Phase 9A-R1 证明：词面 silver 规则与人类判断分歧 25/61（41%），
 
 **gold_search_plans.json**：每 item 一份搜索计划（含正例检索步骤与 hard-negative 检索步骤），每步冻结 `step_id / entrypoint / args / query_terms / filters / corpus_snapshot_sha256`。
 
-**gold_b_verification_plans.json**（B 的 no_positive 复核保持 packet-only）：对 A 声明 no_positive 的 item，冻结 B 复核检索计划（entrypoint/args/query_terms/filters，step_id 前缀 `_bv`）。
+**gold_b_verification_plans.json**（P0 修订：全量预冻结，解决 config 阶段无法预知 no-positive 子集的矛盾）：**采集前为全部 112 项**冻结 B 复核检索计划（entrypoint/args/query_terms/filters，step_id 前缀 `_bv`）；最终只执行 A 声明 no_positive 的子集（未执行项的计划保留但结果为空，reconcile 校验执行子集与 A 声明一致）。不得在 config_frozen 后修改原计划文件。
 
 **执行契约**（候选清单可复算）：
 
@@ -87,8 +87,8 @@ Phase 9A-R1 证明：词面 silver 规则与人类判断分歧 25/61（41%），
 
 **B verification 执行与标签**（P0 修订：schema 与聚合规则冻结）：
 
-1. 冻结执行器机械运行 `gold_b_verification_plans.json` → 结果落盘 gold_search_results.jsonl（`_bv` 步骤）→ 生成独立 `gold_b_verification_packet.jsonl`（仅 item 定义 + 候选条文全文，不含 A 结论）→ **冻结 packet SHA** → B 只审核该 packet
-2. **B verification 标签 schema**（冻结，写入 `gold_b_verification_labels.jsonl`）：每行 `{step_id, item_id, canonical_key, verification_label, note}`；`verification_label ∈ {relevant, partially_relevant, irrelevant, uncertain}`；note 必填
+1. 冻结执行器机械运行 `gold_b_verification_plans.json` 的 no-positive 子集 → 结果落盘 gold_search_results.jsonl（`_bv` 步骤）→ 生成独立 `gold_b_verification_packet.jsonl`（仅 item 定义 + 候选条文全文，不含 A 结论）→ **冻结 packet SHA** → **发布器顺序门**（中优修订：校验 `B_VERIFICATION_PACKET_RECEIPT.json` 存在且 SHA 匹配后才复制进 B 目录，与混合盲审包同构）→ B 只审核该 packet
+2. **B verification 标签 schema**（冻结，写入 `gold_b_verification_labels.jsonl`）：每行 `{step_id, item_id, canonical_key, verification_label, note, evidence_quote}`；`verification_label ∈ {relevant, partially_relevant, irrelevant, uncertain}`；note 必填；**evidence_quote 条件必填**（中优修订：verification_label ∈ {relevant, partially_relevant} 时必填，irrelevant/uncertain 时可空）
 3. **覆盖约束**：标签必须恰好覆盖该 `_bv` 步骤的全部候选（无缺失/重复/额外）；违反 → 该 item BLOCKED
 4. **聚合规则**（冻结）：**仅当该 item 全部 `_bv` 候选均为 `irrelevant`** 才允许确认 `no_relevant_document_found_under_frozen_plan`；出现任何 relevant/partially_relevant/uncertain → 进入 A/B 分歧（C 裁决或 BLOCKED）；B 找到疑似正例时必须引用 `canonical_key + evidence_quote`（写入标签行）
 5. **B 全程不接触语料**
@@ -141,7 +141,7 @@ Phase 9A-R1 证明：词面 silver 规则与人类判断分歧 25/61（41%），
 }
 ```
 
-**组合约束**（中优修订）：`status` 为 BLOCKED_* 时 `hard_negative_status` 必须为 `not_applicable`（新增枚举值），避免 blocked item 同时写成 `found` 的语义不清。
+**组合约束**（中优修订）：`status` 为 BLOCKED_* 时 `hard_negative_status` 必须为 `not_applicable`，避免 blocked item 同时写成 `found` 的语义不清。`hard_negative_status` 完整枚举：`found | no_hard_negative_found | not_applicable`。
 
 **item 级轨迹**：每个 item 恰有一份 collection_trace（存于 gold_acquisition_log.jsonl，trace_id = `trace_{item_id}`）；positive/hard negative 只引用 `trace_step_refs`，不携带轨迹副本。
 
@@ -150,8 +150,12 @@ Phase 9A-R1 证明：词面 silver 规则与人类判断分歧 25/61（41%），
 **轮次版本化**（扩审与 replacement 不绕过 packet-only）：
 
 - **r1（初始轮）**：全部 positive proposal + 抽中的 hard negative（抽样先于 packet 构造冻结，见 §6）+ filler
-- **r2（扩审轮）**：仅当 r1 抽查触发失败门时生成——包含**全部剩余未审 hard negative**（80% 部分）；r2 只能在 r1 触发扩审后生成
-- **r3（replacement 轮）**：仅当扩审后存在 rejected 且 A 重选 replacement 时生成——包含 replacement 条目；replacement 不得绕过 packet-only 直接交 B 复核
+- **r2（扩审轮）**：仅当 r1 抽查触发失败门时生成——包含**全部剩余未审 hard negative**（80% 部分）+ **positive controls 与 filler**（P0 修订：r2/r3 混入已 confirmed 的 positive 条目与 filler，使 B 无法由轮次推出类型，保持类型盲审）；r2 只能在 r1 触发扩审后生成
+- **r3（replacement 轮）**：仅当扩审后存在 rejected 且 A 重选 replacement 时生成——包含 replacement 条目 + **positive controls 与 filler**（同上）；replacement 不得绕过 packet-only 直接交 B 复核
+
+**r2/r3 类型盲审保持**（P0 修订）：r2/r3 混入的 positive controls 从已 confirmed 的 positive 中确定性抽取（数量 = 该轮真实 HN 条数，seed 按轮次派生），filler 算法同 r1；B 仅凭轮次无法推出条目类型。
+
+**轮次生成器 fail-closed 校验**（中优修订）：r2/r3 生成器必须校验前一轮 label receipt 存在且 SHA 匹配 + 触发条件真实成立（r2：r1 抽查有 rejected/uncertain；r3：扩审后有 rejected 且 replacement 条目存在），否则拒绝生成。
 
 每轮独立产物：`gold_blind_review_packet_rN.jsonl` / `gold_b_labels_rN.jsonl` / `gold_blind_unblind_map_rN.json` / `BLIND_PACKET_RECEIPT_rN.json` / `B_LABEL_RECEIPT_rN.json`。
 
@@ -161,9 +165,10 @@ Phase 9A-R1 证明：词面 silver 规则与人类判断分歧 25/61（41%），
   - 逐 item 计算：`n_filler_i = ceil(max(n_positive_i, n_sampled_hn_i) × 0.5)`（ceil 取整冻结）
   - 候选池：冻结语料全部 canonical_key 按字典序排序，排除该 item 已使用的 key（proposal + 抽中 HN + 前轮已用 filler）
   - 抽取：**独立 RNG** `random.Random(20260815 + stable_hash(item_id))`（按 item_id 派生 seed，避免与全局打乱共用隐含 RNG 状态）无放回抽取 n_filler_i 条
+  - **stable_hash 精确定义**（P0 修订：跨进程可复现）：`stable_hash(item_id) = int.from_bytes(hashlib.sha256(item_id.encode("utf-8")).digest()[:8], "big")`
   - 候选不足 → `BLOCKED_BLIND_PACKET_INPUT`
   - filler 归属其检索来源 item 的 item_id；filler 的 B 标签**不参与终态判定**，仅作为**分布诊断**信号记录于 GOLD_CLOSURE（filler 中 relevant 比例异常高提示 B 标签基线漂移；**不得称错误率**——filler 是随机未使用文档，不保证语义无关）
-- **打乱与编号**：本轮全部条目合并后按冻结 seed（20260815）全局打乱（全局 RNG 独立于 filler 抽取 RNG）→ 对最终顺序依次生成 blind_id（`blind_r{N}_001` 起递增）→ 生成 packet → **冻结 packet SHA（code_frozen）→ 发布器 receipt 门 → B 才收到**
+- **打乱与编号**：本轮全部条目合并后按**轮次派生独立 seed**（P0 修订：`20260815 + N`，N=轮次号，避免 r1/r2/r3 共用隐含 RNG 语义）全局打乱（全局 RNG 独立于 filler 抽取 RNG）→ 对最终顺序依次生成 blind_id（`blind_r{N}_001` 起递增）→ 生成 packet → **冻结 packet SHA（code_frozen）→ 发布器 receipt 门 → B 才收到**
 
 **B 标签 schema**（冻结，`gold_b_labels_rN.jsonl`）：每行 `{blind_id, item_id, canonical_key, label, note, packet_sha256}`；label ∈ 四态；note 必填；blind_id 恰好覆盖该轮 packet（无重复/额外）；每行携带该轮 packet SHA。
 
@@ -233,7 +238,7 @@ Phase 9A-R1 证明：词面 silver 规则与人类判断分歧 25/61（41%），
 
 - **config_frozen**：gold_item_definitions.json、gold_roles.json、gold_search_plans.json、gold_b_verification_plans.json、gold_hn_qc_config.json、上游引用（manifest_v4、required_knowledge/knowledge_audit SHA）、禁改守护配置
 - **code_frozen**：gold_read_access.py、gold_search_exec.py、gold_blind_packet_builder.py、gold_unblind_mapper.py（解盲映射生成器，含冻结四态映射）、gold_validate.py、reconcile_gold.py、gold_hn_qc_sample_list.json（r1 构造前冻结）、**gold_blind_review_packet_r1.jsonl（packet SHA 冻结）**、**gold_b_verification_packet.jsonl（packet SHA 冻结）**；后续轮次（r2/r3）packet 在生成时按 code_frozen 追加冻结（manifest 允许 code_frozen 阶段追加新条目，append-only）
-- **sealed**：gold_v1.json、gold_acquisition_log.jsonl、gold_search_results.jsonl、各轮 gold_b_labels_rN.jsonl、各轮 gold_blind_unblind_map_rN.json、各轮 BLIND_PACKET_RECEIPT_rN.json、各轮 B_LABEL_RECEIPT_rN.json、gold_b_verification_labels.jsonl、gold_access_log.jsonl、GOLD_CLOSURE.md
+- **sealed**：gold_v1.json、gold_acquisition_log.jsonl、gold_search_results.jsonl、各轮 gold_b_labels_rN.jsonl、各轮 gold_blind_unblind_map_rN.json、各轮 BLIND_PACKET_RECEIPT_rN.json、各轮 B_LABEL_RECEIPT_rN.json、gold_b_verification_labels.jsonl、gold_access_log.jsonl、B_VERIFICATION_PACKET_RECEIPT.json、GOLD_CLOSURE.md
 
 **密封发布链**：
 
@@ -241,7 +246,7 @@ Phase 9A-R1 证明：词面 silver 规则与人类判断分歧 25/61（41%），
 2. 发布产物 → 冻结条目 → `set_stage(sealed)`
 3. **最后发布 `GOLD_RECEIPT.json`**（不加入 manifest）：
    - `manifest_sha256`：sealed manifest json_canonical SHA
-   - `artifacts` **版本化列表**（中优修订：非固定单文件名，按实际轮次展开）：基础项 `{"gold_v1.json", "gold_acquisition_log.jsonl", "gold_search_results.jsonl", "gold_access_log.jsonl", "gold_b_verification_labels.jsonl", "GOLD_CLOSURE.md"}` + 每轮项 `{gold_blind_review_packet_rN.jsonl, gold_b_labels_rN.jsonl, gold_blind_unblind_map_rN.json, BLIND_PACKET_RECEIPT_rN.json, B_LABEL_RECEIPT_rN.json}`（N=1..实际轮数）+ `gold_hn_qc_sample_list.json`；每项 sha256/size/strategy；**两种终态集合规则相同**（按实际轮数展开）
+   - `artifacts` **版本化列表**（中优修订：非固定单文件名，按实际轮数展开）：基础项 `{"gold_v1.json", "gold_acquisition_log.jsonl", "gold_search_results.jsonl", "gold_access_log.jsonl", "gold_b_verification_labels.jsonl", "gold_b_verification_packet.jsonl", "B_VERIFICATION_PACKET_RECEIPT.json", "GOLD_CLOSURE.md"}` + 每轮项 `{gold_blind_review_packet_rN.jsonl, gold_b_labels_rN.jsonl, gold_blind_unblind_map_rN.json, BLIND_PACKET_RECEIPT_rN.json, B_LABEL_RECEIPT_rN.json}`（N=1..实际轮数）+ `gold_hn_qc_sample_list.json`；每项 sha256/size/strategy；**两种终态集合规则相同**（按实际轮数展开）
    - `acquisition_verdict` + 统计（anchored / no_positive / blocked 计数 + 实际盲审轮数）
 4. **reconcile_gold.py**：逐项 SHA + RECEIPT 版本化集合与绑定 + 112 项完整性 + 双审闭合 + **盲审 receipt 绑定链**（每轮 packet receipt 绑 packet SHA、label receipt 绑 label SHA + packet SHA + 行数/blind_id 集合 SHA、unblind map 绑 packet SHA + label SHA、unblind map 生成晚于 label receipt）+ 引用完整性 + 候选集合对账 + access log（B 侧）校验 + 四态映射共用校验
 5. **恢复协议**：sealed 无 RECEIPT → 校验产物 SHA 与 manifest 一致后补发；其他漂移 fail-closed
