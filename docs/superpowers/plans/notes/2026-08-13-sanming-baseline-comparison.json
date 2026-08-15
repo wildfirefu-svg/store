@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0",
+  "purpose": "Stage 10 full-gate baseline comparison (BLOCKED_BASELINE_AND_ENVIRONMENT)",
+  "command": "python -m pytest tests/test_api.py::TestKB tests/test_bazi_kb.py::TestCLI tests/test_mcp.py::TestBaziKBSearch tests/test_phase8_marriage_capability.py -q --tb=short -rf",
+  "environment": {
+    "python": "3.14.6",
+    "executable": "G:\\project\\agent\\.venv\\Scripts\\python.exe",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "os_name": "Windows"
+  },
+  "baseline": {
+    "commit": "8b0e75ae4bb316ffc4caefe403bb8a201a2bfccb",
+    "exit_code": 1,
+    "passed": 82,
+    "failed": 10,
+    "skipped": 0,
+    "failing_node_ids": [
+      "tests/test_api.py::TestKB::test_kb_search",
+      "tests/test_api.py::TestKB::test_kb_search_top",
+      "tests/test_api.py::TestKB::test_kb_stats",
+      "tests/test_bazi_kb.py::TestCLI::test_search_cli",
+      "tests/test_mcp.py::TestBaziKBSearch::test_empty_query_handled",
+      "tests/test_mcp.py::TestBaziKBSearch::test_returns_results",
+      "tests/test_phase8_marriage_capability.py::TestKbEquivalence::test_regeneration_deterministic",
+      "tests/test_phase8_marriage_capability.py::TestKbSnapshot::test_row_counts_match_original",
+      "tests/test_phase8_marriage_capability.py::TestReconcileSubtype::test_reconcile_full_sections",
+      "tests/test_phase8_marriage_capability.py::TestReconcileSubtype::test_reconcile_subtype_passes"
+    ],
+    "output_sha256": "f2f3fb2d520e95dc1f7b680ef8c1dd81a439a0dee200ed4b3e713f2112baf3f3"
+  },
+  "candidate": {
+    "commit": "e6d5e7fd25fed59e4732badef832b235945053ef",
+    "exit_code": 1,
+    "passed": 82,
+    "failed": 10,
+    "skipped": 0,
+    "failing_node_ids": [
+      "tests/test_api.py::TestKB::test_kb_search",
+      "tests/test_api.py::TestKB::test_kb_search_top",
+      "tests/test_api.py::TestKB::test_kb_stats",
+      "tests/test_bazi_kb.py::TestCLI::test_search_cli",
+      "tests/test_mcp.py::TestBaziKBSearch::test_empty_query_handled",
+      "tests/test_mcp.py::TestBaziKBSearch::test_returns_results",
+      "tests/test_phase8_marriage_capability.py::TestKbEquivalence::test_regeneration_deterministic",
+      "tests/test_phase8_marriage_capability.py::TestKbSnapshot::test_row_counts_match_original",
+      "tests/test_phase8_marriage_capability.py::TestReconcileSubtype::test_reconcile_full_sections",
+      "tests/test_phase8_marriage_capability.py::TestReconcileSubtype::test_reconcile_subtype_passes"
+    ],
+    "output_sha256": "177d2826cb07fb9389b13973fc88912262a09bcbf4deb64fd40e102446cff00f"
+  },
+  "known_failure_set_equal": true,
+  "classification": "BLOCKED_BASELINE_AND_ENVIRONMENT",
+  "root_cause": "knowledge-base/bazi_kb.db 在基线提交即已存在且为空（sqlite_master 无任何表，缺 gejue 表）；候选分支未改动该 db（git status 无变更）。10 个失败全部由此引起，基线/候选失败 node ID 集合完全一致。",
+  "full_gate_notes": [
+    "全量门禁（tests/ 忽略 test_e2e.py）在候选分支多次运行：2391 passed / 10 failed / 8 skipped（2 次干净运行）、2326 passed + MemoryError（1 次）、卡死于既有测试的 threading/concurrent.futures Timeout + huggingface.co 网络超时（1 次）。",
+    "MemoryError / HF 网络超时 / 线程超时均为既有测试在受限环境的 flaky，非本计划引入。"
+  ],
+  "known_failure_exemption": {
+    "status": "pending_approval",
+    "requires": "真实独立审核方批准后方可记为 APPROVED"
+  }
+}
