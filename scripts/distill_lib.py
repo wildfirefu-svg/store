@@ -43,13 +43,16 @@ Public API:
 """
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
 import os
 import re
+import subprocess as _subprocess
 import sys
 import time
 from pathlib import Path
+from scripts.classic_artifacts import EXPERIMENT_ID
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -691,207 +694,301 @@ def canonical_config_sha256() -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-class BudgetLedger:
-    """Run-level shared API budget ledger (P0-2).
+def _pid_alive(pid) -> bool:
+    if pid is None or pid <= 0: return False
+    if os.name == "nt":
+        r = _subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], capture_output=True, text=True)
+        return "No tasks" not in r.stdout
+    try: os.kill(pid, 0); return True
+    except OSError: return False
 
-    Frozen at creation with a global hard cap. Passed to generate_mcq
-    across multiple chapter calls to enforce a single run-wide budget.
-    When exhausted, callers MUST fail-closed (not update progress, not
-    publish partial results).
 
-    Persistence (P0-2): the ledger can be saved to a JSON file and reloaded
-    across process restarts, so a crash does not reset the budget. A CORRUPT
-    or tampered ledger is rejected (raises LedgerCorruptionError) -- it does
-    NOT silently start fresh, because that would reset the budget and violate
-    fail-closed.
+class FileLock:
+    def __init__(self, path, lease=3600): self.path = Path(path); self.lease = lease; self._held = False
+    def __enter__(self):
+        while True:
+            try:
+                fd = os.open(str(self.path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.write(fd, json.dumps({"pid": os.getpid(), "start": time.time(), "owner": f"p{os.getpid()}t{time.time():.0f}"}).encode())
+                os.close(fd); self._held = True; return self
+            except FileExistsError:
+                if self._stale(): os.unlink(str(self.path)); continue
+                raise RuntimeError(f"lock held by live writer: {self.path}")
+    def __exit__(self, *a):
+        if self._held: os.unlink(str(self.path)); self._held = False
+    def _stale(self) -> bool:
+        try: meta = json.loads(self.path.read_text(encoding="utf-8"))
+        except Exception: return False
+        return time.time() - meta.get("start", 0) > self.lease and not _pid_alive(meta.get("pid", -1)) and str(meta.get("owner", "")).startswith("p")
 
-    Run binding (P0-2): the ledger is bound to a run_id and a code/data SHA
-    at creation time. Reloading a ledger with a mismatched run_id or SHA is
-    rejected -- this prevents stale ledgers from being reused across runs.
-    """
 
-    def __init__(
-        self,
-        global_hard_cap: int,
-        persist_path: Path | None = None,
-        run_id: str = "",
-        code_sha: str = "",
-        rules_sha: str = "",
-    ):
-        self.global_hard_cap = global_hard_cap
-        self.calls_made = 0
-        self.accepted = 0
-        self.skipped = 0
-        self.exhausted = False
-        self.persist_path = persist_path
-        self.run_id = run_id
-        self.code_sha = code_sha
-        self.rules_sha = rules_sha
+@dataclasses.dataclass(frozen=True)
+class BudgetCtx:
+    run_id: str; batch_id: str; proj: "ProjectLedger"; run: "BudgetLedger"; proj_path: Path; run_path: Path
+
+
+def attempt_base_id(*, run_id, batch_id, chapter_id, segment_id, operation, rule_id) -> str:
+    return hashlib.sha256(json.dumps({"run_id": run_id, "batch_id": batch_id, "chapter_id": chapter_id, "segment_id": segment_id, "operation": operation, "rule_id": rule_id}, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def attempt_id_for(*, run_id, batch_id, chapter_id, segment_id, operation, rule_id, attempt_no) -> str:
+    return hashlib.sha256(json.dumps({"run_id": run_id, "batch_id": batch_id, "chapter_id": chapter_id, "segment_id": segment_id, "operation": operation, "rule_id": rule_id, "attempt_no": attempt_no}, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def next_attempt_no(run, *, base_id, proj=None):
+    """P0-4：跳过 project 已 reservation 的 attempt number，防止 orphan 死锁。"""
+    run_used = max((st.get("attempt_no", 0) for st in run.attempts.values() if st.get("base_id") == base_id), default=0)
+    if proj is None: return run_used + 1
+    proj_used = 0
+    for r in proj.reservations.values():
+        m = r.get("metadata") or {}
+        if not isinstance(m, dict): continue
+        try:
+            b = attempt_base_id(run_id=m["run_id"], batch_id=m["batch_id"], chapter_id=m["chapter_id"], segment_id=m["segment_id"], operation=m["operation"], rule_id=m["rule_id"])
+        except Exception:
+            continue
+        if b == base_id:
+            proj_used = max(proj_used, int(m.get("attempt_no", 0)))
+    return max(run_used, proj_used) + 1
+
+
+ALREADY_RESERVED = object()
+_TERMINAL_STATES = ("success", "failed", "interrupted")
+_ATTEMPT_STATUSES = ("attempted",) + _TERMINAL_STATES
+
+
+def _ledger_hash(state: dict) -> str:
+    s = dict(state); s.pop("ledger_hash", None)
+    return hashlib.sha256(json.dumps(s, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def _validate_ledger_state(data) -> None:
+    if not isinstance(data, dict): raise LedgerCorruptionError("ledger not a dict")
+    if data.get("ledger_hash") != _ledger_hash(data): raise LedgerCorruptionError("ledger hash mismatch (self-consistent tamper detected)")
+
+
+def _atomic_write_json(path, obj):
+    tmp = Path(path).with_suffix(".tmp")
+    tmp.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
+    os.replace(str(tmp), str(path))
+
+
+def _validate_attempt_metadata(m) -> None:
+    if not isinstance(m, dict): raise LedgerCorruptionError("attempt metadata not a dict")
+    for k in ("operation", "chapter_id", "segment_id", "rule_id", "attempt_no", "run_id", "batch_id"):
+        if k not in m: raise LedgerCorruptionError(f"attempt metadata missing {k}")
+    if not isinstance(m["attempt_no"], int) or m["attempt_no"] < 1: raise LedgerCorruptionError("attempt metadata attempt_no invalid")
+
+
+def _verify_attempt_id(run_id, batch_id, attempt_id, metadata) -> None:
+    recomputed = attempt_id_for(run_id=run_id, batch_id=batch_id, chapter_id=metadata["chapter_id"], segment_id=metadata["segment_id"], operation=metadata["operation"], rule_id=metadata["rule_id"], attempt_no=metadata["attempt_no"])
+    if recomputed != attempt_id: raise LedgerCorruptionError(f"attempt_id {attempt_id} does not bind metadata (expected {recomputed})")
+
+
+def _validate_run_attempts(run_id, attempts) -> None:
+    if not isinstance(attempts, dict): raise LedgerCorruptionError("attempts not a dict")
+    for att_id, st in attempts.items():
+        if not isinstance(st, dict): raise LedgerCorruptionError(f"attempt {att_id} not a dict")
+        if st.get("status") not in _ATTEMPT_STATUSES: raise LedgerCorruptionError(f"attempt {att_id} invalid status {st.get('status')!r}")
+        if not isinstance(st.get("attempt_no"), int) or st.get("attempt_no", 0) < 1: raise LedgerCorruptionError(f"attempt {att_id} invalid attempt_no")
+        if not isinstance(st.get("base_id"), str) or len(st.get("base_id", "")) != 64: raise LedgerCorruptionError(f"attempt {att_id} invalid base_id")
+        meta = st.get("metadata")
+        if meta is None: raise LedgerCorruptionError(f"attempt {att_id} metadata must not be None")
+        _validate_attempt_metadata(meta)
+        _verify_attempt_id(run_id, st.get("batch_id", ""), att_id, meta)
+        recomputed_base = attempt_base_id(run_id=run_id, batch_id=st.get("batch_id", ""), chapter_id=meta["chapter_id"], segment_id=meta["segment_id"], operation=meta["operation"], rule_id=meta["rule_id"])
+        if recomputed_base != st.get("base_id"): raise LedgerCorruptionError(f"attempt {att_id} base_id does not bind metadata")
+
+
+def verify_attempt_metadata_consistency(proj, run, attempt_id) -> None:
+    pr = proj.reservations.get(attempt_id); ra = run.attempts.get(attempt_id)
+    if pr is None or ra is None: return
+    _validate_attempt_metadata(pr.get("metadata")); _validate_attempt_metadata(ra.get("metadata"))
+    if pr.get("metadata") != ra.get("metadata"): raise LedgerCorruptionError(f"attempt metadata mismatch for {attempt_id}")
+
+
+class LedgerCorruptionError(RuntimeError):
+    pass
+
+
+class ProjectLedger:
+    def __init__(self, experiment_id, total_cap, calls_made=0, reservations=None):
+        self.experiment_id = experiment_id; self.total_cap = total_cap; self.calls_made = calls_made; self.reservations = reservations or {}
 
     @classmethod
-    def load_or_create(
-        cls,
-        persist_path: Path | None,
-        global_hard_cap: int,
-        run_id: str = "",
-        code_sha: str = "",
-        rules_sha: str = "",
-    ) -> "BudgetLedger":
-        """Load ledger from persist_path, or create a new one if it doesn't exist.
+    def load_or_create(cls, path, experiment_id, total_cap):
+        if path and os.path.exists(path):
+            try: data = json.loads(Path(path).read_text(encoding="utf-8"))
+            except Exception as e: raise LedgerCorruptionError(f"project ledger JSON unparseable: {e}") from e
+            _validate_ledger_state(data)
+            if data.get("experiment_id") != experiment_id: raise ValueError("project ledger experiment_id mismatch")
+            if data.get("total_cap") != total_cap: raise LedgerCorruptionError(f"project ledger cap mismatch: stored={data.get('total_cap')}, requested={total_cap}")
+            if not isinstance(data.get("calls_made"), int) or data["calls_made"] < 0: raise LedgerCorruptionError("project calls_made invalid")
+            if not isinstance(data.get("reservations"), dict): raise LedgerCorruptionError("project reservations not a dict")
+            if data["calls_made"] != len(data["reservations"]): raise LedgerCorruptionError("project calls_made != len(reservations)")
+            for att_id, r in data["reservations"].items():
+                if not isinstance(r, dict): raise LedgerCorruptionError(f"reservation {att_id} not a dict")
+                if r.get("metadata") is None: raise LedgerCorruptionError(f"reservation {att_id} metadata must not be None")
+                _validate_attempt_metadata(r.get("metadata"))
+                _verify_attempt_id(r.get("metadata")["run_id"], r.get("metadata")["batch_id"], att_id, r.get("metadata"))
+            return cls(experiment_id, total_cap, data["calls_made"], data.get("reservations"))
+        return cls(experiment_id, total_cap)
 
-        The global_hard_cap is ALWAYS enforced from the argument, not from the
-        persisted file -- this prevents a stale manifest from silently raising
-        the cap. If the persisted calls_made already exceeds the cap, the
-        ledger starts exhausted.
+    def _state(self): return {"experiment_id": self.experiment_id, "total_cap": self.total_cap, "calls_made": self.calls_made, "reservations": self.reservations}
+    def _persist(self, path): state = self._state(); state["ledger_hash"] = _ledger_hash(state); _atomic_write_json(path, state)
 
-        Fail-closed on corruption (P0-2): if the persisted file is corrupt,
-        has missing fields, negative values, or a cap mismatch, raises
-        LedgerCorruptionError instead of silently starting fresh.
-        """
-        ledger = cls(
-            global_hard_cap=global_hard_cap,
-            persist_path=persist_path,
-            run_id=run_id,
-            code_sha=code_sha,
-            rules_sha=rules_sha,
-        )
-        if persist_path is not None:
-            # P0-1: any run that persists a ledger MUST freeze its identity by
-            # providing all three binding fields (whether creating fresh or
-            # resuming). Refusing to persist without bindings prevents an
-            # unbound ledger that could later be silently reused.
-            binding_fields = ("run_id", "code_sha", "rules_sha")
-            provided = {"run_id": run_id, "code_sha": code_sha, "rules_sha": rules_sha}
-            for k in binding_fields:
-                if not provided[k]:
-                    raise LedgerCorruptionError(
-                        f"ledger binding field {k!r} must be provided when "
-                        f"persisting to {persist_path} (refusing a ledger "
-                        f"without a frozen identity)"
-                    )
+    def before_call(self, attempt_id, path, metadata=None):
+        if metadata is None: raise LedgerCorruptionError("project metadata must not be None")
+        _validate_attempt_metadata(metadata)
+        _verify_attempt_id(metadata["run_id"], metadata["batch_id"], attempt_id, metadata)
+        with FileLock(str(path) + ".lock"):
+            fresh = self.load_or_create(path, self.experiment_id, self.total_cap)
+            existing = fresh.reservations.get(attempt_id)
+            if existing is not None:
+                if existing.get("metadata") != metadata: raise LedgerCorruptionError(f"project duplicate attempt metadata mismatch for {attempt_id}")
+                return ALREADY_RESERVED
+            if fresh.calls_made + 1 > fresh.total_cap: raise RuntimeError("project budget exhausted")
+            fresh.calls_made += 1
+            fresh.reservations[attempt_id] = {"status": "reserved", "metadata": metadata}
+            fresh._persist(path); self.__dict__.update(fresh.__dict__); return None
 
-        if persist_path is not None and persist_path.exists():
-            try:
-                data = json.loads(persist_path.read_text(encoding="utf-8"))
-            except (json.JSONDecodeError, UnicodeDecodeError) as e:
-                # P0-2: a corrupt (unparseable) ledger must be rejected as
-                # LedgerCorruptionError, not crash with a raw JSONDecodeError
-                # that an upstream `except Exception: pass` could swallow.
-                raise LedgerCorruptionError(
-                    f"ledger file unparseable: {persist_path}: {e}"
-                ) from e
-            if not isinstance(data, dict):
-                raise LedgerCorruptionError(
-                    f"ledger file is not a JSON object: {persist_path}"
-                )
-            # Validate all required fields are present and well-typed.
-            required = ("calls_made", "accepted", "skipped", "global_hard_cap")
-            for k in required:
-                if k not in data:
-                    raise LedgerCorruptionError(
-                        f"ledger missing required field {k!r}: {persist_path}"
-                    )
-                if not isinstance(data[k], int):
-                    raise LedgerCorruptionError(
-                        f"ledger field {k!r} is not int: {data[k]!r}"
-                    )
-            # Negative values are corrupt.
-            for k in required:
-                if data[k] < 0:
-                    raise LedgerCorruptionError(
-                        f"ledger field {k!r} is negative: {data[k]}"
-                    )
-            # Cap mismatch: the persisted cap must match the argument.
-            # A mismatch means the ledger was created for a different run
-            # with a different budget -- reusing it would silently change
-            # the budget.
-            if data["global_hard_cap"] != global_hard_cap:
-                raise LedgerCorruptionError(
-                    f"ledger cap mismatch: persisted={data['global_hard_cap']}, "
-                    f"argument={global_hard_cap}"
-                )
-            # Run binding (P0-1): a persisted ledger REQUIRES all three binding
-            # fields present in the file, and they must match the caller's
-            # frozen values EXACTLY. A missing persisted binding field or any
-            # mismatch is a hard failure -- there is no lenient "upgrade" that
-            # would let a stale ledger from a different run be silently reused.
-            for k in binding_fields:
-                persisted_val = data.get(k, "")
-                if not persisted_val:
-                    raise LedgerCorruptionError(
-                        f"ledger missing binding field {k!r} in persisted file "
-                        f"{persist_path} (cannot establish identity)"
-                    )
-                if persisted_val != provided[k]:
-                    raise LedgerCorruptionError(
-                        f"ledger {k} mismatch: persisted={persisted_val[:16]!r}, "
-                        f"argument={provided[k][:16]!r} -- refusing to reuse a "
-                        f"ledger from a different run"
-                    )
-            ledger.calls_made = data["calls_made"]
-            ledger.accepted = data["accepted"]
-            ledger.skipped = data["skipped"]
-            if ledger.calls_made >= global_hard_cap:
-                ledger.exhausted = True
-        return ledger
+    def remaining(self): return self.total_cap - self.calls_made
 
-    def save(self) -> None:
-        """Persist ledger state to persist_path (atomic write)."""
-        if self.persist_path is None:
-            return
-        data = {
-            "global_hard_cap": self.global_hard_cap,
-            "calls_made": self.calls_made,
-            "accepted": self.accepted,
-            "skipped": self.skipped,
-            "exhausted": self.exhausted,
-            "run_id": self.run_id,
-            "code_sha": self.code_sha,
-            "rules_sha": self.rules_sha,
-        }
+
+class BudgetLedger:
+    """Run-level API budget ledger (new stage-5 schema) merged with the legacy
+    interface (summary()/exhausted/in-memory record_call) so regen_mcq.py and
+    the existing remediation test suite keep working while run_sanming_batch uses
+    the new attempts/legacy_calls budget-ctx path."""
+
+    def __init__(self, global_hard_cap, persist_path=None, run_id="", code_sha="", rules_sha="", attempts=None):
+        self.global_hard_cap = global_hard_cap
+        self.persist_path = Path(persist_path) if persist_path else None
+        self.run_id = run_id; self.code_sha = code_sha; self.rules_sha = rules_sha
+        self.calls_made = 0; self.accepted = 0; self.skipped = 0; self.exhausted = 0
+        self.legacy_calls = 0
+        self.attempts = attempts or {}
+
+    def _state(self):
+        return {"global_hard_cap": self.global_hard_cap, "calls_made": self.calls_made, "accepted": self.accepted,
+                "skipped": self.skipped, "exhausted": self.exhausted, "run_id": self.run_id, "code_sha": self.code_sha,
+                "rules_sha": self.rules_sha, "legacy_calls": self.legacy_calls, "attempts": self.attempts}
+
+    @classmethod
+    def load_or_create(cls, path, global_hard_cap, run_id="", code_sha="", rules_sha=""):
+        if path and os.path.exists(path):
+            try: data = json.loads(Path(path).read_text(encoding="utf-8"))
+            except Exception as e: raise LedgerCorruptionError(f"run ledger JSON unparseable: {e}") from e
+            _validate_ledger_state(data)
+            for k in ("run_id", "code_sha", "rules_sha"):
+                if not data.get(k): raise LedgerCorruptionError(f"run ledger missing binding field {k}")
+            if data["run_id"] != run_id or data["code_sha"] != code_sha or data["rules_sha"] != rules_sha:
+                raise LedgerCorruptionError("run ledger identity drift")
+            if data["global_hard_cap"] != global_hard_cap: raise LedgerCorruptionError("run ledger cap mismatch")
+            if not isinstance(data["calls_made"], int) or data["calls_made"] < 0: raise LedgerCorruptionError("run calls_made invalid")
+            for k in ("accepted", "skipped", "exhausted", "legacy_calls"):
+                if not isinstance(data.get(k, 0), int) or data.get(k, 0) < 0: raise LedgerCorruptionError(f"run {k} invalid")
+            attempts = data.get("attempts", {})
+            _validate_run_attempts(run_id, attempts)
+            if data["calls_made"] != len(attempts): raise LedgerCorruptionError("run calls_made != len(attempts)")
+            led = cls(global_hard_cap, persist_path=path, run_id=run_id, code_sha=code_sha, rules_sha=rules_sha, attempts=attempts)
+            led.calls_made = data["calls_made"]; led.accepted = data.get("accepted", 0); led.skipped = data.get("skipped", 0)
+            led.exhausted = data.get("exhausted", 0); led.legacy_calls = data.get("legacy_calls", 0)
+            return led
+        # P0-1（向后兼容合并）：新建持久化账本必须冻结身份，缺绑定即拒绝
+        if path is not None:
+            for k in ("run_id", "code_sha", "rules_sha"):
+                if not locals().get(k):
+                    raise LedgerCorruptionError(f"ledger binding field {k!r} must be provided when persisting to {path} (refusing a ledger without a frozen identity)")
+        return cls(global_hard_cap, persist_path=path, run_id=run_id, code_sha=code_sha, rules_sha=rules_sha)
+
+    def save(self):
+        if self.persist_path is None: return
+        data = self._state(); data["ledger_hash"] = _ledger_hash(data)
         tmp = self.persist_path.parent / f".{self.persist_path.name}.tmp"
         tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-        try:
-            tmp.replace(self.persist_path)
-        except Exception:
-            tmp.unlink(missing_ok=True)
-            raise
+        try: tmp.replace(self.persist_path)
+        except Exception: tmp.unlink(missing_ok=True); raise
 
-    def can_call(self) -> bool:
-        if self.calls_made >= self.global_hard_cap:
-            self.exhausted = True
-            return False
-        return True
+    def _locked_mutate(self, path, mutate):
+        if not (path or self.persist_path):
+            mutate(self)  # 内存态（无持久化），兼容旧用法
+            return
+        with FileLock(str(path or self.persist_path) + ".lock"):
+            fresh = BudgetLedger.load_or_create(path or self.persist_path, self.global_hard_cap, self.run_id, self.code_sha, self.rules_sha)
+            mutate(fresh)
+            if path:
+                data = fresh._state(); data["ledger_hash"] = _ledger_hash(data); _atomic_write_json(path, data)
+            else:
+                fresh.save()
+            self.__dict__.update(fresh.__dict__)
 
-    def record_call(self) -> None:
-        self.calls_made += 1
-        self.save()
+    def record_attempt(self, attempt_id, path=None, base_id=None, attempt_no=None, metadata=None, batch_id=""):
+        if metadata is None: raise LedgerCorruptionError("run metadata must not be None")
+        _validate_attempt_metadata(metadata); _verify_attempt_id(self.run_id, batch_id, attempt_id, metadata)
+        def _m(fresh):
+            existing = fresh.attempts.get(attempt_id)
+            if existing is not None:
+                if existing.get("status") in _TERMINAL_STATES: raise LedgerCorruptionError(f"record_attempt after terminal for {attempt_id}")
+                if existing.get("metadata") != metadata: raise LedgerCorruptionError(f"run record_attempt metadata mismatch for {attempt_id}")
+                return
+            if fresh.calls_made + fresh.legacy_calls + 1 > fresh.global_hard_cap: raise RuntimeError("run budget exhausted")
+            fresh.attempts[attempt_id] = {"status": "attempted", "base_id": base_id, "batch_id": batch_id, "attempt_no": attempt_no, "metadata": metadata}
+            fresh.calls_made += 1
+        self._locked_mutate(path, _m)
 
-    def record_accept(self) -> None:
-        self.accepted += 1
-        self.save()
+    def record_terminal(self, attempt_id, status, path=None):
+        if status not in _TERMINAL_STATES: raise LedgerCorruptionError(f"invalid terminal status {status!r}")
+        def _m(fresh):
+            existing = fresh.attempts.get(attempt_id)
+            if existing is None: raise LedgerCorruptionError(f"terminal for missing attempt {attempt_id}")
+            if existing.get("status") in _TERMINAL_STATES: raise LedgerCorruptionError(f"terminal re-transition for {attempt_id}: {existing['status']} -> {status}")
+            existing["status"] = status; fresh.attempts[attempt_id] = existing
+        self._locked_mutate(path, _m)
 
-    def record_skip(self) -> None:
-        self.skipped += 1
-        self.save()
+    def record_call(self, path=None):
+        """P0-5：legacy 路径弃用——改用 before_legacy_call 锁内原子 cap 检查。保留为兼容桩，新代码不用。"""
+        self.before_legacy_call(path=path)
+
+    def before_legacy_call(self, path=None):
+        """P0-5：legacy 路径原子 cap 检查 + 计数（同一锁内，无 TOCTOU）。"""
+        def _m(fresh):
+            if fresh.calls_made + fresh.legacy_calls + 1 > fresh.global_hard_cap: raise RuntimeError("run budget exhausted")
+            fresh.legacy_calls += 1
+        self._locked_mutate(path, _m)
+
+    def can_call(self):
+        ok = self.calls_made + self.legacy_calls < self.global_hard_cap
+        if not ok: self.exhausted = True
+        return ok
+
+    def record_accept(self, path=None):
+        def _m(fresh): fresh.accepted += 1
+        self._locked_mutate(path, _m)
+    def record_skip(self, path=None):
+        def _m(fresh): fresh.skipped += 1
+        self._locked_mutate(path, _m)
+    def has_terminal(self, attempt_id): return self.attempts.get(attempt_id, {}).get("status") in _TERMINAL_STATES
 
     def summary(self) -> dict:
-        return {
-            "calls_made": self.calls_made,
-            "accepted": self.accepted,
-            "skipped": self.skipped,
-            "exhausted": self.exhausted,
-            "remaining": max(0, self.global_hard_cap - self.calls_made),
-            "run_id": self.run_id,
-        }
+        return {"calls_made": self.calls_made, "accepted": self.accepted, "skipped": self.skipped,
+                "exhausted": self.exhausted, "remaining": max(0, self.global_hard_cap - (self.calls_made + self.legacy_calls)),
+                "legacy_calls": self.legacy_calls, "attempts": len(self.attempts), "run_id": self.run_id}
 
 
-class LedgerCorruptionError(Exception):
-    """Raised when a persisted budget ledger is corrupt or tampered (P0-2)."""
+def call_with_budget(fn, *, proj, run, attempt_id, project_path, run_path=None, base_id=None, attempt_no=None, metadata=None, batch_id=""):
+    if metadata is None: raise LedgerCorruptionError("metadata must not be None")
+    _validate_attempt_metadata(metadata)
+    if proj.before_call(attempt_id, path=project_path, metadata=metadata) == ALREADY_RESERVED: raise RuntimeError("duplicate attempt_id: refusing external call")
+    run.record_attempt(attempt_id, path=run_path, base_id=base_id, attempt_no=attempt_no, metadata=metadata, batch_id=batch_id)
+    try: out = fn()
+    except Exception as e: run.record_terminal(attempt_id, "failed", path=run_path); raise
+    run.record_terminal(attempt_id, "success", path=run_path)
+    return out
 
 
-# Polarity opposite pairs for bazi terminology (P0-1 strict check).
-# (positive_marker, negative_marker)
+def reserved_unattributed(proj, run): return set(proj.reservations) - set(run.attempts)
+def interrupted_unknown(run): return {a for a, st in run.attempts.items() if st.get("status") == "attempted"}
 _POLARITY_PAIRS = [
     ("喜", "忌"),
     ("吉", "凶"),

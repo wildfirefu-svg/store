@@ -175,7 +175,7 @@ def fill_book(dir_key: str, global_budget: int = 5000,
         run_id=run_id, code_sha=code_sha, rules_sha=rules_sha)
     # Medium: snapshot the SHARED ledger so api_generation records THIS book's
     # call delta, not the cross-book cumulative total.
-    _calls_before = ledger.calls_made
+    _calls_before = ledger.legacy_calls
     _accepted_before = ledger.accepted
     _skipped_before = ledger.skipped
     new_rules_total = []
@@ -387,7 +387,7 @@ def fill_book(dir_key: str, global_budget: int = 5000,
                 "thinking_mode": dl.FROZEN_MODEL_CONFIG["thinking_mode"],
                 "temperature": dl.FROZEN_MODEL_CONFIG["temperature"],
                 # Medium: per-book call deltas, not cross-book cumulative totals.
-                "calls_made": ledger.calls_made - _calls_before,
+                "calls_made": ledger.legacy_calls - _calls_before,
                 "accepted": ledger.accepted - _accepted_before,
                 "skipped": ledger.skipped - _skipped_before,
                 "verification_level": "partial",  # corrected below if manifest archived
