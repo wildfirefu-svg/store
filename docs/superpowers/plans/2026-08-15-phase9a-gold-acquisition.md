@@ -1,10 +1,10 @@
-# Phase 9A-Gold item-centered 人工 Gold 采集 Implementation Plan（v1）
+# Phase 9A-Gold item-centered 人工 Gold 采集 Implementation Plan（v2）
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 按 v1.7 规约建立 item-centered 人工 Gold（112 项，A 提议 + B 盲审 + C 裁决），产出 `GOLD_READY / GOLD_BLOCKED_ACQUISITION` 之一终态并密封。
 
-**Architecture:** 纯本地零 LLM API；复用 Phase 9A 冻结语料（kb_snapshot.db、classic_texts 冻结版）。执行顺序：**config_frozen（112 项定义/角色/搜索计划/HN QC 配置/守护配置）→ code_frozen（工具链：读取包装器/搜索执行器/盲审包生成器/解盲映射器/校验器/对账器 + HN 抽样 + r1 盲审包 + B verification packet）→ 人工采集（A 提议 → 搜索执行 → B 盲审 → 解盲 → 分歧裁决）→ gold_validate 全过 → sealed + GOLD_RECEIPT**。
+**Architecture:** 纯本地零 LLM API；复用 Phase 9A 冻结语料。执行顺序（依赖链）：**基线复核 → config builder/validator 实现并冻结 → 人工填写角色 + 审核搜索计划（暂停点）→ 冻结最终 config（config_frozen）→ 工具 1a（读取+搜索执行）→ 工具 1b（HN 抽样+packet/receipt+解盲映射）→ 工具 1c（validate+reconcile+finalize+guard）→ 冻结全部代码（code_frozen）→ A 采集并冻结 proposal/HN/no-positive 快照 → 生成 HN sample + r1 packet + verification packet 并冻结 → B/C 人工暂停点（按需 r2/r3）→ finalize_gold.py 双终态发布 + reconcile + guard 验证**。
 
 **Tech Stack:** Python 3.11+、sqlite3（只读 URI）、git object 读取、pytest、ruff（E9/F821 基线）。
 
@@ -29,16 +29,10 @@
 
 ---
 
-## Task 0: 基线验证 + gold manifest 初始化（config_frozen）
+## Task 0: 基线验证 + 输入 SHA 记录
 
 **Files:**
-- Create: `docs/phase9a/gold/gold_manifest.json`（初始 config_frozen）
-- Create: `docs/phase9a/gold/gold_item_definitions.json`
-- Create: `docs/phase9a/gold/gold_roles.json`（模板，人工填写身份）
-- Create: `docs/phase9a/gold/gold_search_plans.json`
-- Create: `docs/phase9a/gold/gold_b_verification_plans.json`
-- Create: `docs/phase9a/gold/gold_hn_qc_config.json`
-- Create: `docs/phase9a/gold/gold_guard_config.json`（禁改守护配置，seal 前冻结）
+- Create: `docs/phase9a/gold/upstream_inputs_sha.json`
 - Test: `tests/test_phase9a_gold.py`
 
 - [ ] **Step 1: 复核 Phase 9A/R1 对账与输入存在性**
@@ -55,7 +49,7 @@ Expected: 两个 reconcile exit 0 无 FAIL；全部 True。
 
 - [ ] **Step 2: 写失败测试**
 
-`tests/test_phase9a_gold.py`（新建文件，顶部 helper 复用 Phase 9A 测试模式）：
+`tests/test_phase9a_gold.py`（新建文件，顶部 helper）：
 ```python
 import hashlib
 import importlib.util
@@ -88,228 +82,471 @@ def _load_module(name: str, rel: str):
     return mod
 
 
-class TestGoldConfigFrozen:
-    def test_manifest_config_frozen(self):
-        m = _load_json(PG / "gold_manifest.json")
-        assert m["stage"] == "config_frozen"
-        for name in ("upstream_manifest_v4", "gold_item_definitions", "gold_roles", "gold_search_plans",
-                     "gold_b_verification_plans", "gold_hn_qc_config", "gold_guard_config"):
-            assert name in m["entries"], f"{name} not frozen"
-
-    def test_item_definitions_112(self):
-        defs = _load_json(PG / "gold_item_definitions.json")
-        assert defs["schema_version"] == "1.0"
-        assert len(defs["items"]) == 112
-        item_ids = [i["item_id"] for i in defs["items"]]
-        assert item_ids == sorted(item_ids)  # 按 item_id 排序
-        assert len(set(item_ids)) == 112
-        for item in defs["items"]:
-            assert {"item_id", "case_id", "required_term", "query_specs", "item_description", "upstream"} <= set(item)
-            assert item["upstream"]["required_knowledge_sha256"] and item["upstream"]["knowledge_audit_sha256"]
-
-    def test_roles_template(self):
-        roles = _load_json(PG / "gold_roles.json")
-        assert roles["schema_version"] == "1.0"
-        # 模板状态：身份为占位符，采集前必须人工填写为互不相同的人类身份
-        assert roles["curator_A"] and roles["curator_B"]
+class TestGoldBaseline:
+    def test_upstream_inputs_sha(self):
+        sha = _load_json(PG / "upstream_inputs_sha.json")
+        assert sha["schema_version"] == "1.0"
+        # 上游 SHA 与 Phase 8 manifest 单源一致（jsonl_canonical 口径）
+        p8m = _load_json(P8 / "manifest.json")
+        assert sha["required_knowledge_sha256"] == p8m["entries"]["required_knowledge"]["sha256"]
+        assert sha["knowledge_audit_sha256"] == p8m["entries"]["knowledge_audit"]["sha256"]
 ```
 
 - [ ] **Step 3: 运行确认失败**
 
-Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py::TestGoldConfigFrozen -q`
-Expected: FAIL（文件不存在）。
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py::TestGoldBaseline -q`
+Expected: FAIL。
 
-- [ ] **Step 4: 实现 gold_item_definitions 生成器 + 生成**
+- [ ] **Step 4: 生成 upstream_inputs_sha.json（单源读取 Phase 8 manifest，非 raw-byte 重算）**
 
-写 `docs/phase9a/gold/build_item_definitions.py`：
 ```python
-"""Phase 9A-Gold：从 Phase 8 冻结数据生成 112 项定义（含上游路径与 SHA）。"""
-from __future__ import annotations
-
-import hashlib
-import json
-import sys
+import json, sys
 from pathlib import Path
-
-REPO = Path(__file__).resolve().parent.parent.parent.parent
-P9 = REPO / "docs" / "phase9a" / "retrieval"
-P8 = REPO / "docs" / "phase8" / "marriage-capability"
-PG = REPO / "docs" / "phase9a" / "gold"
-
-
-def _sha(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-def main() -> None:
-    sys.path.insert(0, str(P9))
-    sys.path.insert(0, str(P8))
-    import phase9a_manifest as pm
-    pm.verify_frozen(P9 / "manifest_v4.json", ["item_query_map"], required_stage="sealed")
-    item_map = json.loads((P9 / "item_query_map.json").read_text(encoding="utf-8"))
-    rk = {r["case_id"]: r for r in (json.loads(l) for l in (P8 / "required_knowledge.jsonl").open(encoding="utf-8") if l.strip())}
-    audit = {r["case_id"]: r for r in (json.loads(l) for l in (P8 / "knowledge_audit.jsonl").open(encoding="utf-8") if l.strip())}
-    rk_sha = _sha(P8 / "required_knowledge.jsonl")
-    audit_sha = _sha(P8 / "knowledge_audit.jsonl")
-    items = []
-    for item in item_map["items"]:
-        case_id = item["case_id"]
-        item_id = item["item_id"]
-        req_term = ""
-        if case_id in audit:
-            for audit_item in audit[case_id]["items"]:
-                if audit_item["item_id"] == item_id:
-                    req_term = audit_item.get("prompt_evidence", {}).get("required_term", "")
-                    break
-        query_specs = []
-        if case_id in rk:
-            for rk_item in rk[case_id]["items"]:
-                if rk_item["item_id"] == item_id:
-                    query_specs = rk_item.get("query_specs", [])
-                    break
-        query_terms = []
-        for qs in query_specs:
-            args = qs.get("args", {})
-            term = args.get("query") or args.get("name") or args.get("combo_name") or (args.get("gan", "") + args.get("zhi", "")) or args.get("gan_or_zhi", "")
-            if term:
-                query_terms.append(term)
-        items.append({
-            "item_id": item_id,
-            "case_id": case_id,
-            "required_term": req_term,
-            "query_specs": query_specs,
-            "item_description": f"required_term={req_term}; query_terms={','.join(query_terms[:3])}",
-            "upstream": {
-                "required_knowledge_path": "docs/phase8/marriage-capability/required_knowledge.jsonl",
-                "required_knowledge_sha256": rk_sha,
-                "knowledge_audit_path": "docs/phase8/marriage-capability/knowledge_audit.jsonl",
-                "knowledge_audit_sha256": audit_sha,
-            },
-        })
-    items.sort(key=lambda i: i["item_id"])
-    assert len(items) == 112
-    out = {"schema_version": "1.0", "items": items}
-    PG.mkdir(parents=True, exist_ok=True)
-    (PG / "gold_item_definitions.json").write_text(
-        json.dumps(out, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
-    print(f"gold_item_definitions written: {len(items)} items")
-
-
-if __name__ == "__main__":
-    main()
+sys.path.insert(0, "docs/phase8/marriage-capability")
+sys.path.insert(0, "docs/phase9a/retrieval")
+import phase9a_manifest as pm
+P8 = Path("docs/phase8/marriage-capability")
+PG = Path("docs/phase9a/gold")
+p8m = json.loads((P8 / "manifest.json").read_text(encoding="utf-8"))
+out = {
+    "schema_version": "1.0",
+    "required_knowledge_sha256": p8m["entries"]["required_knowledge"]["sha256"],
+    "knowledge_audit_sha256": p8m["entries"]["knowledge_audit"]["sha256"],
+    "item_query_map_sha256": json.loads((Path("docs/phase9a/retrieval") / "manifest_v4.json").read_text(encoding="utf-8"))["entries"]["item_query_map"]["sha256"],
+    "note": "单源读取 Phase 8/9A manifest，非 raw-byte 重算",
+}
+PG.mkdir(parents=True, exist_ok=True)
+(PG / "upstream_inputs_sha.json").write_text(json.dumps(out, ensure_ascii=False, indent=1) + "\n", encoding="utf-8", newline="\n")
+print("upstream_inputs_sha written")
 ```
 
-- [ ] **Step 5: 生成其余 config 文件 + 初始化 manifest（config_frozen）**
+- [ ] **Step 5: 测试转绿 + Commit**
 
-`gold_roles.json`（模板，人工填写身份）：
-```json
-{"schema_version": "1.0", "curator_A": "PLACEHOLDER_HUMAN_A", "curator_B": "PLACEHOLDER_HUMAN_B", "curator_C": null, "note": "采集前必须人工填写为互不相同的人类身份；C 可选但须采集前冻结；未指定或身份相同 → BLOCKED_ROLE_ASSIGNMENT"}
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py::TestGoldBaseline -q`
+Expected: PASS。
+```powershell
+git add -- docs/phase9a/gold/upstream_inputs_sha.json tests/test_phase9a_gold.py
+git diff --cached --name-only
+git commit -m "feat(phase9a-gold): baseline validation + upstream inputs SHA (single-source from manifests)"
 ```
 
-`gold_search_plans.json`（模板，人工/工具生成）：每 item 一份搜索计划（正例步骤 + hn 步骤），每步 `step_id/entrypoint/args/query_terms/filters/corpus_snapshot_sha256`。初版可由工具从 item_query_map 的 query_specs 机械生成（每 item 一个正例步骤 + 一个 hn 步骤），人工可补充。
+---
 
-`gold_b_verification_plans.json`（全量 112 项预冻结）：每项 `_bv` 步骤（entrypoint/args/query_terms/filters）。
+## Task 1: config builder/validator 实现并冻结（freeze-before-use）
 
-`gold_hn_qc_config.json`：
-```json
-{"schema_version": "1.0", "seed": 20260814, "ratio": 0.2, "stratify_by": "item_id", "sample_count_formula": "ceil(total_hn * 0.2)", "per_item_min_formula": "floor(n_hn_i * 0.2)", "remainder_allocation": "item_id 字典序逐层 +1", "overflow_return": "缺口回流剩余层（同序继续补足）", "rng": "random.Random(20260814) 全局单实例", "note": "样本列表先于 r1 盲审包构造冻结"}
+**Files:**
+- Create: `docs/phase9a/gold/build_gold_config.py`（生成 112 项定义 + 搜索计划 + B verification 计划 + HN QC 配置 + 守护配置）
+- Create: `docs/phase9a/gold/validate_gold_config.py`（schema 校验 + 112 项覆盖 + 上游 SHA 一致性）
+- Test: `tests/test_phase9a_gold.py`
+
+- [ ] **Step 1: 写失败测试**
+
+```python
+class TestGoldConfigBuilder:
+    def test_builder_frozen_before_use(self):
+        # builder 必须先冻结到 gold_manifest（config_frozen 阶段）再运行
+        m = _load_json(PG / "gold_manifest.json")
+        assert "build_gold_config_py" in m["entries"]
+        assert "validate_gold_config_py" in m["entries"]
+
+    def test_config_schema_valid(self):
+        defs = _load_json(PG / "gold_item_definitions.json")
+        assert len(defs["items"]) == 112
+        plans = _load_json(PG / "gold_search_plans.json")
+        assert len(plans["plans"]) == 112
+        bvp = _load_json(PG / "gold_b_verification_plans.json")
+        assert len(bvp["plans"]) == 112  # 全量预冻结
 ```
 
-`gold_guard_config.json`（禁改守护配置，seal 前冻结）：
-```json
-{"schema_version": "1.0", "protected_paths": ["docs/phase9a/gold/gold_v1.json", "docs/phase9a/gold/gold_manifest.json"], "activation": "GOLD_RECEIPT 发布后激活", "note": "修订必须新建 gold_v2.json"}
-```
+- [ ] **Step 2: 运行确认失败**
 
-初始化 manifest（config_frozen）：
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py::TestGoldConfigBuilder -q`
+Expected: FAIL。
+
+- [ ] **Step 3: 实现 build_gold_config.py + validate_gold_config.py**
+
+build_gold_config.py 职责：从 item_query_map + required_knowledge + knowledge_audit 生成 gold_item_definitions.json（112 项，含上游 SHA 从 upstream_inputs_sha.json 单源读取）+ gold_search_plans.json（每 item 正例步骤 + hn 步骤，机械生成）+ gold_b_verification_plans.json（全量 112 项 `_bv` 步骤）+ gold_hn_qc_config.json + gold_guard_config.json。builder 内部 verify_frozen（自身代码 + upstream_inputs_sha）。
+
+validate_gold_config.py 职责：schema 校验（必填字段/类型/枚举）+ 112 项覆盖（item_id 集合与 item_query_map 一致）+ 上游 SHA 一致性（与 upstream_inputs_sha.json 匹配）+ 搜索计划完整性（每 item 至少 1 正例步骤 + 1 hn 步骤）。
+
+- [ ] **Step 4: 初始化 gold_manifest（config_frozen）→ 冻结 builder/validator → 运行生成 config**
+
 ```python
 import sys
 from pathlib import Path
 sys.path.insert(0, "docs/phase8/marriage-capability")
 sys.path.insert(0, "docs/phase9a/retrieval")
 import phase9a_manifest as pm
-P9 = Path("docs/phase9a/retrieval")
 PG = Path("docs/phase9a/gold")
 m = PG / "gold_manifest.json"
 pm.set_stage(m, "config_frozen")
 pm.freeze(m, {
-    "upstream_manifest_v4": (P9 / "manifest_v4.json", "json_canonical"),
-    "gold_item_definitions": (PG / "gold_item_definitions.json", "json_canonical"),
-    "gold_roles": (PG / "gold_roles.json", "json_canonical"),
-    "gold_search_plans": (PG / "gold_search_plans.json", "json_canonical"),
-    "gold_b_verification_plans": (PG / "gold_b_verification_plans.json", "json_canonical"),
-    "gold_hn_qc_config": (PG / "gold_hn_qc_config.json", "json_canonical"),
-    "gold_guard_config": (PG / "gold_guard_config.json", "json_canonical"),
+    "upstream_manifest_v4": (Path("docs/phase9a/retrieval") / "manifest_v4.json", "json_canonical"),
+    "upstream_inputs_sha": (PG / "upstream_inputs_sha.json", "json_canonical"),
+    "build_gold_config_py": (PG / "build_gold_config.py", "git_canonical_lf"),
+    "validate_gold_config_py": (PG / "validate_gold_config.py", "git_canonical_lf"),
 })
-print("gold_manifest initialized at config_frozen")
+print("gold_manifest initialized at config_frozen; builder/validator frozen")
 ```
 
-- [ ] **Step 6: 测试转绿 + Commit**
+Run: `.venv/Scripts/python.exe docs/phase9a/gold/build_gold_config.py`
+Expected: 生成 5 个 config 文件。
 
-Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py::TestGoldConfigFrozen -q`
+Run: `.venv/Scripts/python.exe docs/phase9a/gold/validate_gold_config.py`
+Expected: exit 0（schema + 112 覆盖 + 上游 SHA 一致）。
+
+- [ ] **Step 5: 测试转绿 + Commit**
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py -q`
 Expected: PASS。
 ```powershell
-git add -- docs/phase9a/gold/gold_manifest.json docs/phase9a/gold/gold_item_definitions.json docs/phase9a/gold/gold_roles.json docs/phase9a/gold/gold_search_plans.json docs/phase9a/gold/gold_b_verification_plans.json docs/phase9a/gold/gold_hn_qc_config.json docs/phase9a/gold/gold_guard_config.json docs/phase9a/gold/build_item_definitions.py tests/test_phase9a_gold.py
+git add -- docs/phase9a/gold/gold_manifest.json docs/phase9a/gold/build_gold_config.py docs/phase9a/gold/validate_gold_config.py docs/phase9a/gold/gold_item_definitions.json docs/phase9a/gold/gold_search_plans.json docs/phase9a/gold/gold_b_verification_plans.json docs/phase9a/gold/gold_hn_qc_config.json docs/phase9a/gold/gold_guard_config.json tests/test_phase9a_gold.py
 git diff --cached --name-only
-git commit -m "feat(phase9a-gold): config_frozen - 112 item definitions + roles/search plans/HN QC config/guard config"
+git commit -m "feat(phase9a-gold): config builder/validator frozen + 112 item definitions + search plans generated"
+```
+
+**⏸ 暂停点（人工）：** 人工填写 gold_roles.json（A/B/C 互不相同人类身份）+ 审核 gold_search_plans.json（112 项搜索计划完整性与合理性）。**未完成前不得执行 Task 2 的 config 冻结**。
+
+---
+
+## Task 2: 人工确认后冻结最终 config（config_frozen 完成）
+
+**Files:**
+- Modify: `docs/phase9a/gold/gold_roles.json`（人工填写身份）
+- Modify: `docs/phase9a/gold/gold_search_plans.json`（人工审核后可补充）
+- Modify: `docs/phase9a/gold/gold_manifest.json`（追加冻结）
+- Test: `tests/test_phase9a_gold.py`
+
+- [ ] **Step 1: 写失败测试**
+
+```python
+class TestGoldConfigFinal:
+    def test_roles_real_identities(self):
+        roles = _load_json(PG / "gold_roles.json")
+        assert roles["curator_A"] != "PLACEHOLDER_HUMAN_A"
+        assert roles["curator_B"] != "PLACEHOLDER_HUMAN_B"
+        assert roles["curator_A"] != roles["curator_B"]  # 互不相同
+        if roles.get("curator_C"):
+            assert roles["curator_C"] not in {roles["curator_A"], roles["curator_B"]}
+
+    def test_search_plans_frozen(self):
+        m = _load_json(PG / "gold_manifest.json")
+        assert "gold_search_plans" in m["entries"]
+        assert "gold_roles" in m["entries"]
+        # 冻结后禁止补充：SHA 与磁盘一致
+        plans = _load_json(PG / "gold_search_plans.json")
+        entry = m["entries"]["gold_search_plans"]
+        actual = __import__("phase9a_manifest").STRATEGY_FN[entry["strategy"]](PG / "gold_search_plans.json")
+        assert actual == entry["sha256"]
+```
+
+- [ ] **Step 2: 运行确认失败**
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py::TestGoldConfigFinal -q`
+Expected: FAIL（roles 仍是占位符）。
+
+- [ ] **Step 3: 人工填写 roles + 审核 search plans → 冻结**
+
+人工操作后执行：
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, "docs/phase8/marriage-capability")
+sys.path.insert(0, "docs/phase9a/retrieval")
+import phase9a_manifest as pm
+PG = Path("docs/phase9a/gold")
+pm.freeze(PG / "gold_manifest.json", {
+    "gold_roles": (PG / "gold_roles.json", "json_canonical"),
+    "gold_search_plans": (PG / "gold_search_plans.json", "json_canonical"),
+})
+print("roles + search plans frozen")
+```
+
+- [ ] **Step 4: 测试转绿 + Commit**
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py::TestGoldConfigFinal -q`
+Expected: PASS。
+```powershell
+git add -- docs/phase9a/gold/gold_manifest.json docs/phase9a/gold/gold_roles.json docs/phase9a/gold/gold_search_plans.json tests/test_phase9a_gold.py
+git diff --cached --name-only
+git commit -m "feat(phase9a-gold): final config frozen (roles + search plans confirmed by human)"
 ```
 
 ---
 
-## Task 1: 工具链冻结（code_frozen）
+## Task 3: 工具 1a（读取包装器 + 搜索执行器）
 
 **Files:**
-- Create: `docs/phase9a/gold/gold_read_access.py`（读取包装器，自动 access log）
-- Create: `docs/phase9a/gold/gold_search_exec.py`（搜索计划执行器，落盘 gold_search_results.jsonl）
-- Create: `docs/phase9a/gold/gold_blind_packet_builder.py`（混合盲审包生成器，含 filler/positive_control）
-- Create: `docs/phase9a/gold/gold_unblind_mapper.py`（解盲映射生成器，含冻结四态映射）
-- Create: `docs/phase9a/gold/gold_validate.py`（机器校验器）
-- Create: `docs/phase9a/gold/reconcile_gold.py`（对账入口）
-- Create: `docs/phase9a/gold/gold_hn_qc_sample_list.json`（HN 抽样，先于 r1 构造冻结）
-- Create: `docs/phase9a/gold/gold_blind_review_packet_r1.jsonl`（r1 盲审包，packet SHA 冻结）
-- Create: `docs/phase9a/gold/gold_b_verification_packet.jsonl`（B verification packet，packet SHA 冻结）
+- Create: `docs/phase9a/gold/gold_read_access.py`
+- Create: `docs/phase9a/gold/gold_search_exec.py`
 - Test: `tests/test_phase9a_gold.py`
 
-- [ ] **Step 1: 写失败测试（工具链核心契约）**
+- [ ] **Step 1: 写失败测试**
 
 ```python
-class TestGoldToolchain:
-    def test_stable_hash_deterministic(self):
-        # stable_hash 跨进程可复现
-        import hashlib
-        def stable_hash(item_id: str) -> int:
-            return int.from_bytes(hashlib.sha256(item_id.encode("utf-8")).digest()[:8], "big")
-        assert stable_hash("mingli_ftb_0002#k4") == stable_hash("mingli_ftb_0002#k4")
-        assert isinstance(stable_hash("mingli_ftb_0002#k4"), int)
+class TestGoldTool1a:
+    def test_read_access_logs(self, tmp_path):
+        # 读取包装器自动记录 access log
+        ra = _load_module("gold_read_access", "docs/phase9a/gold/gold_read_access.py")
+        log = tmp_path / "access.jsonl"
+        ra.read_corpus("kb:gejue:hy_002", role="curator_A", log_path=log)
+        lines = [json.loads(l) for l in log.open(encoding="utf-8") if l.strip()]
+        assert len(lines) == 1 and lines[0]["role"] == "curator_A" and lines[0]["canonical_key"] == "kb:gejue:hy_002"
 
-    def test_four_state_mapping_frozen(self):
-        # 四态映射冻结（解盲工具与 reconcile 共用）
-        m = _load_module("gold_unblind_mapper", "docs/phase9a/gold/gold_unblind_mapper.py")
-        assert m.FOUR_STATE_MAP[("positive_proposal", "relevant")] == "confirmed"
-        assert m.FOUR_STATE_MAP[("positive_proposal", "partially_relevant")] == "disagreement"
-        assert m.FOUR_STATE_MAP[("hard_negative", "irrelevant")] == "confirmed"
-        assert m.FOUR_STATE_MAP[("hard_negative", "relevant")] == "rejected"
-        assert m.FOUR_STATE_MAP[("hard_negative", "uncertain")] == "uncertain"
-        assert m.FOUR_STATE_MAP[("positive_control", "relevant")] == "diagnostic_only"
-        assert m.FOUR_STATE_MAP[("filler", "irrelevant")] == "diagnostic_only"
+    def test_search_exec_unique_terminal(self):
+        # 每 step_id 恰一行终态
+        se = _load_module("gold_search_exec", "docs/phase9a/gold/gold_search_exec.py")
+        results = [json.loads(l) for l in (PG / "gold_search_results.jsonl").open(encoding="utf-8") if l.strip()]
+        step_ids = [r["step_id"] for r in results]
+        assert len(step_ids) == len(set(step_ids))  # 无重复
+```
+
+- [ ] **Step 2: 运行确认失败**
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py::TestGoldTool1a -q`
+Expected: FAIL。
+
+- [ ] **Step 3: 实现 gold_read_access.py + gold_search_exec.py**
+
+gold_read_access.py：`read_corpus(canonical_key, role, log_path)` 自动追加 access log（role/timestamp/canonical_key/source_dir）；内部 verify_frozen（自身代码 + upstream）。
+
+gold_search_exec.py：执行 gold_search_plans.json / gold_b_verification_plans.json 的步骤；每步落盘 gold_search_results.jsonl（step_id/item_id/ordered_candidate_keys/candidate_keys_sha256/candidate_count）；唯一终态校验（每 step_id 恰一行，重复执行 fail-closed）；候选排序去重规则与 SHA canonical 规则按规约 §4。
+
+- [ ] **Step 4: 冻结工具 1a → 测试转绿 → Commit**
+
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, "docs/phase8/marriage-capability")
+sys.path.insert(0, "docs/phase9a/retrieval")
+import phase9a_manifest as pm
+PG = Path("docs/phase9a/gold")
+pm.freeze(PG / "gold_manifest.json", {
+    "gold_read_access_py": (PG / "gold_read_access.py", "git_canonical_lf"),
+    "gold_search_exec_py": (PG / "gold_search_exec.py", "git_canonical_lf"),
+})
+print("tool 1a frozen")
+```
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py -q`
+Expected: PASS。
+```powershell
+git add -- docs/phase9a/gold/gold_manifest.json docs/phase9a/gold/gold_read_access.py docs/phase9a/gold/gold_search_exec.py tests/test_phase9a_gold.py
+git diff --cached --name-only
+git commit -m "feat(phase9a-gold): tool 1a frozen (read access wrapper + search executor)"
+```
+
+---
+
+## Task 4: 工具 1b（HN 抽样 + packet/receipt + 解盲映射）
+
+**Files:**
+- Create: `docs/phase9a/gold/gold_hn_sampler.py`
+- Create: `docs/phase9a/gold/gold_blind_packet_builder.py`
+- Create: `docs/phase9a/gold/gold_unblind_mapper.py`
+- Test: `tests/test_phase9a_gold.py`
+
+- [ ] **Step 1: 写失败测试**
+
+```python
+class TestGoldTool1b:
+    def test_stable_hash_deterministic(self):
+        # 调用生产实现（非重写）
+        builder = _load_module("gold_blind_packet_builder", "docs/phase9a/gold/gold_blind_packet_builder.py")
+        assert builder.stable_hash("mingli_ftb_0002#k4") == builder.stable_hash("mingli_ftb_0002#k4")
+        assert isinstance(builder.stable_hash("mingli_ftb_0002#k4"), int)
 
     def test_hn_sampling_deterministic(self):
-        # HN 分层抽样精确等于算法输出
+        # 独立重算分层配额和样本列表
+        sampler = _load_module("gold_hn_sampler", "docs/phase9a/gold/gold_hn_sampler.py")
         sample = _load_json(PG / "gold_hn_qc_sample_list.json")
         assert sample["seed"] == 20260814
-        assert sample["sample_count"] == len(sample["sample_list"])
-        # 样本列表在 r1 构造前冻结（manifest code_frozen 阶段含该条目）
+        # 独立重算：从 gold_search_results.jsonl 的 hn 步骤候选重新执行算法
+        recomputed = sampler.sample_hn(seed=20260814, ratio=0.2)
+        assert recomputed == sample["sample_list"]
+
+    def test_four_state_mapping_frozen(self):
+        m = _load_module("gold_unblind_mapper", "docs/phase9a/gold/gold_unblind_mapper.py")
+        assert m.FOUR_STATE_MAP[("positive_proposal", "relevant")] == "confirmed"
+        assert m.FOUR_STATE_MAP[("hard_negative", "irrelevant")] == "confirmed"
+        assert m.FOUR_STATE_MAP[("positive_control", "relevant")] == "diagnostic_only"
+```
+
+- [ ] **Step 2: 运行确认失败**
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py::TestGoldTool1b -q`
+Expected: FAIL。
+
+- [ ] **Step 3: 实现三个工具**
+
+gold_hn_sampler.py：分层抽样算法（候选排序键/每层最低/全局目标/余数分配/回流/全局单实例 RNG）；输出 gold_hn_qc_sample_list.json；样本列表必须先于 r1 盲审包构造冻结。
+
+gold_blind_packet_builder.py：生成 r1/r2/r3 混合盲审包；filler 算法（逐 item、独立 RNG、stable_hash 精确定义）；positive_control 契约（diagnostic_only、确定性抽取、有放回循环、source_positive_ref）；全局打乱（轮次派生 seed）；blind_id 编号；r2/r3 生成器 fail-closed 校验前一轮 label receipt + 触发条件。
+
+gold_unblind_mapper.py：冻结四态映射 FOUR_STATE_MAP；解盲映射生成（只能在 B_LABEL_RECEIPT 发布后，校验 SHA 匹配）；输出 gold_blind_unblind_map_rN.json（绑定 packet SHA + label SHA）。
+
+- [ ] **Step 4: 冻结工具 1b → 测试转绿 → Commit**
+
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, "docs/phase8/marriage-capability")
+sys.path.insert(0, "docs/phase9a/retrieval")
+import phase9a_manifest as pm
+PG = Path("docs/phase9a/gold")
+pm.freeze(PG / "gold_manifest.json", {
+    "gold_hn_sampler_py": (PG / "gold_hn_sampler.py", "git_canonical_lf"),
+    "gold_blind_packet_builder_py": (PG / "gold_blind_packet_builder.py", "git_canonical_lf"),
+    "gold_unblind_mapper_py": (PG / "gold_unblind_mapper.py", "git_canonical_lf"),
+})
+print("tool 1b frozen")
+```
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py -q`
+Expected: PASS。
+```powershell
+git add -- docs/phase9a/gold/gold_manifest.json docs/phase9a/gold/gold_hn_sampler.py docs/phase9a/gold/gold_blind_packet_builder.py docs/phase9a/gold/gold_unblind_mapper.py tests/test_phase9a_gold.py
+git diff --cached --name-only
+git commit -m "feat(phase9a-gold): tool 1b frozen (HN sampler + blind packet builder + unblind mapper)"
+```
+
+---
+
+## Task 5: 工具 1c（validate + reconcile + finalize + guard）
+
+**Files:**
+- Create: `docs/phase9a/gold/gold_validate.py`
+- Create: `docs/phase9a/gold/reconcile_gold.py`
+- Create: `docs/phase9a/gold/finalize_gold.py`
+- Modify: `.qoder/hooks/guard_data_artifacts.py`（读取冻结配置并保护文件）
+- Test: `tests/test_phase9a_gold.py`
+
+- [ ] **Step 1: 写失败测试**
+
+```python
+class TestGoldTool1c:
+    def test_finalize_one_shot(self):
+        # 正式终态产物已存在时 finalize_gold 必须 fail-closed
+        proc = subprocess.run([sys.executable, str(PG / "finalize_gold.py")], capture_output=True, text=True, encoding="utf-8", cwd=REPO)
+        assert proc.returncode != 0 and "already exists" in (proc.stdout + proc.stderr)
+
+    def test_guard_activated_by_receipt(self):
+        # 禁改守护：仅当 GOLD_RECEIPT 有效时读取冻结配置并保护文件
+        guard = _load_module("guard_data_artifacts", ".qoder/hooks/guard_data_artifacts.py")
+        assert hasattr(guard, "load_gold_guard_config")  # 新增函数
+        # receipt 无效时 guard 不保护 gold 文件
+        # receipt 有效时 guard 保护 gold_v1.json + gold_manifest.json
+```
+
+- [ ] **Step 2: 运行确认失败**
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py::TestGoldTool1c -q`
+Expected: FAIL。
+
+- [ ] **Step 3: 实现四个工具 + 修改 guard**
+
+gold_validate.py：机器校验全集（112 项状态完整 / canonical key 可解析 / evidence_quote 子串真实 / 搜索计划执行覆盖 / 候选集合严格相等 / 引用完整性 / 双审闭合 / 盲审 receipt 绑定链与时间序 / 四态映射共用 / HN 抽样精确等于算法输出）。
+
+reconcile_gold.py：逐项 SHA + RECEIPT 版本化集合与绑定 + 112 项完整性 + 双审闭合 + 盲审 receipt 绑定链 + 引用完整性 + 候选集合对账 + access log（B 侧）校验 + 四态映射共用校验 + 恒等关系校验。
+
+finalize_gold.py：单一终态发布脚本（staging → 校验 → 发布数据 → freeze/seal → 最后 receipt）；覆盖 partial publish（字节一致校验）、sealed 无 receipt（校验后补发）、重复运行（fail-closed）、字节漂移（fail-closed）。
+
+guard_data_artifacts.py 修改：新增 `load_gold_guard_config()` 函数——仅当 GOLD_RECEIPT.json 存在且 manifest_sha256 与当前 gold_manifest.json 的 json_canonical SHA 一致时，读取 gold_guard_config.json 的 protected_paths 并加入保护；receipt 无效时不保护 gold 文件；receipt 后不得再改 hook（该修改在 seal 前完成并冻结）。
+
+- [ ] **Step 4: 冻结工具 1c + guard 修改 → 推进 code_frozen → 测试转绿 → Commit**
+
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, "docs/phase8/marriage-capability")
+sys.path.insert(0, "docs/phase9a/retrieval")
+import phase9a_manifest as pm
+PG = Path("docs/phase9a/gold")
+m = PG / "gold_manifest.json"
+pm.freeze(m, {
+    "gold_validate_py": (PG / "gold_validate.py", "git_canonical_lf"),
+    "reconcile_gold_py": (PG / "reconcile_gold.py", "git_canonical_lf"),
+    "finalize_gold_py": (PG / "finalize_gold.py", "git_canonical_lf"),
+    "guard_data_artifacts_py": (Path(".qoder/hooks/guard_data_artifacts.py"), "git_canonical_lf"),
+})
+pm.set_stage(m, "code_frozen")
+print("tool 1c + guard frozen; stage=code_frozen")
+```
+
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py -q`
+Expected: PASS。
+```powershell
+git add -- docs/phase9a/gold/gold_manifest.json docs/phase9a/gold/gold_validate.py docs/phase9a/gold/reconcile_gold.py docs/phase9a/gold/finalize_gold.py .qoder/hooks/guard_data_artifacts.py tests/test_phase9a_gold.py
+git diff --cached --name-only
+git commit -m "feat(phase9a-gold): tool 1c frozen (validate + reconcile + finalize + guard hook)"
+```
+
+---
+
+## Task 6: A 采集并冻结 proposal/HN/no-positive 快照
+
+**Files:**
+- Create: `docs/phase9a/gold/gold_acquisition_log.jsonl`（过程记录）
+- Create: `docs/phase9a/gold/gold_search_results.jsonl`（搜索执行结果）
+- Create: `docs/phase9a/gold/gold_access_log.jsonl`
+- Create: `docs/phase9a/gold/gold_proposals_snapshot.json`（A 提议快照，冻结）
+- Modify: `docs/phase9a/gold/gold_manifest.json`（追加冻结）
+
+**⏸ 暂停点（人工主体）：** curator_A 执行采集：
+1. 对每 item 执行搜索计划（gold_search_exec.py 落盘结果）
+2. 提议正例（canonical_key + evidence_quote + trace 引用）
+3. 选择 hard negative
+4. 记录轨迹到 gold_acquisition_log.jsonl
+5. 找不到正例 → 完整 no_positive 证据
+6. 一切语料读取经 gold_read_access.py（自动 access log）
+
+完成后冻结快照：
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, "docs/phase8/marriage-capability")
+sys.path.insert(0, "docs/phase9a/retrieval")
+import phase9a_manifest as pm
+PG = Path("docs/phase9a/gold")
+pm.freeze(PG / "gold_manifest.json", {
+    "gold_acquisition_log": (PG / "gold_acquisition_log.jsonl", "jsonl_canonical"),
+    "gold_search_results": (PG / "gold_search_results.jsonl", "jsonl_canonical"),
+    "gold_access_log": (PG / "gold_access_log.jsonl", "jsonl_canonical"),
+    "gold_proposals_snapshot": (PG / "gold_proposals_snapshot.json", "json_canonical"),
+})
+print("A acquisition snapshot frozen")
+```
+
+---
+
+## Task 7: 生成 HN sample + r1 packet + verification packet 并冻结
+
+**Files:**
+- Create: `docs/phase9a/gold/gold_hn_qc_sample_list.json`
+- Create: `docs/phase9a/gold/gold_blind_review_packet_r1.jsonl`
+- Create: `docs/phase9a/gold/BLIND_PACKET_RECEIPT_r1.json`
+- Create: `docs/phase9a/gold/gold_b_verification_packet.jsonl`
+- Create: `docs/phase9a/gold/B_VERIFICATION_PACKET_RECEIPT.json`
+- Modify: `docs/phase9a/gold/gold_manifest.json`（追加冻结）
+- Test: `tests/test_phase9a_gold.py`
+
+- [ ] **Step 1: 写失败测试**
+
+```python
+class TestGoldPackets:
+    def test_hn_sample_frozen_before_r1(self):
+        # HN 样本列表先于 r1 盲审包构造冻结
         m = _load_json(PG / "gold_manifest.json")
         assert "gold_hn_qc_sample_list" in m["entries"]
+        assert "gold_blind_review_packet_r1" in m["entries"]
 
     def test_blind_packet_no_type_leak(self):
-        # r1 盲审包不含类型/身份/理由字段
         packet = [json.loads(l) for l in (PG / "gold_blind_review_packet_r1.jsonl").open(encoding="utf-8") if l.strip()]
         for p in packet:
             assert {"blind_id", "item_id", "canonical_key", "document_text"} <= set(p)
-            assert "proposal_type" not in p and "curator" not in p and "reason" not in p and "collision_terms" not in p
+            assert "proposal_type" not in p and "curator" not in p and "reason" not in p
 
     def test_verification_packet_frozen(self):
-        # B verification packet 冻结（无 no-positive 时为空集产物）
         assert (PG / "gold_b_verification_packet.jsonl").exists()
         m = _load_json(PG / "gold_manifest.json")
         assert "gold_b_verification_packet" in m["entries"]
@@ -317,93 +554,74 @@ class TestGoldToolchain:
 
 - [ ] **Step 2: 运行确认失败**
 
-Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py::TestGoldToolchain -q`
+Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py::TestGoldPackets -q`
 Expected: FAIL。
 
-- [ ] **Step 3: 实现六个工具脚本**
+- [ ] **Step 3: 生成 HN 抽样 → 冻结 → 生成 r1 盲审包 → 冻结 → 生成 verification packet → 冻结 → 生成 receipts**
 
-各脚本职责（完整实现代码较长，此处给出关键契约；实现时严格遵循规约 §3-§6）：
+顺序：gold_hn_sampler.py 生成样本列表 → 冻结 → gold_blind_packet_builder.py 生成 r1 包 → 冻结 packet SHA → 发布 BLIND_PACKET_RECEIPT_r1.json → gold_search_exec.py 执行 B verification 计划（no-positive 子集）→ 生成 verification packet → 冻结 packet SHA → 发布 B_VERIFICATION_PACKET_RECEIPT.json。
 
-**gold_read_access.py**：唯一语料读取包装器；`read_corpus(canonical_key, role)` 自动追加 `gold_access_log.jsonl`（role/timestamp/canonical_key/source_dir）；A 侧调用必须经此（access_attestation）。
-
-**gold_search_exec.py**：执行 gold_search_plans.json / gold_b_verification_plans.json 的步骤；每步落盘 `gold_search_results.jsonl`（step_id/item_id/ordered_candidate_keys/candidate_keys_sha256/candidate_count）；唯一终态校验（每 step_id 恰一行）；候选排序去重规则与 SHA canonical 规则按规约 §4。
-
-**gold_blind_packet_builder.py**：生成 r1/r2/r3 混合盲审包；filler 算法（逐 item、独立 RNG、stable_hash）；positive_control 契约（diagnostic_only、确定性抽取、有放回循环、source_positive_ref）；全局打乱（轮次派生 seed）；blind_id 编号；r2/r3 生成器 fail-closed 校验前一轮 label receipt + 触发条件。
-
-**gold_unblind_mapper.py**：冻结四态映射 FOUR_STATE_MAP；解盲映射生成（只能在 B_LABEL_RECEIPT 发布后，校验 SHA 匹配）；输出 gold_blind_unblind_map_rN.json（绑定 packet SHA + label SHA）。
-
-**gold_validate.py**：机器校验全集（112 项状态完整 / canonical key 可解析 / evidence_quote 子串真实 / 搜索计划执行覆盖 / 候选集合严格相等 / 引用完整性 / 双审闭合 / 盲审 receipt 绑定链与时间序 / 四态映射共用 / HN 抽样精确等于算法输出）。
-
-**reconcile_gold.py**：逐项 SHA + RECEIPT 版本化集合与绑定 + 112 项完整性 + 双审闭合 + 盲审 receipt 绑定链 + 引用完整性 + 候选集合对账 + access log（B 侧）校验 + 四态映射共用校验 + 恒等关系校验。
-
-- [ ] **Step 4: 冻结工具链（code_frozen）→ 生成 HN 抽样 + r1 盲审包 + B verification packet**
-
-冻结六个脚本 + 推进 code_frozen：
-```python
-import sys
-from pathlib import Path
-sys.path.insert(0, "docs/phase8/marriage-capability")
-sys.path.insert(0, "docs/phase9a/retrieval")
-import phase9a_manifest as pm
-PG = Path("docs/phase9a/gold")
-m = PG / "gold_manifest.json"
-pm.freeze(m, {
-    "gold_read_access_py": (PG / "gold_read_access.py", "git_canonical_lf"),
-    "gold_search_exec_py": (PG / "gold_search_exec.py", "git_canonical_lf"),
-    "gold_blind_packet_builder_py": (PG / "gold_blind_packet_builder.py", "git_canonical_lf"),
-    "gold_unblind_mapper_py": (PG / "gold_unblind_mapper.py", "git_canonical_lf"),
-    "gold_validate_py": (PG / "gold_validate.py", "git_canonical_lf"),
-    "reconcile_gold_py": (PG / "reconcile_gold.py", "git_canonical_lf"),
-})
-pm.set_stage(m, "code_frozen")
-print("toolchain frozen; stage=code_frozen")
-```
-
-生成 HN 抽样（先于 r1 构造冻结）→ 生成 r1 盲审包 → 冻结 packet SHA → 生成 B verification packet → 冻结 packet SHA → 生成 B_VERIFICATION_PACKET_RECEIPT.json。
-
-- [ ] **Step 5: 测试转绿 + Commit**
+- [ ] **Step 4: 测试转绿 + Commit**
 
 Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py -q`
 Expected: PASS。
 ```powershell
-git add -- docs/phase9a/gold/gold_manifest.json docs/phase9a/gold/gold_read_access.py docs/phase9a/gold/gold_search_exec.py docs/phase9a/gold/gold_blind_packet_builder.py docs/phase9a/gold/gold_unblind_mapper.py docs/phase9a/gold/gold_validate.py docs/phase9a/gold/reconcile_gold.py docs/phase9a/gold/gold_hn_qc_sample_list.json docs/phase9a/gold/gold_blind_review_packet_r1.jsonl docs/phase9a/gold/gold_b_verification_packet.jsonl docs/phase9a/gold/B_VERIFICATION_PACKET_RECEIPT.json tests/test_phase9a_gold.py
+git add -- docs/phase9a/gold/gold_manifest.json docs/phase9a/gold/gold_hn_qc_sample_list.json docs/phase9a/gold/gold_blind_review_packet_r1.jsonl docs/phase9a/gold/BLIND_PACKET_RECEIPT_r1.json docs/phase9a/gold/gold_b_verification_packet.jsonl docs/phase9a/gold/B_VERIFICATION_PACKET_RECEIPT.json tests/test_phase9a_gold.py
 git diff --cached --name-only
-git commit -m "feat(phase9a-gold): code_frozen - toolchain + HN sampling + r1 blind packet + B verification packet"
+git commit -m "feat(phase9a-gold): HN sample + r1 blind packet + B verification packet frozen"
 ```
 
 ---
 
-## Task 2: 人工采集（A 提议 → 搜索执行 → B 盲审 → 解盲 → 分歧裁决）
+## Task 8: B/C 人工暂停点（盲审 + 解盲 + 分歧裁决 + 按需 r2/r3）
 
 **Files:**
-- Create: `docs/phase9a/gold/gold_acquisition_log.jsonl`（过程记录，含 blocked 项）
-- Create: `docs/phase9a/gold/gold_search_results.jsonl`（搜索执行结果）
-- Create: `docs/phase9a/gold/gold_b_labels_r1.jsonl`（B 盲审标签）
-- Create: `docs/phase9a/gold/BLIND_PACKET_RECEIPT_r1.json` + `B_LABEL_RECEIPT_r1.json`
+- Create: `docs/phase9a/gold/gold_b_labels_r1.jsonl`
+- Create: `docs/phase9a/gold/B_LABEL_RECEIPT_r1.json`
 - Create: `docs/phase9a/gold/gold_blind_unblind_map_r1.json`
-- Create: `docs/phase9a/gold/gold_access_log.jsonl`
 - Create: `docs/phase9a/gold/gold_b_verification_labels.jsonl`
 - （按需）r2/r3 轮次产物
+- Modify: `docs/phase9a/gold/gold_manifest.json`（追加冻结）
+- Test: `tests/test_phase9a_gold.py`
 
-**⏸ 暂停点（人工主体工作）：** 本 Task 是 curator_A/B/C 的人工采集流程，开发者只提供工具与校验。流程：
+**⏸ 暂停点（人工主体）：** curator_B/C 执行盲审与裁决：
+1. 发布器校验 BLIND_PACKET_RECEIPT_r1 后复制 r1 包到 B 目录
+2. B 对全部条目四态打标 → gold_b_labels_r1.jsonl 冻结 → B_LABEL_RECEIPT_r1 发布
+3. gold_unblind_mapper.py 校验 B_LABEL_RECEIPT_r1 后生成 gold_blind_unblind_map_r1.json
+4. 按冻结映射派生；分歧 → C 裁决或 BLOCKED_ACQUISITION
+5. HN 失败门：r1 抽查有 rejected/uncertain → 生成 r2 包 → B 复核 → 必要时 r3（replacement）
+6. no_positive 复核：B 审核 verification packet → 聚合规则判定
+7. 每轮机器校验并冻结
 
-1. **角色确认**：gold_roles.json 填写互不相同人类身份（否则 BLOCKED_ROLE_ASSIGNMENT）
-2. **A 采集**：对每 item 执行搜索计划（gold_search_exec.py 落盘结果）→ 提议正例（canonical_key + evidence_quote + trace 引用）→ 选择 hard negative → 记录轨迹到 gold_acquisition_log.jsonl；找不到正例 → 完整 no_positive 证据
-3. **B 盲审**：发布器校验 BLIND_PACKET_RECEIPT_r1 后复制 r1 包到 B 目录 → B 对全部条目四态打标 → gold_b_labels_r1.jsonl 冻结 → B_LABEL_RECEIPT_r1 发布
-4. **解盲**：gold_unblind_mapper.py 校验 B_LABEL_RECEIPT_r1 后生成 gold_blind_unblind_map_r1.json
-5. **分歧处理**：按冻结映射派生；分歧 → C 裁决或 BLOCKED_ACQUISITION
-6. **HN 失败门**：r1 抽查有 rejected/uncertain → 生成 r2 包（全部剩余 HN + positive controls + filler）→ B 复核 → 必要时 r3（replacement）
-7. **no_positive 复核**：B 审核 verification packet → 聚合规则判定
-8. **机器校验**：gold_validate.py 全过
+**本 Task 有自动化测试**（状态机与 receipt 链）：
 
-**本 Task 无自动化测试**（人工主体）；完成标志是 gold_validate.py exit 0 + 全部过程产物落盘。
+```python
+class TestGoldBlindReview:
+    def test_unblind_after_label_receipt(self):
+        # 解盲只能在 B_LABEL_RECEIPT 发布后
+        mapper = _load_module("gold_unblind_mapper", "docs/phase9a/gold/gold_unblind_mapper.py")
+        # 无 receipt 时 fail-closed
+        # 有 receipt 且 SHA 匹配时生成映射
+
+    def test_r2_trigger_fail_closed(self):
+        # r2 生成器校验前一轮 label receipt + 触发条件
+        builder = _load_module("gold_blind_packet_builder", "docs/phase9a/gold/gold_blind_packet_builder.py")
+        # 无触发条件时拒绝生成 r2
+
+    def test_blocked_path_recorded(self):
+        # BLOCKED 项的未完成过程记录必须存在于 acquisition log
+        log = [json.loads(l) for l in (PG / "gold_acquisition_log.jsonl").open(encoding="utf-8") if l.strip()]
+        blocked = [r for r in log if r.get("status", "").startswith("BLOCKED")]
+        for r in blocked:
+            assert r.get("blocked_reason")
+```
 
 ---
 
-## Task 3: 密封发布（sealed + GOLD_RECEIPT）
+## Task 9: finalize_gold.py 双终态发布 + reconcile + guard 验证
 
 **Files:**
-- Create: `docs/phase9a/gold/gold_v1.json`（裁决后派生结果）
+- Create: `docs/phase9a/gold/gold_v1.json`
 - Create: `docs/phase9a/gold/GOLD_CLOSURE.md`
 - Create: `docs/phase9a/gold/GOLD_RECEIPT.json`
 - Modify: `docs/phase9a/gold/gold_manifest.json`（sealed）
@@ -433,9 +651,9 @@ class TestGoldSealed:
     def test_receipt_binds_sealed_manifest(self):
         receipt = _load_json(PG / "GOLD_RECEIPT.json")
         m = _load_json(PG / "gold_manifest.json")
+        gold = _load_json(PG / "gold_v1.json")
         assert receipt["manifest_sha256"] == hashlib.sha256(json.dumps(m, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode() + b"\n").hexdigest()
-        assert "GOLD_RECEIPT" not in m["entries"]  # RECEIPT 不加入 manifest
-        # 版本化集合：基础项 + 每轮项 + HN 样本列表
+        assert "GOLD_RECEIPT" not in m["entries"]
         assert "gold_v1.json" in receipt["artifacts"]
         assert receipt["acquisition_verdict"] == gold["acquisition_verdict"]
 
@@ -443,6 +661,12 @@ class TestGoldSealed:
         proc = subprocess.run([sys.executable, str(PG / "reconcile_gold.py")], capture_output=True, text=True, encoding="utf-8", cwd=REPO)
         assert proc.returncode == 0, proc.stdout + proc.stderr
         assert "FAIL" not in proc.stdout
+
+    def test_guard_protects_gold_files(self):
+        # 禁改守护：GOLD_RECEIPT 有效时保护 gold_v1.json + gold_manifest.json
+        guard = _load_module("guard_data_artifacts", ".qoder/hooks/guard_data_artifacts.py")
+        assert guard.load_gold_guard_config() is not None
+        # 尝试修改 gold_v1.json 应被 hook 拦截（集成测试，非本单元测试）
 ```
 
 - [ ] **Step 2: 运行确认失败**
@@ -450,13 +674,12 @@ class TestGoldSealed:
 Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py::TestGoldSealed -q`
 Expected: FAIL。
 
-- [ ] **Step 3: 生成 gold_v1.json + GOLD_CLOSURE.md → 冻结 → sealed → GOLD_RECEIPT**
+- [ ] **Step 3: 运行 finalize_gold.py（双终态发布）**
 
-gold_v1.json 由 gold_unblind_mapper.py 从裁决后派生结果生成（只含 confirmed/third_party_adjudicated 的 positive + hard negative + no_positive/BLOCKED 状态）。
+finalize_gold.py 内部：gold_validate.py 全过 → 生成 gold_v1.json（裁决后派生结果）→ 生成 GOLD_CLOSURE.md → staging → 校验 → 发布数据 → 冻结条目 → set_stage(sealed) → 最后发布 GOLD_RECEIPT.json（绑定 sealed manifest SHA + 版本化 artifact 集合）。
 
-GOLD_CLOSURE.md 内容：acquisition_verdict、统计（anchored/no_positive/blocked 计数 + 实际盲审轮数）、隔离等级（B=packet_only，A=access_attestation）、filler/control 分布诊断（含 control 唯一数/重复数/复用率）、后续衔接（R2）。
-
-发布链：发布 gold_v1.json + 审计产物 → 冻结条目 → set_stage(sealed) → 最后发布 GOLD_RECEIPT.json（绑定 sealed manifest SHA + 版本化 artifact 集合）。
+Run: `.venv/Scripts/python.exe docs/phase9a/gold/finalize_gold.py`
+Expected: `finalize_gold: acquisition_verdict=GOLD_READY|GOLD_BLOCKED_ACQUISITION, manifest sealed, GOLD_RECEIPT published`。
 
 - [ ] **Step 4: reconcile_gold exit 0 → 测试转绿 → Commit**
 
@@ -466,13 +689,14 @@ Run: `.venv/Scripts/python.exe -m pytest tests/test_phase9a_gold.py -q`
 Expected: PASS。
 ```powershell
 git add -- docs/phase9a/gold/gold_manifest.json docs/phase9a/gold/gold_v1.json docs/phase9a/gold/GOLD_CLOSURE.md docs/phase9a/gold/GOLD_RECEIPT.json docs/phase9a/gold/gold_acquisition_log.jsonl docs/phase9a/gold/gold_search_results.jsonl docs/phase9a/gold/gold_b_labels_r1.jsonl docs/phase9a/gold/gold_blind_unblind_map_r1.json docs/phase9a/gold/BLIND_PACKET_RECEIPT_r1.json docs/phase9a/gold/B_LABEL_RECEIPT_r1.json docs/phase9a/gold/gold_access_log.jsonl docs/phase9a/gold/gold_b_verification_labels.jsonl tests/test_phase9a_gold.py
+# 按需追加 r2/r3 轮次产物（若实际产生）
 git diff --cached --name-only
 git commit -m "chore(phase9a-gold): sealed + GOLD_RECEIPT published (acquisition_verdict=...)"
 ```
 
-- [ ] **Step 5: 禁改守护激活**
+- [ ] **Step 5: 禁改守护验证**
 
-GOLD_RECEIPT 发布后，按 gold_guard_config.json 将 gold_v1.json + gold_manifest.json 加入 Qoder Hook 禁改数据产物清单（只激活既有配置，不修改受保护代码）。
+GOLD_RECEIPT 发布后，验证 guard_data_artifacts.py 的 load_gold_guard_config() 正确读取冻结配置并保护 gold_v1.json + gold_manifest.json（尝试修改应被 hook 拦截）。
 
 ---
 
