@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "run_id": "sanming-303-completion-R1",
-  "approval_commit": "d59229dd7023d37702c8c9a90334bbbf099998d4",
+  "approval_commit": "d236d7527e5442d2da377040be0efcda9bd628cb",
   "schedule_hash": "",
   "raw_dataset_sha": "",
   "enriched_dataset_sha": ""

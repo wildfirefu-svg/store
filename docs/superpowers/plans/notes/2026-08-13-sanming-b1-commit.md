@@ -2,4 +2,4 @@
 
 Approval gate for the historical-artifact exemption chain (E -> R -> B1).
 
-B1=d59229dd7023d37702c8c9a90334bbbf099998d4
+B1=d236d7527e5442d2da377040be0efcda9bd628cb
