@@ -63,8 +63,11 @@
     "approved_at": "2026-08-15",
     "approval_input_sha256": "a6298fbec0fdc1062f89897d945d49ddddbafa363bb8d0ae06e828cad8fc2cc9",
     "approval_input_rel": "docs/superpowers/plans/notes/approvals/2026-08-15-sanming-approval-bazi_kb-exemption.txt",
-    "approval_source": "user direct confirmation in TRAE chat message body (2026-08-15)",
+    "approval_source": "user direct confirmation in Codex chat body (2026-08-15T17:31:49+08:00), recorded after predecessor 995a18b27ecf85f504ce6404c3e272de75e8dbbd",
     "approval_confirmation_sha256": "4fabe5a17df96aa2a951dd4772e8fd7c3b94c986742829da1cace4d979b16534",
-    "approval_confirmation_rel": "docs/superpowers/plans/notes/approvals/2026-08-15-sanming-approval-confirmation.txt"
+    "approval_confirmation_rel": "docs/superpowers/plans/notes/approvals/2026-08-15-sanming-approval-confirmation.txt",
+    "approval_confirmation_receipt_rel": "docs/superpowers/plans/notes/approvals/2026-08-15-sanming-direct-confirmation-receipt.md",
+    "approval_confirmation_receipt_sha256": "319f71d6371ae3bf7cc7c0bac923d4b9a2e43e02e54a19284327e5cfb1042f77",
+    "approval_confirmation_recorded_after_commit": "995a18b27ecf85f504ce6404c3e272de75e8dbbd"
   }
 }
