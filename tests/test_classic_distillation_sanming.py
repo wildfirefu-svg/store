@@ -445,3 +445,17 @@ def test_final_anchor_full_chain_verify(tmp_path):
     bp = tmp_path / "bad.json"; bp.write_text(json.dumps(bad), encoding="utf-8")
     with pytest.raises(ValueError, match="experiment_id"):
         verify_final_anchor(bp, index_rel="gi.json", audit_rel="audit.txt", genesis_anchor=genesis, git_root=repo, anchors_path=anchors_path)
+
+
+
+def test_clean_subprocess_package_import():
+    """P0-1：fill_missing_chapters 必须是干净的包导入——干净子进程 `python -c
+    "import scripts.fill_missing_chapters"` 不得依赖 sys.path 手改，也不能因
+    双模块（distill_lib vs scripts.distill_lib）而 ModuleNotFoundError。"""
+    import subprocess, sys
+    r = subprocess.run(
+        [sys.executable, "-c", "import scripts.fill_missing_chapters; print('ok', scripts.fill_missing_chapters.run_sanming_batch.__name__)"],
+        capture_output=True, text=True, cwd=str(ROOT), timeout=60)
+    assert r.returncode == 0, f"clean import failed: {r.stderr.strip()}"
+    assert "ok" in r.stdout
+
