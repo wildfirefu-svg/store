@@ -1,0 +1,10 @@
+{
+  "exemption_request_sha256": "d6957faf02acd3e335e94684f245d9c5b065ce5cefee8db14b21f9bcaf7a02f6",
+  "baseline_commit": "8b0e75ae4bb316ffc4caefe403bb8a201a2bfccb",
+  "artifact_manifest_sha256": "26775a0ef8ca52100e6d80bb8d056648a0e6c96f0d6ea707a3c5a42c452ff0d6",
+  "approval_input_sha256": "72906fc1c8bd6c491973517c3fe554cbfdea046d1e487c02f1827b94bcb9f582",
+  "approval_input_rel": "docs/superpowers/plans/notes/approvals/2026-08-15-sanming-approval-E.txt",
+  "approval_source": "user direct approval message in TRAE session (2026-08-15)",
+  "approver": "fu",
+  "approved_at": "2026-08-15"
+}
