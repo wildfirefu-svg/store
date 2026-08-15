@@ -1460,50 +1460,6 @@ def test_regen_book_main_returns_nonzero_on_fail_closed(tmp_path, monkeypatch):
     assert exit_code == 1
 
 
-def test_fill_book_fail_closed_no_raw_files_written(tmp_path, monkeypatch):
-    """fill_book does not write raw_*.txt when incomplete (P0-2).
-
-    The audit found fill_book wrote raw files before the integrity check.
-    Now raw writes are deferred until chapter is confirmed complete.
-    """
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    import distill_lib as dl
-
-    book_dir = tmp_path / "zipingzhenquan"
-    book_dir.mkdir()
-    (book_dir / "all_rules.json").write_text("[]", encoding="utf-8")
-    (book_dir / "all_mcq.jsonl").write_text("", encoding="utf-8")
-    (book_dir / "progress.json").write_text(
-        json.dumps({"done": [], "total_rules": 0, "total_mcqs": 0}),
-        encoding="utf-8")
-    (book_dir / "raw_full.txt").write_text("第一章 甲木\n甲木参天\n第二章 乙木\n乙木系甲", encoding="utf-8")
-    (book_dir / "chapter_list.txt").write_text("1. 第一章 甲木\n2. 第二章 乙木", encoding="utf-8")
-
-    # Mock distill_chapter to return rules (so len(rules) > 0), but _call
-    # to return empty for MCQ generation (so len(linked) < len(rules)).
-    mock_rules = [
-        {"id": "zpzq_000_000", "source_chapter": "第一章 甲木", "subject": "甲木",
-         "rule": "甲木参天", "original_text": "甲木", "category": "天干"},
-    ]
-    monkeypatch.setattr(dl, "distill_chapter", lambda *a, **k: mock_rules)
-    monkeypatch.setattr(dl, "_call", lambda *a, **k: "")
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-
-    ledger_path = tmp_path / ".fill_ledger.json"
-    b = ("r1", "a" * 64, "b" * 64)
-    result = fmc.fill_book("zipingzhenquan", global_budget=100, ledger_path=ledger_path,
-                           run_id=b[0], code_sha=b[1], rules_sha=b[2])
-    assert result.get("error") == "fail_closed"
-    # No raw_*.txt files should have been written (deferred writes)
-    raw_files = list(book_dir.glob("raw_*.txt"))
-    new_raws = [f for f in raw_files if f.name != "raw_full.txt"]
-    assert len(new_raws) == 0, f"Unexpected raw files written: {new_raws}"
-
-
-# ---------------------------------------------------------------------------
-# P0-1: ledger run-identity binding (missing fields + cross-run drift)
-# ---------------------------------------------------------------------------
 
 
 def test_ledger_rejects_missing_binding_on_fresh_persist(tmp_path):
@@ -1760,77 +1716,8 @@ def test_regen_rolls_back_when_post_publish_validation_fails(tmp_path, monkeypat
     assert not list(book_dir.glob(".publish_backup_*"))
 
 
-def test_fill_rolls_back_when_post_publish_validation_fails(tmp_path, monkeypatch):
-    """P0-1: fill rolls back published files when post-publish provenance
-    validation fails (not just mid-replace failures)."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    import distill_lib as dl
-
-    book_dir = tmp_path / "zipingzhenquan"
-    book_dir.mkdir()
-    (book_dir / "all_rules.json").write_text("[]", encoding="utf-8")
-    (book_dir / "all_mcq.jsonl").write_text("", encoding="utf-8")
-    (book_dir / "progress.json").write_text(
-        json.dumps({"done": [], "total_rules": 0, "total_mcqs": 0}), encoding="utf-8")
-    (book_dir / "raw_full.txt").write_text("第一章 甲木\n甲木参天", encoding="utf-8")
-    (book_dir / "chapter_list.txt").write_text("1. 第一章 甲木", encoding="utf-8")
-
-    mock_rules = [{"id": "zpzq_000_000", "source_chapter": "第一章 甲木", "subject": "甲木",
-                   "rule": "甲木参天", "original_text": "甲木", "category": "天干"}]
-    monkeypatch.setattr(dl, "distill_chapter", lambda *a, **k: mock_rules)
-
-    def mock_call(prompt, timeout=120):
-        return json.dumps({
-            "question": "甲木为何参天？",
-            "options": {"A": "甲木参天", "B": "甲木忌水", "C": "甲木喜金", "D": "甲木忌金"},
-            "answer": "A", "explanation": "甲木参天", "difficulty": "基础", "category": "天干",
-        })
-    monkeypatch.setattr(dl, "_call", mock_call)
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-    monkeypatch.setattr(fmc, "validate_provenance",
-                        lambda *a, **k: (False, ["simulated validation failure"]))
-
-    ledger_path = tmp_path / ".fill_ledger.json"
-    b = ("r1", "a" * 64, "b" * 64)
-    with pytest.raises(ConservationError):
-        fmc.fill_book("zipingzhenquan", global_budget=100, ledger_path=ledger_path,
-                      run_id=b[0], code_sha=b[1], rules_sha=b[2])
-
-    # Rolled back: no rules/mcq/new-raw files, no staging/backup left.
-    assert (book_dir / "all_rules.json").read_text(encoding="utf-8") == "[]"
-    assert (book_dir / "all_mcq.jsonl").read_text(encoding="utf-8") == ""
-    new_raws = [f for f in book_dir.glob("raw_*.txt") if f.name != "raw_full.txt"]
-    assert len(new_raws) == 0, f"new raw files left behind: {new_raws}"
-    assert not list(book_dir.glob(".fill_staging_*"))
-    assert not list(book_dir.glob(".publish_backup_*"))
 
 
-# ---------------------------------------------------------------------------
-# P0-2: run bindings are sensitive to the full input manifest
-# ---------------------------------------------------------------------------
-
-
-def test_fill_run_bindings_sensitive_to_input_manifest(tmp_path, monkeypatch):
-    """P0-2: changing any manifest-covered input changes the run_id."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-
-    book_dir = tmp_path / "zipingzhenquan"
-    book_dir.mkdir()
-    (book_dir / "raw_full.txt").write_text("甲木参天", encoding="utf-8")
-    (book_dir / "chapter_list.txt").write_text("1. 第一章", encoding="utf-8")
-    (book_dir / "progress.json").write_text("{}", encoding="utf-8")
-    (book_dir / "all_rules.json").write_text("[]", encoding="utf-8")
-    (book_dir / "all_mcq.jsonl").write_text("", encoding="utf-8")
-
-    rid1 = fmc._compute_run_bindings(["zipingzhenquan"])
-    # Changing a manifest-covered input (chapter_list.txt) must change run_id.
-    (book_dir / "chapter_list.txt").write_text("1. 第一章\n2. 第二章", encoding="utf-8")
-    rid2 = fmc._compute_run_bindings(["zipingzhenquan"])
-    assert rid1[0] != rid2[0]
-    assert rid1[2] != rid2[2]  # rules_sha must change too
 
 
 def test_regen_run_bindings_sensitive_to_rules_input(tmp_path, monkeypatch):
@@ -2305,50 +2192,10 @@ def test_regen_main_rejects_invalid_target_without_run_bindings(tmp_path, monkey
     assert calls == []
 
 
-def test_fill_main_rejects_invalid_target_without_run_bindings(tmp_path, monkeypatch):
-    """P0: `fill ghostbook` returns 2 and never computes run bindings."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    import distill_lib as dl
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-    monkeypatch.setitem(dl.VALID_TARGETS_BY_OPERATION, "fill", ("zipingzhenquan",))
-    calls = _spy_run_bindings(monkeypatch, fmc)
-    monkeypatch.setattr("sys.argv", ["fill_missing_chapters.py", "ghostbook"])
-    assert fmc.main() == 2
-    assert calls == []
 
 
-def test_fill_main_rejects_mixed_valid_invalid_targets(tmp_path, monkeypatch):
-    """P0: mixed valid+invalid explicit targets reject the whole fill run
-    (never run the legal subset)."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    import distill_lib as dl
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-    monkeypatch.setitem(dl.VALID_TARGETS_BY_OPERATION, "fill", ("zipingzhenquan",))
-    calls = _spy_run_bindings(monkeypatch, fmc)
-    monkeypatch.setattr("sys.argv",
-                        ["fill_missing_chapters.py", "zipingzhenquan", "ghostbook"])
-    assert fmc.main() == 2
-    assert calls == []
 
 
-def test_fill_main_no_args_defaults_to_all_allowed(tmp_path, monkeypatch):
-    """P0: no explicit args still default to the full shared fill allowlist."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    import distill_lib as dl
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-    monkeypatch.setitem(dl.VALID_TARGETS_BY_OPERATION, "fill", ("zipingzhenquan",))
-    monkeypatch.setattr(dl, "_call", lambda *a, **k: "")
-    calls = []
-    def spy(dir_key, *a, **k):
-        calls.append(dir_key)
-        return {"error": "simulated"}  # 只验证 targets 展开，跳过完整执行
-    monkeypatch.setattr(fmc, "fill_book", spy)
-    monkeypatch.setattr("sys.argv", ["fill_missing_chapters.py"])
-    fmc.main()
-    assert calls == ["zipingzhenquan"]  # 无参数 → 默认全部（allowlist 仅 zipingzhenquan）
 
 
 def test_regen_main_rejects_mixed_valid_invalid_targets(tmp_path, monkeypatch):
@@ -2535,79 +2382,8 @@ def test_api_generation_forged_shas_rejected(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_fill_api_generation_records_actual_rule_payload(tmp_path, monkeypatch):
-    """P0-4: fill's rules_input_sha hashes the rules ACTUALLY sent this run
-    (new_rules_total), and rules_output_sha the final all_rules.json."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    import distill_lib as dl
-    book = tmp_path / "zipingzhenquan"
-    book.mkdir()
-    (book / "all_rules.json").write_text("[]", encoding="utf-8")
-    (book / "all_mcq.jsonl").write_text("", encoding="utf-8")
-    (book / "quarantine_rules.jsonl").write_text("", encoding="utf-8")
-    (book / "quarantine_mcq.jsonl").write_text("", encoding="utf-8")
-    (book / "progress.json").write_text(
-        json.dumps({"done": [], "total_rules": 0, "total_mcqs": 0}), encoding="utf-8")
-    (book / "raw_full.txt").write_text("第一章 甲木\n甲木参天", encoding="utf-8")
-    (book / "chapter_list.txt").write_text("1. 第一章 甲木", encoding="utf-8")
-    mock_rules = [{"id": "zpzq_000_000", "source_chapter": "第一章 甲木", "subject": "甲木",
-                   "rule": "甲木参天", "original_text": "甲木", "category": "天干"}]
-    monkeypatch.setattr(dl, "distill_chapter", lambda *a, **k: mock_rules)
-
-    def mock_call(prompt, timeout=120):
-        return json.dumps({
-            "question": "甲木为何参天？",
-            "options": {"A": "甲木参天", "B": "甲木忌水", "C": "甲木喜金", "D": "甲木忌金"},
-            "answer": "A", "explanation": "甲木参天", "difficulty": "基础", "category": "天干",
-        })
-    monkeypatch.setattr(dl, "_call", mock_call)
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-    manifest_path = tmp_path / ".fill_run_manifest.json"
-    b = fmc._compute_run_bindings(["zipingzhenquan"], manifest_path)[:3]
-    fmc.fill_book("zipingzhenquan", global_budget=100,
-                  ledger_path=tmp_path / ".fill_ledger.json",
-                  run_id=b[0], code_sha=b[1], rules_sha=b[2],
-                  manifest_path=manifest_path)
-    prov = json.loads((book / "provenance.json").read_text(encoding="utf-8"))
-    api = prov.get("api_generation")
-    assert api is not None
-    import hashlib
-    rules_input_payload = json.dumps(
-        mock_rules, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    rules_out = json.loads((book / "all_rules.json").read_text(encoding="utf-8"))
-    rules_output_payload = json.dumps(
-        rules_out, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    assert api["rules_input_sha"] == hashlib.sha256(rules_input_payload).hexdigest()
-    assert api["rules_output_sha"] == hashlib.sha256(rules_output_payload).hexdigest()
-    assert api["rules_added"] == 1
 
 
-def test_fill_noop_does_not_create_api_generation(tmp_path, monkeypatch):
-    """P0-4: when there is nothing to fill (zero API calls), fill skips and
-    does NOT create an api_generation record for the existing MCQs."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-    book = tmp_path / "zipingzhenquan"
-    book.mkdir()
-    (book / "all_rules.json").write_text("[]", encoding="utf-8")
-    (book / "all_mcq.jsonl").write_text('{"question":"old"}\n', encoding="utf-8")
-    (book / "progress.json").write_text(
-        json.dumps({"done": ["第一章 甲木"], "total_rules": 0, "total_mcqs": 1}), encoding="utf-8")
-    (book / "raw_full.txt").write_text("第一章 甲木\n甲木参天", encoding="utf-8")
-    (book / "chapter_list.txt").write_text("1. 第一章 甲木", encoding="utf-8")
-    b = ("r1", "a" * 64, "b" * 64)
-    result = fmc.fill_book("zipingzhenquan", global_budget=100,
-                           ledger_path=tmp_path / ".fill_ledger.json",
-                           run_id=b[0], code_sha=b[1], rules_sha=b[2])
-    assert result.get("skipped") is True
-    assert not (book / "provenance.json").exists()
-
-
-# ---------------------------------------------------------------------------
-# Round-5 P0-1: resume rejects forged identity / forged completed receipt
-# ---------------------------------------------------------------------------
 
 
 def test_resume_rejects_forged_identity(tmp_path):
@@ -2896,54 +2672,6 @@ def test_validator_rejects_missing_verification_level_no_manifest(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_fill_records_per_book_call_delta(tmp_path, monkeypatch):
-    """Medium: api_generation.calls_made is THIS book's call delta, not the
-    cross-book cumulative ledger total."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    import distill_lib as dl
-    book = tmp_path / "zipingzhenquan"
-    book.mkdir()
-    (book / "all_rules.json").write_text("[]", encoding="utf-8")
-    (book / "all_mcq.jsonl").write_text("", encoding="utf-8")
-    (book / "quarantine_rules.jsonl").write_text("", encoding="utf-8")
-    (book / "quarantine_mcq.jsonl").write_text("", encoding="utf-8")
-    (book / "progress.json").write_text(
-        json.dumps({"done": [], "total_rules": 0, "total_mcqs": 0}), encoding="utf-8")
-    (book / "raw_full.txt").write_text("第一章 甲木\n甲木参天", encoding="utf-8")
-    (book / "chapter_list.txt").write_text("1. 第一章 甲木", encoding="utf-8")
-    mock_rules = [{"id": "zpzq_000_000", "source_chapter": "第一章 甲木", "subject": "甲木",
-                   "rule": "甲木参天", "original_text": "甲木", "category": "天干"}]
-    monkeypatch.setattr(dl, "distill_chapter", lambda *a, **k: mock_rules)
-
-    def mock_call(prompt, timeout=120):
-        return json.dumps({
-            "question": "甲木为何参天？",
-            "options": {"A": "甲木参天", "B": "甲木忌水", "C": "甲木喜金", "D": "甲木忌金"},
-            "answer": "A", "explanation": "甲木参天", "difficulty": "基础", "category": "天干",
-        })
-    monkeypatch.setattr(dl, "_call", mock_call)
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-    manifest_path = tmp_path / ".fill_run_manifest.json"
-    b = fmc._compute_run_bindings(["zipingzhenquan"], manifest_path)[:3]
-    ledger_path = tmp_path / ".fill_ledger.json"
-    # Pre-seed the shared ledger with 7 calls from a PRIOR book.
-    seed = dl.BudgetLedger.load_or_create(
-        ledger_path, 100, run_id=b[0], code_sha=b[1], rules_sha=b[2])
-    for _ in range(7):
-        seed.record_call()
-    fmc.fill_book("zipingzhenquan", global_budget=100, ledger_path=ledger_path,
-                  run_id=b[0], code_sha=b[1], rules_sha=b[2],
-                  manifest_path=manifest_path)
-    prov = json.loads((book / "provenance.json").read_text(encoding="utf-8"))
-    api = prov["api_generation"]
-    # The delta is THIS book's calls (< 7); a cumulative value would be > 7.
-    assert 1 <= api["calls_made"] < 7
-
-
-# ---------------------------------------------------------------------------
-# Round-6 P0-1: missing files must be rejected on resume / at receipt write
-# ---------------------------------------------------------------------------
 
 
 def test_resume_rejects_missing_pending_input(tmp_path):

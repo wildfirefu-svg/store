@@ -1557,3 +1557,53 @@ def write_provenance(out_dir: Path, cfg: dict) -> None:
             manifest["file_shas"][name] = sha256_file(f)
     (out_dir / "provenance.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def load_batch_manifest(path):
+    m = json.loads(Path(path).read_text(encoding="utf-8"))
+    for k in ("schema_version", "batch_id", "selected_chapter_ids", "source_sha_map", "segment_manifest_sha", "pre_run_output_sha", "model_prompt_config_sha", "batch_hard_cap", "parent_commit", "parent_head_sha", "code_sha", "rules_sha", "source_snapshot_sha256", "source_manifest_sha256", "source_archive_pointer_sha256", "experiment_id"):
+        if k not in m: raise ValueError(f"batch manifest missing {k}")
+    return m
+
+def build_batch_manifest(*, batch_id, selected_chapter_ids, source_sha_map, segment_manifest_sha, pre_run_output_sha, model_prompt_config_sha, batch_hard_cap, parent_commit, parent_head_sha, code_sha, rules_sha, source_snapshot_sha256, source_manifest_sha256, source_archive_pointer_sha256, experiment_id=EXPERIMENT_ID):
+    return {"schema_version": "1.0", "batch_id": batch_id, "selected_chapter_ids": selected_chapter_ids, "source_sha_map": source_sha_map, "segment_manifest_sha": segment_manifest_sha, "pre_run_output_sha": pre_run_output_sha, "model_prompt_config_sha": model_prompt_config_sha, "batch_hard_cap": batch_hard_cap, "parent_commit": parent_commit, "parent_head_sha": parent_head_sha, "code_sha": code_sha, "rules_sha": rules_sha, "source_snapshot_sha256": source_snapshot_sha256, "source_manifest_sha256": source_manifest_sha256, "source_archive_pointer_sha256": source_archive_pointer_sha256, "experiment_id": experiment_id}
+
+def _canonical_key(r):
+    # P0-5：按已批准设计 sha256(canonical_json({source_book,source_chapter,category,subject,condition,rule,original_text}))，
+    # 缺字段 fail-closed（禁止空 key 吞并全部新规则）
+    parts = {}
+    for k in ("source_book", "source_chapter", "category", "subject", "condition", "rule", "original_text"):
+        v = r.get(k)
+        if not isinstance(v, str) or not v.strip():
+            raise ValueError(f"rule missing canonical field {k} (fail-closed, no empty key)")
+        parts[k] = v.strip()
+    return hashlib.sha256(json.dumps(parts, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+def canonical_dedup(rules):
+    seen, out = set(), []
+    for r in rules:
+        key = _canonical_key(r)
+        r["canonical_key"] = key          # P0-5：key 写回规则
+        if key in seen: continue
+        seen.add(key); r.setdefault("dedup_origin_segment", r.get("segment_index")); out.append(r)
+    return out
+
+def dedup_then_assign_rule_ids(rules, prefix, ch_idx):
+    rules.sort(key=lambda r: (r.get("segment_index", 0), r.get("_origin_order", 0)))
+    rules[:] = canonical_dedup(rules)
+    assign_rule_ids(rules, prefix, ch_idx)   # 复用既有 distill_lib.assign_rule_ids
+
+def backfill_canonical_keys(book_dir: Path) -> None:
+    """P0-5：为既有规则补写 canonical_key（不改 ID/顺序/其它字段）。
+    legacy 规则缺 source_book/source_chapter/category 时按冻结默认派生：
+    source_book='sanmingtonghui'、category='classic'、source_chapter 由 id 推导（0-based ch_idx -> 1-based）。"""
+    p = book_dir / "all_rules.json"
+    rules = json.loads(p.read_text(encoding="utf-8"))
+    for r in rules:
+        rid = r.get("id", "")
+        if not rid or not re.fullmatch(r"smth_\d{3}_\d{3}", rid): raise ValueError(f"legacy rule missing valid id (fail-closed): {rid!r}")
+        r.setdefault("source_book", "sanmingtonghui")
+        r.setdefault("source_chapter", str(int(rid.split("_")[1]) + 1))
+        r.setdefault("category", "classic")
+        r["canonical_key"] = _canonical_key(r)
+    tmp = p.with_suffix(".tmp"); tmp.write_text(json.dumps(rules, ensure_ascii=False, indent=2), encoding="utf-8"); os.replace(str(tmp), str(p))   # P0-3：原子替换

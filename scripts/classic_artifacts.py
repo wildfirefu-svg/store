@@ -19,7 +19,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
+import time
 from pathlib import Path
 from typing import Callable
 
@@ -1390,3 +1392,160 @@ def build_artifact_manifest(book_dir, *, git_ref, git_root):
 
 def load_exemption_request(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+# ---------------------------------------------------------------------------
+# Stage 8: GenerationIndex + batch anchor + final-anchor full chain
+# ---------------------------------------------------------------------------
+
+def generation_index_sha256(entries) -> str:
+    return hashlib.sha256(json.dumps(entries, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+FROZEN_ENTRY_FIELDS = ("batch_id", "completed_receipt_sha256", "genesis_commit", "previous_index_sha256")
+
+def _is_40hex(v) -> bool: return isinstance(v, str) and len(v) == 40 and all(c in "0123456789abcdef" for c in v)
+def _is_64hex(v) -> bool: return isinstance(v, str) and len(v) == 64 and all(c in "0123456789abcdef" for c in v)
+
+def validate_generation_index_entry(e, *, is_first=False) -> None:
+    # P0-5：冻结 entry schema——精确字段集合（拒绝缺失/额外字段）、类型、SHA 格式。
+    # 40/64 契约：genesis_commit 恒为 40-hex Git SHA；首条 entry previous_index_sha256=None，
+    # 后续 entry previous_index_sha256 为 64-hex 链前缀 SHA。GenerationIndex.verify 与 final verifier 共用。
+    if not isinstance(e, dict): raise ValueError("generation index entry not a dict")
+    if set(e) != set(FROZEN_ENTRY_FIELDS): raise ValueError(f"generation index entry fields must be exactly {set(FROZEN_ENTRY_FIELDS)}")
+    if not isinstance(e["batch_id"], str) or not e["batch_id"]: raise ValueError("generation index batch_id must be non-empty str")
+    if not _is_64hex(e["completed_receipt_sha256"]): raise ValueError("generation index completed_receipt_sha256 must be 64-hex")
+    if not _is_40hex(e["genesis_commit"]): raise ValueError("generation index genesis_commit must be 40-hex Git SHA")
+    if is_first:
+        if e["previous_index_sha256"] is not None: raise ValueError("generation index first entry previous_index_sha256 must be None")
+    elif not _is_64hex(e["previous_index_sha256"]):
+        raise ValueError("generation index subsequent entry previous_index_sha256 must be 64-hex")
+
+def verify_generation_index_entries(entries, genesis_anchor, expected_head) -> bool:
+    expected = genesis_anchor
+    for i, e in enumerate(entries):
+        try: validate_generation_index_entry(e, is_first=(i == 0))
+        except ValueError: return False   # P0-5：schema 门禁，自洽但缺/多字段的 index 也会拒绝
+        if e.get("genesis_commit") != genesis_anchor: return False   # 每条约 genesis 锚定
+        if i > 0 and e.get("previous_index_sha256") != expected: return False
+        expected = generation_index_sha256(entries[:i + 1])
+    if expected_head is not None and expected != expected_head: return False
+    return True
+
+def _pid_alive(pid) -> bool:
+    if pid is None or pid <= 0: return False
+    if os.name == "nt":
+        import subprocess as _sp
+        r = _sp.run(["tasklist", "/FI", f"PID eq {pid}"], capture_output=True, text=True)
+        return "No tasks" not in r.stdout
+    try: os.kill(pid, 0); return True
+    except OSError: return False
+
+def repository_identity(git_root) -> str:
+    import subprocess as _sp
+    r = _sp.run(["git", "-C", str(git_root), "remote", "get-url", "origin"], capture_output=True)
+    if r.returncode != 0 or not r.stdout.strip(): raise ValueError("repository has no origin remote; cannot derive repository_identity")
+    url = r.stdout.decode("utf-8").strip()
+    url = url.replace("git@", "", 1)
+    if "://" in url: url = url.split("://", 1)[1]
+    if ":" in url and "/" not in url.split(":", 1)[0]: url = url.replace(":", "/", 1)
+    if "@" in url: url = url.split("@", 1)[1]
+    if url.endswith(".git"): url = url[:-4]
+    return url
+
+def _git(git_root, *args):
+    import subprocess as _sp; return _sp.run(["git", "-C", str(git_root), *args], capture_output=True)
+def _try_git_show(git_root, commit, rel):
+    r = _git(git_root, "show", f"{commit}:{rel}")
+    return r.stdout if r.returncode == 0 else None
+def _git_sha256(obj) -> str:
+    return hashlib.sha256(json.dumps(obj, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+def _is_ancestor(git_root, ancestor, descendant) -> bool:
+    return _git(git_root, "merge-base", "--is-ancestor", ancestor, descendant).returncode == 0
+
+def _find_batch_commit(git_root, parent_commit, final_commit, anchor):
+    r = _git(git_root, "rev-list", final_commit, "--reverse", "--ancestry-path", "--first-parent", "--not", parent_commit)
+    if r.returncode != 0: return None
+    for c in r.stdout.decode().split():
+        blob = _try_git_show(git_root, c, anchor.get("index_rel"))
+        if blob is None: continue
+        try: entries = json.loads(blob.decode("utf-8"))
+        except Exception: continue
+        if generation_index_sha256(entries) != anchor.get("head_sha"): continue
+        ab = _try_git_show(git_root, c, anchor.get("anchor_rel"))
+        if ab is None: continue
+        try: committed_anchor = json.loads(ab.decode("utf-8"))
+        except Exception: continue
+        if committed_anchor != anchor: continue
+        return c
+    return None
+
+class GenerationIndex:
+    def __init__(self, path, genesis_anchor):
+        if not _is_40hex(genesis_anchor) or genesis_anchor == "b1" * 40: raise ValueError("genesis_anchor must be a 40-hex anchor SHA (required, no placeholder)")
+        self.path = Path(path); self.genesis = genesis_anchor
+    def _load(self): return json.loads(self.path.read_text(encoding="utf-8")) if self.path.exists() else []
+    def _prefix_sha(self, entries, upto): return generation_index_sha256(entries[:upto])
+    def _acquire_lock(self):
+        lock = Path(str(self.path) + ".lock")
+        while True:
+            try:
+                fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.write(fd, json.dumps({"pid": os.getpid(), "start": time.time(), "owner": f"p{os.getpid()}t{time.time():.0f}"}).encode())
+                os.close(fd); return lock
+            except FileExistsError:
+                try: meta = json.loads(Path(lock).read_text(encoding="utf-8"))
+                except Exception: raise RuntimeError("index lock held (unparseable)")
+                stale = time.time() - meta.get("start", 0) > 3600 and not _pid_alive(meta.get("pid", -1)) and str(meta.get("owner", "")).startswith("p")
+                if stale: os.unlink(str(lock)); continue
+                raise RuntimeError("index lock held by live writer")
+    def append(self, entry):
+        lock = self._acquire_lock()
+        try:
+            entries = self._load()
+            if any(e.get("batch_id") == entry.get("batch_id") for e in entries): raise ValueError("duplicate batch_id")
+            # P0-1：40/64 契约——每条约 genesis_commit；首条 previous_index_sha256=None，后续为 64-hex 链前缀
+            entry["genesis_commit"] = self.genesis
+            entry["previous_index_sha256"] = None if not entries else self._prefix_sha(entries, len(entries))
+            entries2 = self._load()
+            expected = None if not entries2 else self._prefix_sha(entries2, len(entries2))
+            if entry["previous_index_sha256"] != expected: raise RuntimeError("CAS failed: concurrent write")
+            entries2.append(entry)
+            tmp = Path(str(self.path) + ".tmp"); tmp.write_text(json.dumps(entries2, ensure_ascii=False, indent=2), encoding="utf-8"); os.replace(str(tmp), str(self.path))
+        finally: os.unlink(str(lock))
+    def verify(self, expected_head=None): return verify_generation_index_entries(self._load(), self.genesis, expected_head)
+    def find_orphan_entries(self, completed_receipt_sha_set, full_entries=()):
+        registered = {e.get("completed_receipt_sha256") for e in self._load()}
+        return [e for e in full_entries if e.get("completed_receipt_sha256") in completed_receipt_sha_set - registered]
+
+def finalize_batch(*, batch_id, completed_receipt_path, index_path, genesis_anchor):
+    idx = GenerationIndex(index_path, genesis_anchor=genesis_anchor)
+    receipt_sha = hashlib.sha256(Path(completed_receipt_path).read_bytes()).hexdigest()
+    idx.append({"batch_id": batch_id, "completed_receipt_sha256": receipt_sha})
+    entries = idx._load()
+    return {"head_sha": generation_index_sha256(entries), "index_entries": entries, "completed_receipt_sha256": receipt_sha}
+
+def batch_anchor_receipt(*, batch_id, parent_commit, head_sha, index_rel, anchor_rel, completed_receipt_rel, completed_receipt_sha256, source_snapshot_sha256, source_snapshot_rel):
+    return {"batch_id": batch_id, "parent_commit": parent_commit, "head_sha": head_sha, "index_rel": index_rel, "anchor_rel": anchor_rel, "completed_receipt_rel": completed_receipt_rel, "completed_receipt_sha256": completed_receipt_sha256, "source_snapshot_sha256": source_snapshot_sha256, "source_snapshot_rel": source_snapshot_rel}
+
+def verify_batch_anchors(anchors, git_root, genesis_commit, final_commit=None):
+    if not isinstance(anchors, list) or not anchors: return False
+    if final_commit is None: final_commit = _git(git_root, "rev-parse", "HEAD").stdout.decode().strip()
+    if _git(git_root, "cat-file", "-e", f"{final_commit}^{{commit}}").returncode != 0: return False
+    parent = genesis_commit
+    for a in anchors:
+        if a.get("parent_commit") != parent: return False
+        if not _is_ancestor(git_root, genesis_commit, a["parent_commit"]): return False
+        if not a.get("anchor_rel"): return False
+        c = _find_batch_commit(git_root, a["parent_commit"], final_commit, a)
+        if c is None: return False
+        if a.get("completed_receipt_rel") and a.get("completed_receipt_sha256"):
+            blob = _try_git_show(git_root, c, a["completed_receipt_rel"])
+            if blob is None or hashlib.sha256(blob).hexdigest() != a["completed_receipt_sha256"]: return False
+        if not a.get("source_snapshot_rel"): return False
+        if a.get("source_snapshot_sha256"):
+            blob = _try_git_show(git_root, c, a["source_snapshot_rel"])
+            if blob is None: return False
+            man = json.loads(blob.decode("utf-8")) if blob else {}
+            if man.get("snapshot_sha256") != a["source_snapshot_sha256"]: return False
+        parent = c
+    return _is_ancestor(git_root, parent, final_commit)
