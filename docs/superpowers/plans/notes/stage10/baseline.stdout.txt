@@ -1,0 +1,632 @@
+﻿FFF..FFF...............................F....F........................... [ 78%]
+..................FF                                                     [100%]
+================================== FAILURES ===================================
+____________________________ TestKB.test_kb_search ____________________________
+knowledge-base\bazi_kb.py:262: in search_gejue
+    rows = conn.execute(
+E   sqlite3.OperationalError: no such table: gejue
+
+The above exception was the direct cause of the following exception:
+tests\test_api.py:189: in test_kb_search
+    r = client.get('/api/kb/search', params={'q': '婚姻'})
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_api.py:31: in get
+    return self._c.get(url, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\starlette\testclient.py:482: in get
+    return super().get(
+..\..\.venv\Lib\site-packages\httpx\_client.py:1053: in get
+    return self.request(
+..\..\.venv\Lib\site-packages\starlette\testclient.py:454: in request
+    return super().request(
+..\..\.venv\Lib\site-packages\httpx\_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\httpx\_client.py:914: in send
+    response = self._send_handling_auth(
+..\..\.venv\Lib\site-packages\httpx\_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+..\..\.venv\Lib\site-packages\httpx\_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\httpx\_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\starlette\testclient.py:356: in handle_request
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\testclient.py:353: in handle_request
+    portal.call(self.app, scope, receive, send)
+..\..\.venv\Lib\site-packages\anyio\from_thread.py:338: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Administrator\scoop\apps\python\current\Lib\concurrent\futures\_base.py:454: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+C:\Users\Administrator\scoop\apps\python\current\Lib\concurrent\futures\_base.py:396: in __get_result
+    raise self._exception
+..\..\.venv\Lib\site-packages\anyio\from_thread.py:263: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\fastapi\applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\applications.py:90: in __call__
+    await self.middleware_stack(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\middleware\errors.py:186: in __call__
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\middleware\errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:193: in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+api_server.py:237: in body_size_limit_middleware
+    return await call_next(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:168: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:144: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:193: in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+api_server.py:195: in auth_middleware
+    return await call_next(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:168: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:144: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:193: in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+api_server.py:167: in rate_limit_middleware
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:168: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:144: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+..\..\.venv\Lib\site-packages\starlette\middleware\cors.py:88: in __call__
+    await self.app(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\middleware\exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:53: in wrapped_app
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+..\..\.venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\routing.py:660: in __call__
+    await self.middleware_stack(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\routing.py:680: in app
+    await route.handle(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\routing.py:276: in handle
+    await self.app(scope, receive, send)
+..\..\.venv\Lib\site-packages\fastapi\routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:53: in wrapped_app
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+..\..\.venv\Lib\site-packages\fastapi\routing.py:120: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\fastapi\routing.py:674: in app
+    raw_response = await run_endpoint_function(
+..\..\.venv\Lib\site-packages\fastapi\routing.py:330: in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\starlette\concurrency.py:34: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\anyio\to_thread.py:65: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+..\..\.venv\Lib\site-packages\anyio\_backends\_asyncio.py:2641: in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\anyio\_backends\_asyncio.py:1033: in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+api_server.py:1657: in kb_search
+    results = kb.fulltext_search(q, top)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge-base\bazi_kb.py:309: in fulltext_search
+    gejue = self.search_gejue(text, top_n=top_n)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge-base\bazi_kb.py:267: in search_gejue
+    rows = conn.execute(
+E   sqlite3.OperationalError: no such table: gejue
+__________________________ TestKB.test_kb_search_top __________________________
+knowledge-base\bazi_kb.py:262: in search_gejue
+    rows = conn.execute(
+E   sqlite3.OperationalError: no such table: gejue
+
+The above exception was the direct cause of the following exception:
+tests\test_api.py:196: in test_kb_search_top
+    r = client.get('/api/kb/search', params={'q': '财运', 'top': 3})
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_api.py:31: in get
+    return self._c.get(url, **kw)
+           ^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\starlette\testclient.py:482: in get
+    return super().get(
+..\..\.venv\Lib\site-packages\httpx\_client.py:1053: in get
+    return self.request(
+..\..\.venv\Lib\site-packages\starlette\testclient.py:454: in request
+    return super().request(
+..\..\.venv\Lib\site-packages\httpx\_client.py:825: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\httpx\_client.py:914: in send
+    response = self._send_handling_auth(
+..\..\.venv\Lib\site-packages\httpx\_client.py:942: in _send_handling_auth
+    response = self._send_handling_redirects(
+..\..\.venv\Lib\site-packages\httpx\_client.py:979: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\httpx\_client.py:1014: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\starlette\testclient.py:356: in handle_request
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\testclient.py:353: in handle_request
+    portal.call(self.app, scope, receive, send)
+..\..\.venv\Lib\site-packages\anyio\from_thread.py:338: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\Administrator\scoop\apps\python\current\Lib\concurrent\futures\_base.py:454: in result
+    return self.__get_result()
+           ^^^^^^^^^^^^^^^^^^^
+C:\Users\Administrator\scoop\apps\python\current\Lib\concurrent\futures\_base.py:396: in __get_result
+    raise self._exception
+..\..\.venv\Lib\site-packages\anyio\from_thread.py:263: in _call_func
+    retval = await retval_or_awaitable
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\fastapi\applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\applications.py:90: in __call__
+    await self.middleware_stack(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\middleware\errors.py:186: in __call__
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\middleware\errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:193: in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+api_server.py:237: in body_size_limit_middleware
+    return await call_next(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:168: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:144: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:193: in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+api_server.py:195: in auth_middleware
+    return await call_next(request)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:168: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:144: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:193: in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+api_server.py:167: in rate_limit_middleware
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:168: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+..\..\.venv\Lib\site-packages\starlette\middleware\base.py:144: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+..\..\.venv\Lib\site-packages\starlette\middleware\cors.py:88: in __call__
+    await self.app(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\middleware\exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:53: in wrapped_app
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+..\..\.venv\Lib\site-packages\fastapi\middleware\asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\routing.py:660: in __call__
+    await self.middleware_stack(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\routing.py:680: in app
+    await route.handle(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\routing.py:276: in handle
+    await self.app(scope, receive, send)
+..\..\.venv\Lib\site-packages\fastapi\routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:53: in wrapped_app
+    raise exc
+..\..\.venv\Lib\site-packages\starlette\_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+..\..\.venv\Lib\site-packages\fastapi\routing.py:120: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\fastapi\routing.py:674: in app
+    raw_response = await run_endpoint_function(
+..\..\.venv\Lib\site-packages\fastapi\routing.py:330: in run_endpoint_function
+    return await run_in_threadpool(dependant.call, **values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\starlette\concurrency.py:34: in run_in_threadpool
+    return await anyio.to_thread.run_sync(func)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\anyio\to_thread.py:65: in run_sync
+    return await get_async_backend().run_sync_in_worker_thread(
+..\..\.venv\Lib\site-packages\anyio\_backends\_asyncio.py:2641: in run_sync_in_worker_thread
+    return await future
+           ^^^^^^^^^^^^
+..\..\.venv\Lib\site-packages\anyio\_backends\_asyncio.py:1033: in run
+    result = context.run(func, *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^
+api_server.py:1657: in kb_search
+    results = kb.fulltext_search(q, top)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge-base\bazi_kb.py:309: in fulltext_search
+    gejue = self.search_gejue(text, top_n=top_n)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge-base\bazi_kb.py:267: in search_gejue
+    rows = conn.execute(
+E   sqlite3.OperationalError: no such table: gejue
+____________________________ TestKB.test_kb_stats _____________________________
+tests\test_api.py:204: in test_kb_stats
+    assert data['gejue'] >= 900
+E   assert 0 >= 900
+___________________________ TestCLI.test_search_cli ___________________________
+tests\test_bazi_kb.py:143: in test_search_cli
+    assert ret == 0
+E   assert 1 == 0
+---------------------------- Captured stderr call -----------------------------
+Traceback (most recent call last):
+
+  File "G:\project\agent\.tmp\baseline_wt\knowledge-base\bazi_kb.py", line 262, in search_gejue
+
+    rows = conn.execute(
+
+           ~~~~~~~~~~~~^
+
+        "SELECT g.* FROM gejue g INNER JOIN (SELECT rowid, rank FROM gejue_fts WHERE gejue_fts MATCH ? ORDER BY rank LIMIT ?) f ON g.rowid = f.rowid",
+
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+        (query, top_n)
+
+        ^^^^^^^^^^^^^^
+
+    ).fetchall()
+
+    ^
+
+sqlite3.OperationalError: no such table: gejue
+
+
+
+During handling of the above exception, another exception occurred:
+
+
+
+Traceback (most recent call last):
+
+  File "G:\project\agent\.tmp\baseline_wt\knowledge-base\bazi_kb.py", line 363, in <module>
+
+    main()
+
+    ~~~~^^
+
+  File "G:\project\agent\.tmp\baseline_wt\knowledge-base\bazi_kb.py", line 353, in main
+
+    results = kb.fulltext_search(args.search)
+
+  File "G:\project\agent\.tmp\baseline_wt\knowledge-base\bazi_kb.py", line 309, in fulltext_search
+
+    gejue = self.search_gejue(text, top_n=top_n)
+
+  File "G:\project\agent\.tmp\baseline_wt\knowledge-base\bazi_kb.py", line 267, in search_gejue
+
+    rows = conn.execute(
+
+           ~~~~~~~~~~~~^
+
+        "SELECT * FROM gejue WHERE text LIKE ? OR keywords LIKE ? LIMIT ?",
+
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+        (f'%{query}%', f'%{query}%', top_n)
+
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    ).fetchall()
+
+    ^
+
+sqlite3.OperationalError: no such table: gejue
+
+____________________ TestBaziKBSearch.test_returns_results ____________________
+knowledge-base\bazi_kb.py:262: in search_gejue
+    rows = conn.execute(
+E   sqlite3.OperationalError: no such table: gejue
+
+During handling of the above exception, another exception occurred:
+tests\test_mcp.py:147: in test_returns_results
+    result = json.loads(mcp.bazi_kb_search('财运', top=3))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+mcp_server.py:292: in bazi_kb_search
+    results = kb.fulltext_search(query, top)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge-base\bazi_kb.py:309: in fulltext_search
+    gejue = self.search_gejue(text, top_n=top_n)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge-base\bazi_kb.py:267: in search_gejue
+    rows = conn.execute(
+E   sqlite3.OperationalError: no such table: gejue
+__________________ TestBaziKBSearch.test_empty_query_handled __________________
+knowledge-base\bazi_kb.py:262: in search_gejue
+    rows = conn.execute(
+E   sqlite3.OperationalError: no such table: gejue
+
+During handling of the above exception, another exception occurred:
+tests\test_mcp.py:154: in test_empty_query_handled
+    result = json.loads(mcp.bazi_kb_search('', top=3))
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+mcp_server.py:292: in bazi_kb_search
+    results = kb.fulltext_search(query, top)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge-base\bazi_kb.py:309: in fulltext_search
+    gejue = self.search_gejue(text, top_n=top_n)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+knowledge-base\bazi_kb.py:267: in search_gejue
+    rows = conn.execute(
+E   sqlite3.OperationalError: no such table: gejue
+________________ TestKbSnapshot.test_row_counts_match_original ________________
+tests\test_phase8_marriage_capability.py:503: in test_row_counts_match_original
+    n_orig = conn_orig.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   sqlite3.OperationalError: no such table: gejue
+______________ TestKbEquivalence.test_regeneration_deterministic ______________
+tests\test_phase8_marriage_capability.py:562: in test_regeneration_deterministic
+    snap.run_equivalence(
+docs\phase8\marriage-capability\p8_kb_snapshot.py:152: in run_equivalence
+    rows_src, fallback = _run_entrypoint(src, ep, args, top_n)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+docs\phase8\marriage-capability\p8_kb_snapshot.py:78: in _run_entrypoint
+    rows = conn.execute(
+E   sqlite3.OperationalError: no such table: gejue
+_____________ TestReconcileSubtype.test_reconcile_subtype_passes ______________
+tests\test_phase8_marriage_capability.py:1185: in test_reconcile_subtype_passes
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+E   AssertionError: [subtype_split]
+E       ok  case_id 集合与输入一致（35 题）  (35 vs 35)
+E       ok  主亚型之和 = 35 = 题目数  ({"by_primary_subtype": {"事件反查": 4, "多段婚姻": 6, "婚姻状态": 12, "结婚离婚应期": 9, "配偶特征": 4}, "total": 35})
+E       ok  主/副亚型均在冻结枚举内  (enum=['婚姻状态', '结婚离婚应期', '多段婚姻', '配偶特征', '事件反查'])
+E       ok  归并题有 merge_reason，非归并题为 null
+E     [required_knowledge]
+E       ok  required_knowledge 35 行 == subtype_split 35 题  (35 vs 35)
+E       ok  知识项总数 > 0  (171 items)
+E     [computability_probe]
+E       ok  探针 item_id 集 == computation 项集  (58 vs 58)
+E       ok  四态值域合法且总量一致  ({"computable": 39, "no_interface": 19, "total": 58})
+E     [knowledge_audit]
+E       ok  knowledge_audit 35 行 == subtype_split 35 题  (35 vs 35)
+E       ok  知识项总数 = 五类 + undetermined  ({"注入缺失": 39, "计算缺失": 19, "检索不可见": 112, "知识缺失": 1})
+E     [c1_replay]
+E       ok  C1 replay_count == 1
+E       ok  C1 total == 160
+E       ok  C1 四态和 == 160  ({"improved": 4, "harmed": 3, "unchanged": 150, "changed_wrong_to_wrong": 3})
+E       ok  C1 verdict 为双终态之一  (C1_TERMINATED)
+E     [kb_equivalence]
+E       ok  KB 等价性 total == ok  ({"total": 59, "ok": 59, "fallback_used": 0})
+E       ok  KB 等价性 fallback_used == 0
+E     [manifest_disk]
+E       ok  docs/phase7/error-analysis/error_classification.jsonl SHA 一致  (jsonl_canonical)
+E       ok  docs/phase7/phase7-mingli-v4flash-nt-20260811-r2/merged_details.jsonl SHA 一致  (jsonl_canonical)
+E       ok  docs/phase7/phase7-mingli-v4flash-nt-20260811-r2/mingli_160.jsonl SHA 一致  (jsonl_canonical)
+E       ok  docs/phase8/marriage-capability/c1_detector.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/c1_detector_eval.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/c1_replay.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/classic_texts_freeze.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/classic_texts_search.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/classic_texts_search_results.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/computability_probe.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/fts_behavior_probe.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/kb_equivalence.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/kb_query_set.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/kb_snapshot.db SHA 一致  (raw_bytes)
+E       ok  docs/phase8/marriage-capability/knowledge_audit.jsonl SHA 一致  (jsonl_canonical)
+E       ok  docs/phase8/marriage-capability/knowledge_audit_summary.md SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/p8_audit.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/p8_freeze.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/p8_kb_snapshot.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/p8_probe.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/p8_provenance.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/p8_reconcile.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/p8_subtype_split.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/provenance.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/required_knowledge.jsonl SHA 一致  (jsonl_canonical)
+E       ok  docs/phase8/marriage-capability/sealed_marriageset_spec.md SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/subtype_split.json SHA 一致  (json_canonical)
+E       FAIL  knowledge-base/bazi_kb.db SHA 一致  (raw_bytes)
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['G:\\project\\agent\\.venv\\Scripts\\python.exe', 'G:\\project\\agent\\.tmp\\baseline_wt\\docs\...ility/subtype_split.json SHA 一致  (json_canonical)\n  FAIL  knowledge-base/bazi_kb.db SHA 一致  (raw_bytes)\n', stderr='').returncode
+______________ TestReconcileSubtype.test_reconcile_full_sections ______________
+tests\test_phase8_marriage_capability.py:1198: in test_reconcile_full_sections
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+E   AssertionError: [subtype_split]
+E       ok  case_id 集合与输入一致（35 题）  (35 vs 35)
+E       ok  主亚型之和 = 35 = 题目数  ({"by_primary_subtype": {"事件反查": 4, "多段婚姻": 6, "婚姻状态": 12, "结婚离婚应期": 9, "配偶特征": 4}, "total": 35})
+E       ok  主/副亚型均在冻结枚举内  (enum=['婚姻状态', '结婚离婚应期', '多段婚姻', '配偶特征', '事件反查'])
+E       ok  归并题有 merge_reason，非归并题为 null
+E     [required_knowledge]
+E       ok  required_knowledge 35 行 == subtype_split 35 题  (35 vs 35)
+E       ok  知识项总数 > 0  (171 items)
+E     [computability_probe]
+E       ok  探针 item_id 集 == computation 项集  (58 vs 58)
+E       ok  四态值域合法且总量一致  ({"computable": 39, "no_interface": 19, "total": 58})
+E     [knowledge_audit]
+E       ok  knowledge_audit 35 行 == subtype_split 35 题  (35 vs 35)
+E       ok  知识项总数 = 五类 + undetermined  ({"注入缺失": 39, "计算缺失": 19, "检索不可见": 112, "知识缺失": 1})
+E     [c1_replay]
+E       ok  C1 replay_count == 1
+E       ok  C1 total == 160
+E       ok  C1 四态和 == 160  ({"improved": 4, "harmed": 3, "unchanged": 150, "changed_wrong_to_wrong": 3})
+E       ok  C1 verdict 为双终态之一  (C1_TERMINATED)
+E     [kb_equivalence]
+E       ok  KB 等价性 total == ok  ({"total": 59, "ok": 59, "fallback_used": 0})
+E       ok  KB 等价性 fallback_used == 0
+E     [manifest_disk]
+E       ok  docs/phase7/error-analysis/error_classification.jsonl SHA 一致  (jsonl_canonical)
+E       ok  docs/phase7/phase7-mingli-v4flash-nt-20260811-r2/merged_details.jsonl SHA 一致  (jsonl_canonical)
+E       ok  docs/phase7/phase7-mingli-v4flash-nt-20260811-r2/mingli_160.jsonl SHA 一致  (jsonl_canonical)
+E       ok  docs/phase8/marriage-capability/c1_detector.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/c1_detector_eval.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/c1_replay.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/classic_texts_freeze.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/classic_texts_search.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/classic_texts_search_results.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/computability_probe.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/fts_behavior_probe.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/kb_equivalence.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/kb_query_set.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/kb_snapshot.db SHA 一致  (raw_bytes)
+E       ok  docs/phase8/marriage-capability/knowledge_audit.jsonl SHA 一致  (jsonl_canonical)
+E       ok  docs/phase8/marriage-capability/knowledge_audit_summary.md SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/p8_audit.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/p8_freeze.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/p8_kb_snapshot.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/p8_probe.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/p8_provenance.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/p8_reconcile.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/p8_subtype_split.py SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/provenance.json SHA 一致  (json_canonical)
+E       ok  docs/phase8/marriage-capability/required_knowledge.jsonl SHA 一致  (jsonl_canonical)
+E       ok  docs/phase8/marriage-capability/sealed_marriageset_spec.md SHA 一致  (git_canonical_lf)
+E       ok  docs/phase8/marriage-capability/subtype_split.json SHA 一致  (json_canonical)
+E       FAIL  knowledge-base/bazi_kb.db SHA 一致  (raw_bytes)
+E     
+E   assert 1 == 0
+E    +  where 1 = CompletedProcess(args=['G:\\project\\agent\\.venv\\Scripts\\python.exe', 'G:\\project\\agent\\.tmp\\baseline_wt\\docs\...ility/subtype_split.json SHA 一致  (json_canonical)\n  FAIL  knowledge-base/bazi_kb.db SHA 一致  (raw_bytes)\n', stderr='').returncode
+============================== warnings summary ===============================
+..\..\.venv\Lib\site-packages\fastapi\testclient.py:1
+  G:\project\agent\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_api.py::TestKB::test_kb_search - sqlite3.OperationalError: no such table: gejue
+FAILED tests/test_api.py::TestKB::test_kb_search_top - sqlite3.OperationalError: no such table: gejue
+FAILED tests/test_api.py::TestKB::test_kb_stats - assert 0 >= 900
+FAILED tests/test_bazi_kb.py::TestCLI::test_search_cli - assert 1 == 0
+FAILED tests/test_mcp.py::TestBaziKBSearch::test_returns_results - sqlite3.OperationalError: no such table: gejue
+FAILED tests/test_mcp.py::TestBaziKBSearch::test_empty_query_handled - sqlite3.OperationalError: no such table: gejue
+FAILED tests/test_phase8_marriage_capability.py::TestKbSnapshot::test_row_counts_match_original - sqlite3.OperationalError: no such table: gejue
+FAILED tests/test_phase8_marriage_capability.py::TestKbEquivalence::test_regeneration_deterministic - sqlite3.OperationalError: no such table: gejue
+FAILED tests/test_phase8_marriage_capability.py::TestReconcileSubtype::test_reconcile_subtype_passes - AssertionError: [subtype_split]
+    ok  case_id 集合与输入一致（35 题）  (35 vs 35)
+    ok  主亚型之和 = 35 = 题目数  ({"by_primary_subtype": {"事件反查": 4, "多段婚姻": 6, "婚姻状态": 12, "结婚离婚应期": 9, "配偶特征": 4}, "total": 35})
+    ok  主/副亚型均在冻结枚举内  (enum=['婚姻状态', '结婚离婚应期', '多段婚姻', '配偶特征', '事件反查'])
+    ok  归并题有 merge_reason，非归并题为 null
+  [required_knowledge]
+    ok  required_knowledge 35 行 == subtype_split 35 题  (35 vs 35)
+    ok  知识项总数 > 0  (171 items)
+  [computability_probe]
+    ok  探针 item_id 集 == computation 项集  (58 vs 58)
+    ok  四态值域合法且总量一致  ({"computable": 39, "no_interface": 19, "total": 58})
+  [knowledge_audit]
+    ok  knowledge_audit 35 行 == subtype_split 35 题  (35 vs 35)
+    ok  知识项总数 = 五类 + undetermined  ({"注入缺失": 39, "计算缺失": 19, "检索不可见": 112, "知识缺失": 1})
+  [c1_replay]
+    ok  C1 replay_count == 1
+    ok  C1 total == 160
+    ok  C1 四态和 == 160  ({"improved": 4, "harmed": 3, "unchanged": 150, "changed_wrong_to_wrong": 3})
+    ok  C1 verdict 为双终态之一  (C1_TERMINATED)
+  [kb_equivalence]
+    ok  KB 等价性 total == ok  ({"total": 59, "ok": 59, "fallback_used": 0})
+    ok  KB 等价性 fallback_used == 0
+  [manifest_disk]
+    ok  docs/phase7/error-analysis/error_classification.jsonl SHA 一致  (jsonl_canonical)
+    ok  docs/phase7/phase7-mingli-v4flash-nt-20260811-r2/merged_details.jsonl SHA 一致  (jsonl_canonical)
+    ok  docs/phase7/phase7-mingli-v4flash-nt-20260811-r2/mingli_160.jsonl SHA 一致  (jsonl_canonical)
+    ok  docs/phase8/marriage-capability/c1_detector.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/c1_detector_eval.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/c1_replay.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/classic_texts_freeze.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/classic_texts_search.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/classic_texts_search_results.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/computability_probe.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/fts_behavior_probe.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/kb_equivalence.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/kb_query_set.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/kb_snapshot.db SHA 一致  (raw_bytes)
+    ok  docs/phase8/marriage-capability/knowledge_audit.jsonl SHA 一致  (jsonl_canonical)
+    ok  docs/phase8/marriage-capability/knowledge_audit_summary.md SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/p8_audit.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/p8_freeze.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/p8_kb_snapshot.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/p8_probe.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/p8_provenance.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/p8_reconcile.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/p8_subtype_split.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/provenance.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/required_knowledge.jsonl SHA 一致  (jsonl_canonical)
+    ok  docs/phase8/marriage-capability/sealed_marriageset_spec.md SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/subtype_split.json SHA 一致  (json_canonical)
+    FAIL  knowledge-base/bazi_kb.db SHA 一致  (raw_bytes)
+  
+assert 1 == 0
+ +  where 1 = CompletedProcess(args=['G:\\project\\agent\\.venv\\Scripts\\python.exe', 'G:\\project\\agent\\.tmp\\baseline_wt\\docs\...ility/subtype_split.json SHA 一致  (json_canonical)\n  FAIL  knowledge-base/bazi_kb.db SHA 一致  (raw_bytes)\n', stderr='').returncode
+FAILED tests/test_phase8_marriage_capability.py::TestReconcileSubtype::test_reconcile_full_sections - AssertionError: [subtype_split]
+    ok  case_id 集合与输入一致（35 题）  (35 vs 35)
+    ok  主亚型之和 = 35 = 题目数  ({"by_primary_subtype": {"事件反查": 4, "多段婚姻": 6, "婚姻状态": 12, "结婚离婚应期": 9, "配偶特征": 4}, "total": 35})
+    ok  主/副亚型均在冻结枚举内  (enum=['婚姻状态', '结婚离婚应期', '多段婚姻', '配偶特征', '事件反查'])
+    ok  归并题有 merge_reason，非归并题为 null
+  [required_knowledge]
+    ok  required_knowledge 35 行 == subtype_split 35 题  (35 vs 35)
+    ok  知识项总数 > 0  (171 items)
+  [computability_probe]
+    ok  探针 item_id 集 == computation 项集  (58 vs 58)
+    ok  四态值域合法且总量一致  ({"computable": 39, "no_interface": 19, "total": 58})
+  [knowledge_audit]
+    ok  knowledge_audit 35 行 == subtype_split 35 题  (35 vs 35)
+    ok  知识项总数 = 五类 + undetermined  ({"注入缺失": 39, "计算缺失": 19, "检索不可见": 112, "知识缺失": 1})
+  [c1_replay]
+    ok  C1 replay_count == 1
+    ok  C1 total == 160
+    ok  C1 四态和 == 160  ({"improved": 4, "harmed": 3, "unchanged": 150, "changed_wrong_to_wrong": 3})
+    ok  C1 verdict 为双终态之一  (C1_TERMINATED)
+  [kb_equivalence]
+    ok  KB 等价性 total == ok  ({"total": 59, "ok": 59, "fallback_used": 0})
+    ok  KB 等价性 fallback_used == 0
+  [manifest_disk]
+    ok  docs/phase7/error-analysis/error_classification.jsonl SHA 一致  (jsonl_canonical)
+    ok  docs/phase7/phase7-mingli-v4flash-nt-20260811-r2/merged_details.jsonl SHA 一致  (jsonl_canonical)
+    ok  docs/phase7/phase7-mingli-v4flash-nt-20260811-r2/mingli_160.jsonl SHA 一致  (jsonl_canonical)
+    ok  docs/phase8/marriage-capability/c1_detector.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/c1_detector_eval.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/c1_replay.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/classic_texts_freeze.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/classic_texts_search.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/classic_texts_search_results.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/computability_probe.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/fts_behavior_probe.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/kb_equivalence.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/kb_query_set.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/kb_snapshot.db SHA 一致  (raw_bytes)
+    ok  docs/phase8/marriage-capability/knowledge_audit.jsonl SHA 一致  (jsonl_canonical)
+    ok  docs/phase8/marriage-capability/knowledge_audit_summary.md SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/p8_audit.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/p8_freeze.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/p8_kb_snapshot.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/p8_probe.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/p8_provenance.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/p8_reconcile.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/p8_subtype_split.py SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/provenance.json SHA 一致  (json_canonical)
+    ok  docs/phase8/marriage-capability/required_knowledge.jsonl SHA 一致  (jsonl_canonical)
+    ok  docs/phase8/marriage-capability/sealed_marriageset_spec.md SHA 一致  (git_canonical_lf)
+    ok  docs/phase8/marriage-capability/subtype_split.json SHA 一致  (json_canonical)
+    FAIL  knowledge-base/bazi_kb.db SHA 一致  (raw_bytes)
+  
+assert 1 == 0
+ +  where 1 = CompletedProcess(args=['G:\\project\\agent\\.venv\\Scripts\\python.exe', 'G:\\project\\agent\\.tmp\\baseline_wt\\docs\...ility/subtype_split.json SHA 一致  (json_canonical)\n  FAIL  knowledge-base/bazi_kb.db SHA 一致  (raw_bytes)\n', stderr='').returncode
+10 failed, 82 passed, 1 warning in 6.81s

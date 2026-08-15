@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "purpose": "Stage 10 full-gate baseline comparison (BLOCKED_BASELINE_AND_ENVIRONMENT)",
   "command": "python -m pytest tests/test_api.py::TestKB tests/test_bazi_kb.py::TestCLI tests/test_mcp.py::TestBaziKBSearch tests/test_phase8_marriage_capability.py -q --tb=short -rf",
   "environment": {
@@ -26,10 +26,11 @@
       "tests/test_phase8_marriage_capability.py::TestReconcileSubtype::test_reconcile_full_sections",
       "tests/test_phase8_marriage_capability.py::TestReconcileSubtype::test_reconcile_subtype_passes"
     ],
-    "output_sha256": "f2f3fb2d520e95dc1f7b680ef8c1dd81a439a0dee200ed4b3e713f2112baf3f3"
+    "output_sha256": "325bfc4a39f95b1ba38827269f25cbf7bb012e5bf03767da8284c4822c7b43fb",
+    "output_rel": "docs/superpowers/plans/notes/stage10/baseline.stdout.txt"
   },
   "candidate": {
-    "commit": "e6d5e7fd25fed59e4732badef832b235945053ef",
+    "tested_commit": "14f6dfe4b0048ae229443c5c626d8e738245ec48",
     "exit_code": 1,
     "passed": 82,
     "failed": 10,
@@ -46,7 +47,8 @@
       "tests/test_phase8_marriage_capability.py::TestReconcileSubtype::test_reconcile_full_sections",
       "tests/test_phase8_marriage_capability.py::TestReconcileSubtype::test_reconcile_subtype_passes"
     ],
-    "output_sha256": "177d2826cb07fb9389b13973fc88912262a09bcbf4deb64fd40e102446cff00f"
+    "output_sha256": "1e72631ded5caae7054d4a6c122b08079b326bdff638b89d54fff1329c8ca0b3",
+    "output_rel": "docs/superpowers/plans/notes/stage10/candidate.stdout.txt"
   },
   "known_failure_set_equal": true,
   "classification": "BLOCKED_BASELINE_AND_ENVIRONMENT",
@@ -56,12 +58,11 @@
     "MemoryError / HF 网络超时 / 线程超时均为既有测试在受限环境的 flaky，非本计划引入。"
   ],
   "known_failure_exemption": {
-    "status": "pending_approval",
-    "requires": "真实独立审核方批准后方可记为 APPROVED"
-  },
-  "comparison_validity": {
-    "run_commit": "e6d5e7fd25fed59e4732badef832b235945053ef",
-    "current_head": "0c949482174d1a37348dced50be8c6107007b60c",
-    "delta_since_run": "仅审批链（tests/testdata/r.json 换为 fu 审批回执 + 审批提交作者/approval_input_sha256），不改变被比较的代码/测试路径，10 个 bazi_kb.db 失败与候选套件结果不受影响。"
+    "status": "APPROVED",
+    "approved_by": "fu",
+    "approved_at": "2026-08-15",
+    "approval_input_sha256": "a6298fbec0fdc1062f89897d945d49ddddbafa363bb8d0ae06e828cad8fc2cc9",
+    "approval_input_rel": "docs/superpowers/plans/notes/approvals/2026-08-15-sanming-approval-bazi_kb-exemption.txt",
+    "approval_source": "user direct approval message in TRAE session (2026-08-15)"
   }
 }
