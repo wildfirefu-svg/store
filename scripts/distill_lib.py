@@ -48,7 +48,6 @@ import hashlib
 import json
 import os
 import re
-import subprocess as _subprocess
 import sys
 import time
 from pathlib import Path
@@ -695,12 +694,38 @@ def canonical_config_sha256() -> str:
 
 
 def _pid_alive(pid) -> bool:
+    """语言无关的 PID 探测，明确区分「确认存活 / 存在但无权限 / 不存在」。
+
+    - Windows：ctypes OpenProcess（不解析本地化 tasklist 文本；tasklist 输出会因
+      语言本地化、且权限不足时返回 "ERROR: Access denied" 而误判）。
+      ERROR_ACCESS_DENIED(5) = 进程存在但无权限 -> fail-closed 视为存活（不得偷锁）；
+      ERROR_INVALID_PARAMETER(87) = 无此 PID -> 确认不存在。
+    - POSIX：os.kill(pid,0)；ProcessLookupError=不存在；PermissionError=存在（fail-closed）。
+    """
     if pid is None or pid <= 0: return False
     if os.name == "nt":
-        r = _subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], capture_output=True, text=True)
-        return "No tasks" not in r.stdout
-    try: os.kill(pid, 0); return True
-    except OSError: return False
+        return _win_pid_alive(int(pid))
+    try:
+        os.kill(pid, 0); return True
+    except ProcessLookupError:
+        return False
+    except OSError:
+        return True
+
+
+def _win_pid_alive(pid: int) -> bool:
+    try:
+        import ctypes
+    except ImportError:
+        return True  # 无法探测 -> fail-closed
+    PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+    kernel32 = ctypes.windll.kernel32
+    h = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+    if h:
+        kernel32.CloseHandle(h)
+        return True
+    # ERROR_INVALID_PARAMETER(87)：无此 PID。其余（含 ERROR_ACCESS_DENIED(5)）fail-closed 视为存活。
+    return int(kernel32.GetLastError()) != 87
 
 
 class FileLock:

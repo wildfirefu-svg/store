@@ -3633,9 +3633,13 @@ def test_legacy_hard_cap_enforced(tmp_path):
     assert r.legacy_calls == 2
 
 
-def test_filelock_concurrency_and_stale(tmp_path):
+def test_filelock_concurrency_and_stale(tmp_path, monkeypatch):
+    from scripts import distill_lib as dl
     from scripts.distill_lib import FileLock
     import threading
+    # 确定性：不依赖真实操作系统进程表——_pid_alive 由测试显式控制
+    # （真实环境 tasklist 可能因本地化/权限不足而误判，见 P1）。
+    monkeypatch.setattr(dl, "_pid_alive", lambda pid: False)
     lock = tmp_path / "l.lock"
     with FileLock(str(lock)):
         with pytest.raises(RuntimeError, match="lock held by live writer"):
@@ -3646,6 +3650,46 @@ def test_filelock_concurrency_and_stale(tmp_path):
     stale.write_text(json.dumps({"pid": 99999999, "start": _time.time() - 7200, "owner": "p1t1"}), encoding="utf-8")
     with FileLock(str(stale)):
         pass
+
+
+def test_pid_alive_language_independent(monkeypatch):
+    """P1：_pid_alive 语义不依赖本地化 tasklist 文本，且 fail-closed 区分
+    「确认存活 / 存在但无权限 / 不存在」。"""
+    import sys as _sys, types
+    from scripts import distill_lib as dl
+    # Windows 分支（ctypes.OpenProcess / GetLastError 由假 kernel32 驱动）
+    class FakeK32:
+        def __init__(self):
+            self.handle = 0; self.last_error = 0; self.opened = None
+        def OpenProcess(self, access, inherit, pid):
+            self.opened = (access, inherit, pid); return self.handle
+        def CloseHandle(self, h): pass
+        def GetLastError(self): return self.last_error
+    k32 = FakeK32()
+    fake_ctypes = types.SimpleNamespace(windll=types.SimpleNamespace(kernel32=k32))
+    monkeypatch.setitem(_sys.modules, "ctypes", fake_ctypes)
+    # 确认存活：OpenProcess 返回有效句柄
+    k32.handle = 1; k32.last_error = 0
+    assert dl._win_pid_alive(123) is True
+    assert k32.opened[2] == 123
+    # 存在但无权限（ERROR_ACCESS_DENIED=5）-> fail-closed 视为存活
+    k32.handle = 0; k32.last_error = 5
+    assert dl._win_pid_alive(123) is True
+    # 无此 PID（ERROR_INVALID_PARAMETER=87）-> 确认不存在
+    k32.handle = 0; k32.last_error = 87
+    assert dl._win_pid_alive(123) is False
+    # 探测不可用（无 ctypes）-> fail-closed 视为存活
+    monkeypatch.delitem(_sys.modules, "ctypes")
+    import builtins as _b
+    real_import = _b.__import__
+    def _no_ctypes(name, *a, **k):
+        if name == "ctypes": raise ImportError("no ctypes")
+        return real_import(name, *a, **k)
+    monkeypatch.setattr(_b, "__import__", _no_ctypes)
+    assert dl._win_pid_alive(123) is True
+    # 边界：pid <= 0 / None -> 不存在
+    monkeypatch.setattr(dl, "os", types.SimpleNamespace(name="posix"))
+    assert dl._pid_alive(None) is False and dl._pid_alive(0) is False and dl._pid_alive(-1) is False
 
 # ---------------------------------------------------------------------------
 # Stage 6: 常量 + retry + 可重试解析 + 分段器 + generate_mcq
