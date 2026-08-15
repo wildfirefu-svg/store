@@ -1036,7 +1036,7 @@ def test_budget_ledger_tracks_calls():
     assert ledger.can_call() is False
     assert ledger.exhausted is True
     s = ledger.summary()
-    assert s["calls_made"] == 3
+    assert s["calls_made"] == 0 and s["legacy_calls"] == 3   # P0-5：legacy 路径计 legacy_calls
     assert s["remaining"] == 0
 
 
@@ -1286,7 +1286,7 @@ def test_budget_ledger_persistence_across_restart(tmp_path):
     # Second "process": reload from disk with SAME identity + cap
     l2 = BudgetLedger.load_or_create(ledger_path, global_hard_cap=10,
                                      run_id=b[0], code_sha=b[1], rules_sha=b[2])
-    assert l2.calls_made == 3
+    assert l2.legacy_calls == 3   # P0-5：legacy 调用持久化到 legacy_calls
     assert l2.can_call() is True
     # P0-2: cap mismatch is now rejected (fail-closed), not silently reset.
     # A mismatch means the ledger was created for a different run.
@@ -1294,14 +1294,14 @@ def test_budget_ledger_persistence_across_restart(tmp_path):
         BudgetLedger.load_or_create(ledger_path, global_hard_cap=2,
                                     run_id=b[0], code_sha=b[1], rules_sha=b[2])
     # P0-1: resume with a different identity (cross-run drift) is rejected.
-    with pytest.raises(LedgerCorruptionError, match="mismatch"):
+    with pytest.raises(LedgerCorruptionError, match="identity drift"):
         BudgetLedger.load_or_create(ledger_path, global_hard_cap=10,
                                     run_id="run2", code_sha=b[1], rules_sha=b[2])
 
 
 def test_budget_ledger_corrupt_rejected(tmp_path):
     """P0-2: corrupt ledger raises LedgerCorruptionError, does not reset."""
-    from scripts.distill_lib import BudgetLedger, LedgerCorruptionError
+    from scripts.distill_lib import BudgetLedger, LedgerCorruptionError, _ledger_hash
     ledger_path = tmp_path / "ledger.json"
     b = ("run1", "a" * 64, "b" * 64)
     # Corrupt JSON
@@ -1309,27 +1309,29 @@ def test_budget_ledger_corrupt_rejected(tmp_path):
     with pytest.raises((LedgerCorruptionError, json.JSONDecodeError)):
         BudgetLedger.load_or_create(ledger_path, global_hard_cap=10,
                                     run_id=b[0], code_sha=b[1], rules_sha=b[2])
-    # Missing fields
+    # 新 schema：无 ledger_hash（旧格式/缺字段）一律 hash mismatch（fail-closed）
     ledger_path.write_text(json.dumps({"calls_made": 5}), encoding="utf-8")
-    with pytest.raises(LedgerCorruptionError, match="missing required field"):
+    with pytest.raises(LedgerCorruptionError, match="hash mismatch"):
         BudgetLedger.load_or_create(ledger_path, global_hard_cap=10,
                                     run_id=b[0], code_sha=b[1], rules_sha=b[2])
-    # Negative values
-    ledger_path.write_text(json.dumps({
-        "calls_made": -1, "accepted": 0, "skipped": 0, "global_hard_cap": 10,
-    }), encoding="utf-8")
-    with pytest.raises(LedgerCorruptionError, match="negative"):
+    # Negative values：hash 自洽但 calls_made 为负 -> 拒绝
+    bad = {"global_hard_cap": 10, "calls_made": -1, "accepted": 0, "skipped": 0, "exhausted": 0,
+           "run_id": b[0], "code_sha": b[1], "rules_sha": b[2], "legacy_calls": 0, "attempts": {}}
+    bad["ledger_hash"] = _ledger_hash(bad)
+    ledger_path.write_text(json.dumps(bad), encoding="utf-8")
+    with pytest.raises(LedgerCorruptionError, match="calls_made"):
         BudgetLedger.load_or_create(ledger_path, global_hard_cap=10,
                                     run_id=b[0], code_sha=b[1], rules_sha=b[2])
-    # P0-1: persisted ledger missing binding fields is rejected (no lenient
-    # upgrade to a fresh identity).
-    ledger_path.write_text(json.dumps({
-        "calls_made": 0, "accepted": 0, "skipped": 0, "global_hard_cap": 10,
-    }), encoding="utf-8")
+    # P0-1：hash 自洽但缺持久化绑定字段 -> 拒绝（无宽松升级）
+    nb = {"global_hard_cap": 10, "calls_made": 0, "accepted": 0, "skipped": 0, "exhausted": 0,
+          "run_id": "", "code_sha": "", "rules_sha": "", "legacy_calls": 0, "attempts": {}}
+    nb["ledger_hash"] = _ledger_hash(nb)
+    ledger_path.write_text(json.dumps(nb), encoding="utf-8")
     with pytest.raises(LedgerCorruptionError, match="missing binding field"):
         BudgetLedger.load_or_create(ledger_path, global_hard_cap=10,
                                     run_id=b[0], code_sha=b[1], rules_sha=b[2])
-    # P0-1: creating a persisted ledger without a frozen identity is refused.
+    # P0-1：新建持久化账本缺冻结身份 -> 拒绝
+    ledger_path.unlink(missing_ok=True)
     with pytest.raises(LedgerCorruptionError, match="must be provided"):
         BudgetLedger.load_or_create(ledger_path, global_hard_cap=10)
 
@@ -1458,50 +1460,6 @@ def test_regen_book_main_returns_nonzero_on_fail_closed(tmp_path, monkeypatch):
     assert exit_code == 1
 
 
-def test_fill_book_fail_closed_no_raw_files_written(tmp_path, monkeypatch):
-    """fill_book does not write raw_*.txt when incomplete (P0-2).
-
-    The audit found fill_book wrote raw files before the integrity check.
-    Now raw writes are deferred until chapter is confirmed complete.
-    """
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    import distill_lib as dl
-
-    book_dir = tmp_path / "zipingzhenquan"
-    book_dir.mkdir()
-    (book_dir / "all_rules.json").write_text("[]", encoding="utf-8")
-    (book_dir / "all_mcq.jsonl").write_text("", encoding="utf-8")
-    (book_dir / "progress.json").write_text(
-        json.dumps({"done": [], "total_rules": 0, "total_mcqs": 0}),
-        encoding="utf-8")
-    (book_dir / "raw_full.txt").write_text("第一章 甲木\n甲木参天\n第二章 乙木\n乙木系甲", encoding="utf-8")
-    (book_dir / "chapter_list.txt").write_text("1. 第一章 甲木\n2. 第二章 乙木", encoding="utf-8")
-
-    # Mock distill_chapter to return rules (so len(rules) > 0), but _call
-    # to return empty for MCQ generation (so len(linked) < len(rules)).
-    mock_rules = [
-        {"id": "zpzq_000_000", "source_chapter": "第一章 甲木", "subject": "甲木",
-         "rule": "甲木参天", "original_text": "甲木", "category": "天干"},
-    ]
-    monkeypatch.setattr(dl, "distill_chapter", lambda *a, **k: mock_rules)
-    monkeypatch.setattr(dl, "_call", lambda *a, **k: "")
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-
-    ledger_path = tmp_path / ".fill_ledger.json"
-    b = ("r1", "a" * 64, "b" * 64)
-    result = fmc.fill_book("zipingzhenquan", global_budget=100, ledger_path=ledger_path,
-                           run_id=b[0], code_sha=b[1], rules_sha=b[2])
-    assert result.get("error") == "fail_closed"
-    # No raw_*.txt files should have been written (deferred writes)
-    raw_files = list(book_dir.glob("raw_*.txt"))
-    new_raws = [f for f in raw_files if f.name != "raw_full.txt"]
-    assert len(new_raws) == 0, f"Unexpected raw files written: {new_raws}"
-
-
-# ---------------------------------------------------------------------------
-# P0-1: ledger run-identity binding (missing fields + cross-run drift)
-# ---------------------------------------------------------------------------
 
 
 def test_ledger_rejects_missing_binding_on_fresh_persist(tmp_path):
@@ -1515,9 +1473,12 @@ def test_ledger_rejects_missing_binding_on_fresh_persist(tmp_path):
 def test_ledger_rejects_resume_with_missing_persisted_binding(tmp_path):
     """P0-1: an old ledger missing binding fields is rejected (no lenient upgrade)."""
     from scripts.distill_lib import BudgetLedger, LedgerCorruptionError
+    from scripts.distill_lib import _ledger_hash
     p = tmp_path / "ledger.json"
-    p.write_text(json.dumps({"calls_made": 0, "accepted": 0, "skipped": 0,
-                             "global_hard_cap": 10}), encoding="utf-8")
+    d = {"global_hard_cap": 10, "calls_made": 0, "accepted": 0, "skipped": 0, "exhausted": 0,
+         "run_id": "", "code_sha": "", "rules_sha": "", "legacy_calls": 0, "attempts": {}}
+    d["ledger_hash"] = _ledger_hash(d)
+    p.write_text(json.dumps(d), encoding="utf-8")
     with pytest.raises(LedgerCorruptionError, match="missing binding field"):
         BudgetLedger.load_or_create(p, global_hard_cap=10,
                                     run_id="r", code_sha="a" * 64, rules_sha="b" * 64)
@@ -1529,7 +1490,7 @@ def test_ledger_rejects_cross_run_drift(tmp_path):
     p = tmp_path / "ledger.json"
     b = ("runA", "a" * 64, "b" * 64)
     BudgetLedger.load_or_create(p, 10, run_id=b[0], code_sha=b[1], rules_sha=b[2]).save()
-    with pytest.raises(LedgerCorruptionError, match="mismatch"):
+    with pytest.raises(LedgerCorruptionError, match="identity drift"):
         BudgetLedger.load_or_create(p, 10, run_id="runB", code_sha=b[1], rules_sha=b[2])
 
 
@@ -1755,77 +1716,8 @@ def test_regen_rolls_back_when_post_publish_validation_fails(tmp_path, monkeypat
     assert not list(book_dir.glob(".publish_backup_*"))
 
 
-def test_fill_rolls_back_when_post_publish_validation_fails(tmp_path, monkeypatch):
-    """P0-1: fill rolls back published files when post-publish provenance
-    validation fails (not just mid-replace failures)."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    import distill_lib as dl
-
-    book_dir = tmp_path / "zipingzhenquan"
-    book_dir.mkdir()
-    (book_dir / "all_rules.json").write_text("[]", encoding="utf-8")
-    (book_dir / "all_mcq.jsonl").write_text("", encoding="utf-8")
-    (book_dir / "progress.json").write_text(
-        json.dumps({"done": [], "total_rules": 0, "total_mcqs": 0}), encoding="utf-8")
-    (book_dir / "raw_full.txt").write_text("第一章 甲木\n甲木参天", encoding="utf-8")
-    (book_dir / "chapter_list.txt").write_text("1. 第一章 甲木", encoding="utf-8")
-
-    mock_rules = [{"id": "zpzq_000_000", "source_chapter": "第一章 甲木", "subject": "甲木",
-                   "rule": "甲木参天", "original_text": "甲木", "category": "天干"}]
-    monkeypatch.setattr(dl, "distill_chapter", lambda *a, **k: mock_rules)
-
-    def mock_call(prompt, timeout=120):
-        return json.dumps({
-            "question": "甲木为何参天？",
-            "options": {"A": "甲木参天", "B": "甲木忌水", "C": "甲木喜金", "D": "甲木忌金"},
-            "answer": "A", "explanation": "甲木参天", "difficulty": "基础", "category": "天干",
-        })
-    monkeypatch.setattr(dl, "_call", mock_call)
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-    monkeypatch.setattr(fmc, "validate_provenance",
-                        lambda *a, **k: (False, ["simulated validation failure"]))
-
-    ledger_path = tmp_path / ".fill_ledger.json"
-    b = ("r1", "a" * 64, "b" * 64)
-    with pytest.raises(ConservationError):
-        fmc.fill_book("zipingzhenquan", global_budget=100, ledger_path=ledger_path,
-                      run_id=b[0], code_sha=b[1], rules_sha=b[2])
-
-    # Rolled back: no rules/mcq/new-raw files, no staging/backup left.
-    assert (book_dir / "all_rules.json").read_text(encoding="utf-8") == "[]"
-    assert (book_dir / "all_mcq.jsonl").read_text(encoding="utf-8") == ""
-    new_raws = [f for f in book_dir.glob("raw_*.txt") if f.name != "raw_full.txt"]
-    assert len(new_raws) == 0, f"new raw files left behind: {new_raws}"
-    assert not list(book_dir.glob(".fill_staging_*"))
-    assert not list(book_dir.glob(".publish_backup_*"))
 
 
-# ---------------------------------------------------------------------------
-# P0-2: run bindings are sensitive to the full input manifest
-# ---------------------------------------------------------------------------
-
-
-def test_fill_run_bindings_sensitive_to_input_manifest(tmp_path, monkeypatch):
-    """P0-2: changing any manifest-covered input changes the run_id."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-
-    book_dir = tmp_path / "zipingzhenquan"
-    book_dir.mkdir()
-    (book_dir / "raw_full.txt").write_text("甲木参天", encoding="utf-8")
-    (book_dir / "chapter_list.txt").write_text("1. 第一章", encoding="utf-8")
-    (book_dir / "progress.json").write_text("{}", encoding="utf-8")
-    (book_dir / "all_rules.json").write_text("[]", encoding="utf-8")
-    (book_dir / "all_mcq.jsonl").write_text("", encoding="utf-8")
-
-    rid1 = fmc._compute_run_bindings(["zipingzhenquan"])
-    # Changing a manifest-covered input (chapter_list.txt) must change run_id.
-    (book_dir / "chapter_list.txt").write_text("1. 第一章\n2. 第二章", encoding="utf-8")
-    rid2 = fmc._compute_run_bindings(["zipingzhenquan"])
-    assert rid1[0] != rid2[0]
-    assert rid1[2] != rid2[2]  # rules_sha must change too
 
 
 def test_regen_run_bindings_sensitive_to_rules_input(tmp_path, monkeypatch):
@@ -2300,50 +2192,10 @@ def test_regen_main_rejects_invalid_target_without_run_bindings(tmp_path, monkey
     assert calls == []
 
 
-def test_fill_main_rejects_invalid_target_without_run_bindings(tmp_path, monkeypatch):
-    """P0: `fill ghostbook` returns 2 and never computes run bindings."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    import distill_lib as dl
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-    monkeypatch.setitem(dl.VALID_TARGETS_BY_OPERATION, "fill", ("zipingzhenquan",))
-    calls = _spy_run_bindings(monkeypatch, fmc)
-    monkeypatch.setattr("sys.argv", ["fill_missing_chapters.py", "ghostbook"])
-    assert fmc.main() == 2
-    assert calls == []
 
 
-def test_fill_main_rejects_mixed_valid_invalid_targets(tmp_path, monkeypatch):
-    """P0: mixed valid+invalid explicit targets reject the whole fill run
-    (never run the legal subset)."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    import distill_lib as dl
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-    monkeypatch.setitem(dl.VALID_TARGETS_BY_OPERATION, "fill", ("zipingzhenquan",))
-    calls = _spy_run_bindings(monkeypatch, fmc)
-    monkeypatch.setattr("sys.argv",
-                        ["fill_missing_chapters.py", "zipingzhenquan", "ghostbook"])
-    assert fmc.main() == 2
-    assert calls == []
 
 
-def test_fill_main_no_args_defaults_to_all_allowed(tmp_path, monkeypatch):
-    """P0: no explicit args still default to the full shared fill allowlist."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    import distill_lib as dl
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-    monkeypatch.setitem(dl.VALID_TARGETS_BY_OPERATION, "fill", ("zipingzhenquan",))
-    monkeypatch.setattr(dl, "_call", lambda *a, **k: "")
-    calls = []
-    def spy(dir_key, *a, **k):
-        calls.append(dir_key)
-        return {"error": "simulated"}  # 只验证 targets 展开，跳过完整执行
-    monkeypatch.setattr(fmc, "fill_book", spy)
-    monkeypatch.setattr("sys.argv", ["fill_missing_chapters.py"])
-    fmc.main()
-    assert calls == ["zipingzhenquan"]  # 无参数 → 默认全部（allowlist 仅 zipingzhenquan）
 
 
 def test_regen_main_rejects_mixed_valid_invalid_targets(tmp_path, monkeypatch):
@@ -2530,79 +2382,8 @@ def test_api_generation_forged_shas_rejected(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_fill_api_generation_records_actual_rule_payload(tmp_path, monkeypatch):
-    """P0-4: fill's rules_input_sha hashes the rules ACTUALLY sent this run
-    (new_rules_total), and rules_output_sha the final all_rules.json."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    import distill_lib as dl
-    book = tmp_path / "zipingzhenquan"
-    book.mkdir()
-    (book / "all_rules.json").write_text("[]", encoding="utf-8")
-    (book / "all_mcq.jsonl").write_text("", encoding="utf-8")
-    (book / "quarantine_rules.jsonl").write_text("", encoding="utf-8")
-    (book / "quarantine_mcq.jsonl").write_text("", encoding="utf-8")
-    (book / "progress.json").write_text(
-        json.dumps({"done": [], "total_rules": 0, "total_mcqs": 0}), encoding="utf-8")
-    (book / "raw_full.txt").write_text("第一章 甲木\n甲木参天", encoding="utf-8")
-    (book / "chapter_list.txt").write_text("1. 第一章 甲木", encoding="utf-8")
-    mock_rules = [{"id": "zpzq_000_000", "source_chapter": "第一章 甲木", "subject": "甲木",
-                   "rule": "甲木参天", "original_text": "甲木", "category": "天干"}]
-    monkeypatch.setattr(dl, "distill_chapter", lambda *a, **k: mock_rules)
-
-    def mock_call(prompt, timeout=120):
-        return json.dumps({
-            "question": "甲木为何参天？",
-            "options": {"A": "甲木参天", "B": "甲木忌水", "C": "甲木喜金", "D": "甲木忌金"},
-            "answer": "A", "explanation": "甲木参天", "difficulty": "基础", "category": "天干",
-        })
-    monkeypatch.setattr(dl, "_call", mock_call)
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-    manifest_path = tmp_path / ".fill_run_manifest.json"
-    b = fmc._compute_run_bindings(["zipingzhenquan"], manifest_path)[:3]
-    fmc.fill_book("zipingzhenquan", global_budget=100,
-                  ledger_path=tmp_path / ".fill_ledger.json",
-                  run_id=b[0], code_sha=b[1], rules_sha=b[2],
-                  manifest_path=manifest_path)
-    prov = json.loads((book / "provenance.json").read_text(encoding="utf-8"))
-    api = prov.get("api_generation")
-    assert api is not None
-    import hashlib
-    rules_input_payload = json.dumps(
-        mock_rules, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    rules_out = json.loads((book / "all_rules.json").read_text(encoding="utf-8"))
-    rules_output_payload = json.dumps(
-        rules_out, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    assert api["rules_input_sha"] == hashlib.sha256(rules_input_payload).hexdigest()
-    assert api["rules_output_sha"] == hashlib.sha256(rules_output_payload).hexdigest()
-    assert api["rules_added"] == 1
 
 
-def test_fill_noop_does_not_create_api_generation(tmp_path, monkeypatch):
-    """P0-4: when there is nothing to fill (zero API calls), fill skips and
-    does NOT create an api_generation record for the existing MCQs."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-    book = tmp_path / "zipingzhenquan"
-    book.mkdir()
-    (book / "all_rules.json").write_text("[]", encoding="utf-8")
-    (book / "all_mcq.jsonl").write_text('{"question":"old"}\n', encoding="utf-8")
-    (book / "progress.json").write_text(
-        json.dumps({"done": ["第一章 甲木"], "total_rules": 0, "total_mcqs": 1}), encoding="utf-8")
-    (book / "raw_full.txt").write_text("第一章 甲木\n甲木参天", encoding="utf-8")
-    (book / "chapter_list.txt").write_text("1. 第一章 甲木", encoding="utf-8")
-    b = ("r1", "a" * 64, "b" * 64)
-    result = fmc.fill_book("zipingzhenquan", global_budget=100,
-                           ledger_path=tmp_path / ".fill_ledger.json",
-                           run_id=b[0], code_sha=b[1], rules_sha=b[2])
-    assert result.get("skipped") is True
-    assert not (book / "provenance.json").exists()
-
-
-# ---------------------------------------------------------------------------
-# Round-5 P0-1: resume rejects forged identity / forged completed receipt
-# ---------------------------------------------------------------------------
 
 
 def test_resume_rejects_forged_identity(tmp_path):
@@ -2891,54 +2672,6 @@ def test_validator_rejects_missing_verification_level_no_manifest(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_fill_records_per_book_call_delta(tmp_path, monkeypatch):
-    """Medium: api_generation.calls_made is THIS book's call delta, not the
-    cross-book cumulative ledger total."""
-    sys.path.insert(0, str(ROOT / "scripts"))
-    import scripts.fill_missing_chapters as fmc
-    import distill_lib as dl
-    book = tmp_path / "zipingzhenquan"
-    book.mkdir()
-    (book / "all_rules.json").write_text("[]", encoding="utf-8")
-    (book / "all_mcq.jsonl").write_text("", encoding="utf-8")
-    (book / "quarantine_rules.jsonl").write_text("", encoding="utf-8")
-    (book / "quarantine_mcq.jsonl").write_text("", encoding="utf-8")
-    (book / "progress.json").write_text(
-        json.dumps({"done": [], "total_rules": 0, "total_mcqs": 0}), encoding="utf-8")
-    (book / "raw_full.txt").write_text("第一章 甲木\n甲木参天", encoding="utf-8")
-    (book / "chapter_list.txt").write_text("1. 第一章 甲木", encoding="utf-8")
-    mock_rules = [{"id": "zpzq_000_000", "source_chapter": "第一章 甲木", "subject": "甲木",
-                   "rule": "甲木参天", "original_text": "甲木", "category": "天干"}]
-    monkeypatch.setattr(dl, "distill_chapter", lambda *a, **k: mock_rules)
-
-    def mock_call(prompt, timeout=120):
-        return json.dumps({
-            "question": "甲木为何参天？",
-            "options": {"A": "甲木参天", "B": "甲木忌水", "C": "甲木喜金", "D": "甲木忌金"},
-            "answer": "A", "explanation": "甲木参天", "difficulty": "基础", "category": "天干",
-        })
-    monkeypatch.setattr(dl, "_call", mock_call)
-    monkeypatch.setattr(fmc, "BASE", tmp_path)
-    manifest_path = tmp_path / ".fill_run_manifest.json"
-    b = fmc._compute_run_bindings(["zipingzhenquan"], manifest_path)[:3]
-    ledger_path = tmp_path / ".fill_ledger.json"
-    # Pre-seed the shared ledger with 7 calls from a PRIOR book.
-    seed = dl.BudgetLedger.load_or_create(
-        ledger_path, 100, run_id=b[0], code_sha=b[1], rules_sha=b[2])
-    for _ in range(7):
-        seed.record_call()
-    fmc.fill_book("zipingzhenquan", global_budget=100, ledger_path=ledger_path,
-                  run_id=b[0], code_sha=b[1], rules_sha=b[2],
-                  manifest_path=manifest_path)
-    prov = json.loads((book / "provenance.json").read_text(encoding="utf-8"))
-    api = prov["api_generation"]
-    # The delta is THIS book's calls (< 7); a cumulative value would be > 7.
-    assert 1 <= api["calls_made"] < 7
-
-
-# ---------------------------------------------------------------------------
-# Round-6 P0-1: missing files must be rejected on resume / at receipt write
-# ---------------------------------------------------------------------------
 
 
 def test_resume_rejects_missing_pending_input(tmp_path):
@@ -3726,4 +3459,691 @@ def test_validator_rejects_unknown_or_operation_mismatched_target(
     assert ok is False
     joined = "; ".join(issues)
     assert "not an allowed target" in joined
+
+
+
+# ---------------------------------------------------------------------------
+# Stage 5: 双层账本 + BudgetCtx（新 schema）——attempt 校验/守恒/锁/orphan
+# ---------------------------------------------------------------------------
+
+def _meta(attempt_no=1, operation="rules", chapter_id=1, segment_id=0, rule_id=None, run_id="R", batch_id="B"):
+    return {"operation": operation, "chapter_id": chapter_id, "segment_id": segment_id, "rule_id": rule_id,
+            "attempt_no": attempt_no, "run_id": run_id, "batch_id": batch_id}
+
+
+def _att(attempt_no=1):
+    from scripts.distill_lib import attempt_id_for
+    return attempt_id_for(run_id="R", batch_id="B", chapter_id=1, segment_id=0, operation="rules", rule_id=None, attempt_no=attempt_no)
+
+
+def _base():
+    from scripts.distill_lib import attempt_base_id
+    return attempt_base_id(run_id="R", batch_id="B", chapter_id=1, segment_id=0, operation="rules", rule_id=None)
+
+
+def test_stage5_experiment_id_frozen():
+    from scripts.distill_lib import EXPERIMENT_ID
+    assert EXPERIMENT_ID == "sanming-303-completion"
+
+
+def test_attempt_id_canonical_sha():
+    from scripts.distill_lib import attempt_id_for, attempt_base_id
+    a = attempt_id_for(run_id="R", batch_id="B", chapter_id=1, segment_id=0, operation="rules", rule_id=None, attempt_no=1)
+    assert isinstance(a, str) and len(a) == 64
+    assert a == attempt_id_for(run_id="R", batch_id="B", chapter_id=1, segment_id=0, operation="rules", rule_id=None, attempt_no=1)
+    assert a != attempt_id_for(run_id="R", batch_id="B", chapter_id=1, segment_id=0, operation="rules", rule_id=None, attempt_no=2)
+    b = attempt_base_id(run_id="R", batch_id="B", chapter_id=1, segment_id=0, operation="rules", rule_id=None)
+    assert isinstance(b, str) and len(b) == 64
+
+
+def test_project_ledger_cap_drift_rejected(tmp_path):
+    from scripts.distill_lib import ProjectLedger, LedgerCorruptionError, EXPERIMENT_ID
+    p = tmp_path / "proj.json"
+    ProjectLedger.load_or_create(p, experiment_id=EXPERIMENT_ID, total_cap=100).before_call(_att(), path=p, metadata=_meta())
+    with pytest.raises(LedgerCorruptionError, match="cap mismatch"):
+        ProjectLedger.load_or_create(p, experiment_id=EXPERIMENT_ID, total_cap=50)
+
+
+def test_project_duplicate_metadata_consistent_and_inconsistent(tmp_path):
+    from scripts.distill_lib import ProjectLedger, ALREADY_RESERVED, LedgerCorruptionError, EXPERIMENT_ID
+    p = tmp_path / "proj.json"
+    proj = ProjectLedger.load_or_create(p, experiment_id=EXPERIMENT_ID, total_cap=100)
+    assert proj.before_call(_att(), path=p, metadata=_meta()) is None
+    assert proj.before_call(_att(), path=p, metadata=_meta()) is ALREADY_RESERVED
+    bad = _meta(); bad["chapter_id"] = 99
+    with pytest.raises(LedgerCorruptionError, match="bind metadata"):
+        proj.before_call(_att(), path=p, metadata=bad)
+
+
+def test_project_tampered_reservation_key_rejected_on_load(tmp_path):
+    from scripts.distill_lib import ProjectLedger, LedgerCorruptionError, _ledger_hash, EXPERIMENT_ID
+    p = tmp_path / "proj.json"
+    proj = ProjectLedger.load_or_create(p, experiment_id=EXPERIMENT_ID, total_cap=100)
+    att = _att(); proj.before_call(att, path=p, metadata=_meta())
+    data = json.loads(p.read_text(encoding="utf-8"))
+    data["reservations"]["forged"] = data["reservations"].pop(att)
+    data["ledger_hash"] = _ledger_hash(data)
+    p.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(LedgerCorruptionError):
+        ProjectLedger.load_or_create(p, experiment_id=EXPERIMENT_ID, total_cap=100)
+
+
+def test_run_record_attempt_atomic_cap_duplicate(tmp_path):
+    from scripts.distill_lib import BudgetLedger, LedgerCorruptionError
+    rp = tmp_path / "run.json"
+    run = BudgetLedger.load_or_create(rp, global_hard_cap=2, run_id="R", code_sha="c", rules_sha="r")
+    run.record_attempt(_att(1), path=rp, base_id=_base(), attempt_no=1, metadata=_meta(1), batch_id="B")
+    # 同 metadata 幂等返回；不同 metadata 拒绝
+    run.record_attempt(_att(1), path=rp, base_id=_base(), attempt_no=1, metadata=_meta(1), batch_id="B")
+    bad = _meta(1); bad["chapter_id"] = 99
+    with pytest.raises(LedgerCorruptionError, match="bind metadata"):
+        run.record_attempt(_att(1), path=rp, base_id=_base(), attempt_no=1, metadata=bad, batch_id="B")
+    # cap: 第 2 个 attempt 后第 3 个越界
+    run.record_attempt(_att(2), path=rp, base_id=_base(), attempt_no=2, metadata=_meta(2), batch_id="B")
+    with pytest.raises(RuntimeError, match="budget exhausted"):
+        run.record_attempt(_att(3), path=rp, base_id=_base(), attempt_no=3, metadata=_meta(3), batch_id="B")
+
+
+def test_run_terminal_state_machine(tmp_path):
+    from scripts.distill_lib import BudgetLedger, LedgerCorruptionError
+    rp = tmp_path / "run.json"
+    run = BudgetLedger.load_or_create(rp, global_hard_cap=10, run_id="R", code_sha="c", rules_sha="r")
+    base = _base()
+    run.record_attempt(_att(1), path=rp, base_id=base, attempt_no=1, metadata=_meta(1), batch_id="B")
+    run.record_terminal(_att(1), "success", path=rp)
+    with pytest.raises(LedgerCorruptionError, match="re-transition"):
+        run.record_terminal(_att(1), "failed", path=rp)
+    with pytest.raises(LedgerCorruptionError, match="terminal"):
+        run.record_attempt(_att(1), path=rp, base_id=base, attempt_no=1, metadata=_meta(1), batch_id="B")
+
+
+def test_call_with_budget_records_terminal(tmp_path):
+    from scripts.distill_lib import BudgetLedger, ProjectLedger, call_with_budget, EXPERIMENT_ID
+    proj = ProjectLedger.load_or_create(tmp_path / "p.json", experiment_id=EXPERIMENT_ID, total_cap=100)
+    run = BudgetLedger.load_or_create(tmp_path / "r.json", global_hard_cap=10, run_id="R", code_sha="c", rules_sha="r")
+    meta = _meta(1)
+    out = call_with_budget(lambda: 42, proj=proj, run=run, attempt_id=_att(1), project_path=tmp_path / "p.json",
+                           run_path=tmp_path / "r.json", base_id=_base(), attempt_no=1, metadata=meta, batch_id="B")
+    assert out == 42
+    assert run.attempts[_att(1)]["status"] == "success"
+
+
+def test_verify_attempt_metadata_consistency():
+    from scripts.distill_lib import BudgetLedger, ProjectLedger, verify_attempt_metadata_consistency, LedgerCorruptionError, EXPERIMENT_ID
+    proj = ProjectLedger(EXPERIMENT_ID, 100)
+    run = BudgetLedger(100, run_id="R", code_sha="c", rules_sha="r")
+    att = _att(1)
+    proj.reservations[att] = {"status": "reserved", "metadata": _meta(1)}
+    run.attempts[att] = {"status": "attempted", "base_id": "a" * 64, "attempt_no": 1, "metadata": _meta(1)}
+    verify_attempt_metadata_consistency(proj, run, att)
+    run.attempts[att]["metadata"] = dict(_meta(1), chapter_id=99)
+    with pytest.raises(LedgerCorruptionError, match="metadata mismatch"):
+        verify_attempt_metadata_consistency(proj, run, att)
+
+
+def test_metadata_none_rejected():
+    from scripts.distill_lib import BudgetLedger, ProjectLedger, LedgerCorruptionError, EXPERIMENT_ID
+    with pytest.raises(LedgerCorruptionError):
+        ProjectLedger(EXPERIMENT_ID, 10).before_call(_att(), path=None, metadata=None)
+    with pytest.raises(LedgerCorruptionError):
+        BudgetLedger(10).record_attempt(_att(), metadata=None)
+
+
+def test_orphan_and_interrupted():
+    from scripts.distill_lib import ProjectLedger, BudgetLedger, reserved_unattributed, interrupted_unknown, EXPERIMENT_ID
+    proj = ProjectLedger(EXPERIMENT_ID, 100)
+    run = BudgetLedger(100, run_id="R", code_sha="c", rules_sha="r")
+    proj.reservations[_att(1)] = {"status": "reserved", "metadata": _meta(1)}
+    run.attempts[_att(2)] = {"status": "attempted", "base_id": "a" * 64, "attempt_no": 1, "metadata": _meta(1)}
+    assert _att(1) in reserved_unattributed(proj, run)
+    assert _att(2) in interrupted_unknown(run)
+
+
+def test_project_recomputes_attempt_id_on_load(tmp_path):
+    from scripts.distill_lib import ProjectLedger, LedgerCorruptionError, _ledger_hash, EXPERIMENT_ID
+    p = tmp_path / "project.json"
+    proj = ProjectLedger.load_or_create(p, experiment_id=EXPERIMENT_ID, total_cap=100)
+    m = _meta(attempt_no=1)
+    m.update({"run_id": "R", "batch_id": "B"})
+    att = _att(1)
+    proj.before_call(att, path=p, metadata=m)
+    data = json.loads(p.read_text(encoding="utf-8"))
+    data["reservations"]["forged"] = data["reservations"].pop(att)
+    data["ledger_hash"] = _ledger_hash(data)
+    p.write_text(json.dumps(data), encoding="utf-8")
+    with pytest.raises(LedgerCorruptionError):
+        ProjectLedger.load_or_create(p, experiment_id=EXPERIMENT_ID, total_cap=100)
+
+
+def test_legacy_record_call_does_not_break_conservation(tmp_path):
+    from scripts.distill_lib import BudgetLedger
+    r = BudgetLedger.load_or_create(tmp_path / "run.json", global_hard_cap=100, run_id="R", code_sha="c", rules_sha="r")
+    r.record_call(path=tmp_path / "run.json"); r.record_call(path=tmp_path / "run.json")
+    r2 = BudgetLedger.load_or_create(tmp_path / "run.json", global_hard_cap=100, run_id="R", code_sha="c", rules_sha="r")
+    assert r2.legacy_calls == 2 and r2.calls_made == 0 and len(r2.attempts) == 0
+    assert r2.can_call() is True
+
+
+def test_legacy_hard_cap_enforced(tmp_path):
+    from scripts.distill_lib import BudgetLedger
+    r = BudgetLedger.load_or_create(tmp_path / "run.json", global_hard_cap=2, run_id="R", code_sha="c", rules_sha="r")
+    r.before_legacy_call(path=tmp_path / "run.json"); r.before_legacy_call(path=tmp_path / "run.json")
+    with pytest.raises(RuntimeError, match="budget exhausted"):
+        r.before_legacy_call(path=tmp_path / "run.json")
+    assert r.legacy_calls == 2
+
+
+def test_filelock_concurrency_and_stale(tmp_path, monkeypatch):
+    from scripts import distill_lib as dl
+    from scripts.distill_lib import FileLock
+    import threading
+    # 确定性：不依赖真实操作系统进程表——_pid_alive 由测试显式控制
+    # （真实环境 tasklist 可能因本地化/权限不足而误判，见 P1）。
+    monkeypatch.setattr(dl, "_pid_alive", lambda pid: False)
+    lock = tmp_path / "l.lock"
+    with FileLock(str(lock)):
+        with pytest.raises(RuntimeError, match="lock held by live writer"):
+            FileLock(str(lock)).__enter__()
+    # 陈旧锁（超时 + pid 不存在）可被接管
+    stale = tmp_path / "s.lock"
+    import time as _time
+    stale.write_text(json.dumps({"pid": 99999999, "start": _time.time() - 7200, "owner": "p1t1"}), encoding="utf-8")
+    with FileLock(str(stale)):
+        pass
+
+
+def test_pid_alive_language_independent(monkeypatch):
+    """P1：_pid_alive 语义不依赖本地化 tasklist 文本，且 fail-closed 区分
+    「确认存活 / 存在但无权限 / 不存在」。"""
+    import sys as _sys, types
+    from scripts import distill_lib as dl
+    # Windows 分支（ctypes.OpenProcess / GetLastError 由假 kernel32 驱动）
+    class FakeK32:
+        def __init__(self):
+            self.handle = 0; self.last_error = 0; self.opened = None
+        def OpenProcess(self, access, inherit, pid):
+            self.opened = (access, inherit, pid); return self.handle
+        def CloseHandle(self, h): pass
+        def GetLastError(self): return self.last_error
+    k32 = FakeK32()
+    fake_ctypes = types.SimpleNamespace(windll=types.SimpleNamespace(kernel32=k32))
+    monkeypatch.setitem(_sys.modules, "ctypes", fake_ctypes)
+    # 确认存活：OpenProcess 返回有效句柄
+    k32.handle = 1; k32.last_error = 0
+    assert dl._win_pid_alive(123) is True
+    assert k32.opened[2] == 123
+    # 存在但无权限（ERROR_ACCESS_DENIED=5）-> fail-closed 视为存活
+    k32.handle = 0; k32.last_error = 5
+    assert dl._win_pid_alive(123) is True
+    # 无此 PID（ERROR_INVALID_PARAMETER=87）-> 确认不存在
+    k32.handle = 0; k32.last_error = 87
+    assert dl._win_pid_alive(123) is False
+    # 探测不可用（无 ctypes）-> fail-closed 视为存活
+    monkeypatch.delitem(_sys.modules, "ctypes")
+    import builtins as _b
+    real_import = _b.__import__
+    def _no_ctypes(name, *a, **k):
+        if name == "ctypes": raise ImportError("no ctypes")
+        return real_import(name, *a, **k)
+    monkeypatch.setattr(_b, "__import__", _no_ctypes)
+    assert dl._win_pid_alive(123) is True
+    # 边界：pid <= 0 / None -> 不存在
+    monkeypatch.setattr(dl, "os", types.SimpleNamespace(name="posix"))
+    assert dl._pid_alive(None) is False and dl._pid_alive(0) is False and dl._pid_alive(-1) is False
+
+# ---------------------------------------------------------------------------
+# Stage 6: 常量 + retry + 可重试解析 + 分段器 + generate_mcq
+# ---------------------------------------------------------------------------
+
+def test_stage6_max_constants_frozen():
+    from scripts.distill_lib import MAX_RULES_PER_SEGMENT, MAX_RULE_EXTRACTION_ATTEMPTS, MAX_MCQ_ATTEMPTS_PER_RULE, MAX_PROMPT_CHARS, MAX_REQUEST_BYTES
+    assert (MAX_RULES_PER_SEGMENT, MAX_RULE_EXTRACTION_ATTEMPTS, MAX_MCQ_ATTEMPTS_PER_RULE, MAX_PROMPT_CHARS, MAX_REQUEST_BYTES) == (8, 3, 3, 8000, 16000)
+
+
+def test_safe_batch_hard_cap_formula():
+    from scripts.distill_lib import safe_batch_hard_cap
+    assert safe_batch_hard_cap(2, 3, 8, 3) == 2 * 3 + 2 * 8 * 3
+
+
+def test_rule_overflow_raises():
+    from scripts.distill_lib import enforce_budget_before_call, RuleOverflowError
+    enforce_budget_before_call(5, "rules")
+    with pytest.raises(RuleOverflowError):
+        enforce_budget_before_call(9, "rules")
+
+
+def test_segmentation_conservation():
+    from scripts.distill_lib import segment_chapter, PromptLimits
+    text = "第一段。第二段！第三段？" * 2000
+    segs = segment_chapter(text, book="b", chapter="1", limits=PromptLimits())
+    assert "".join(s.text for s in segs) == text
+    assert [s.char_start for s in segs] == [0] + [s.char_end for s in segs[:-1]]
+    for s in segs:
+        assert len(s.text) > 0
+
+
+def test_prompt_char_limit():
+    from scripts.distill_lib import validate_segment, PromptLimits, PromptLimitError
+    with pytest.raises(PromptLimitError):
+        validate_segment("x" * 9000, book="b", chapter="1", limits=PromptLimits())
+
+
+def test_rules_retryable_parse():
+    from scripts.distill_lib import _parse_rules_retryable, RetryableModelOutputError
+    good = '[{"rule":"甲木喜水","condition":"生于寅月","subject":"甲木","original_text":"甲木喜水"}]'
+    assert len(_parse_rules_retryable(good)) == 1
+    for bad in ("not json", "{}", "[]", '[{"rule":"x"}]', '[' + '"x"' * 20 + ']'):
+        with pytest.raises(RetryableModelOutputError):
+            _parse_rules_retryable(bad)
+
+
+def test_mcq_retryable_parse():
+    from scripts.distill_lib import _parse_mcq_retryable, RetryableModelOutputError
+    good = '{"question":"q","options":{"A":"a","B":"b","C":"c","D":"d"},"answer":"A","explanation":"e"}'
+    assert _parse_mcq_retryable(good)["answer"] == "A"
+    for bad in ("{}", '{"question":"q"}', '{"question":"q","options":{"A":"a"},"answer":"A","explanation":"e"}'):
+        with pytest.raises(RetryableModelOutputError):
+            _parse_mcq_retryable(bad)
+
+
+def test_is_retryable_error():
+    from scripts.distill_lib import is_retryable_error, RetryableModelOutputError
+    assert is_retryable_error(RetryableModelOutputError("x")) is True
+    assert is_retryable_error(ConnectionError("x")) is True
+    assert is_retryable_error(RuntimeError("network down")) is True
+    assert is_retryable_error(RuntimeError("boom")) is False
+
+
+def test_retry_non_retryable_raises_immediately(tmp_path):
+    from scripts.distill_lib import BudgetLedger, ProjectLedger, retry_call_with_budget, EXPERIMENT_ID
+    proj = ProjectLedger.load_or_create(tmp_path / "p.json", experiment_id=EXPERIMENT_ID, total_cap=100)
+    run = BudgetLedger.load_or_create(tmp_path / "r.json", global_hard_cap=50, run_id="R", code_sha="c", rules_sha="r")
+    def boom(*a, **k): raise ValueError("hard")
+    with pytest.raises(ValueError):
+        retry_call_with_budget(boom, proj=proj, run=run, run_id="R", batch_id="B", chapter_id=1, segment_id=0,
+                               operation="rules", rule_id=None, base_id=_base(), max_attempts=3,
+                               project_path=tmp_path / "p.json", run_path=tmp_path / "r.json")
+
+
+def test_generate_mcq_exhaustion_blocks(tmp_path, monkeypatch):
+    from scripts.distill_lib import generate_mcq
+    ok = {"question": "q", "options": {"A": "a", "B": "b", "C": "c", "D": "d"}, "answer": "A", "explanation": "e"}
+    monkeypatch.setattr("scripts.distill_lib._call", lambda *a, **k: json.dumps(ok, ensure_ascii=False))
+    rules = [{"id": "smth_080_000", "subject": "甲木", "condition": "生于寅月", "rule": "甲木喜水", "original_text": "甲木喜水"}]
+    stats = {}
+    verified, _ = generate_mcq(rules, "sanmingtonghui", "81", max_calls=0, stats=stats)
+    assert stats["max_calls_hit"] is True and len(verified) == 0
+
+
+def test_legacy_mcq_output_failure_retries(tmp_path, monkeypatch):
+    from scripts.distill_lib import generate_mcq
+    ok = {"question": "甲木喜什么？", "options": {"A": "喜水滋润", "B": "火", "C": "土", "D": "金"}, "answer": "A", "explanation": "甲木喜水"}
+    state = {"n": 0}
+    def flaky(*a, **k):
+        state["n"] += 1
+        if state["n"] == 1: return "not json"
+        return json.dumps(ok, ensure_ascii=False)
+    monkeypatch.setattr("scripts.distill_lib._call", flaky)
+    rules = [{"id": "smth_080_000", "subject": "甲木", "condition": "生于寅月", "rule": "甲木日主喜水", "original_text": "甲木喜水"}]
+    verified, _ = generate_mcq(rules, "sanmingtonghui", "81")
+    assert len(verified) == 1
+
+
+def test_legacy_mcq_network_error_retries(tmp_path, monkeypatch):
+    from scripts.distill_lib import generate_mcq
+    ok = {"question": "甲木喜什么？", "options": {"A": "喜水滋润", "B": "火", "C": "土", "D": "金"}, "answer": "A", "explanation": "甲木喜水"}
+    state = {"n": 0}
+    def flaky(*a, **k):
+        state["n"] += 1
+        if state["n"] == 1: raise ConnectionError("refused")
+        return json.dumps(ok, ensure_ascii=False)
+    monkeypatch.setattr("scripts.distill_lib._call", flaky)
+    rules = [{"id": "smth_080_000", "subject": "甲木", "condition": "生于寅月", "rule": "甲木日主喜水", "original_text": "甲木喜水"}]
+    verified, _ = generate_mcq(rules, "sanmingtonghui", "81")
+    assert len(verified) == 1
+
+
+def test_retry_exhaustion_classified_as_resume(tmp_path, monkeypatch):
+    import scripts.distill_lib as dl
+    from scripts.distill_lib import (ProjectLedger, BudgetLedger, retry_call_with_budget, attempt_base_id,
+                                     MAX_RULE_EXTRACTION_ATTEMPTS, RetryExhaustedError, classify_failure_for_resume, is_retryable_error, EXPERIMENT_ID)
+    def boom(*a, **k): raise ConnectionError("refused")
+    monkeypatch.setattr(dl, "_call", boom)
+    proj = ProjectLedger.load_or_create(tmp_path / "p.json", experiment_id=EXPERIMENT_ID, total_cap=100)
+    run = BudgetLedger.load_or_create(tmp_path / "r.json", global_hard_cap=50, run_id="R", code_sha="c", rules_sha="r")
+    base = attempt_base_id(run_id="R", batch_id="B", chapter_id=1, segment_id=0, operation="rules", rule_id=None)
+    with pytest.raises(RetryExhaustedError) as ei:
+        retry_call_with_budget(lambda: dl._call("P"), proj=proj, run=run, run_id="R", batch_id="B", chapter_id=1,
+                               segment_id=0, operation="rules", rule_id=None, base_id=base,
+                               max_attempts=MAX_RULE_EXTRACTION_ATTEMPTS, project_path=tmp_path / "p.json",
+                               run_path=tmp_path / "r.json")
+    assert classify_failure_for_resume(ei.value, code_sha_before="a"*64, code_sha_now="a"*64) == "resume"
+    assert is_retryable_error(ei.value.__cause__) is True
+
+
+def test_legacy_mcq_single_success_charges_once(tmp_path, monkeypatch):
+    import scripts.distill_lib as dl
+    from scripts.distill_lib import BudgetLedger
+    ok = {"question": "甲木喜什么？", "options": {"A": "喜水滋润", "B": "火", "C": "土", "D": "金"},
+          "answer": "A", "explanation": "甲木喜水"}
+    monkeypatch.setattr(dl, "_call", lambda *a, **k: json.dumps(ok, ensure_ascii=False))
+    run = BudgetLedger.load_or_create(tmp_path / "run.json", global_hard_cap=50, run_id="R", code_sha="c", rules_sha="r")
+    rules = [{"id": "smth_080_000", "subject": "甲木", "condition": "生于寅月", "rule": "甲木日主喜水", "original_text": "甲木喜水",
+              "source_book": "sanmingtonghui", "source_chapter": "81", "category": "classic"}]
+    verified, _ = dl.generate_mcq(rules, "sanmingtonghui", "81", ledger=run)
+    run2 = BudgetLedger.load_or_create(tmp_path / "run.json", global_hard_cap=50, run_id="R", code_sha="c", rules_sha="r")
+    assert len(verified) == 1 and run2.legacy_calls == 1   # 单次成功只扣一次
+
+
+# ---------------------------------------------------------------------------
+# 恢复：fill_missing_chapters 旧公共 API（fill_book/_compute_run_bindings/main/CLI）回归测试
+# ---------------------------------------------------------------------------
+
+def test_fill_book_fail_closed_no_raw_files_written(tmp_path, monkeypatch):
+    """fill_book does not write raw_*.txt when incomplete (P0-2).
+
+    The audit found fill_book wrote raw files before the integrity check.
+    Now raw writes are deferred until chapter is confirmed complete.
+    """
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import scripts.fill_missing_chapters as fmc
+    import scripts.distill_lib as dl
+
+    book_dir = tmp_path / "zipingzhenquan"
+    book_dir.mkdir()
+    (book_dir / "all_rules.json").write_text("[]", encoding="utf-8")
+    (book_dir / "all_mcq.jsonl").write_text("", encoding="utf-8")
+    (book_dir / "progress.json").write_text(
+        json.dumps({"done": [], "total_rules": 0, "total_mcqs": 0}),
+        encoding="utf-8")
+    (book_dir / "raw_full.txt").write_text("第一章 甲木\n甲木参天\n第二章 乙木\n乙木系甲", encoding="utf-8")
+    (book_dir / "chapter_list.txt").write_text("1. 第一章 甲木\n2. 第二章 乙木", encoding="utf-8")
+
+    # Mock distill_chapter to return rules (so len(rules) > 0), but _call
+    # to return empty for MCQ generation (so len(linked) < len(rules)).
+    mock_rules = [
+        {"id": "zpzq_000_000", "source_chapter": "第一章 甲木", "subject": "甲木",
+         "rule": "甲木参天", "original_text": "甲木", "category": "天干"},
+    ]
+    monkeypatch.setattr(dl, "distill_chapter", lambda *a, **k: mock_rules)
+    monkeypatch.setattr(dl, "_call", lambda *a, **k: "")
+    monkeypatch.setattr(fmc, "BASE", tmp_path)
+
+    ledger_path = tmp_path / ".fill_ledger.json"
+    b = ("r1", "a" * 64, "b" * 64)
+    result = fmc.fill_book("zipingzhenquan", global_budget=100, ledger_path=ledger_path,
+                           run_id=b[0], code_sha=b[1], rules_sha=b[2])
+    assert result.get("error") == "fail_closed"
+    # No raw_*.txt files should have been written (deferred writes)
+    raw_files = list(book_dir.glob("raw_*.txt"))
+    new_raws = [f for f in raw_files if f.name != "raw_full.txt"]
+    assert len(new_raws) == 0, f"Unexpected raw files written: {new_raws}"
+
+
+# ---------------------------------------------------------------------------
+# P0-1: ledger run-identity binding (missing fields + cross-run drift)
+# ---------------------------------------------------------------------------
+
+
+
+
+def test_fill_rolls_back_when_post_publish_validation_fails(tmp_path, monkeypatch):
+    """P0-1: fill rolls back published files when post-publish provenance
+    validation fails (not just mid-replace failures)."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import scripts.fill_missing_chapters as fmc
+    import scripts.distill_lib as dl
+
+    book_dir = tmp_path / "zipingzhenquan"
+    book_dir.mkdir()
+    (book_dir / "all_rules.json").write_text("[]", encoding="utf-8")
+    (book_dir / "all_mcq.jsonl").write_text("", encoding="utf-8")
+    (book_dir / "progress.json").write_text(
+        json.dumps({"done": [], "total_rules": 0, "total_mcqs": 0}), encoding="utf-8")
+    (book_dir / "raw_full.txt").write_text("第一章 甲木\n甲木参天", encoding="utf-8")
+    (book_dir / "chapter_list.txt").write_text("1. 第一章 甲木", encoding="utf-8")
+
+    mock_rules = [{"id": "zpzq_000_000", "source_chapter": "第一章 甲木", "subject": "甲木",
+                   "rule": "甲木参天", "original_text": "甲木", "category": "天干"}]
+    monkeypatch.setattr(dl, "distill_chapter", lambda *a, **k: mock_rules)
+
+    def mock_call(prompt, timeout=120):
+        return json.dumps({
+            "question": "甲木为何参天？",
+            "options": {"A": "甲木参天", "B": "甲木忌水", "C": "甲木喜金", "D": "甲木忌金"},
+            "answer": "A", "explanation": "甲木参天", "difficulty": "基础", "category": "天干",
+        })
+    monkeypatch.setattr(dl, "_call", mock_call)
+    monkeypatch.setattr(fmc, "BASE", tmp_path)
+    monkeypatch.setattr(fmc, "validate_provenance",
+                        lambda *a, **k: (False, ["simulated validation failure"]))
+
+    ledger_path = tmp_path / ".fill_ledger.json"
+    b = ("r1", "a" * 64, "b" * 64)
+    with pytest.raises(ConservationError):
+        fmc.fill_book("zipingzhenquan", global_budget=100, ledger_path=ledger_path,
+                      run_id=b[0], code_sha=b[1], rules_sha=b[2])
+
+    # Rolled back: no rules/mcq/new-raw files, no staging/backup left.
+    assert (book_dir / "all_rules.json").read_text(encoding="utf-8") == "[]"
+    assert (book_dir / "all_mcq.jsonl").read_text(encoding="utf-8") == ""
+    new_raws = [f for f in book_dir.glob("raw_*.txt") if f.name != "raw_full.txt"]
+    assert len(new_raws) == 0, f"new raw files left behind: {new_raws}"
+    assert not list(book_dir.glob(".fill_staging_*"))
+    assert not list(book_dir.glob(".publish_backup_*"))
+
+
+# ---------------------------------------------------------------------------
+# P0-2: run bindings are sensitive to the full input manifest
+# ---------------------------------------------------------------------------
+
+
+
+
+def test_fill_run_bindings_sensitive_to_input_manifest(tmp_path, monkeypatch):
+    """P0-2: changing any manifest-covered input changes the run_id."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import scripts.fill_missing_chapters as fmc
+    monkeypatch.setattr(fmc, "BASE", tmp_path)
+
+    book_dir = tmp_path / "zipingzhenquan"
+    book_dir.mkdir()
+    (book_dir / "raw_full.txt").write_text("甲木参天", encoding="utf-8")
+    (book_dir / "chapter_list.txt").write_text("1. 第一章", encoding="utf-8")
+    (book_dir / "progress.json").write_text("{}", encoding="utf-8")
+    (book_dir / "all_rules.json").write_text("[]", encoding="utf-8")
+    (book_dir / "all_mcq.jsonl").write_text("", encoding="utf-8")
+
+    rid1 = fmc._compute_run_bindings(["zipingzhenquan"])
+    # Changing a manifest-covered input (chapter_list.txt) must change run_id.
+    (book_dir / "chapter_list.txt").write_text("1. 第一章\n2. 第二章", encoding="utf-8")
+    rid2 = fmc._compute_run_bindings(["zipingzhenquan"])
+    assert rid1[0] != rid2[0]
+    assert rid1[2] != rid2[2]  # rules_sha must change too
+
+
+
+
+def test_fill_main_rejects_invalid_target_without_run_bindings(tmp_path, monkeypatch):
+    """P0: `fill ghostbook` returns 2 and never computes run bindings."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import scripts.fill_missing_chapters as fmc
+    import scripts.distill_lib as dl
+    monkeypatch.setattr(fmc, "BASE", tmp_path)
+    monkeypatch.setitem(dl.VALID_TARGETS_BY_OPERATION, "fill", ("zipingzhenquan",))
+    calls = _spy_run_bindings(monkeypatch, fmc)
+    monkeypatch.setattr("sys.argv", ["fill_missing_chapters.py", "ghostbook"])
+    assert fmc.main() == 2
+    assert calls == []
+
+
+
+
+def test_fill_main_rejects_mixed_valid_invalid_targets(tmp_path, monkeypatch):
+    """P0: mixed valid+invalid explicit targets reject the whole fill run
+    (never run the legal subset)."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import scripts.fill_missing_chapters as fmc
+    import scripts.distill_lib as dl
+    monkeypatch.setattr(fmc, "BASE", tmp_path)
+    monkeypatch.setitem(dl.VALID_TARGETS_BY_OPERATION, "fill", ("zipingzhenquan",))
+    calls = _spy_run_bindings(monkeypatch, fmc)
+    monkeypatch.setattr("sys.argv",
+                        ["fill_missing_chapters.py", "zipingzhenquan", "ghostbook"])
+    assert fmc.main() == 2
+    assert calls == []
+
+
+
+
+def test_fill_main_no_args_defaults_to_all_allowed(tmp_path, monkeypatch):
+    """P0: no explicit args still default to the full shared fill allowlist."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import scripts.fill_missing_chapters as fmc
+    import scripts.distill_lib as dl
+    monkeypatch.setattr(fmc, "BASE", tmp_path)
+    monkeypatch.setitem(dl.VALID_TARGETS_BY_OPERATION, "fill", ("zipingzhenquan",))
+    monkeypatch.setattr(dl, "_call", lambda *a, **k: "")
+    calls = []
+    def spy(dir_key, *a, **k):
+        calls.append(dir_key)
+        return {"error": "simulated"}  # 只验证 targets 展开，跳过完整执行
+    monkeypatch.setattr(fmc, "fill_book", spy)
+    monkeypatch.setattr("sys.argv", ["fill_missing_chapters.py"])
+    fmc.main()
+    assert calls == ["zipingzhenquan"]  # 无参数 → 默认全部（allowlist 仅 zipingzhenquan）
+
+
+
+
+def test_fill_api_generation_records_actual_rule_payload(tmp_path, monkeypatch):
+    """P0-4: fill's rules_input_sha hashes the rules ACTUALLY sent this run
+    (new_rules_total), and rules_output_sha the final all_rules.json."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import scripts.fill_missing_chapters as fmc
+    import scripts.distill_lib as dl
+    book = tmp_path / "zipingzhenquan"
+    book.mkdir()
+    (book / "all_rules.json").write_text("[]", encoding="utf-8")
+    (book / "all_mcq.jsonl").write_text("", encoding="utf-8")
+    (book / "quarantine_rules.jsonl").write_text("", encoding="utf-8")
+    (book / "quarantine_mcq.jsonl").write_text("", encoding="utf-8")
+    (book / "progress.json").write_text(
+        json.dumps({"done": [], "total_rules": 0, "total_mcqs": 0}), encoding="utf-8")
+    (book / "raw_full.txt").write_text("第一章 甲木\n甲木参天", encoding="utf-8")
+    (book / "chapter_list.txt").write_text("1. 第一章 甲木", encoding="utf-8")
+    mock_rules = [{"id": "zpzq_000_000", "source_chapter": "第一章 甲木", "subject": "甲木",
+                   "rule": "甲木参天", "original_text": "甲木", "category": "天干"}]
+    monkeypatch.setattr(dl, "distill_chapter", lambda *a, **k: mock_rules)
+
+    def mock_call(prompt, timeout=120):
+        return json.dumps({
+            "question": "甲木为何参天？",
+            "options": {"A": "甲木参天", "B": "甲木忌水", "C": "甲木喜金", "D": "甲木忌金"},
+            "answer": "A", "explanation": "甲木参天", "difficulty": "基础", "category": "天干",
+        })
+    monkeypatch.setattr(dl, "_call", mock_call)
+    monkeypatch.setattr(fmc, "BASE", tmp_path)
+    manifest_path = tmp_path / ".fill_run_manifest.json"
+    b = fmc._compute_run_bindings(["zipingzhenquan"], manifest_path)[:3]
+    fmc.fill_book("zipingzhenquan", global_budget=100,
+                  ledger_path=tmp_path / ".fill_ledger.json",
+                  run_id=b[0], code_sha=b[1], rules_sha=b[2],
+                  manifest_path=manifest_path)
+    prov = json.loads((book / "provenance.json").read_text(encoding="utf-8"))
+    api = prov.get("api_generation")
+    assert api is not None
+    import hashlib
+    rules_input_payload = json.dumps(
+        mock_rules, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    rules_out = json.loads((book / "all_rules.json").read_text(encoding="utf-8"))
+    rules_output_payload = json.dumps(
+        rules_out, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    assert api["rules_input_sha"] == hashlib.sha256(rules_input_payload).hexdigest()
+    assert api["rules_output_sha"] == hashlib.sha256(rules_output_payload).hexdigest()
+    assert api["rules_added"] == 1
+
+
+
+
+def test_fill_noop_does_not_create_api_generation(tmp_path, monkeypatch):
+    """P0-4: when there is nothing to fill (zero API calls), fill skips and
+    does NOT create an api_generation record for the existing MCQs."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import scripts.fill_missing_chapters as fmc
+    monkeypatch.setattr(fmc, "BASE", tmp_path)
+    book = tmp_path / "zipingzhenquan"
+    book.mkdir()
+    (book / "all_rules.json").write_text("[]", encoding="utf-8")
+    (book / "all_mcq.jsonl").write_text('{"question":"old"}\n', encoding="utf-8")
+    (book / "progress.json").write_text(
+        json.dumps({"done": ["第一章 甲木"], "total_rules": 0, "total_mcqs": 1}), encoding="utf-8")
+    (book / "raw_full.txt").write_text("第一章 甲木\n甲木参天", encoding="utf-8")
+    (book / "chapter_list.txt").write_text("1. 第一章 甲木", encoding="utf-8")
+    b = ("r1", "a" * 64, "b" * 64)
+    result = fmc.fill_book("zipingzhenquan", global_budget=100,
+                           ledger_path=tmp_path / ".fill_ledger.json",
+                           run_id=b[0], code_sha=b[1], rules_sha=b[2])
+    assert result.get("skipped") is True
+    assert not (book / "provenance.json").exists()
+
+
+# ---------------------------------------------------------------------------
+# Round-5 P0-1: resume rejects forged identity / forged completed receipt
+# ---------------------------------------------------------------------------
+
+
+
+
+def test_fill_records_per_book_call_delta(tmp_path, monkeypatch):
+    """Medium: api_generation.calls_made is THIS book's call delta, not the
+    cross-book cumulative ledger total."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import scripts.fill_missing_chapters as fmc
+    import scripts.distill_lib as dl
+    book = tmp_path / "zipingzhenquan"
+    book.mkdir()
+    (book / "all_rules.json").write_text("[]", encoding="utf-8")
+    (book / "all_mcq.jsonl").write_text("", encoding="utf-8")
+    (book / "quarantine_rules.jsonl").write_text("", encoding="utf-8")
+    (book / "quarantine_mcq.jsonl").write_text("", encoding="utf-8")
+    (book / "progress.json").write_text(
+        json.dumps({"done": [], "total_rules": 0, "total_mcqs": 0}), encoding="utf-8")
+    (book / "raw_full.txt").write_text("第一章 甲木\n甲木参天", encoding="utf-8")
+    (book / "chapter_list.txt").write_text("1. 第一章 甲木", encoding="utf-8")
+    mock_rules = [{"id": "zpzq_000_000", "source_chapter": "第一章 甲木", "subject": "甲木",
+                   "rule": "甲木参天", "original_text": "甲木", "category": "天干"}]
+    monkeypatch.setattr(dl, "distill_chapter", lambda *a, **k: mock_rules)
+
+    def mock_call(prompt, timeout=120):
+        return json.dumps({
+            "question": "甲木为何参天？",
+            "options": {"A": "甲木参天", "B": "甲木忌水", "C": "甲木喜金", "D": "甲木忌金"},
+            "answer": "A", "explanation": "甲木参天", "difficulty": "基础", "category": "天干",
+        })
+    monkeypatch.setattr(dl, "_call", mock_call)
+    monkeypatch.setattr(fmc, "BASE", tmp_path)
+    manifest_path = tmp_path / ".fill_run_manifest.json"
+    b = fmc._compute_run_bindings(["zipingzhenquan"], manifest_path)[:3]
+    ledger_path = tmp_path / ".fill_ledger.json"
+    # Pre-seed the shared ledger with 7 calls from a PRIOR book.
+    seed = dl.BudgetLedger.load_or_create(
+        ledger_path, 100, run_id=b[0], code_sha=b[1], rules_sha=b[2])
+    for _ in range(7):
+        seed.record_call()
+    fmc.fill_book("zipingzhenquan", global_budget=100, ledger_path=ledger_path,
+                  run_id=b[0], code_sha=b[1], rules_sha=b[2],
+                  manifest_path=manifest_path)
+    prov = json.loads((book / "provenance.json").read_text(encoding="utf-8"))
+    api = prov["api_generation"]
+    # The delta is THIS book's calls (< 7); a cumulative value would be > 7.
+    assert 1 <= api["calls_made"] < 7
+
+
+# ---------------------------------------------------------------------------
+# Round-6 P0-1: missing files must be rejected on resume / at receipt write
+# ---------------------------------------------------------------------------
+
+
+
 

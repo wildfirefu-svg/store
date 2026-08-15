@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import pytest
 from pathlib import Path
 
 from scripts.validate_classic_distillation import validate_book
@@ -134,3 +135,27 @@ def test_g9_passes_with_canonical_source_chapters(tmp_path):
     report = _validate(tmp_path, rules, mcqs, raw_text="甲木参天乙木系甲")
     g9 = report["gates"]["G9_content_dedup"]
     assert g9["pass"]
+
+
+# ---------------------------------------------------------------------------
+# Stage 1: apply_exemption (E -> R -> B1 chain)
+# ---------------------------------------------------------------------------
+from scripts.validate_classic_distillation import apply_exemption
+
+
+def test_apply_exemption_exempts_listed_checks_only():
+    issues = {"missing_upstream_response_body": ["1"], "artifact_integrity": ["2"]}
+    e = {"book": "sanmingtonghui", "baseline_commit": "a" * 40, "artifact_manifest_sha256": "b" * 64,
+         "validator_code_sha256": "c" * 64, "exempted_checks": ["missing_upstream_response_body"],
+         "non_exempt_checks": ["artifact_integrity", "quality_gates", "future_generation_provenance"],
+         "author": "r", "date": "2026-08-13"}
+    out = apply_exemption(issues, e)
+    assert out["missing_upstream_response_body"] == "exempted"
+    assert out["artifact_integrity"] == ["2"]  # 非豁免门保持原样
+
+
+def test_apply_exemption_rejects_malformed_request():
+    issues = {"missing_upstream_response_body": ["1"]}
+    e = {"book": "sanmingtonghui"}  # 缺必需字段
+    with pytest.raises(ValueError, match="missing"):
+        apply_exemption(issues, e)
