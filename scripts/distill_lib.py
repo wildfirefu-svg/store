@@ -1246,147 +1246,231 @@ def _explanation_supports_answer(explanation: str, answer_text: str) -> bool:
     return False
 
 
-def distill_chapter(
-    text: str,
-    book: str,
-    chapter: str,
-    ledger: "BudgetLedger | None" = None,
-) -> list[dict]:
-    """Distill rules from a chapter's raw text.
+MAX_RULES_PER_SEGMENT = 8; MAX_RULE_EXTRACTION_ATTEMPTS = 3; MAX_MCQ_ATTEMPTS_PER_RULE = 3; MAX_PROMPT_CHARS = 8000; MAX_REQUEST_BYTES = 16000
 
-    P0-2: if a ledger is provided, the API call is counted against the
-    run-level budget. If the ledger is exhausted, returns [] and the caller
-    MUST fail-closed (not mark the chapter as done).
-    """
-    if ledger is not None and not ledger.can_call():
-        return []
-    prompt = (RULE_PROMPT
-              .replace("__BOOK__", book)
-              .replace("__CH__", chapter)
-              .replace("__TEXT__", text[:8000]))
-    if ledger is not None:
-        ledger.record_call()
-    rules = _parse_json_array(_call(prompt))
+class RuleOverflowError(RuntimeError): pass
+class RetryableModelOutputError(RuntimeError): pass
+
+class RetryExhaustedError(RuntimeError):
+    """retry 耗尽，保留原始 cause chain；classify_failure_for_resume 遍历 cause 链判断可重试。"""
+    def __init__(self, message, cause=None):
+        super().__init__(message)
+        self.cause = cause
+
+def sha256_bytes(data: bytes) -> str: return hashlib.sha256(data).hexdigest()
+
+def safe_batch_hard_cap(total_segments, max_rule_extraction_attempts, max_rules_per_segment, max_mcq_attempts_per_rule) -> int:
+    return total_segments * max_rule_extraction_attempts + total_segments * max_rules_per_segment * max_mcq_attempts_per_rule
+
+def enforce_budget_before_call(n_rules, operation):
+    if operation == "rules" and n_rules > MAX_RULES_PER_SEGMENT: raise RuleOverflowError(f"segment returned {n_rules} rules > {MAX_RULES_PER_SEGMENT}")
+
+def _parse_rules_retryable(response):
+    try: data = json.loads(response) if isinstance(response, str) else None
+    except Exception as e: raise RetryableModelOutputError(f"rules JSON unparseable: {e}") from e
+    if not isinstance(data, list): raise RetryableModelOutputError("rules output not a list")
+    if not data: raise RetryableModelOutputError("rules output empty")
+    if len(data) > MAX_RULES_PER_SEGMENT: raise RetryableModelOutputError(f"rules count {len(data)} > {MAX_RULES_PER_SEGMENT}")
+    for i, r in enumerate(data):
+        if not isinstance(r, dict): raise RetryableModelOutputError(f"rule {i} not a dict")
+        for k in ("rule", "condition", "subject", "original_text"):
+            v = r.get(k)
+            if not isinstance(v, str) or not v.strip(): raise RetryableModelOutputError(f"rule {i} field {k} must be non-empty string")
+    return data
+
+def _parse_mcq_retryable(response):
+    try: obj = json.loads(response) if isinstance(response, str) else None
+    except Exception as e: raise RetryableModelOutputError(f"mcq JSON unparseable: {e}") from e
+    if not isinstance(obj, dict): raise RetryableModelOutputError("mcq output not a dict")
+    if not isinstance(obj.get("question"), str) or not obj["question"].strip(): raise RetryableModelOutputError("mcq question must be non-empty string")
+    opts = obj.get("options")
+    if not isinstance(opts, dict): raise RetryableModelOutputError("mcq options must be an object")
+    if set(opts.keys()) != {"A", "B", "C", "D"}: raise RetryableModelOutputError("mcq options must be exactly A/B/C/D")
+    for k in ("A", "B", "C", "D"):
+        if not isinstance(opts.get(k), str) or not opts[k].strip(): raise RetryableModelOutputError(f"mcq option {k} must be non-empty string")
+    answer = obj.get("answer")
+    if answer not in ("A", "B", "C", "D"): raise RetryableModelOutputError("mcq answer must be A/B/C/D")
+    if not isinstance(obj.get("explanation"), str) or not obj["explanation"].strip(): raise RetryableModelOutputError("mcq explanation must be non-empty string")
+    return obj
+
+def is_retryable_error(e) -> bool:
+    if isinstance(e, RetryableModelOutputError): return True
+    if isinstance(e, (ConnectionError, TimeoutError)): return True
+    msg = str(e).lower()
+    return "network down" in msg or "timeout" in msg or "rate limit" in msg or "429" in msg or "temporarily unavailable" in msg or "connection" in msg
+
+def retry_call_with_budget(fn, *, proj, run, run_id, batch_id, chapter_id, segment_id, operation, rule_id, base_id, max_attempts, project_path, run_path=None):
+    start = next_attempt_no(run, base_id=base_id, proj=proj)   # P0-4：跳过 project 已 reservation 的 attempt number
+    if start > max_attempts: raise RetryExhaustedError("attempts exhausted")
+    last = None
+    for attempt_no in range(start, max_attempts + 1):
+        att = attempt_id_for(run_id=run_id, batch_id=batch_id, chapter_id=chapter_id, segment_id=segment_id, operation=operation, rule_id=rule_id, attempt_no=attempt_no)
+        # P0-2：metadata 持久化 run_id/batch_id，project 层才能复算 attempt_id
+        meta = {"operation": operation, "chapter_id": chapter_id, "segment_id": segment_id, "rule_id": rule_id, "attempt_no": attempt_no, "run_id": run_id, "batch_id": batch_id}
+        try:
+            return call_with_budget(fn, proj=proj, run=run, attempt_id=att, project_path=project_path, run_path=run_path, base_id=base_id, batch_id=batch_id, attempt_no=attempt_no, metadata=meta)
+        except Exception as e:
+            if not is_retryable_error(e): raise
+            if attempt_no >= max_attempts: raise RetryExhaustedError("attempts exhausted") from e
+            last = e
+    raise RetryExhaustedError("attempts exhausted") from last
+
+
+@dataclasses.dataclass(frozen=True)
+class PromptLimits:
+    max_prompt_chars: int = MAX_PROMPT_CHARS
+    max_request_bytes: int = MAX_REQUEST_BYTES
+
+class PromptLimitError(RuntimeError): pass
+
+@dataclasses.dataclass(frozen=True)
+class Segment:
+    text: str; char_start: int; char_end: int; segment_index: int
+
+def render_rule_prompt(text, book, chapter):
+    return (RULE_PROMPT.replace("__BOOK__", book).replace("__CH__", chapter).replace("__TEXT__", text))
+
+def validate_segment(text, *, book, chapter, limits):
+    prompt = render_rule_prompt(text, book, chapter)
+    if len(text) > limits.max_prompt_chars: raise PromptLimitError(f"segment text {len(text)} > {limits.max_prompt_chars} chars")
+    if len(prompt) > limits.max_prompt_chars: raise PromptLimitError(f"prompt {len(prompt)} > {limits.max_prompt_chars} chars")
+    if len(prompt.encode("utf-8")) > limits.max_request_bytes: raise PromptLimitError(f"prompt bytes {len(prompt.encode('utf-8'))} > {limits.max_request_bytes}")
+
+def _validate_ok(text, book, chapter, limits):
+    try: validate_segment(text, book=book, chapter=chapter, limits=limits); return True
+    except PromptLimitError: return False
+
+def _split_to_max_prefix(part, book, chapter, limits) -> list[str]:
+    if _validate_ok(part, book, chapter, limits): return [part]
+    pieces = re.split(r"(?<=[。？！；])", part)
+    if len(pieces) <= 1:
+        lo, hi = 0, len(part)
+        while lo < hi:
+            mid = (lo + hi + 1) // 2
+            if _validate_ok(part[:mid], book, chapter, limits): lo = mid
+            else: hi = mid - 1
+        if lo <= 0: raise PromptLimitError("single char exceeds limits")
+        return [part[:lo]] + _split_to_max_prefix(part[lo:], book, chapter, limits)
+    out, cur = [], ""
+    for piece in pieces:
+        if not piece: continue
+        if _validate_ok(cur + piece, book, chapter, limits): cur += piece
+        else:
+            if cur: out.append(cur); cur = ""
+            out.extend(_split_to_max_prefix(piece, book, chapter, limits))
+    if cur: out.append(cur)
+    return out
+
+def segment_chapter(text, *, book, chapter, limits):
+    parts = _split_to_max_prefix(text, book, chapter, limits)
+    segs, start = [], 0
+    for i, part in enumerate(parts):
+        segs.append(Segment(text=part, char_start=start, char_end=start + len(part), segment_index=i)); start += len(part)
+    if start != len(text) or "".join(s.text for s in segs) != text: raise PromptLimitError("segmentation conservation violated")
+    return segs
+
+def distill_segments(segments, *, book, chapter, limits, ledger=None, budget_ctx=None, chapter_id=0):
+    all_rules = []
+    for seg in segments:
+        validate_segment(seg.text, book=book, chapter=chapter, limits=limits)
+        rules = distill_chapter(seg.text, book, chapter, ledger=ledger, budget_ctx=budget_ctx, segment_id=seg.segment_index, chapter_id=chapter_id)
+        enforce_budget_before_call(len(rules), "rules")
+        for r in rules: r["segment_index"] = seg.segment_index
+        all_rules.extend(rules)
+    return all_rules
+
+def distill_chapter(text, book, chapter, ledger=None, *, budget_ctx=None, segment_id=0, chapter_id=0):
+    prompt = render_rule_prompt(text, book, chapter)
+    if budget_ctx is None:
+        if ledger is not None:
+            try: ledger.before_legacy_call()   # P0-5：锁内原子 cap 检查 + 计数
+            except RuntimeError: return []
+        try: rules = _parse_rules_retryable(_call(prompt))
+        except RetryableModelOutputError: return []
+    else:
+        rules = retry_call_with_budget(
+            lambda: _parse_rules_retryable(_call(prompt)),
+            proj=budget_ctx.proj, run=budget_ctx.run, run_id=budget_ctx.run_id, batch_id=budget_ctx.batch_id,
+            chapter_id=chapter_id, segment_id=segment_id, operation="rules", rule_id=None,
+            base_id=attempt_base_id(run_id=budget_ctx.run_id, batch_id=budget_ctx.batch_id, chapter_id=chapter_id, segment_id=segment_id, operation="rules", rule_id=None),
+            max_attempts=MAX_RULE_EXTRACTION_ATTEMPTS, project_path=budget_ctx.proj_path, run_path=budget_ctx.run_path)
     for r in rules:
-        r.setdefault("source_book", book)
-        r.setdefault("source_chapter", chapter)
-        r.pop("id", None)
+        r.setdefault("source_book", book); r.setdefault("source_chapter", chapter); r.setdefault("category", "classic"); r.pop("id", None)
     return rules
 
+def classify_failure_for_resume(error, *, code_sha_before, code_sha_now):
+    if code_sha_before != code_sha_now: return "abandon"
+    if is_retryable_error(error): return "resume"
+    # P0-4：遍历 cause chain（RetryExhaustedError.cause 或 __cause__），识别网络故障
+    cause = getattr(error, "cause", None) or getattr(error, "__cause__", None)
+    seen = 0
+    while cause is not None and seen < 5:
+        if is_retryable_error(cause): return "resume"
+        cause = getattr(cause, "cause", None) or getattr(cause, "__cause__", None); seen += 1
+    return "abandon"
+
+
+def generate_mcq(rules, book, chapter, max_calls=100, max_retries=2, stats=None, ledger=None, *, budget_ctx=None, chapter_id=0):
+    if not rules: return [], []
+    verified, unaudited = [], []
+    calls_made, skipped = 0, 0
+    max_calls_hit = False
+    for r in rules:
+        rid = r.get("id", "")
+        if not rid: continue
+        rule_payload = json.dumps({"subject": r.get("subject", ""), "condition": r.get("condition", ""), "rule": r.get("rule", ""), "original_text": r.get("original_text", "")}, ensure_ascii=False, indent=2)
+        prompt = PER_RULE_MCQ_PROMPT.replace("__RULE__", rule_payload)
+        obj: dict | None = None
+        if budget_ctx is not None:
+            base = attempt_base_id(run_id=budget_ctx.run_id, batch_id=budget_ctx.batch_id, chapter_id=chapter_id, segment_id=-1, operation="mcq", rule_id=rid)
+            try:
+                obj = retry_call_with_budget(lambda _p=prompt: _parse_mcq_retryable(_call(_p, timeout=120)), proj=budget_ctx.proj, run=budget_ctx.run, run_id=budget_ctx.run_id, batch_id=budget_ctx.batch_id, chapter_id=chapter_id, segment_id=-1, operation="mcq", rule_id=rid, base_id=base, max_attempts=MAX_MCQ_ATTEMPTS_PER_RULE, project_path=budget_ctx.proj_path, run_path=budget_ctx.run_path)
+            except RetryExhaustedError as e:
+                raise RetryableModelOutputError(f"mcq attempts exhausted for rule {rid}") from e
+        else:
+            # P0-2：不预扣——每个真实 attempt 只在紧邻 _call 前原子扣账一次（before_legacy_call）
+            if ledger is None and calls_made >= max_calls: max_calls_hit = True; skipped += 1; continue
+            last_err = None
+            for _attempt_i in range(max_retries + 1):
+                if ledger is not None:
+                    try: ledger.before_legacy_call()
+                    except RuntimeError: max_calls_hit = True; break
+                else:
+                    if calls_made >= max_calls: max_calls_hit = True; break
+                    calls_made += 1
+                try:
+                    obj = _parse_mcq_retryable(_call(prompt, timeout=120)); last_err = None; break
+                except Exception as e:
+                    last_err = e
+                    if not is_retryable_error(e): break
+                    continue
+            if last_err is not None:
+                skipped += 1
+                if ledger is not None: ledger.record_skip()
+                continue
+        if obj is None:
+            skipped += 1
+            if ledger is not None: ledger.record_skip()   # 兼容：legacy 路径记录 skip（regen/fill 依赖 ledger.accepted 差值）
+            continue
+        if not _mcq_prefilter(obj, r):
+            skipped += 1
+            if ledger is not None: ledger.record_skip()   # 兼容：legacy 路径记录 skip
+            continue
+        obj["source_rule_id"] = rid; obj.pop("id", None)
+        if _mcq_strict_consistency(obj, r):
+            obj["_consistency_verified"] = True; verified.append(obj)
+            if ledger is not None: ledger.record_accept()   # 兼容：legacy 路径记录 accept
+        else:
+            obj["_consistency_verified"] = False; obj["_audit_reason"] = "semantic_unaudited"; unaudited.append(obj)
+            if ledger is not None: ledger.record_skip()   # 兼容：legacy 路径记录 skip
+    if stats is not None:
+        stats["calls_made"] = calls_made if ledger is None else ledger.calls_made
+        stats["accepted"] = len(verified); stats["unaudited"] = len(unaudited); stats["skipped"] = skipped; stats["max_calls_hit"] = max_calls_hit
+    return verified, unaudited
 
 def assign_rule_ids(rules: list[dict], prefix: str, ch_idx: int) -> None:
     for i, r in enumerate(rules):
         r["id"] = f"{prefix}_{ch_idx:03d}_{i:03d}"
-
-
-def generate_mcq(
-    rules: list[dict],
-    book: str,
-    chapter: str,
-    max_calls: int = 100,
-    max_retries: int = 2,
-    stats: dict | None = None,
-    ledger: BudgetLedger | None = None,
-) -> tuple[list[dict], list[dict]]:
-    """Generate MCQs, one per rule, with two-tiered consistency gate (P0-1).
-
-    Returns (verified, unaudited):
-      - verified: MCQs passing BOTH prefilter and strict check, with
-        _consistency_verified=True. These enter the clean set.
-      - unaudited: MCQs passing prefilter but failing strict check, with
-        _consistency_verified=False and _audit_reason='semantic_unaudited'.
-        These enter quarantine for human review.
-
-    MCQs failing the prefilter are dropped entirely (not in either list).
-
-    Budget controls (P0-2):
-      - ledger: if provided, uses the ledger's global hard cap instead of
-        local max_calls. The ledger tracks calls across multiple invocations.
-        Callers MUST check ledger.exhausted after the run and fail-closed.
-      - max_calls: local cap (ignored when ledger is provided). Default 100.
-      - max_retries: retries per rule (default 2).
-      - stats: optional dict mutated in-place.
-    """
-    if not rules:
-        return [], []
-    verified: list[dict] = []
-    unaudited: list[dict] = []
-    calls_made = 0
-    skipped = 0
-    max_calls_hit = False
-    for r in rules:
-        rid = r.get("id", "")
-        if not rid:
-            continue
-        # Budget check
-        if ledger is not None:
-            if not ledger.can_call():
-                max_calls_hit = True
-                skipped += 1
-                ledger.record_skip()
-                continue
-        elif calls_made >= max_calls:
-            max_calls_hit = True
-            skipped += 1
-            continue
-        rule_payload = json.dumps({
-            "subject": r.get("subject", ""),
-            "condition": r.get("condition", ""),
-            "rule": r.get("rule", ""),
-            "original_text": r.get("original_text", ""),
-        }, ensure_ascii=False, indent=2)
-        prompt = PER_RULE_MCQ_PROMPT.replace("__RULE__", rule_payload)
-        obj: dict | None = None
-        for _attempt in range(max_retries + 1):
-            if ledger is not None:
-                if not ledger.can_call():
-                    max_calls_hit = True
-                    break
-                ledger.record_call()
-            else:
-                if calls_made >= max_calls:
-                    max_calls_hit = True
-                    break
-                calls_made += 1
-            try:
-                obj = _parse_json_object(_call(prompt, timeout=120))
-            except Exception:
-                obj = None
-            if obj is not None:
-                break
-        if obj is None:
-            skipped += 1
-            if ledger is not None:
-                ledger.record_skip()
-            continue
-        # Tier 1: prefilter (cheap)
-        if not _mcq_prefilter(obj, r):
-            skipped += 1
-            if ledger is not None:
-                ledger.record_skip()
-            continue
-        # Stamp orchestrator mapping
-        obj["source_rule_id"] = rid
-        obj.pop("id", None)
-        # Tier 2: strict consistency
-        if _mcq_strict_consistency(obj, r):
-            obj["_consistency_verified"] = True
-            verified.append(obj)
-            if ledger is not None:
-                ledger.record_accept()
-        else:
-            obj["_consistency_verified"] = False
-            obj["_audit_reason"] = "semantic_unaudited"
-            unaudited.append(obj)
-            if ledger is not None:
-                ledger.record_skip()
-    if stats is not None:
-        stats["calls_made"] = calls_made if ledger is None else ledger.calls_made
-        stats["accepted"] = len(verified)
-        stats["unaudited"] = len(unaudited)
-        stats["skipped"] = skipped
-        stats["max_calls_hit"] = max_calls_hit
-    return verified, unaudited
 
 
 def link_mcq_to_rules(mcqs: list[dict], rules: list[dict]) -> tuple[list[dict], list[dict]]:

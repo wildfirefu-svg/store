@@ -3918,3 +3918,146 @@ def test_filelock_concurrency_and_stale(tmp_path):
     stale.write_text(json.dumps({"pid": 99999999, "start": _time.time() - 7200, "owner": "p1t1"}), encoding="utf-8")
     with FileLock(str(stale)):
         pass
+
+# ---------------------------------------------------------------------------
+# Stage 6: 常量 + retry + 可重试解析 + 分段器 + generate_mcq
+# ---------------------------------------------------------------------------
+
+def test_stage6_max_constants_frozen():
+    from scripts.distill_lib import MAX_RULES_PER_SEGMENT, MAX_RULE_EXTRACTION_ATTEMPTS, MAX_MCQ_ATTEMPTS_PER_RULE, MAX_PROMPT_CHARS, MAX_REQUEST_BYTES
+    assert (MAX_RULES_PER_SEGMENT, MAX_RULE_EXTRACTION_ATTEMPTS, MAX_MCQ_ATTEMPTS_PER_RULE, MAX_PROMPT_CHARS, MAX_REQUEST_BYTES) == (8, 3, 3, 8000, 16000)
+
+
+def test_safe_batch_hard_cap_formula():
+    from scripts.distill_lib import safe_batch_hard_cap
+    assert safe_batch_hard_cap(2, 3, 8, 3) == 2 * 3 + 2 * 8 * 3
+
+
+def test_rule_overflow_raises():
+    from scripts.distill_lib import enforce_budget_before_call, RuleOverflowError
+    enforce_budget_before_call(5, "rules")
+    with pytest.raises(RuleOverflowError):
+        enforce_budget_before_call(9, "rules")
+
+
+def test_segmentation_conservation():
+    from scripts.distill_lib import segment_chapter, PromptLimits
+    text = "第一段。第二段！第三段？" * 2000
+    segs = segment_chapter(text, book="b", chapter="1", limits=PromptLimits())
+    assert "".join(s.text for s in segs) == text
+    assert [s.char_start for s in segs] == [0] + [s.char_end for s in segs[:-1]]
+    for s in segs:
+        assert len(s.text) > 0
+
+
+def test_prompt_char_limit():
+    from scripts.distill_lib import validate_segment, PromptLimits, PromptLimitError
+    with pytest.raises(PromptLimitError):
+        validate_segment("x" * 9000, book="b", chapter="1", limits=PromptLimits())
+
+
+def test_rules_retryable_parse():
+    from scripts.distill_lib import _parse_rules_retryable, RetryableModelOutputError
+    good = '[{"rule":"甲木喜水","condition":"生于寅月","subject":"甲木","original_text":"甲木喜水"}]'
+    assert len(_parse_rules_retryable(good)) == 1
+    for bad in ("not json", "{}", "[]", '[{"rule":"x"}]', '[' + '"x"' * 20 + ']'):
+        with pytest.raises(RetryableModelOutputError):
+            _parse_rules_retryable(bad)
+
+
+def test_mcq_retryable_parse():
+    from scripts.distill_lib import _parse_mcq_retryable, RetryableModelOutputError
+    good = '{"question":"q","options":{"A":"a","B":"b","C":"c","D":"d"},"answer":"A","explanation":"e"}'
+    assert _parse_mcq_retryable(good)["answer"] == "A"
+    for bad in ("{}", '{"question":"q"}', '{"question":"q","options":{"A":"a"},"answer":"A","explanation":"e"}'):
+        with pytest.raises(RetryableModelOutputError):
+            _parse_mcq_retryable(bad)
+
+
+def test_is_retryable_error():
+    from scripts.distill_lib import is_retryable_error, RetryableModelOutputError
+    assert is_retryable_error(RetryableModelOutputError("x")) is True
+    assert is_retryable_error(ConnectionError("x")) is True
+    assert is_retryable_error(RuntimeError("network down")) is True
+    assert is_retryable_error(RuntimeError("boom")) is False
+
+
+def test_retry_non_retryable_raises_immediately(tmp_path):
+    from scripts.distill_lib import BudgetLedger, ProjectLedger, retry_call_with_budget, EXPERIMENT_ID
+    proj = ProjectLedger.load_or_create(tmp_path / "p.json", experiment_id=EXPERIMENT_ID, total_cap=100)
+    run = BudgetLedger.load_or_create(tmp_path / "r.json", global_hard_cap=50, run_id="R", code_sha="c", rules_sha="r")
+    def boom(*a, **k): raise ValueError("hard")
+    with pytest.raises(ValueError):
+        retry_call_with_budget(boom, proj=proj, run=run, run_id="R", batch_id="B", chapter_id=1, segment_id=0,
+                               operation="rules", rule_id=None, base_id=_base(), max_attempts=3,
+                               project_path=tmp_path / "p.json", run_path=tmp_path / "r.json")
+
+
+def test_generate_mcq_exhaustion_blocks(tmp_path, monkeypatch):
+    from scripts.distill_lib import generate_mcq
+    ok = {"question": "q", "options": {"A": "a", "B": "b", "C": "c", "D": "d"}, "answer": "A", "explanation": "e"}
+    monkeypatch.setattr("scripts.distill_lib._call", lambda *a, **k: json.dumps(ok, ensure_ascii=False))
+    rules = [{"id": "smth_080_000", "subject": "甲木", "condition": "生于寅月", "rule": "甲木喜水", "original_text": "甲木喜水"}]
+    stats = {}
+    verified, _ = generate_mcq(rules, "sanmingtonghui", "81", max_calls=0, stats=stats)
+    assert stats["max_calls_hit"] is True and len(verified) == 0
+
+
+def test_legacy_mcq_output_failure_retries(tmp_path, monkeypatch):
+    from scripts.distill_lib import generate_mcq
+    ok = {"question": "甲木喜什么？", "options": {"A": "喜水滋润", "B": "火", "C": "土", "D": "金"}, "answer": "A", "explanation": "甲木喜水"}
+    state = {"n": 0}
+    def flaky(*a, **k):
+        state["n"] += 1
+        if state["n"] == 1: return "not json"
+        return json.dumps(ok, ensure_ascii=False)
+    monkeypatch.setattr("scripts.distill_lib._call", flaky)
+    rules = [{"id": "smth_080_000", "subject": "甲木", "condition": "生于寅月", "rule": "甲木日主喜水", "original_text": "甲木喜水"}]
+    verified, _ = generate_mcq(rules, "sanmingtonghui", "81")
+    assert len(verified) == 1
+
+
+def test_legacy_mcq_network_error_retries(tmp_path, monkeypatch):
+    from scripts.distill_lib import generate_mcq
+    ok = {"question": "甲木喜什么？", "options": {"A": "喜水滋润", "B": "火", "C": "土", "D": "金"}, "answer": "A", "explanation": "甲木喜水"}
+    state = {"n": 0}
+    def flaky(*a, **k):
+        state["n"] += 1
+        if state["n"] == 1: raise ConnectionError("refused")
+        return json.dumps(ok, ensure_ascii=False)
+    monkeypatch.setattr("scripts.distill_lib._call", flaky)
+    rules = [{"id": "smth_080_000", "subject": "甲木", "condition": "生于寅月", "rule": "甲木日主喜水", "original_text": "甲木喜水"}]
+    verified, _ = generate_mcq(rules, "sanmingtonghui", "81")
+    assert len(verified) == 1
+
+
+def test_retry_exhaustion_classified_as_resume(tmp_path, monkeypatch):
+    import scripts.distill_lib as dl
+    from scripts.distill_lib import (ProjectLedger, BudgetLedger, retry_call_with_budget, attempt_base_id,
+                                     MAX_RULE_EXTRACTION_ATTEMPTS, RetryExhaustedError, classify_failure_for_resume, is_retryable_error, EXPERIMENT_ID)
+    def boom(*a, **k): raise ConnectionError("refused")
+    monkeypatch.setattr(dl, "_call", boom)
+    proj = ProjectLedger.load_or_create(tmp_path / "p.json", experiment_id=EXPERIMENT_ID, total_cap=100)
+    run = BudgetLedger.load_or_create(tmp_path / "r.json", global_hard_cap=50, run_id="R", code_sha="c", rules_sha="r")
+    base = attempt_base_id(run_id="R", batch_id="B", chapter_id=1, segment_id=0, operation="rules", rule_id=None)
+    with pytest.raises(RetryExhaustedError) as ei:
+        retry_call_with_budget(lambda: dl._call("P"), proj=proj, run=run, run_id="R", batch_id="B", chapter_id=1,
+                               segment_id=0, operation="rules", rule_id=None, base_id=base,
+                               max_attempts=MAX_RULE_EXTRACTION_ATTEMPTS, project_path=tmp_path / "p.json",
+                               run_path=tmp_path / "r.json")
+    assert classify_failure_for_resume(ei.value, code_sha_before="a"*64, code_sha_now="a"*64) == "resume"
+    assert is_retryable_error(ei.value.__cause__) is True
+
+
+def test_legacy_mcq_single_success_charges_once(tmp_path, monkeypatch):
+    import scripts.distill_lib as dl
+    from scripts.distill_lib import BudgetLedger
+    ok = {"question": "甲木喜什么？", "options": {"A": "喜水滋润", "B": "火", "C": "土", "D": "金"},
+          "answer": "A", "explanation": "甲木喜水"}
+    monkeypatch.setattr(dl, "_call", lambda *a, **k: json.dumps(ok, ensure_ascii=False))
+    run = BudgetLedger.load_or_create(tmp_path / "run.json", global_hard_cap=50, run_id="R", code_sha="c", rules_sha="r")
+    rules = [{"id": "smth_080_000", "subject": "甲木", "condition": "生于寅月", "rule": "甲木日主喜水", "original_text": "甲木喜水",
+              "source_book": "sanmingtonghui", "source_chapter": "81", "category": "classic"}]
+    verified, _ = dl.generate_mcq(rules, "sanmingtonghui", "81", ledger=run)
+    run2 = BudgetLedger.load_or_create(tmp_path / "run.json", global_hard_cap=50, run_id="R", code_sha="c", rules_sha="r")
+    assert len(verified) == 1 and run2.legacy_calls == 1   # 单次成功只扣一次
