@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "book": "sanmingtonghui",
+  "baseline_commit": "8b0e75ae4bb316ffc4caefe403bb8a201a2bfccb",
+  "artifact_manifest_sha256": "26775a0ef8ca52100e6d80bb8d056648a0e6c96f0d6ea707a3c5a42c452ff0d6",
+  "validator_code_sha256": "5dd6f52b87858424095e2c323dff63d46f81d93ceaf83fd00a8fc479ec904632",
+  "exempted_checks": [
+    "missing_upstream_response_body"
+  ],
+  "non_exempt_checks": [
+    "artifact_integrity",
+    "quality_gates",
+    "future_generation_provenance"
+  ],
+  "author": "implementing-agent",
+  "date": "2026-08-13",
+  "reason": "80 章为历史导入无上游 response body，豁免缺失上游链；内容完整性与质量门不豁免"
+}

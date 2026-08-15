@@ -1338,3 +1338,55 @@ def verify_published_artifacts(
 
     return (len(issues) == 0), issues
 
+
+
+# ---------------------------------------------------------------------------
+# Sanming 303 completion: historical-artifact exemption chain (E -> R -> B1)
+# ---------------------------------------------------------------------------
+
+EXPERIMENT_ID = "sanming-303-completion"
+EXEMPT_ALLOWLIST = ("missing_upstream_response_body",)
+NON_EXEMPT_ALLOWLIST = ("artifact_integrity", "quality_gates", "future_generation_provenance")
+
+
+class HistoricalArtifactDriftError(ValueError):
+    pass
+
+
+def exemption_request_sha256(e: dict) -> str:
+    return hashlib.sha256(json.dumps(e, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def verify_exemption_request(e: dict) -> bool:
+    for k in ("book", "artifact_manifest_sha256", "baseline_commit", "validator_code_sha256", "exempted_checks", "non_exempt_checks", "author", "date"):
+        if k not in e: raise ValueError(f"exemption request missing {k}")
+    if not set(e["exempted_checks"]) <= set(EXEMPT_ALLOWLIST): raise ValueError("exempted_checks outside allowlist")
+    if not set(e["non_exempt_checks"]) <= set(NON_EXEMPT_ALLOWLIST): raise ValueError("non_exempt_checks outside allowlist")
+    if set(e["exempted_checks"]) & set(e["non_exempt_checks"]): raise ValueError("overlapping exempt/non-exempt")
+    for forbidden in ("approval_receipt_sha256", "approval_commit"):
+        if forbidden in e: raise ValueError(f"exemption request must not contain {forbidden}")
+    return True
+
+
+def verify_approval_receipt(r: dict, e: dict) -> bool:
+    if r.get("exemption_request_sha256") != exemption_request_sha256(e): raise ValueError("approval receipt exemption_request_sha256 mismatch")
+    if r.get("baseline_commit") != e.get("baseline_commit"): raise ValueError("approval receipt baseline_commit mismatch")
+    if r.get("artifact_manifest_sha256") != e.get("artifact_manifest_sha256"): raise ValueError("approval receipt artifact_manifest_sha256 mismatch")
+    if not r.get("approver") or not r.get("approved_at"): raise ValueError("approval receipt missing approver/approved_at")
+    return True
+
+
+def build_artifact_manifest(book_dir, *, git_ref, git_root):
+    import subprocess as _sp
+    files = sorted(p for p in Path(book_dir).iterdir() if p.is_file() and p.suffix in (".json", ".jsonl", ".txt"))
+    shas = {}
+    for p in files: shas[p.name] = hashlib.sha256(p.read_bytes()).hexdigest()
+    for name, sha in shas.items():
+        rel = str(Path(book_dir).resolve().relative_to(Path(git_root).resolve()) / name).replace("\\", "/")
+        blob = _sp.run(["git", "-C", str(git_root), "show", f"{git_ref}:{rel}"], capture_output=True).stdout
+        if hashlib.sha256(blob).hexdigest() != sha: raise HistoricalArtifactDriftError(f"{rel} drifts from git blob at {git_ref}")
+    return {"sha256_by_path": shas, "git_ref": git_ref, "git_verified": True}
+
+
+def load_exemption_request(path):
+    return json.loads(Path(path).read_text(encoding="utf-8"))

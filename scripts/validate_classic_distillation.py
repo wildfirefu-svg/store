@@ -285,3 +285,19 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+# ---------------------------------------------------------------------------
+# Historical-artifact exemption application (E -> R -> B1 chain, stage 1)
+# ---------------------------------------------------------------------------
+from scripts.classic_artifacts import verify_exemption_request
+
+
+def apply_exemption(issues: dict, exemption_request: dict) -> dict:
+    """Apply an approved exemption: exempt listed checks (fail-closed on a
+    malformed / un-approved request via verify_exemption_request)."""
+    verify_exemption_request(exemption_request)
+    out = dict(issues)
+    for check in exemption_request["exempted_checks"]:
+        if check in out: out[check] = "exempted"
+    return out
