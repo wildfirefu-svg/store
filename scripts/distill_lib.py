@@ -769,7 +769,9 @@ def _validate_ledger_state(data) -> None:
 
 def _atomic_write_json(path, obj):
     tmp = Path(path).with_suffix(".tmp")
-    tmp.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
+    # P0-3/LF：显式 LF 写入，使磁盘字节 == git blob（text=auto eol=lf）字节，
+    # 保证 completed_receipt 文件字节 SHA 与 verify_batch_anchors 读到的 blob SHA 一致。
+    tmp.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8", newline="\n")
     os.replace(str(tmp), str(path))
 
 
