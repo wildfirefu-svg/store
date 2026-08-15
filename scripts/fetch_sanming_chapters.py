@@ -6,7 +6,7 @@ the 80 historically-imported chapters (legacy raw text, no upstream response
 body) with 303 fetched chapters (with archived response bodies).
 """
 from __future__ import annotations
-import json, os, re, hashlib
+import io, json, os, re, tarfile, hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -55,3 +55,13 @@ def bootstrap_snapshot(legacy_raw_dir: Path, chapter_list, fetched_records):
         records.append(rec); ids.append(rec["chapter_index"])
     if sorted(ids) != list(range(1, 384)): raise ValueError("bootstrap must yield exactly 383 unique contiguous ids")
     return {"ids": ids, "records": records}
+
+def build_canonical_tar(responses: dict[str, bytes]) -> bytes:
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:", format=tarfile.GNU_FORMAT) as tf:
+        for name in sorted(responses, key=lambda n: int(re.search(r"raw_(\d+)\.html", n).group(1))):
+            data = responses[name]
+            info = tarfile.TarInfo(name=name)
+            info.size = len(data); info.mtime = 0; info.uid = 0; info.gid = 0; info.uname = ""; info.gname = ""; info.mode = 0o644
+            tf.addfile(info, io.BytesIO(data))
+    return buf.getvalue()
