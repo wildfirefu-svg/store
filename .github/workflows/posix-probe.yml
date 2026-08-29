@@ -1,0 +1,19 @@
+﻿name: POSIX acceptance probe (throwaway)
+
+on:
+  push:
+    branches: [ci/acceptance-posix-probe]
+
+jobs:
+  posix-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test deps
+        run: python -m pip install --upgrade pip && pip install pytest pytest-timeout
+      - name: Run classic acceptance review tests (POSIX)
+        run: python -m pytest tests/test_classic_acceptance_review.py -v --tb=short --timeout=120 --ignore=tests/test_e2e.py
