@@ -2,7 +2,7 @@
   "schema_version": "2.0",
   "freeze_tag": "CLASSIC_ACCEPTANCE_FREEZE_V2",
   "candidate_commit": "80bc630396f31c6b6c122e49ef97f6d912e6f636",
-  "tooling_payload_commit": "PENDING",
+  "tooling_payload_commit": "ba7cc51423e27502c8fc19fbdaa31bfe77807491",
   "generator": {
     "path": "scripts/generate_acceptance_manifests.py",
     "blob_oid": "9fa0fdc6b190316a9804e6cdd2be6a87bae92ff4",
