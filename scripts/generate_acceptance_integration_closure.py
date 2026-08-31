@@ -45,6 +45,7 @@ recorded OIDs.
 """
 from __future__ import annotations
 
+import fnmatch
 import json
 import os
 import re
@@ -60,6 +61,9 @@ JSON_PATH = SPECS / "2026-08-29-classic-texts-acceptance-integration-closure.jso
 MD_PATH = SPECS / "2026-08-29-classic-texts-acceptance-integration-closure.md"
 GENERATED_OUTPUTS = [JSON_PATH.relative_to(ROOT).as_posix(),
                      MD_PATH.relative_to(ROOT).as_posix()]
+AUDIT_OUTPUT_EXCLUSION_GLOB = (
+    "docs/superpowers/*classic-texts-review-e*-receipt.md"
+)
 OLD_CANDIDATE = "80bc630396f31c6b6c122e49ef97f6d912e6f636"
 MERGE_BASE = "3d3b41cf65af487b03ca5233a109fee14191b88c"
 TOOLING_PIN_COMMIT = "ed5493a94d0268b88f2dca448f963880e7cc1ad5"
@@ -221,6 +225,12 @@ def group_of(p):
     return "other"
 
 
+def touch_scan_excluded(rel):
+    return rel in GENERATED_OUTPUTS or fnmatch.fnmatchcase(
+        rel, AUDIT_OUTPUT_EXCLUSION_GLOB
+    )
+
+
 def scan_touch_list():
     binding, short_only = [], []
     for dirpath, dirnames, filenames in os.walk(ROOT):
@@ -237,7 +247,7 @@ def scan_touch_list():
             if not short_n:
                 continue
             rel = fp.relative_to(ROOT).as_posix()
-            if rel in GENERATED_OUTPUTS:
+            if touch_scan_excluded(rel):
                 continue
             full_n = data.count(FULL_NEEDLE)
             if full_n:
@@ -556,6 +566,7 @@ def build_closure(candidate_commit=OLD_CANDIDATE, base_commit=MERGE_BASE,
         "code_freeze_touch_list": {
             "binding_full_sha": binding,
             "short_sha_only": short_only,
+            "audit_output_exclusion_glob": AUDIT_OUTPUT_EXCLUSION_GLOB,
             "generated_outputs_excluded_from_scan": [
                 {"path": GENERATED_OUTPUTS[0],
                  "note": ("generated artifact; carries the full candidate SHA twice "
@@ -566,7 +577,8 @@ def build_closure(candidate_commit=OLD_CANDIDATE, base_commit=MERGE_BASE,
                           "truncated to 12 chars (short prefix on disk)")},
             ],
             "scan_note": ("needle is the 8-hex prefix 80bc630; scope is repository INPUT "
-                          "files - the two generated artifacts are excluded because "
+                          "files - the two generated artifacts and the explicit Review E "
+                          "audit-receipt family are excluded because "
                           "their candidate-SHA content is derived from the anchors and "
                           "including them makes the scan self-referentially unstable. "
                           "Files containing the full 40-hex SHA are binding or chain-"
@@ -801,6 +813,8 @@ def verify(cl, candidate_commit=OLD_CANDIDATE, base_commit=MERGE_BASE,
         errors.append("touch-list drift: binding occurrence counts mismatch")
     if tl.get("short_sha_only") != short_only:
         errors.append("touch-list drift: short-SHA-only file set mismatch")
+    if tl.get("audit_output_exclusion_glob") != AUDIT_OUTPUT_EXCLUSION_GLOB:
+        errors.append("touch-list drift: audit output exclusion policy mismatch")
     if len(binding) != EXPECTED["touch_binding_files"]:
         errors.append(f"touch-list drift: binding files {len(binding)} != {EXPECTED['touch_binding_files']}")
     if len(short_only) != EXPECTED["touch_short_only_files"]:

@@ -351,3 +351,26 @@ def test_short_sha_classification_recorded(closure):
     assert len(tl["binding_full_sha"]) == 11
     assert "tests/test_classic_acceptance_sampling.py" not in [
         e["path"] for e in tl["binding_full_sha"]]
+
+
+def test_review_e_receipts_are_explicit_touch_scan_outputs(closure):
+    receipt = (
+        "docs/superpowers/"
+        "2026-08-31-classic-texts-review-e-superseding-receipt.md"
+    )
+    assert gic.touch_scan_excluded(receipt)
+    assert not gic.touch_scan_excluded("docs/superpowers/unrelated-receipt.md")
+    assert receipt not in [
+        e["path"] for e in closure["code_freeze_touch_list"]["binding_full_sha"]
+    ]
+    assert closure["code_freeze_touch_list"]["audit_output_exclusion_glob"] == (
+        "docs/superpowers/*classic-texts-review-e*-receipt.md"
+    )
+
+
+def test_ci_checkouts_fetch_frozen_history_and_tags():
+    workflow = (gic.ROOT / ".github" / "workflows" / "ci.yml").read_text(
+        encoding="utf-8"
+    )
+    assert workflow.count("fetch-depth: 0") == 2
+    assert workflow.count("fetch-tags: true") == 2

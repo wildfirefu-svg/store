@@ -7307,6 +7307,7 @@
       }
     ],
     "short_sha_only": [],
+    "audit_output_exclusion_glob": "docs/superpowers/*classic-texts-review-e*-receipt.md",
     "generated_outputs_excluded_from_scan": [
       {
         "path": "docs/superpowers/specs/2026-08-29-classic-texts-acceptance-integration-closure.json",
@@ -7317,7 +7318,7 @@
         "note": "generated artifact; renders old_candidate_commit truncated to 12 chars (short prefix on disk)"
       }
     ],
-    "scan_note": "needle is the 8-hex prefix 80bc630; scope is repository INPUT files - the two generated artifacts are excluded because their candidate-SHA content is derived from the anchors and including them makes the scan self-referentially unstable. Files containing the full 40-hex SHA are binding or chain-record files and are updated or regenerated at re-freeze (including this generator, whose OLD_CANDIDATE constant is patched to C2); the current chain has no short-prefix-only files. Historical short-prefix mentions remain historical evidence and are not represented as a new-chain binding"
+    "scan_note": "needle is the 8-hex prefix 80bc630; scope is repository INPUT files - the two generated artifacts and the explicit Review E audit-receipt family are excluded because their candidate-SHA content is derived from the anchors and including them makes the scan self-referentially unstable. Files containing the full 40-hex SHA are binding or chain-record files and are updated or regenerated at re-freeze (including this generator, whose OLD_CANDIDATE constant is patched to C2); the current chain has no short-prefix-only files. Historical short-prefix mentions remain historical evidence and are not represented as a new-chain binding"
   },
   "new_candidate_construction_policy": "No history cherry-pick from the 129 unpushed commits. C2 is an OVERLAY commit: start from the FULL origin/main tree and replace/add exactly the 698 candidate data paths with their recorded old-candidate blobs; every other origin/main path stays byte-identical; parent = the integration branch base so C2 stays reachable and pushable. The construction is performed and checked by build_candidate_overlay_tree() and verify_candidate_tree() in the tracked generator, NOT by manual steps. The 17 tooling paths and the 4 infrastructure paths land as normal commits on top; the code-side binding files are patched to C2 first (re-freeze order step 2).",
   "new_candidate_gates": [
