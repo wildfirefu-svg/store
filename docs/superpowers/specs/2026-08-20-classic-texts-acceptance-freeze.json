@@ -1,0 +1,17 @@
+{
+  "schema_version": "2.0",
+  "freeze_tag": "CLASSIC_ACCEPTANCE_FREEZE_V2",
+  "candidate_commit": "80bc630396f31c6b6c122e49ef97f6d912e6f636",
+  "tooling_payload_commit": "PENDING",
+  "generator": {
+    "path": "scripts/generate_acceptance_manifests.py",
+    "blob_oid": "9fa0fdc6b190316a9804e6cdd2be6a87bae92ff4",
+    "sha256_lf": "e9f4b562ff3f964cb982a8a0b79b43a93c370ff2b4ca9054c4f42b1d2fdbddd5",
+    "algorithm_version": "1.4"
+  },
+  "manifests": {
+    "2026-08-20-classic-texts-candidate-identity-manifest.json": "0279e30b92f70f8b7cce9c786070fc201cfc3fac86826ef6403b15ad90c5aad2",
+    "2026-08-20-classic-texts-chapter-identity-manifest.json": "ba8ab35e7b98e3a0578f7b62f758e2faff1bbe73d480e153c25b6c74b497d1cf"
+  },
+  "note": "Three-object freeze receipt (v2.0): candidate_commit=data, tooling_payload_commit=tooling content (generator+manifests+design; its own copy of this receipt is a PENDING placeholder by design), freeze_commit=the commit the annotated CLASSIC_ACCEPTANCE_FREEZE_V2 tag points at (this receipt is finalized THERE only; the freeze commit differs from the payload only in this receipt). Verification: python scripts/generate_acceptance_manifests.py --check --freeze-ref CLASSIC_ACCEPTANCE_FREEZE_V2 --expected-freeze-tag-oid <40-hex tag object OID pinned by the independent approval record>. The verifier compares the resolved tag object OID against the pinned anchor, reads the receipt ONLY from the fixed freeze tag, verifies the payload is an ancestor of the freeze commit and differs only in the receipt, verifies the manifests AND the generator blob at the payload commit against the frozen record, regenerates from candidate data, and verifies the running generator. Updated deliberately on re-freeze only. v5.0 clean-chain re-freeze: candidate C2 80bc630 overlays the 698 classic-texts closure blobs onto the full origin/main tree (3d3b41cf), so the three oversized provenance blobs that structurally blocked the V1 chain are unreachable on this chain; the old V1 chain (candidate 51eb92b) remains LOCAL_ONLY historical evidence on acceptance/task1."
+}

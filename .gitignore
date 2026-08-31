@@ -7,6 +7,8 @@ __pycache__/
 *.pyc
 .chromadb_case_index/
 bazi_kb.db
+bazi_kb.db-wal
+bazi_kb.db-shm
 bazi_data.db
 
 # Generated reports (contain personal data)
@@ -87,3 +89,5 @@ tests/fixtures/baziqa/contest8_sample.jsonl
 # MingLi-Bench external data (reproducible via scripts/fetch_mingli_bench.py, pinned commit)
 data/mingli/
 *.lock
+# 响应归档包（tar）外置于 Git；materialized responses/ 仍入库，归档 tar 由外部提供
+knowledge_base/classic_texts/*/.snapshot_archive/
