@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "record_type": "freeze-anchor-record",
+  "status": "LOCAL_ONLY",
+  "freeze_tag": "CLASSIC_ACCEPTANCE_FREEZE_V2",
+  "expected_tag_oid": "98c7cb90b0f0d1b8d3f512c657c3a1614303cdf7",
+  "freeze_commit": "d7922bb932e8d572cd3c55d0aeca04442d7dd5f7",
+  "tooling_payload_commit": "ba7cc51423e27502c8fc19fbdaa31bfe77807491",
+  "candidate_commit": "80bc630396f31c6b6c122e49ef97f6d912e6f636",
+  "generator": {
+    "path": "scripts/generate_acceptance_manifests.py",
+    "blob_oid": "9fa0fdc6b190316a9804e6cdd2be6a87bae92ff4",
+    "sha256_lf": "e9f4b562ff3f964cb982a8a0b79b43a93c370ff2b4ca9054c4f42b1d2fdbddd5",
+    "algorithm_version": "1.4"
+  },
+  "manifests": {
+    "2026-08-20-classic-texts-candidate-identity-manifest.json": "0279e30b92f70f8b7cce9c786070fc201cfc3fac86826ef6403b15ad90c5aad2",
+    "2026-08-20-classic-texts-chapter-identity-manifest.json": "ba8ab35e7b98e3a0578f7b62f758e2faff1bbe73d480e153c25b6c74b497d1cf"
+  },
+  "provenance": {
+    "record_created_by": "implementer",
+    "record_created_in_commit": "the v5.0 anchor-record finalization commit on integration/classic-texts-clean (this commit)",
+    "independent_approval": "none",
+    "basis": "Chain values (tag object OID, freeze_commit, tooling_payload_commit, candidate_commit, manifests, generator) are locally reproducible via scripts/generate_acceptance_manifests.py --check --freeze-ref CLASSIC_ACCEPTANCE_FREEZE_V2 --expected-freeze-tag-oid <expected_tag_oid>; the candidate overlay was verified by the four executable closure gates plus the narrow-tree negative control before the chain was built. This record is NOT an approval.",
+    "recorded_at": "2026-08-31"
+  },
+  "overall_state": "LOCAL_FREEZE_VERIFIED / FORMAL_GATE_BLOCKED",
+  "remote_publication": {
+    "remote": "https://github.com/wildfirefu-svg/store.git",
+    "published": false,
+    "status": "pending_push",
+    "structural_block": "resolved by construction on this chain: candidate C2 overlays the 698 classic-texts closure blobs onto the full origin/main tree (3d3b41cf), so the three oversized provenance blobs that structurally blocked the V1 chain are unreachable from this tag (origin/main versions of QUALITY_REPORT.json and remediation_meta.json are 6,381 and 332 bytes; provenance.json does not exist on the clean chain).",
+    "v1_chain_history": "the V1 chain's blocked push attempts and oversized-blob evidence remain recorded in the historical anchor record on acceptance/task1 (LOCAL_ONLY historical evidence).",
+    "excluded_oversized_blobs": [
+      {
+        "path": "knowledge_base/classic_texts/QUALITY_REPORT.json",
+        "v1_blob_oid": "51ec7648e191a5709c00a12765ec131b5bea814e",
+        "size_bytes": 354001243,
+        "clean_chain_state": "origin/main version a7148788b72187fb93ee4cdaad4d1775d6b6f096 (6,381 bytes) retained; V1 blob unreachable"
+      },
+      {
+        "path": "knowledge_base/classic_texts/sanmingtonghui/provenance.json",
+        "v1_blob_oid": "65a627ae8fbfe2f72cead578388ee9a4019f7a7e",
+        "size_bytes": 314130603,
+        "clean_chain_state": "path absent from origin/main and from C2"
+      },
+      {
+        "path": "knowledge_base/classic_texts/sanmingtonghui/remediation_meta.json",
+        "v1_blob_oid": "f6649813f1e550afdd69428738ba7f71f869458a",
+        "size_bytes": 312701489,
+        "clean_chain_state": "origin/main version 42641a50d8dcffa69a0e790cea85c446f7945dd1 (332 bytes) retained; V1 blob unreachable"
+      }
+    ],
+    "next_steps": "controlled push of integration/classic-texts-clean and this tag, official Ubuntu CI, protected-tag platform rule; formal gate stays BLOCKED until those are archived as evidence.",
+    "protected_tag_rule": "pending: requires platform-side rule configuration AND a successful tag publication; no evidence exists yet."
+  },
+  "note": "Freeze anchor record (v5.0, clean-chain re-freeze): pins the expected tag object OID and the frozen chain values for --check and consistency tests. Honesty statement: this record was created and is maintained by the implementer inside the same repository; it provides NO independent trust boundary (the record, the design doc, and the tests can all be modified together). Its only legitimate role is to make the anchor value an explicit, reviewable artifact instead of a hidden test constant. A genuine approval would require, recorded outside implementer control: the independent approver's original statement text, its SHA-256, approver identity, and timestamp. Until then the overall state remains LOCAL_FREEZE_VERIFIED / FORMAL_GATE_BLOCKED."
+}

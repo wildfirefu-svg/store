@@ -111,7 +111,7 @@ python scripts/generate_acceptance_manifests.py --check --freeze-ref CLASSIC_ACC
 
 不依赖文档人工比对。**整体重冻结攻击（新 payload + 新自洽 receipt + tag 改指）**被第 2 层（锚定 OID 不匹配）拦截；即使操作者误用攻击者提供的 OID，第 8/9 层仍以候选数据重生成与运行生成器比对兜底。生成器 blob OID/LF SHA 见 manifest `generator` 元数据（内容派生，HEAD 无关）。
 
-**当前冻结锚点（v5.0）**：`CLASSIC_ACCEPTANCE_FREEZE_V2`（干净链重冻结；tag object OID / freeze_commit / payload 于冻结链建立后在锚点记录 `2026-08-20-classic-texts-freeze-anchor-record.json` 定稿，本行与该记录按 `test_anchor_record_matches_design_doc` 保持三方一致）。锚定值的载体为冻结锚点记录（LOCAL_ONLY，实现者工件，非审批；远端发布状态见其 `remote_publication` 字段）；本行与测试均从该记录核对，三方一致性由 `test_anchor_record_matches_real_tag` / `test_anchor_record_matches_design_doc` / `test_anchor_record_matches_freeze_chain` 机械锁定（防无意漂移，非信任边界）。
+**当前冻结锚点（v5.0）**：`CLASSIC_ACCEPTANCE_FREEZE_V2` tag object OID = `98c7cb90b0f0d1b8d3f512c657c3a1614303cdf7`（指向 freeze_commit `d7922bb9…`，payload `ba7cc51…`）。锚定值的载体为冻结锚点记录 `2026-08-20-classic-texts-freeze-anchor-record.json`（LOCAL_ONLY，实现者工件，非审批；远端发布状态：结构性阻断已按构造解除、待受控推送，详见其 `remote_publication` 字段；总体状态 `LOCAL_FREEZE_VERIFIED / FORMAL_GATE_BLOCKED`）；本行与测试均从该记录核对，三方一致性由 `test_anchor_record_matches_real_tag` / `test_anchor_record_matches_design_doc` / `test_anchor_record_matches_freeze_chain` 机械锁定（防无意漂移，非信任边界）。
 
 ---
 
