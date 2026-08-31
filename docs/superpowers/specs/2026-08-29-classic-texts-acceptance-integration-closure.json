@@ -7139,15 +7139,15 @@
     "source_files": [
       {
         "path": "scripts/generate_acceptance_integration_closure.py",
-        "blob_oid_at_infrastructure_commit": "9df3eea22cb9d79627fdaf04147b3f118a097b48",
-        "size": 57092,
+        "blob_oid_at_infrastructure_commit": "879f9d025b4817c4a7a170f43c7cd438b1bef379",
+        "size": 57646,
         "group": "infrastructure_source",
         "migrated": true
       },
       {
         "path": "tests/test_generate_acceptance_integration_closure.py",
-        "blob_oid_at_infrastructure_commit": "365dcfb0a38a09d27d632de1a164f60c694cf068",
-        "size": 15681,
+        "blob_oid_at_infrastructure_commit": "5ebd483257f5a84550a18ddb14cdbcf493ecf135",
+        "size": 16520,
         "group": "infrastructure_source",
         "migrated": true
       }
