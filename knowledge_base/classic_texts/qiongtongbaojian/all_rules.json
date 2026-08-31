@@ -97,7 +97,7 @@
     "original_text": "以之水，即水附之而行；以之木，则木托之而生；金不得土，则无自出；火不得土，则无自归。必损实以为通，致虚以为明，故五行皆赖土也。",
     "source_book": "穷通宝鉴",
     "source_chapter": "五行总论",
-    "id": "qtbj_000_010"
+    "id": "qtbj_000_009"
   },
   {
     "category": "五行",
@@ -107,17 +107,7 @@
     "original_text": "水黑、火赤、木青、土黄，此正色也。及其变易，则不然。常以生旺从正色，死绝从母色，成形冠带从妻色，病败从鬼色，旺墓从子色。",
     "source_book": "穷通宝鉴",
     "source_chapter": "五行总论",
-    "id": "qtbj_000_011"
-  },
-  {
-    "category": "五行",
-    "subject": "五行之数",
-    "condition": "五行生旺死绝",
-    "rule": "五行之数为水一、火二、木三、金四、土五；生旺时加倍，死绝时减半。",
-    "original_text": "其数则水一、火二、木三、金四、土五。生旺加倍，死绝减半。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "五行总论",
-    "id": "qtbj_000_012"
+    "id": "qtbj_000_010"
   },
   {
     "category": "大运",
@@ -127,7 +117,7 @@
     "original_text": "行运亦如之，识其微意，则於命理之说，思过半矣。",
     "source_book": "穷通宝鉴",
     "source_chapter": "五行总论",
-    "id": "qtbj_000_014"
+    "id": "qtbj_000_012"
   },
   {
     "id": "qtbj_001_000",
@@ -427,7 +417,7 @@
     "original_text": "遇水返化其源，其势尽也",
     "source_book": "穷通宝鉴",
     "source_chapter": "论木",
-    "id": "qtbj_001_031"
+    "id": "qtbj_001_029"
   },
   {
     "category": "格局",
@@ -437,7 +427,7 @@
     "original_text": "金木相等，格谓斲轮。若向秋生，反为伤斧，是秋生忌金重也",
     "source_book": "穷通宝鉴",
     "source_chapter": "论木",
-    "id": "qtbj_001_032"
+    "id": "qtbj_001_030"
   },
   {
     "category": "五行",
@@ -447,7 +437,7 @@
     "original_text": "木生於春，余寒犹存。喜火温暖，则无盘屈之患。藉水资扶，而有舒畅之美",
     "source_book": "穷通宝鉴",
     "source_chapter": "论木",
-    "id": "qtbj_001_033"
+    "id": "qtbj_001_031"
   },
   {
     "category": "五行",
@@ -457,7 +447,7 @@
     "original_text": "春初不宜水盛，阴浓则根损枝枯",
     "source_book": "穷通宝鉴",
     "source_chapter": "论木",
-    "id": "qtbj_001_034"
+    "id": "qtbj_001_032"
   },
   {
     "category": "五行",
@@ -467,17 +457,7 @@
     "original_text": "春木阳气烦燥，无水则叶槁根枯。是以水火二物，既济方佳",
     "source_book": "穷通宝鉴",
     "source_chapter": "论木",
-    "id": "qtbj_001_035"
-  },
-  {
-    "category": "五行",
-    "subject": "春木",
-    "condition": "土多或土薄",
-    "rule": "春木土多则损力，土薄则财丰。",
-    "original_text": "土多而损力，土薄则财丰",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "论木",
-    "id": "qtbj_001_036"
+    "id": "qtbj_001_033"
   },
   {
     "category": "五行",
@@ -487,17 +467,7 @@
     "original_text": "忌逢金重伤残克伐，一生不闲。设使木旺，得金则良，终生获福",
     "source_book": "穷通宝鉴",
     "source_chapter": "论木",
-    "id": "qtbj_001_037"
-  },
-  {
-    "category": "五行",
-    "subject": "夏木",
-    "condition": "土厚",
-    "rule": "夏木土宜薄，不可厚重，厚则反为灾咎。",
-    "original_text": "土宜在薄，不可厚重，厚则反为灾咎",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "论木",
-    "id": "qtbj_001_039"
+    "id": "qtbj_001_035"
   },
   {
     "category": "五行",
@@ -507,17 +477,7 @@
     "original_text": "恶金在多，不可欠缺，缺则不能琢削",
     "source_book": "穷通宝鉴",
     "source_chapter": "论木",
-    "id": "qtbj_001_040"
-  },
-  {
-    "category": "五行",
-    "subject": "夏木",
-    "condition": "木多",
-    "rule": "夏木重重见木，徒以成林，叠叠逢华，终无结果。",
-    "original_text": "重重见木，徒以成林，叠叠逢华，终无结果",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "论木",
-    "id": "qtbj_001_041"
+    "id": "qtbj_001_037"
   },
   {
     "category": "五行",
@@ -527,7 +487,7 @@
     "original_text": "初秋之时，火气未除，尤喜水土以相滋",
     "source_book": "穷通宝鉴",
     "source_chapter": "论木",
-    "id": "qtbj_001_042"
+    "id": "qtbj_001_039"
   },
   {
     "category": "五行",
@@ -537,17 +497,7 @@
     "original_text": "中秋之令，果以成实，欲得刚金而修削",
     "source_book": "穷通宝鉴",
     "source_chapter": "论木",
-    "id": "qtbj_001_043"
-  },
-  {
-    "category": "五行",
-    "subject": "秋木",
-    "condition": "霜降后水盛",
-    "rule": "霜降后不宜水盛，水盛则木漂。",
-    "original_text": "霜降後不宜水盛，水盛则木漂",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "论木",
-    "id": "qtbj_001_044"
+    "id": "qtbj_001_040"
   },
   {
     "category": "五行",
@@ -557,7 +507,7 @@
     "original_text": "寒露节又喜火炎，火炎则木实",
     "source_book": "穷通宝鉴",
     "source_chapter": "论木",
-    "id": "qtbj_001_045"
+    "id": "qtbj_001_042"
   },
   {
     "category": "五行",
@@ -567,7 +517,7 @@
     "original_text": "木多有多材之美，土厚无自任之能",
     "source_book": "穷通宝鉴",
     "source_chapter": "论木",
-    "id": "qtbj_001_046"
+    "id": "qtbj_001_043"
   },
   {
     "category": "五行",
@@ -577,7 +527,7 @@
     "original_text": "冬月之木，盘屈在地，欲土多而培养。恶水盛而忘形",
     "source_book": "穷通宝鉴",
     "source_chapter": "论木",
-    "id": "qtbj_001_047"
+    "id": "qtbj_001_044"
   },
   {
     "category": "五行",
@@ -587,7 +537,7 @@
     "original_text": "金总多不能克伐。火重见温暖有功",
     "source_book": "穷通宝鉴",
     "source_chapter": "论木",
-    "id": "qtbj_001_048"
+    "id": "qtbj_001_045"
   },
   {
     "category": "五行",
@@ -597,7 +547,7 @@
     "original_text": "归根复命之时。木病安能辅助，须忌死绝之地，只宜生旺之方",
     "source_book": "穷通宝鉴",
     "source_chapter": "论木",
-    "id": "qtbj_001_049"
+    "id": "qtbj_001_046"
   },
   {
     "id": "qtbj_002_000",
@@ -807,7 +757,11 @@
     "original_text": "或甲午日庚午时，此人必贵。但要好运相催，不宜制了庚丁。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三春甲木总论",
-    "id": "qtbj_002_020"
+    "id": "qtbj_002_020",
+    "source_chapters": [
+      "三春甲木总论",
+      "三春甲木"
+    ]
   },
   {
     "category": "格局",
@@ -1106,16 +1060,6 @@
     "condition": "庚申、戊寅、甲寅、丙寅，行金水运",
     "rule": "此命造行金水运可发进士，但不宜制去庚金和丁火。",
     "original_text": "若庚申、戊寅、甲寅、丙寅。一行金水运，发进士。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三春甲木"
-  },
-  {
-    "id": "qtbj_003_010",
-    "category": "格局",
-    "subject": "正二月甲木",
-    "condition": "甲午日庚午时",
-    "rule": "甲午日庚午时，此人必贵，但要好运相催，不宜制了庚丁。",
-    "original_text": "或甲午日庚午时，此人必贵。但要好运相催，不宜制了庚丁。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三春甲木"
   },
@@ -1557,7 +1501,7 @@
     "original_text": "若全无点水，又无庚金丁火，一派丙戊，此无用之人也。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_027"
+    "id": "qtbj_004_026"
   },
   {
     "category": "用神",
@@ -1567,7 +1511,7 @@
     "original_text": "五月先癸後丁庚金次之。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_028"
+    "id": "qtbj_004_027"
   },
   {
     "category": "用神",
@@ -1577,7 +1521,7 @@
     "original_text": "六月三伏生寒，丁火退气。先丁後庚，无癸亦可。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_029"
+    "id": "qtbj_004_028"
   },
   {
     "category": "大运",
@@ -1587,7 +1531,7 @@
     "original_text": "或五月乏癸，用丁亦可，要运行北地为隹。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_030"
+    "id": "qtbj_004_029"
   },
   {
     "category": "用神",
@@ -1597,7 +1541,7 @@
     "original_text": "凡用神太多，不宜克制，须泄之为妙。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_032"
+    "id": "qtbj_004_030"
   },
   {
     "category": "格局",
@@ -1607,7 +1551,7 @@
     "original_text": "五六月甲木，木盛先庚，庚盛先丁。五月癸庚两透，为上上之格。六月庚丁两透，亦为上上之格。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_033"
+    "id": "qtbj_004_031"
   },
   {
     "category": "格局",
@@ -1617,7 +1561,7 @@
     "original_text": "或丁火太多，癸水亦多，反作平人。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_034"
+    "id": "qtbj_004_032"
   },
   {
     "category": "格局",
@@ -1627,7 +1571,7 @@
     "original_text": "若柱中多金，名曰杀重身轻，先富後贫，运不相扶，非贫即夭。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_035"
+    "id": "qtbj_004_033"
   },
   {
     "category": "格局",
@@ -1637,7 +1581,7 @@
     "original_text": "或庚多，有一二丙丁制伏，又有壬癸透干，泄金之气，此又为先贫後富。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_036"
+    "id": "qtbj_004_034"
   },
   {
     "category": "大运",
@@ -1647,7 +1591,7 @@
     "original_text": "若柱中有壬水，运又逢水，必贫夭死。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_038"
+    "id": "qtbj_004_035"
   },
   {
     "category": "格局",
@@ -1657,7 +1601,7 @@
     "original_text": "或四柱多土，干上有乙木，切勿作弃命从才。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_040"
+    "id": "qtbj_004_036"
   },
   {
     "category": "六亲",
@@ -1667,7 +1611,7 @@
     "original_text": "时月两透己土，名二土争合，男主奔流，女主淫贱。见二甲则不争矣，亦属平庸之辈。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_041"
+    "id": "qtbj_004_037"
   },
   {
     "category": "格局",
@@ -1677,7 +1621,7 @@
     "original_text": "或四柱有辰，干见二己二甲，此人名利双全，大富大贵。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_042"
+    "id": "qtbj_004_038"
   },
   {
     "category": "格局",
@@ -1687,7 +1631,7 @@
     "original_text": "若在六月，见辰支，名为逢时化合格。以癸水为妻，丁火为子。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_043"
+    "id": "qtbj_004_039"
   },
   {
     "category": "六亲",
@@ -1697,7 +1641,7 @@
     "original_text": "若二己一甲争合。取支中比劫为用。以甲为用者，壬癸为妻，甲乙为子。其余用庚者，土妻金子。用丁者，木妻火子。女命以妻作夫，用作子。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_044"
+    "id": "qtbj_004_040"
   },
   {
     "category": "格局",
@@ -1707,7 +1651,7 @@
     "original_text": "或是己土，不见戊土，乃为假从，其人一生缩首，反畏妻子。若无印绶，一生贫苦。六月尤可，五月决不可。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏甲木",
-    "id": "qtbj_004_045"
+    "id": "qtbj_004_041"
   },
   {
     "id": "qtbj_005_000",
@@ -1888,16 +1832,6 @@
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋甲木总论",
     "id": "qtbj_005_017"
-  },
-  {
-    "category": "疾病",
-    "subject": "甲木",
-    "condition": "庚多无丁",
-    "rule": "庚金多而无丁火制，主残疾；若为僧道，可免灾厄。",
-    "original_text": "或庚多无丁，残疾之人若为僧道，灾厄可免。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三秋甲木总论",
-    "id": "qtbj_005_018"
   },
   {
     "category": "格局",
@@ -2660,16 +2594,6 @@
     "source_chapter": "三冬甲木"
   },
   {
-    "id": "qtbj_007_015",
-    "category": "六亲",
-    "subject": "十一月甲木",
-    "condition": "用庚",
-    "rule": "用庚金时，以土为妻，以金为子。",
-    "original_text": "用庚，土妻金子。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三冬甲木"
-  },
-  {
     "id": "qtbj_007_016",
     "category": "六亲",
     "subject": "十一月甲木",
@@ -2870,26 +2794,6 @@
     "id": "qtbj_007_035"
   },
   {
-    "category": "六亲",
-    "subject": "甲木",
-    "condition": "十月甲木，用庚",
-    "rule": "用庚金时，以土为妻，以金为子。",
-    "original_text": "用庚，土妻金子。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三冬甲木",
-    "id": "qtbj_007_036"
-  },
-  {
-    "category": "六亲",
-    "subject": "甲木",
-    "condition": "十月甲木，用丁",
-    "rule": "用丁火时，以木为妻，以火为子。",
-    "original_text": "用丁，木妻火子。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三冬甲木",
-    "id": "qtbj_007_037"
-  },
-  {
     "category": "用神",
     "subject": "甲木",
     "condition": "十一月甲木，木性生寒",
@@ -2960,26 +2864,6 @@
     "id": "qtbj_007_044"
   },
   {
-    "category": "六亲",
-    "subject": "甲木",
-    "condition": "十一月甲木，用庚",
-    "rule": "用庚金时，以土为妻，以金为子。",
-    "original_text": "用庚，土妻金子。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三冬甲木",
-    "id": "qtbj_007_045"
-  },
-  {
-    "category": "六亲",
-    "subject": "甲木",
-    "condition": "十一月甲木，用火",
-    "rule": "用火时，以木为妻，以火为子。",
-    "original_text": "用火，木妻火子。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三冬甲木",
-    "id": "qtbj_007_046"
-  },
-  {
     "category": "用神",
     "subject": "甲木",
     "condition": "十二月甲木，天寒气冻",
@@ -3022,26 +2906,6 @@
   {
     "category": "格局",
     "subject": "甲木",
-    "condition": "十二月甲木，无庚",
-    "rule": "无庚金，主贫贱。",
-    "original_text": "无庚者，贫贱。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三冬甲木",
-    "id": "qtbj_007_051"
-  },
-  {
-    "category": "格局",
-    "subject": "甲木",
-    "condition": "十二月甲木，无丁",
-    "rule": "无丁火，主寒儒。",
-    "original_text": "无丁者，寒儒。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三冬甲木",
-    "id": "qtbj_007_052"
-  },
-  {
-    "category": "格局",
-    "subject": "甲木",
     "condition": "十二月甲木，丁透重重，有比肩",
     "rule": "丁火多透且有比肩，主富贵中人，有德业才能。",
     "original_text": "或有丁透重重，亦是富贵中人，但须比肩，能发丁之焰，自有德业才能。",
@@ -3060,16 +2924,6 @@
     "id": "qtbj_007_054"
   },
   {
-    "category": "格局",
-    "subject": "甲木",
-    "condition": "十二月甲木，支多见水，有比肩",
-    "rule": "地支多水，即使有比肩，也属平常。",
-    "original_text": "或支多见水，即有比肩，亦属平常。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三冬甲木",
-    "id": "qtbj_007_055"
-  },
-  {
     "category": "用神",
     "subject": "甲木",
     "condition": "十二月甲木，有庚金",
@@ -3078,16 +2932,6 @@
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬甲木",
     "id": "qtbj_007_056"
-  },
-  {
-    "category": "疾病",
-    "subject": "甲木",
-    "condition": "甲木无根",
-    "rule": "甲木无根，主男女夭寿。",
-    "original_text": "甲木无根，男女夭寿。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三冬甲木",
-    "id": "qtbj_007_057"
   },
   {
     "id": "qtbj_008_000",
@@ -3557,7 +3401,12 @@
     "rule": "以丙火为用神者，以木为妻，以火为子。",
     "original_text": "用丙者，木妻火子。",
     "source_book": "穷通宝鉴",
-    "source_chapter": "三春乙木"
+    "source_chapter": "三春乙木",
+    "source_chapters": [
+      "三春乙木",
+      "正月己土",
+      "正月壬水"
+    ]
   },
   {
     "id": "qtbj_009_007",
@@ -3630,16 +3479,6 @@
     "source_chapter": "三春乙木"
   },
   {
-    "id": "qtbj_009_014",
-    "category": "六亲",
-    "subject": "二月乙木",
-    "condition": "用丙",
-    "rule": "以丙火为用神者，以木为妻，以火为子。",
-    "original_text": "用丙者，木妻、火子。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三春乙木"
-  },
-  {
     "id": "qtbj_009_015",
     "category": "六亲",
     "subject": "二月乙木",
@@ -3647,7 +3486,11 @@
     "rule": "以癸水为用神者，以金为妻，以水为子。",
     "original_text": "用癸者，金妻、水子。",
     "source_book": "穷通宝鉴",
-    "source_chapter": "三春乙木"
+    "source_chapter": "三春乙木",
+    "source_chapters": [
+      "三春乙木",
+      "三夏乙木"
+    ]
   },
   {
     "id": "qtbj_009_016",
@@ -3806,16 +3649,6 @@
     "condition": "年干见丁破庚",
     "rule": "年干见丁火破庚金，可云从化，不失武职之权。",
     "original_text": "如年干见丁破庚，可云从化，亦不失武职之权。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三春乙木"
-  },
-  {
-    "id": "qtbj_009_032",
-    "category": "六亲",
-    "subject": "三月乙木",
-    "condition": "用癸",
-    "rule": "以癸水为用神者，以金为妻，以水为子。",
-    "original_text": "用癸者，金妻水子。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三春乙木"
   },
@@ -4246,16 +4079,6 @@
     "condition": "丙戊太多，支成火局",
     "rule": "丙火戊土过多，地支合成火局，木被火焚，主眼盲残疾。",
     "original_text": "丙戊太多，支成火局，瞽目之流。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三夏乙木"
-  },
-  {
-    "id": "qtbj_011_005",
-    "category": "六亲",
-    "subject": "四月乙木",
-    "condition": "用癸者",
-    "rule": "以癸水为用神者，以金为妻，以水为子。",
-    "original_text": "用癸者，金妻水子。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏乙木"
   },
@@ -4837,7 +4660,7 @@
     "original_text": "或癸透、丙藏、庚少，此不用己，可许贡拔。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_038"
+    "id": "qtbj_012_037"
   },
   {
     "category": "格局",
@@ -4847,7 +4670,7 @@
     "original_text": "无丙、有癸透者，不失刀笔门户。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_039"
+    "id": "qtbj_012_038"
   },
   {
     "category": "格局",
@@ -4857,7 +4680,7 @@
     "original_text": "有支下庚多，癸又藏者，无丙己二神，平常人物。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_040"
+    "id": "qtbj_012_039"
   },
   {
     "category": "格局",
@@ -4867,7 +4690,7 @@
     "original_text": "或生辰时，此为从化，反主富贵。凡化合格皆以所生之神为用。化金者，戊为用神，特忌丙丁煆炼破格。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_041"
+    "id": "qtbj_012_040"
   },
   {
     "category": "六亲",
@@ -4877,7 +4700,7 @@
     "original_text": "从化者以火为妻，土为子。其余以金为妻。妻必贤美。以水为子，子必克肖，但忌刑冲。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_042"
+    "id": "qtbj_012_041"
   },
   {
     "category": "疾病",
@@ -4887,7 +4710,7 @@
     "original_text": "秋乙逢金，非贫即夭。秋生乙木忌根枯，根既枯槁，贫苦到老。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_043"
+    "id": "qtbj_012_042"
   },
   {
     "category": "格局",
@@ -4897,7 +4720,7 @@
     "original_text": "丙癸两透，科甲名臣。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_045"
+    "id": "qtbj_012_043"
   },
   {
     "category": "格局",
@@ -4907,7 +4730,7 @@
     "original_text": "或支成金局，宜暗藏丁，无丁制金，恐木被金伤。若无水火，此人劳碌。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_046"
+    "id": "qtbj_012_044"
   },
   {
     "category": "格局",
@@ -4917,7 +4740,7 @@
     "original_text": "或得癸水，为子得母，其人一生丰盈。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_047"
+    "id": "qtbj_012_045"
   },
   {
     "category": "格局",
@@ -4927,7 +4750,7 @@
     "original_text": "或丙癸两透，戊土杂出，亦主异路功名。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_048"
+    "id": "qtbj_012_046"
   },
   {
     "category": "格局",
@@ -4937,7 +4760,7 @@
     "original_text": "生秋分後，有丙无癸，亦略富贵。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_049"
+    "id": "qtbj_012_047"
   },
   {
     "category": "格局",
@@ -4947,7 +4770,7 @@
     "original_text": "若有癸无丙，名利虚花。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_050"
+    "id": "qtbj_012_048"
   },
   {
     "category": "格局",
@@ -4957,7 +4780,7 @@
     "original_text": "若四柱不见丙癸，下格。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_051"
+    "id": "qtbj_012_049"
   },
   {
     "category": "格局",
@@ -4967,7 +4790,7 @@
     "original_text": "或癸在年（月）干，丙透时干，名为木火文星，定主上达。生於秋分後方佳。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_052"
+    "id": "qtbj_012_050"
   },
   {
     "category": "用神",
@@ -4977,7 +4800,7 @@
     "original_text": "或生上半月无癸，姑用壬水，不然，枯木无用，必作贫人。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_053"
+    "id": "qtbj_012_051"
   },
   {
     "category": "格局",
@@ -4987,7 +4810,7 @@
     "original_text": "又四柱多见戊己，下格。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_054"
+    "id": "qtbj_012_052"
   },
   {
     "category": "六亲",
@@ -4997,7 +4820,7 @@
     "original_text": "用癸者，金妻、水子。用丙者，木妻、火子。用壬者，金妻水子。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_055"
+    "id": "qtbj_012_053"
   },
   {
     "category": "疾病",
@@ -5007,7 +4830,7 @@
     "original_text": "甲乙遇强金，魂归西土，青龙逢兑旺，且贫且贱。乙木生居酉，莫逢巳酉丑，富贵坎离宫，贫穷申酉守。木逢金旺巳伤，再遇金乡，岂不损寿。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_056"
+    "id": "qtbj_012_054"
   },
   {
     "category": "格局",
@@ -5017,7 +4840,7 @@
     "original_text": "九月乙木，根枯叶落，必赖癸水滋养。如见甲申时，名为藤萝系甲，可秋可冬。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_057"
+    "id": "qtbj_012_055"
   },
   {
     "category": "格局",
@@ -5027,7 +4850,7 @@
     "original_text": "若见癸水，又遇辛金发水之源，定主科甲。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_058"
+    "id": "qtbj_012_056"
   },
   {
     "category": "格局",
@@ -5037,7 +4860,7 @@
     "original_text": "或有癸无辛，常人。有辛无癸，贫贱。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_059"
+    "id": "qtbj_012_057"
   },
   {
     "category": "格局",
@@ -5047,7 +4870,7 @@
     "original_text": "或四柱壬多，水难生乙，亦是寻常之辈。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_060"
+    "id": "qtbj_012_058"
   },
   {
     "category": "格局",
@@ -5057,7 +4880,7 @@
     "original_text": "或支多戊土，又逢天干，作从才看，无比劫方妙，一逢比劫，富屋贫人。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_061"
+    "id": "qtbj_012_059"
   },
   {
     "category": "六亲",
@@ -5067,7 +4890,7 @@
     "original_text": "用癸者，金妻、水子。但子女艰难，季土克制故也。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋乙木",
-    "id": "qtbj_012_062"
+    "id": "qtbj_012_060"
   },
   {
     "id": "qtbj_013_000",
@@ -5397,7 +5220,7 @@
     "original_text": "支成木局，时值小阳，此又如春木同旺，若有癸出，须取戊为尊，加以丙透，科甲之人。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_034"
+    "id": "qtbj_013_032"
   },
   {
     "category": "格局",
@@ -5407,7 +5230,7 @@
     "original_text": "若无丙戊二字，自成自败，终非承受之辈。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_035"
+    "id": "qtbj_013_033"
   },
   {
     "category": "用神",
@@ -5417,7 +5240,7 @@
     "original_text": "十一月乙木，花木寒冻，一阳来复，喜用丙火解冻，则花木有向阳之意，不宜用癸以冻花木，故端用丙火。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_036"
+    "id": "qtbj_013_034"
   },
   {
     "category": "格局",
@@ -5427,7 +5250,7 @@
     "original_text": "有一二点丙火出干，无癸制者，可许科甲。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_037"
+    "id": "qtbj_013_035"
   },
   {
     "category": "格局",
@@ -5437,7 +5260,7 @@
     "original_text": "即丙藏支内，亦有选拔恩封，得此不贵，必因风水薄。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_038"
+    "id": "qtbj_013_036"
   },
   {
     "category": "格局",
@@ -5447,7 +5270,7 @@
     "original_text": "或壬癸出干，有戊制，可作能人，即丙在支内，亦是俊秀。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_039"
+    "id": "qtbj_013_037"
   },
   {
     "category": "格局",
@@ -5457,7 +5280,7 @@
     "original_text": "若壬透无戊，贫贱之人。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_040"
+    "id": "qtbj_013_038"
   },
   {
     "category": "格局",
@@ -5467,7 +5290,7 @@
     "original_text": "支成水局，干透壬癸，丙丁全无，虽有戊制，贫乏到老，运至南方，稍有衣食。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_041"
+    "id": "qtbj_013_039"
   },
   {
     "category": "五行",
@@ -5477,7 +5300,7 @@
     "original_text": "丁火有亦如无，丁乃灯烛之火，岂能解严寒之冻。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_042"
+    "id": "qtbj_013_040"
   },
   {
     "category": "格局",
@@ -5487,7 +5310,7 @@
     "original_text": "设无丙丁，戊土多见，金水奔流，下贱。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_043"
+    "id": "qtbj_013_041"
   },
   {
     "category": "格局",
@@ -5497,7 +5320,7 @@
     "original_text": "或有戊己无火，亦属常人，但不至下贱。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_044"
+    "id": "qtbj_013_042"
   },
   {
     "category": "性情",
@@ -5507,7 +5330,7 @@
     "original_text": "或一派丁火，大奸大诈之徒。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_045"
+    "id": "qtbj_013_043"
   },
   {
     "category": "六亲",
@@ -5517,17 +5340,7 @@
     "original_text": "如无甲引丁，孤鳏到老。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_046"
-  },
-  {
-    "category": "六亲",
-    "subject": "十一月乙木",
-    "condition": "丁火见甲",
-    "rule": "丁火见甲木，主子孙兴旺，芝兰绕膝。",
-    "original_text": "丁火见甲，必主麟趾振振，芝兰绕膝。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三冬乙木",
-    "id": "qtbj_013_047"
+    "id": "qtbj_013_044"
   },
   {
     "category": "格局",
@@ -5537,7 +5350,7 @@
     "original_text": "或成水局，壬癸两透，则木浮矣，不特贫贱，而且夭折，得一戊救方可。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_048"
+    "id": "qtbj_013_046"
   },
   {
     "category": "用神",
@@ -5547,17 +5360,7 @@
     "original_text": "冬月之木，虽取戊制水，不可作用，端取丙火则可。用火者，木妻、火子。用土者，火妻、土子。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_049"
-  },
-  {
-    "category": "格局",
-    "subject": "乙木生于冬至后",
-    "condition": "坐下木局，丙透干",
-    "rule": "乙木生于冬至之后，地支成木局，丙火透干，主富贵。",
-    "original_text": "乙木生於冬至之後，坐下木局，得丙透干者，富贵之造。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三冬乙木",
-    "id": "qtbj_013_050"
+    "id": "qtbj_013_047"
   },
   {
     "category": "格局",
@@ -5567,7 +5370,7 @@
     "original_text": "即丁出干，亦有衣禄，须忌癸制丁。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_051"
+    "id": "qtbj_013_049"
   },
   {
     "category": "格局",
@@ -5577,7 +5380,7 @@
     "original_text": "乙木生於冬月，己土透干，又有丙透，大富贵之造。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_052"
+    "id": "qtbj_013_050"
   },
   {
     "category": "格局",
@@ -5587,7 +5390,7 @@
     "original_text": "十一月乙木，木寒宜丙，有寒谷回春之象，得一丙透，无癸出破格，不特科甲，定主名臣显宦。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_053"
+    "id": "qtbj_013_051"
   },
   {
     "category": "格局",
@@ -5597,17 +5400,7 @@
     "original_text": "丙火藏支，食饩而已。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_054"
-  },
-  {
-    "category": "格局",
-    "subject": "十一月乙木",
-    "condition": "干支无丙",
-    "rule": "天干地支均无丙火，主一介寒儒。",
-    "original_text": "干支无丙，一介寒儒。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三冬乙木",
-    "id": "qtbj_013_055"
+    "id": "qtbj_013_052"
   },
   {
     "category": "格局",
@@ -5617,7 +5410,7 @@
     "original_text": "或四柱多己，不逢比劫，乃为从才，富比王侯，若见比劫，贫无立锥。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_056"
+    "id": "qtbj_013_054"
   },
   {
     "category": "格局",
@@ -5627,7 +5420,7 @@
     "original_text": "虽或一派戊己，见甲颇有衣禄。端以丙火为用，方妙。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬乙木",
-    "id": "qtbj_013_057"
+    "id": "qtbj_013_055"
   },
   {
     "id": "qtbj_014_000",
@@ -5807,7 +5600,13 @@
     "rule": "用壬水者，以金为妻，以水为子。",
     "original_text": "用壬者，金妻水子。",
     "source_book": "穷通宝鉴",
-    "source_chapter": "正月丙火"
+    "source_chapter": "正月丙火",
+    "source_chapters": [
+      "正月丙火",
+      "四月丙火",
+      "九月丙火",
+      "正月辛金"
+    ]
   },
   {
     "id": "qtbj_015_010",
@@ -5887,7 +5686,7 @@
     "original_text": "或见一戊制壬，反成富贵，宜见一二比肩方妙",
     "source_book": "穷通宝鉴",
     "source_chapter": "正月丙火",
-    "id": "qtbj_015_018"
+    "id": "qtbj_015_017"
   },
   {
     "category": "格局",
@@ -5897,7 +5696,7 @@
     "original_text": "或一片戊土，甲不出干，终非大器，且恐孤贫，正月之丙，忌戊晦光",
     "source_book": "穷通宝鉴",
     "source_chapter": "正月丙火",
-    "id": "qtbj_015_019"
+    "id": "qtbj_015_018"
   },
   {
     "category": "用神",
@@ -5907,7 +5706,7 @@
     "original_text": "或支成火局，端取壬水为贵，无壬、癸亦姑用，若壬癸俱无，取戊以泄火气，但属平人",
     "source_book": "穷通宝鉴",
     "source_chapter": "正月丙火",
-    "id": "qtbj_015_020"
+    "id": "qtbj_015_019"
   },
   {
     "category": "格局",
@@ -5917,7 +5716,7 @@
     "original_text": "或支成火局，吊作炎上而推，但不逢时耳，若不见东南岁运，反致孤贫",
     "source_book": "穷通宝鉴",
     "source_chapter": "正月丙火",
-    "id": "qtbj_015_021"
+    "id": "qtbj_015_020"
   },
   {
     "category": "格局",
@@ -5927,7 +5726,7 @@
     "original_text": "或四柱有甲木，得康金暗制，可作秀才",
     "source_book": "穷通宝鉴",
     "source_chapter": "正月丙火",
-    "id": "qtbj_015_022"
+    "id": "qtbj_015_021"
   },
   {
     "category": "用神",
@@ -5937,7 +5736,7 @@
     "original_text": "无壬用癸者，略富贵，且官杀亦要旺有限，丙火无壬，多主贫贼，屡徵屡验",
     "source_book": "穷通宝鉴",
     "source_chapter": "正月丙火",
-    "id": "qtbj_015_023"
+    "id": "qtbj_015_022"
   },
   {
     "category": "疾病",
@@ -5947,7 +5746,7 @@
     "original_text": "或火多无水，一至水必死。不然，定有灾咎",
     "source_book": "穷通宝鉴",
     "source_chapter": "正月丙火",
-    "id": "qtbj_015_024"
+    "id": "qtbj_015_023"
   },
   {
     "id": "qtbj_016_000",
@@ -6247,7 +6046,11 @@
     "rule": "以壬水为用神时，金为妻星，水为子星，即妻属金，子属水。",
     "original_text": "用壬者，金妻水子",
     "source_book": "穷通宝鉴",
-    "source_chapter": "三月丙火"
+    "source_chapter": "三月丙火",
+    "source_chapters": [
+      "三月丙火",
+      "五月戊土"
+    ]
   },
   {
     "id": "qtbj_017_011",
@@ -6670,16 +6473,6 @@
     "source_chapter": "四月丙火"
   },
   {
-    "id": "qtbj_019_008",
-    "category": "六亲",
-    "subject": "四月丙火",
-    "condition": "用壬水",
-    "rule": "用壬水者，以金为妻，以水为子。",
-    "original_text": "用壬者金妻水子。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "四月丙火"
-  },
-  {
     "category": "用神",
     "subject": "四月丙火",
     "condition": "四月丙火，建禄于巳，火势炎炎",
@@ -6760,16 +6553,6 @@
     "id": "qtbj_019_016"
   },
   {
-    "category": "六亲",
-    "subject": "四月丙火",
-    "condition": "用壬水",
-    "rule": "用壬水者，以金为妻，以水为子。",
-    "original_text": "用壬者金妻水子。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "四月丙火",
-    "id": "qtbj_019_017"
-  },
-  {
     "id": "qtbj_020_000",
     "category": "调候",
     "subject": "五月丙火",
@@ -6847,7 +6630,7 @@
     "original_text": "即不透庚壬。或有申宫长生之水，济之坐禄之金，至妙，必入词林，又怕戊己杂乱，则为异路。",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月丙火",
-    "id": "qtbj_020_008"
+    "id": "qtbj_020_007"
   },
   {
     "category": "大运",
@@ -6857,7 +6640,7 @@
     "original_text": "得戊己透火气，亦主刑克孤寡，行北运多凶，何也，所谓燥烈水激反凶。",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月丙火",
-    "id": "qtbj_020_010"
+    "id": "qtbj_020_008"
   },
   {
     "category": "格局",
@@ -6867,7 +6650,7 @@
     "original_text": "或成炎上格，柱运不见庚辛，多见甲乙者，反主大富贵，然亦不可见水运。",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月丙火",
-    "id": "qtbj_020_011"
+    "id": "qtbj_020_009"
   },
   {
     "category": "格局",
@@ -6877,7 +6660,7 @@
     "original_text": "或有庚癸透者，衣禄充足，支火轻，无目疾，支见水者，异途。",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月丙火",
-    "id": "qtbj_020_012"
+    "id": "qtbj_020_010"
   },
   {
     "category": "格局",
@@ -6887,7 +6670,7 @@
     "original_text": "或成土局，又为泄太过，得壬滋甲出干，土被制而火得生扶，此必富贵寿考之格也。",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月丙火",
-    "id": "qtbj_020_013"
+    "id": "qtbj_020_011"
   },
   {
     "category": "格局",
@@ -6897,7 +6680,7 @@
     "original_text": "五月丙火，合炎上格，则不喜水破格",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月丙火",
-    "id": "qtbj_020_014"
+    "id": "qtbj_020_012"
   },
   {
     "category": "疾病",
@@ -6907,7 +6690,7 @@
     "original_text": "用癸无根，定主日疾",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月丙火",
-    "id": "qtbj_020_015"
+    "id": "qtbj_020_013"
   },
   {
     "category": "十神",
@@ -6917,7 +6700,7 @@
     "original_text": "用壬者，金妻水子",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月丙火",
-    "id": "qtbj_020_016"
+    "id": "qtbj_020_014"
   },
   {
     "category": "十神",
@@ -6927,7 +6710,7 @@
     "original_text": "用庚者，土妻金子",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月丙火",
-    "id": "qtbj_020_017"
+    "id": "qtbj_020_015"
   },
   {
     "id": "qtbj_021_000",
@@ -7567,7 +7350,11 @@
     "rule": "以甲木为用神者，以水为妻星，以木为子星。",
     "original_text": "用甲者，水妻木子",
     "source_book": "穷通宝鉴",
-    "source_chapter": "九月丙火"
+    "source_chapter": "九月丙火",
+    "source_chapters": [
+      "九月丙火",
+      "六月戊土"
+    ]
   },
   {
     "id": "qtbj_024_010",
@@ -7687,17 +7474,13 @@
     "original_text": "用甲者，水妻木子",
     "source_book": "穷通宝鉴",
     "source_chapter": "九月丙火",
-    "id": "qtbj_024_021"
-  },
-  {
-    "category": "六亲",
-    "subject": "九月丙火",
-    "condition": "用壬水",
-    "rule": "用壬水者，以金为妻，以水为子。",
-    "original_text": "用壬者，金妻水子",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "九月丙火",
-    "id": "qtbj_024_022"
+    "id": "qtbj_024_021",
+    "source_chapters": [
+      "九月丙火",
+      "三月丁火",
+      "六月丁火",
+      "三月庚金"
+    ]
   },
   {
     "id": "qtbj_025_000",
@@ -7917,7 +7700,7 @@
     "original_text": "或无壬水，癸亦可用，但不甚显。",
     "source_book": "穷通宝鉴",
     "source_chapter": "十一月丙火",
-    "id": "qtbj_026_012"
+    "id": "qtbj_026_011"
   },
   {
     "category": "格局",
@@ -7927,7 +7710,7 @@
     "original_text": "或四柱多壬无甲，乃作弃命从杀，亦有云路。",
     "source_book": "穷通宝鉴",
     "source_chapter": "十一月丙火",
-    "id": "qtbj_026_013"
+    "id": "qtbj_026_012"
   },
   {
     "id": "qtbj_027_000",
@@ -8542,16 +8325,6 @@
   {
     "category": "格局",
     "subject": "丁火",
-    "condition": "得印旺杀高",
-    "rule": "印星旺而七杀高透，主大富大贵。",
-    "original_text": "得印旺杀高，大富大贵",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "二月丁火",
-    "id": "qtbj_029_028"
-  },
-  {
-    "category": "格局",
-    "subject": "丁火",
     "condition": "一派水，无一戊制",
     "rule": "水势泛滥而无戊土制水，主贫苦无依。",
     "original_text": "或一派水，无一戊制，主贫苦无依",
@@ -8648,16 +8421,6 @@
     "source_book": "穷通宝鉴",
     "source_chapter": "三月丁火",
     "id": "qtbj_030_006"
-  },
-  {
-    "category": "六亲",
-    "subject": "三月丁火",
-    "condition": "用甲木",
-    "rule": "用甲木者，以水为妻，以木为子。",
-    "original_text": "用甲者、水妻木子",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三月丁火",
-    "id": "qtbj_030_007"
   },
   {
     "category": "六亲",
@@ -9210,16 +8973,6 @@
     "source_chapter": "六月丁火"
   },
   {
-    "id": "qtbj_033_005",
-    "category": "六亲",
-    "subject": "六月丁火",
-    "condition": "用甲木者",
-    "rule": "用甲木者，以水为妻，以木为子。",
-    "original_text": "用甲者、水妻木子。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "六月丁火"
-  },
-  {
     "category": "用神",
     "subject": "六月丁火",
     "condition": "三伏生寒，丁火弱极",
@@ -9278,16 +9031,6 @@
     "source_book": "穷通宝鉴",
     "source_chapter": "六月丁火",
     "id": "qtbj_033_011"
-  },
-  {
-    "category": "六亲",
-    "subject": "六月丁火",
-    "condition": "用甲木",
-    "rule": "用甲木者，以水为妻，以木为子。",
-    "original_text": "用甲者、水妻木子。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "六月丁火",
-    "id": "qtbj_033_012"
   },
   {
     "id": "qtbj_034_000",
@@ -11110,16 +10853,6 @@
     "source_chapter": "五月戊土"
   },
   {
-    "id": "qtbj_041_004",
-    "category": "六亲",
-    "subject": "五月戊土",
-    "condition": "用壬水者",
-    "rule": "以壬水为用神时，金为妻星，水为子星，即妻属金，子属水。",
-    "original_text": "用壬者，金妻水子。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "五月戊土"
-  },
-  {
     "category": "格局",
     "subject": "五月戊土",
     "condition": "壬水、甲木两透天干",
@@ -11286,16 +11019,6 @@
     "condition": "用丙火为用神",
     "rule": "以丙火为用神者，以木为妻星，以火为子星。",
     "original_text": "用丙者，木妻，火子",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "六月戊土"
-  },
-  {
-    "id": "qtbj_042_010",
-    "category": "六亲",
-    "subject": "六月戊土",
-    "condition": "用甲木为用神",
-    "rule": "以甲木为用神者，以水为妻星，以木为子星。",
-    "original_text": "用甲者，水妻，木子。",
     "source_book": "穷通宝鉴",
     "source_chapter": "六月戊土"
   },
@@ -12082,22 +11805,12 @@
   {
     "category": "格局",
     "subject": "十月戊土",
-    "condition": "庚丁不透，甲丙藏支",
-    "rule": "庚金丁火不透干，甲木丙火藏于地支，亦主富贵。",
-    "original_text": "即庚丁不透，甲丙藏支，亦云富贵。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "十月戊土",
-    "id": "qtbj_046_014"
-  },
-  {
-    "category": "格局",
-    "subject": "十月戊土",
     "condition": "丙甲俱无",
     "rule": "丙火甲木皆无，必为僧道之命。",
     "original_text": "丙甲俱无，必为僧道。",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月戊土",
-    "id": "qtbj_046_016"
+    "id": "qtbj_046_015"
   },
   {
     "category": "用神",
@@ -12107,7 +11820,7 @@
     "original_text": "十一二月严寒冰冻，丙火为尊，甲木为佐，丙甲两透，桃浪之人，丙出甲藏，采芹食，丙藏甲出，佐杂前程，有丙无甲者，豪富，有甲无丙者，清贫，丙甲全无，下流之造。",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月戊土",
-    "id": "qtbj_046_017"
+    "id": "qtbj_046_016"
   },
   {
     "category": "格局",
@@ -12117,7 +11830,7 @@
     "original_text": "或一派丙火，加以丙透，运值火土，弱中复强，又一壬透干，主清高荣禄，乏壬，僧道孤寒。",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月戊土",
-    "id": "qtbj_046_018"
+    "id": "qtbj_046_017"
   },
   {
     "category": "格局",
@@ -12127,7 +11840,7 @@
     "original_text": "或一派水土寒滞，不见一丙，得一癸透月时，亦不失儒雅风流。",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月戊土",
-    "id": "qtbj_046_019"
+    "id": "qtbj_046_018"
   },
   {
     "category": "格局",
@@ -12137,7 +11850,7 @@
     "original_text": "若寒土无丙，虽有甲木，亦是内虚外实之人。",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月戊土",
-    "id": "qtbj_046_021"
+    "id": "qtbj_046_019"
   },
   {
     "category": "格局",
@@ -12147,7 +11860,7 @@
     "original_text": "或二癸透月时，名为争合，终属劳碌之人，得一己出干制癸，反为忠义之士，合己从人而论。",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月戊土",
-    "id": "qtbj_046_022"
+    "id": "qtbj_046_020"
   },
   {
     "category": "格局",
@@ -12157,7 +11870,7 @@
     "original_text": "年月透辛金者，又属土金伤官，异路功名可许，以金为妻，水为子。",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月戊土",
-    "id": "qtbj_046_023"
+    "id": "qtbj_046_021"
   },
   {
     "id": "qtbj_047_000",
@@ -12266,16 +11979,6 @@
     "condition": "见乙出，虽多不能疏土",
     "rule": "若见乙木，虽多不能疏土，且乙多者主奸诈小人。",
     "original_text": "如见乙出，虽多不能疏土，且乙多者奸诈小人",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "正月己土"
-  },
-  {
-    "id": "qtbj_047_011",
-    "category": "六亲",
-    "subject": "正月己土",
-    "condition": "用丙者",
-    "rule": "以丙火为用神者，以木为妻，以火为子。",
-    "original_text": "用丙者，木妻，火子",
     "source_book": "穷通宝鉴",
     "source_chapter": "正月己土"
   },
@@ -12397,7 +12100,11 @@
     "original_text": "用丙者，木妻，火子",
     "source_book": "穷通宝鉴",
     "source_chapter": "正月己土",
-    "id": "qtbj_047_023"
+    "id": "qtbj_047_023",
+    "source_chapters": [
+      "正月己土",
+      "三夏己土"
+    ]
   },
   {
     "id": "qtbj_048_000",
@@ -12508,16 +12215,6 @@
     "source_book": "穷通宝鉴",
     "source_chapter": "二月己土",
     "id": "qtbj_048_010"
-  },
-  {
-    "category": "格局",
-    "subject": "二月己土",
-    "condition": "地支成木局，庚金透出",
-    "rule": "地支成木局，庚金透出，主富贵。",
-    "original_text": "或支成木局，庚透富贵",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "二月己土",
-    "id": "qtbj_048_011"
   },
   {
     "category": "性情",
@@ -12770,16 +12467,6 @@
     "source_chapter": "三夏己土"
   },
   {
-    "id": "qtbj_050_005",
-    "category": "六亲",
-    "subject": "三夏己土",
-    "condition": "用丙者",
-    "rule": "用丙火者，以木为妻，以火为子。",
-    "original_text": "用丙者，木妻，火子。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三夏己土"
-  },
-  {
     "category": "用神",
     "subject": "三夏己土",
     "condition": "生于三夏（巳午未月）",
@@ -12812,32 +12499,12 @@
   {
     "category": "格局",
     "subject": "三夏己土",
-    "condition": "有甲木，又见丙火重重，无水解炎",
-    "rule": "甲木与重重丙火，无水济火，主孤贫到老。",
-    "original_text": "或有甲木，又见丙火重重，无济水解炎，亦孤贫到老。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三夏己土",
-    "id": "qtbj_050_010"
-  },
-  {
-    "category": "格局",
-    "subject": "三夏己土",
     "condition": "壬癸并出，破火润土",
     "rule": "壬癸并出，能破火润土，主人聪颖特达，富中取贵，转祸为福。",
     "original_text": "或壬癸并出，破火润土，此人聪颖特达，富中取贵，又转祸为福也。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三夏己土",
-    "id": "qtbj_050_013"
-  },
-  {
-    "category": "六亲",
-    "subject": "三夏己土",
-    "condition": "用丙火",
-    "rule": "用丙火者，以木为妻，以火为子。",
-    "original_text": "用丙者，木妻，火子。",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三夏己土",
-    "id": "qtbj_050_015"
+    "id": "qtbj_050_010"
   },
   {
     "id": "qtbj_051_000",
@@ -12987,7 +12654,7 @@
     "original_text": "丙癸两透，雁塔题名",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋己土",
-    "id": "qtbj_051_015"
+    "id": "qtbj_051_014"
   },
   {
     "category": "格局",
@@ -12997,17 +12664,7 @@
     "original_text": "或无癸，有两丙透者，异途显达，或武职权高",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋己土",
-    "id": "qtbj_051_016"
-  },
-  {
-    "category": "格局",
-    "subject": "三秋己土",
-    "condition": "有丙火，不见壬癸",
-    "rule": "有丙火但无壬癸水，主假道斯文，终无诚实。",
-    "original_text": "或有丙火，不见壬癸，为假道斯文，终无诚实",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三秋己土",
-    "id": "qtbj_051_017"
+    "id": "qtbj_051_015"
   },
   {
     "category": "格局",
@@ -13017,7 +12674,7 @@
     "original_text": "或有壬癸无丙者，衣食充足，才能而已",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋己土",
-    "id": "qtbj_051_018"
+    "id": "qtbj_051_017"
   },
   {
     "category": "格局",
@@ -13027,7 +12684,7 @@
     "original_text": "或支成金局，癸透有根，此人家畜万缗，富中取贵",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋己土",
-    "id": "qtbj_051_019"
+    "id": "qtbj_051_018"
   },
   {
     "category": "格局",
@@ -13037,7 +12694,7 @@
     "original_text": "或支四库，甲透者富，乏甲者孤贫",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋己土",
-    "id": "qtbj_051_020"
+    "id": "qtbj_051_019"
   },
   {
     "category": "格局",
@@ -13047,7 +12704,7 @@
     "original_text": "或甲出无癸乏金，积德可全科甲",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋己土",
-    "id": "qtbj_051_021"
+    "id": "qtbj_051_020"
   },
   {
     "category": "格局",
@@ -13057,7 +12714,7 @@
     "original_text": "或会火局，无水救，乃大奸大恶之徒",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋己土",
-    "id": "qtbj_051_022"
+    "id": "qtbj_051_021"
   },
   {
     "category": "格局",
@@ -13067,7 +12724,7 @@
     "original_text": "或丙透癸藏，遇金颇有选援，加一壬辅，富贵慷慨，有贤声",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋己土",
-    "id": "qtbj_051_023"
+    "id": "qtbj_051_022"
   },
   {
     "category": "格局",
@@ -13077,7 +12734,7 @@
     "original_text": "见戊透者，主遭凶厄且贫",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋己土",
-    "id": "qtbj_051_024"
+    "id": "qtbj_051_023"
   },
   {
     "category": "格局",
@@ -13087,7 +12744,7 @@
     "original_text": "八月支成金局，无丙丁出救，此人零丁孤苦",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋己土",
-    "id": "qtbj_051_025"
+    "id": "qtbj_051_024"
   },
   {
     "category": "格局",
@@ -13097,7 +12754,7 @@
     "original_text": "如得丙透丁藏，生己元神，此人名魁天下，五福完人",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋己土",
-    "id": "qtbj_051_026"
+    "id": "qtbj_051_025"
   },
   {
     "category": "用神",
@@ -13107,7 +12764,7 @@
     "original_text": "九月土盛，宜甲木疏之，余皆酌用",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋己土",
-    "id": "qtbj_051_027"
+    "id": "qtbj_051_026"
   },
   {
     "category": "其他",
@@ -13117,7 +12774,7 @@
     "original_text": "勾陈全备润下，劳碌奔波之客，土凝水竭，离乡背井之流",
     "source_book": "穷通宝鉴",
     "source_chapter": "三秋己土",
-    "id": "qtbj_051_028"
+    "id": "qtbj_051_027"
   },
   {
     "id": "qtbj_052_000",
@@ -13298,16 +12955,6 @@
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬己土",
     "id": "qtbj_052_017"
-  },
-  {
-    "category": "六亲",
-    "subject": "三冬己土",
-    "condition": "从财格",
-    "rule": "从财格以木为妻星，以火为子星。",
-    "original_text": "从才者，木妻，火子",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三冬己土",
-    "id": "qtbj_052_018"
   },
   {
     "category": "格局",
@@ -14820,16 +14467,6 @@
     "source_chapter": "三月庚金"
   },
   {
-    "id": "qtbj_056_016",
-    "category": "六亲",
-    "subject": "三月庚金",
-    "condition": "用甲者",
-    "rule": "用甲木者，以水为妻，以木为子。",
-    "original_text": "用甲者，水妻木子",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三月庚金"
-  },
-  {
     "id": "qtbj_056_017",
     "category": "六亲",
     "subject": "三月庚金",
@@ -14868,16 +14505,6 @@
     "source_book": "穷通宝鉴",
     "source_chapter": "三月庚金",
     "id": "qtbj_056_020"
-  },
-  {
-    "category": "大运",
-    "subject": "三月庚金",
-    "condition": "身弱才多",
-    "rule": "身弱而财多，富贵不能长久。",
-    "original_text": "身弱才多，富贵不久",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三月庚金",
-    "id": "qtbj_056_021"
   },
   {
     "category": "格局",
@@ -14922,42 +14549,12 @@
   {
     "category": "格局",
     "subject": "三月庚金",
-    "condition": "有甲无丁",
-    "rule": "有甲木而无丁火，主平常之辈。",
-    "original_text": "有甲无丁，平常之辈",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三月庚金",
-    "id": "qtbj_056_026"
-  },
-  {
-    "category": "格局",
-    "subject": "三月庚金",
     "condition": "有丁无甲",
     "rule": "有丁火而无甲木，主迂腐儒生。",
     "original_text": "有丁无甲，迂儒腐儒",
     "source_book": "穷通宝鉴",
     "source_chapter": "三月庚金",
     "id": "qtbj_056_027"
-  },
-  {
-    "category": "格局",
-    "subject": "三月庚金",
-    "condition": "丁甲两无",
-    "rule": "丁甲皆无，主下贱之流。",
-    "original_text": "丁甲两无，下贱之流",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三月庚金",
-    "id": "qtbj_056_028"
-  },
-  {
-    "category": "格局",
-    "subject": "三月庚金",
-    "condition": "一甲无丁，有丙，不见壬癸",
-    "rule": "只有甲木无丁火，但有丙火，且不见壬癸水，主由行伍而得官职。",
-    "original_text": "或一甲，无丁，有丙，由行伍而得官职，须不见壬，癸，为妙",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "三月庚金",
-    "id": "qtbj_056_029"
   },
   {
     "category": "格局",
@@ -15572,26 +15169,6 @@
   {
     "category": "格局",
     "subject": "六月庚金",
-    "condition": "有甲木无丁火",
-    "rule": "只有甲木而无丁火，格局平庸，主庸俗之人。",
-    "original_text": "有甲无丁，庸俗",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "六月庚金",
-    "id": "qtbj_059_015"
-  },
-  {
-    "category": "格局",
-    "subject": "六月庚金",
-    "condition": "有丁火无甲木",
-    "rule": "只有丁火而无甲木，可获生员（秀才）之功名。",
-    "original_text": "有丁无甲，生员",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "六月庚金",
-    "id": "qtbj_059_016"
-  },
-  {
-    "category": "格局",
-    "subject": "六月庚金",
     "condition": "丁火甲木全无",
     "rule": "丁甲皆无，格局下贱，主为下贱之人。",
     "original_text": "丁甲全无，下贱之人",
@@ -15807,7 +15384,7 @@
     "original_text": "或见甲出引丁，可云生监",
     "source_book": "穷通宝鉴",
     "source_chapter": "七月庚金",
-    "id": "qtbj_060_015"
+    "id": "qtbj_060_014"
   },
   {
     "category": "格局",
@@ -15817,7 +15394,7 @@
     "original_text": "甲弱者，衣食充盈",
     "source_book": "穷通宝鉴",
     "source_chapter": "七月庚金",
-    "id": "qtbj_060_016"
+    "id": "qtbj_060_015"
   },
   {
     "category": "格局",
@@ -15827,7 +15404,7 @@
     "original_text": "支成土局，先甲後丁",
     "source_book": "穷通宝鉴",
     "source_chapter": "七月庚金",
-    "id": "qtbj_060_017"
+    "id": "qtbj_060_016"
   },
   {
     "category": "格局",
@@ -15837,7 +15414,7 @@
     "original_text": "支成火局，富贵中人",
     "source_book": "穷通宝鉴",
     "source_chapter": "七月庚金",
-    "id": "qtbj_060_018"
+    "id": "qtbj_060_017"
   },
   {
     "category": "格局",
@@ -15847,7 +15424,7 @@
     "original_text": "金刚木明，行商坐贾之人",
     "source_book": "穷通宝鉴",
     "source_chapter": "七月庚金",
-    "id": "qtbj_060_019"
+    "id": "qtbj_060_018"
   },
   {
     "category": "格局",
@@ -15857,7 +15434,7 @@
     "original_text": "金备申酉戌之地，富贵疑",
     "source_book": "穷通宝鉴",
     "source_chapter": "七月庚金",
-    "id": "qtbj_060_020"
+    "id": "qtbj_060_019"
   },
   {
     "category": "格局",
@@ -15867,7 +15444,7 @@
     "original_text": "金神入火乡，逢羊刃富贵荣华",
     "source_book": "穷通宝鉴",
     "source_chapter": "七月庚金",
-    "id": "qtbj_060_021"
+    "id": "qtbj_060_020"
   },
   {
     "id": "qtbj_061_000",
@@ -17032,16 +16609,6 @@
   {
     "category": "格局",
     "subject": "辛金",
-    "condition": "正月辛金，庚金壬水两透，破火局制火",
-    "rule": "庚壬两透，能破火局制火，必为显达之人。",
-    "original_text": "或庚壬两透，破局制火，必为显达之人",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "正月辛金",
-    "id": "qtbj_066_021"
-  },
-  {
-    "category": "格局",
-    "subject": "辛金",
     "condition": "正月辛金，地支成水局，不见丙火",
     "rule": "支成水局而无丙火，为金弱沉寒，主平常之士，少年多有凄凉之忧。",
     "original_text": "或支成水局，不见丙火，名为金弱沉寒，平常之士",
@@ -17078,16 +16645,6 @@
     "source_book": "穷通宝鉴",
     "source_chapter": "正月辛金",
     "id": "qtbj_066_025"
-  },
-  {
-    "category": "六亲",
-    "subject": "辛金",
-    "condition": "正月辛金，用壬水为用神",
-    "rule": "用壬水者，以金为妻，以水为子。",
-    "original_text": "用壬，金妻水子",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "正月辛金",
-    "id": "qtbj_066_026"
   },
   {
     "category": "性情",
@@ -17620,16 +17177,6 @@
     "id": "qtbj_069_013"
   },
   {
-    "category": "格局",
-    "subject": "辛金",
-    "condition": "壬癸水皆藏支，戊己土亦藏",
-    "rule": "壬癸水藏支，戊己土也藏，主略有财富。",
-    "original_text": "若壬癸皆藏，戊己亦藏，略富",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "四月辛金",
-    "id": "qtbj_069_014"
-  },
-  {
     "category": "六亲",
     "subject": "辛金",
     "condition": "壬癸水俱无，反见火出",
@@ -17857,7 +17404,7 @@
     "original_text": "或无壬有己，须得异途，或癸出有庚，必主衣锦，叨受恩荣",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月辛金",
-    "id": "qtbj_070_015"
+    "id": "qtbj_070_014"
   },
   {
     "category": "大运",
@@ -17867,17 +17414,7 @@
     "original_text": "若水土多者，见甲方妙",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月辛金",
-    "id": "qtbj_070_016"
-  },
-  {
-    "category": "大运",
-    "subject": "庚辛金生于夏月",
-    "condition": "木多火多，不见金水",
-    "rule": "庚辛金生于夏月，需壬癸水得地。若木多火多而无金水，逢金水运必败。",
-    "original_text": "庚辛生於夏月，要壬癸得地，若木多火多，不见金水，逢金水运必败",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "五月辛金",
-    "id": "qtbj_070_017"
+    "id": "qtbj_070_015"
   },
   {
     "id": "qtbj_071_000",
@@ -18588,16 +18125,6 @@
     "source_book": "穷通宝鉴",
     "source_chapter": "九月辛金",
     "id": "qtbj_074_015"
-  },
-  {
-    "category": "格局",
-    "subject": "九月辛金",
-    "condition": "甲透壬藏，戊在支内",
-    "rule": "甲木透干而壬水藏支，戊土藏于地支，主异途功名，非正途出身。",
-    "original_text": "甲透，壬藏，戊在支内，异途之仕",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "九月辛金",
-    "id": "qtbj_074_016"
   },
   {
     "category": "格局",
@@ -20130,16 +19657,6 @@
     "source_chapter": "正月壬水"
   },
   {
-    "id": "qtbj_079_009",
-    "category": "六亲",
-    "subject": "正月壬水",
-    "condition": "用丙火为用神",
-    "rule": "以丙火为用神者，以木为妻，以火为子。",
-    "original_text": "用丙者，木妻火子",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "正月壬水"
-  },
-  {
     "id": "qtbj_079_010",
     "category": "六亲",
     "subject": "正月壬水",
@@ -20218,36 +19735,6 @@
     "source_book": "穷通宝鉴",
     "source_chapter": "正月壬水",
     "id": "qtbj_079_017"
-  },
-  {
-    "category": "六亲",
-    "subject": "壬水",
-    "condition": "用庚金为用神",
-    "rule": "以庚金为用神者，以土为妻，以金为子。",
-    "original_text": "用庚者，土妻金子",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "正月壬水",
-    "id": "qtbj_079_018"
-  },
-  {
-    "category": "六亲",
-    "subject": "壬水",
-    "condition": "用丙火为用神",
-    "rule": "以丙火为用神者，以木为妻，以火为子。",
-    "original_text": "用丙者，木妻火子",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "正月壬水",
-    "id": "qtbj_079_019"
-  },
-  {
-    "category": "六亲",
-    "subject": "壬水",
-    "condition": "用戊土为用神",
-    "rule": "以戊土为用神者，以火为妻，以土为子。",
-    "original_text": "用戊者，火妻土子",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "正月壬水",
-    "id": "qtbj_079_020"
   },
   {
     "id": "qtbj_080_000",
@@ -20427,7 +19914,7 @@
     "original_text": "或木出火多，名木盛火炎，须比肩羊刃，尤宜水透，富贵恩荣，乏水者则否",
     "source_book": "穷通宝鉴",
     "source_chapter": "二月壬水",
-    "id": "qtbj_080_018"
+    "id": "qtbj_080_017"
   },
   {
     "category": "格局",
@@ -20437,7 +19924,7 @@
     "original_text": "或比肩重重，又须戊土，书曰，土止流水福寿全",
     "source_book": "穷通宝鉴",
     "source_chapter": "二月壬水",
-    "id": "qtbj_080_019"
+    "id": "qtbj_080_018"
   },
   {
     "category": "格局",
@@ -20447,7 +19934,7 @@
     "original_text": "若戊不见，名水泛木浮，一生辛苦，再行水运，落水身亡",
     "source_book": "穷通宝鉴",
     "source_chapter": "二月壬水",
-    "id": "qtbj_080_020"
+    "id": "qtbj_080_019"
   },
   {
     "category": "格局",
@@ -20457,7 +19944,7 @@
     "original_text": "或甲乙重重无比肩者，此依人度日，全无作为，若见庚辛，饥寒可免",
     "source_book": "穷通宝鉴",
     "source_chapter": "二月壬水",
-    "id": "qtbj_080_021"
+    "id": "qtbj_080_020"
   },
   {
     "id": "qtbj_081_000",
@@ -20597,7 +20084,7 @@
     "original_text": "乏庚，愚顽之辈。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三月壬水",
-    "id": "qtbj_081_020"
+    "id": "qtbj_081_013"
   },
   {
     "category": "格局",
@@ -20607,7 +20094,7 @@
     "original_text": "或支成四库，乏甲者，名杀重身轻，终身有损。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三月壬水",
-    "id": "qtbj_081_022"
+    "id": "qtbj_081_014"
   },
   {
     "category": "用神",
@@ -20617,7 +20104,7 @@
     "original_text": "凡水旺多见庚金者，乃无用之人，须丙制之方妙。",
     "source_book": "穷通宝鉴",
     "source_chapter": "三月壬水",
-    "id": "qtbj_081_023"
+    "id": "qtbj_081_015"
   },
   {
     "id": "qtbj_082_000",
@@ -20848,16 +20335,6 @@
     "source_book": "穷通宝鉴",
     "source_chapter": "五月壬水",
     "id": "qtbj_083_007"
-  },
-  {
-    "category": "用神",
-    "subject": "五月壬水",
-    "condition": "辛癸亦可参用",
-    "rule": "五月壬水，辛金和癸水也可以参合使用，其道理与四月壬水相同。",
-    "original_text": "五月壬水，辛癸亦可参用，其理与四月皆同",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "五月壬水",
-    "id": "qtbj_083_008"
   },
   {
     "category": "格局",
@@ -21797,7 +21274,7 @@
     "original_text": "或甲出制戊，不见庚救者，断之困穷",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月壬水",
-    "id": "qtbj_088_011"
+    "id": "qtbj_088_010"
   },
   {
     "category": "格局",
@@ -21807,7 +21284,7 @@
     "original_text": "戊藏无制，可许生员",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月壬水",
-    "id": "qtbj_088_012"
+    "id": "qtbj_088_011"
   },
   {
     "category": "格局",
@@ -21817,7 +21294,7 @@
     "original_text": "或戊庚两透无甲者，亦主荣显",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月壬水",
-    "id": "qtbj_088_013"
+    "id": "qtbj_088_012"
   },
   {
     "category": "格局",
@@ -21827,7 +21304,7 @@
     "original_text": "或支木局，有甲乙出干，得庚透者，富贵，无庚者，平常",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月壬水",
-    "id": "qtbj_088_014"
+    "id": "qtbj_088_013"
   },
   {
     "category": "格局",
@@ -21837,7 +21314,7 @@
     "original_text": "或支成水局，不见戊己，名润下格，运行西北，大富贵，行东南者，必危",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月壬水",
-    "id": "qtbj_088_015"
+    "id": "qtbj_088_014"
   },
   {
     "category": "用神",
@@ -21847,7 +21324,7 @@
     "original_text": "或丙戊两透，行火土运，名利双全",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月壬水",
-    "id": "qtbj_088_016"
+    "id": "qtbj_088_015"
   },
   {
     "category": "用神",
@@ -21857,7 +21334,7 @@
     "original_text": "或有丙无戊，可云衣禄",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月壬水",
-    "id": "qtbj_088_017"
+    "id": "qtbj_088_016"
   },
   {
     "category": "用神",
@@ -21867,17 +21344,7 @@
     "original_text": "有戊无丙，难许推盈",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月壬水",
-    "id": "qtbj_088_018"
-  },
-  {
-    "category": "用神",
-    "subject": "壬水",
-    "condition": "十月壬水，取用总则",
-    "rule": "十月壬水，专用戊土和丙火，其次取庚金。",
-    "original_text": "十月壬水，专用戊丙，次取庚金",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "十月壬水",
-    "id": "qtbj_088_019"
+    "id": "qtbj_088_017"
   },
   {
     "id": "qtbj_089_000",
@@ -22038,16 +21505,6 @@
     "source_book": "穷通宝鉴",
     "source_chapter": "十一月壬水",
     "id": "qtbj_089_015"
-  },
-  {
-    "category": "格局",
-    "subject": "壬水",
-    "condition": "十一月壬水，地支成四库",
-    "rule": "地支辰戌丑未四库齐全，主富贵中人。",
-    "original_text": "支成四库，富贵中人",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "十一月壬水",
-    "id": "qtbj_089_016"
   },
   {
     "category": "格局",
@@ -22560,16 +22017,6 @@
     "id": "qtbj_091_022"
   },
   {
-    "category": "六亲",
-    "subject": "癸水",
-    "condition": "用辛金为用神",
-    "rule": "用辛金者，以土为妻，以金为子。",
-    "original_text": "用辛者，土妻金子",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "正月癸水",
-    "id": "qtbj_091_023"
-  },
-  {
     "id": "qtbj_092_000",
     "category": "用神",
     "subject": "二月癸水",
@@ -22682,26 +22129,6 @@
   {
     "category": "格局",
     "subject": "二月癸水",
-    "condition": "庚透辛藏",
-    "rule": "庚金透干、辛金藏支，主有荣封之贵。",
-    "original_text": "庚透辛藏，荣封有准",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "二月癸水",
-    "id": "qtbj_092_011"
-  },
-  {
-    "category": "格局",
-    "subject": "二月癸水",
-    "condition": "庚藏辛透",
-    "rule": "庚金藏支、辛金透干，亦有衣禄功名。",
-    "original_text": "庚藏辛透，亦有衣衿",
-    "source_book": "穷通宝鉴",
-    "source_chapter": "二月癸水",
-    "id": "qtbj_092_012"
-  },
-  {
-    "category": "格局",
-    "subject": "二月癸水",
     "condition": "庚辛两藏",
     "rule": "庚辛均藏支不透，主富中取贵，或靠刀笔文书扬名。",
     "original_text": "庚辛两藏，富中取贵，或刀笔扬名",
@@ -22737,7 +22164,7 @@
     "original_text": "三春丁火",
     "source_book": "穷通宝鉴",
     "source_chapter": "三春丁火",
-    "id": "qtbj_095_000"
+    "id": "qtbj_093_000"
   },
   {
     "category": "五行",
@@ -22747,7 +22174,7 @@
     "original_text": "三冬丁火",
     "source_book": "穷通宝鉴",
     "source_chapter": "三冬丁火",
-    "id": "qtbj_098_000"
+    "id": "qtbj_094_000"
   },
   {
     "category": "用神",
@@ -22757,7 +22184,7 @@
     "original_text": "正二月即有甲癸，若无丙除寒，如万物生而不长，故无丙者，富贵艰辛",
     "source_book": "穷通宝鉴",
     "source_chapter": "正二月戊土",
-    "id": "qtbj_100_000"
+    "id": "qtbj_095_000"
   },
   {
     "category": "格局",
@@ -22767,7 +22194,7 @@
     "original_text": "或有丙无甲癸者，名日春旱，如万物生而厄，无甲癸者，一生勤苦，劳而无功",
     "source_book": "穷通宝鉴",
     "source_chapter": "正二月戊土",
-    "id": "qtbj_100_001"
+    "id": "qtbj_095_001"
   },
   {
     "category": "格局",
@@ -22777,7 +22204,7 @@
     "original_text": "或一丙火，有甲久癸，先泰後否",
     "source_book": "穷通宝鉴",
     "source_chapter": "正二月戊土",
-    "id": "qtbj_100_002"
+    "id": "qtbj_095_002"
   },
   {
     "category": "格局",
@@ -22787,7 +22214,7 @@
     "original_text": "或支成火局，不见壬癸，僧道孤贫",
     "source_book": "穷通宝鉴",
     "source_chapter": "正二月戊土",
-    "id": "qtbj_100_003"
+    "id": "qtbj_095_003"
   },
   {
     "category": "格局",
@@ -22797,7 +22224,7 @@
     "original_text": "癸透者贵",
     "source_book": "穷通宝鉴",
     "source_chapter": "正二月戊土",
-    "id": "qtbj_100_004"
+    "id": "qtbj_095_004"
   },
   {
     "category": "格局",
@@ -22807,7 +22234,7 @@
     "original_text": "壬透者富",
     "source_book": "穷通宝鉴",
     "source_chapter": "正二月戊土",
-    "id": "qtbj_100_005"
+    "id": "qtbj_095_005"
   },
   {
     "category": "用神",
@@ -22817,7 +22244,7 @@
     "original_text": "用水者要审水之多少",
     "source_book": "穷通宝鉴",
     "source_chapter": "正二月戊土",
-    "id": "qtbj_100_006"
+    "id": "qtbj_095_006"
   },
   {
     "category": "格局",
@@ -22827,7 +22254,7 @@
     "original_text": "或一派，甲木无丙常人，得一庚透方妙",
     "source_book": "穷通宝鉴",
     "source_chapter": "正二月戊土",
-    "id": "qtbj_100_007"
+    "id": "qtbj_095_007"
   },
   {
     "category": "格局",
@@ -22837,7 +22264,7 @@
     "original_text": "或支成水局，甲又出干，又有庚透，富贵双全",
     "source_book": "穷通宝鉴",
     "source_chapter": "正二月戊土",
-    "id": "qtbj_100_008"
+    "id": "qtbj_095_008"
   },
   {
     "category": "格局",
@@ -22847,7 +22274,7 @@
     "original_text": "或无庚金，又无比印，难作从杀，定主遭凶，不然，必为盗贼",
     "source_book": "穷通宝鉴",
     "source_chapter": "正二月戊土",
-    "id": "qtbj_100_009"
+    "id": "qtbj_095_009"
   },
   {
     "category": "疾病",
@@ -22857,7 +22284,7 @@
     "original_text": "若日下坐午，不得善终",
     "source_book": "穷通宝鉴",
     "source_chapter": "正二月戊土",
-    "id": "qtbj_100_010"
+    "id": "qtbj_095_010"
   },
   {
     "category": "性情",
@@ -22867,7 +22294,7 @@
     "original_text": "或一派乙木，为官杀会党，即有庚从，郤难制乙，此人内奸外直，口是心非",
     "source_book": "穷通宝鉴",
     "source_chapter": "正二月戊土",
-    "id": "qtbj_100_011"
+    "id": "qtbj_095_011"
   },
   {
     "category": "性情",
@@ -22877,7 +22304,7 @@
     "original_text": "加一甲在内，无庚，必懒惰自甘，好食无厌",
     "source_book": "穷通宝鉴",
     "source_chapter": "正二月戊土",
-    "id": "qtbj_100_012"
+    "id": "qtbj_095_012"
   },
   {
     "category": "用神",
@@ -22887,7 +22314,7 @@
     "original_text": "或丙多甲多，宜以癸庚参用",
     "source_book": "穷通宝鉴",
     "source_chapter": "正二月戊土",
-    "id": "qtbj_100_013"
+    "id": "qtbj_095_013"
   },
   {
     "category": "用神",
@@ -22897,7 +22324,7 @@
     "original_text": "清明後，火气未炽，专用丙火，为阴阳合谐",
     "source_book": "穷通宝鉴",
     "source_chapter": "三月癸水",
-    "id": "qtbj_105_000"
+    "id": "qtbj_096_000"
   },
   {
     "category": "用神",
@@ -22907,7 +22334,7 @@
     "original_text": "谷雨後，虽用丙火，尚宜辛甲佐之",
     "source_book": "穷通宝鉴",
     "source_chapter": "三月癸水",
-    "id": "qtbj_105_001"
+    "id": "qtbj_096_001"
   },
   {
     "category": "格局",
@@ -22917,7 +22344,7 @@
     "original_text": "或支成水局，又见己土，无木，乃假杀格，有甲出者，常人",
     "source_book": "穷通宝鉴",
     "source_chapter": "三月癸水",
-    "id": "qtbj_105_002"
+    "id": "qtbj_096_002"
   },
   {
     "category": "格局",
@@ -22927,7 +22354,7 @@
     "original_text": "或支坐四库，又得甲透，可谓显达名扬，无甲者僧道孤苦",
     "source_book": "穷通宝鉴",
     "source_chapter": "三月癸水",
-    "id": "qtbj_105_003"
+    "id": "qtbj_096_003"
   },
   {
     "category": "格局",
@@ -22937,7 +22364,7 @@
     "original_text": "或支成木局，无金，名伤官生才格，主聪明博学，衣禄充饶",
     "source_book": "穷通宝鉴",
     "source_chapter": "三月癸水",
-    "id": "qtbj_105_004"
+    "id": "qtbj_096_004"
   },
   {
     "category": "六亲",
@@ -22947,7 +22374,7 @@
     "original_text": "用丙，木妻水子",
     "source_book": "穷通宝鉴",
     "source_chapter": "三月癸水",
-    "id": "qtbj_105_005"
+    "id": "qtbj_096_005"
   },
   {
     "category": "六亲",
@@ -22957,7 +22384,7 @@
     "original_text": "下半月，土妻金子",
     "source_book": "穷通宝鉴",
     "source_chapter": "三月癸水",
-    "id": "qtbj_105_006"
+    "id": "qtbj_096_006"
   },
   {
     "category": "用神",
@@ -22967,7 +22394,7 @@
     "original_text": "四月癸水，喜辛金为用，无辛用庚",
     "source_book": "穷通宝鉴",
     "source_chapter": "四月癸水",
-    "id": "qtbj_106_000"
+    "id": "qtbj_097_000"
   },
   {
     "category": "格局",
@@ -22977,7 +22404,7 @@
     "original_text": "若辛高透，不见丁火，加以壬透，主科名荣贵，声播四夷",
     "source_book": "穷通宝鉴",
     "source_chapter": "四月癸水",
-    "id": "qtbj_106_001"
+    "id": "qtbj_097_001"
   },
   {
     "category": "格局",
@@ -22987,7 +22414,7 @@
     "original_text": "若有丁破格，贫无立锥，有壬可免",
     "source_book": "穷通宝鉴",
     "source_chapter": "四月癸水",
-    "id": "qtbj_106_002"
+    "id": "qtbj_097_002"
   },
   {
     "category": "格局",
@@ -22997,7 +22424,7 @@
     "original_text": "辛藏无丁，贡监衣衿",
     "source_book": "穷通宝鉴",
     "source_chapter": "四月癸水",
-    "id": "qtbj_106_003"
+    "id": "qtbj_097_003"
   },
   {
     "category": "格局",
@@ -23007,7 +22434,7 @@
     "original_text": "或一派火土乏辛，即有巳庚，亦不能生水，又无比肩羊刃，必至熬乾癸水，损日无疑",
     "source_book": "穷通宝鉴",
     "source_chapter": "四月癸水",
-    "id": "qtbj_106_004"
+    "id": "qtbj_097_004"
   },
   {
     "category": "格局",
@@ -23017,7 +22444,7 @@
     "original_text": "艾壬两透，泄制火土，名劫印化晋，极贵之造，有丁见干者，则否",
     "source_book": "穷通宝鉴",
     "source_chapter": "四月癸水",
-    "id": "qtbj_106_005"
+    "id": "qtbj_097_005"
   },
   {
     "category": "格局",
@@ -23027,7 +22454,7 @@
     "original_text": "如有庚无壬，亦无丁破金者，堪入儒林",
     "source_book": "穷通宝鉴",
     "source_chapter": "四月癸水",
-    "id": "qtbj_106_006"
+    "id": "qtbj_097_006"
   },
   {
     "category": "格局",
@@ -23037,7 +22464,7 @@
     "original_text": "有庚无辛者，异路功名",
     "source_book": "穷通宝鉴",
     "source_chapter": "四月癸水",
-    "id": "qtbj_106_007"
+    "id": "qtbj_097_007"
   },
   {
     "category": "用神",
@@ -23047,7 +22474,7 @@
     "original_text": "总之四月癸水，专用辛金方妙",
     "source_book": "穷通宝鉴",
     "source_chapter": "四月癸水",
-    "id": "qtbj_106_008"
+    "id": "qtbj_097_008"
   },
   {
     "category": "格局",
@@ -23057,7 +22484,7 @@
     "original_text": "如庚辛透干，又见壬癸者，定主锺鼎名家",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月癸水",
-    "id": "qtbj_107_000"
+    "id": "qtbj_098_000"
   },
   {
     "category": "格局",
@@ -23067,7 +22494,7 @@
     "original_text": "或有金透，支见申子辰者，亦主金榜挂名",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月癸水",
-    "id": "qtbj_107_001"
+    "id": "qtbj_098_001"
   },
   {
     "category": "格局",
@@ -23077,7 +22504,7 @@
     "original_text": "或无水出干，支只一水，虽有庚辛，一富之造",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月癸水",
-    "id": "qtbj_107_002"
+    "id": "qtbj_098_002"
   },
   {
     "category": "大运",
@@ -23087,7 +22514,7 @@
     "original_text": "金水会夏天，富贵永无边，运行火土地，快乐似神仙",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月癸水",
-    "id": "qtbj_107_003"
+    "id": "qtbj_098_003"
   },
   {
     "category": "格局",
@@ -23097,7 +22524,7 @@
     "original_text": "或支成炎局，无壬出干，定主僧道",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月癸水",
-    "id": "qtbj_107_004"
+    "id": "qtbj_098_004"
   },
   {
     "category": "格局",
@@ -23107,7 +22534,7 @@
     "original_text": "或二壬一庚同透，衣锦腰金",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月癸水",
-    "id": "qtbj_107_005"
+    "id": "qtbj_098_005"
   },
   {
     "category": "格局",
@@ -23117,7 +22544,7 @@
     "original_text": "或一派己土，无甲出制，此作从杀而论，又主大贵，凡从杀者，切不可破格方吉",
     "source_book": "穷通宝鉴",
     "source_chapter": "五月癸水",
-    "id": "qtbj_107_006"
+    "id": "qtbj_098_006"
   },
   {
     "category": "格局",
@@ -23127,7 +22554,7 @@
     "original_text": "上半月金神衰弱，火气炎烈，宜比劫助身，可云富贵",
     "source_book": "穷通宝鉴",
     "source_chapter": "六月癸水",
-    "id": "qtbj_108_000"
+    "id": "qtbj_099_000"
   },
   {
     "category": "格局",
@@ -23137,7 +22564,7 @@
     "original_text": "下半月庚辛有气，即无比劫亦可",
     "source_book": "穷通宝鉴",
     "source_chapter": "六月癸水",
-    "id": "qtbj_108_001"
+    "id": "qtbj_099_001"
   },
   {
     "category": "用神",
@@ -23147,7 +22574,7 @@
     "original_text": "故癸水不能从杀，所以专用庚辛",
     "source_book": "穷通宝鉴",
     "source_chapter": "六月癸水",
-    "id": "qtbj_108_002"
+    "id": "qtbj_099_002"
   },
   {
     "category": "天干",
@@ -23157,7 +22584,7 @@
     "original_text": "又忌丁透，即丁在支亦不吉",
     "source_book": "穷通宝鉴",
     "source_chapter": "六月癸水",
-    "id": "qtbj_108_003"
+    "id": "qtbj_099_003"
   },
   {
     "category": "其他",
@@ -23167,7 +22594,7 @@
     "original_text": "其生克制化，与五月略同",
     "source_book": "穷通宝鉴",
     "source_chapter": "六月癸水",
-    "id": "qtbj_108_004"
+    "id": "qtbj_099_004"
   },
   {
     "category": "五行",
@@ -23177,7 +22604,7 @@
     "original_text": "癸虽死申，殊不知申中有庚生之，名死处逢生，弱中复强，即运行西北，亦不死也",
     "source_book": "穷通宝鉴",
     "source_chapter": "七月癸水",
-    "id": "qtbj_109_000"
+    "id": "qtbj_100_000"
   },
   {
     "category": "用神",
@@ -23187,7 +22614,7 @@
     "original_text": "但庚司令，刚锐极矣，必取丁火为用",
     "source_book": "穷通宝鉴",
     "source_chapter": "七月癸水",
-    "id": "qtbj_109_001"
+    "id": "qtbj_100_001"
   },
   {
     "category": "格局",
@@ -23197,7 +22624,7 @@
     "original_text": "或丁透有甲，名有焰之火，必主科甲",
     "source_book": "穷通宝鉴",
     "source_chapter": "七月癸水",
-    "id": "qtbj_109_002"
+    "id": "qtbj_100_002"
   },
   {
     "category": "格局",
@@ -23207,7 +22634,7 @@
     "original_text": "或丁透无甲，又无壬癸，即有一二庚金，亦有生监，有二丁更妙",
     "source_book": "穷通宝鉴",
     "source_chapter": "七月癸水",
-    "id": "qtbj_109_003"
+    "id": "qtbj_100_003"
   },
   {
     "category": "格局",
@@ -23217,7 +22644,7 @@
     "original_text": "或金多乏丁制者，贫困之人",
     "source_book": "穷通宝鉴",
     "source_chapter": "七月癸水",
-    "id": "qtbj_109_004"
+    "id": "qtbj_100_004"
   },
   {
     "category": "格局",
@@ -23227,7 +22654,7 @@
     "original_text": "或一丁坐午，名独才格，主金玉满堂，富中取贵",
     "source_book": "穷通宝鉴",
     "source_chapter": "七月癸水",
-    "id": "qtbj_109_005"
+    "id": "qtbj_100_005"
   },
   {
     "category": "格局",
@@ -23237,7 +22664,7 @@
     "original_text": "若在未戌，则是常人",
     "source_book": "穷通宝鉴",
     "source_chapter": "七月癸水",
-    "id": "qtbj_109_006"
+    "id": "qtbj_100_006"
   },
   {
     "category": "格局",
@@ -23247,7 +22674,7 @@
     "original_text": "或柱见二戌二未，又得丙丁藏支，干见甲出，无水，亦作富贵而推",
     "source_book": "穷通宝鉴",
     "source_chapter": "七月癸水",
-    "id": "qtbj_109_007"
+    "id": "qtbj_100_007"
   },
   {
     "category": "用神",
@@ -23257,7 +22684,7 @@
     "original_text": "八月癸水，辛金虚灵，非顽金可比，正金白水清，故取辛金为用",
     "source_book": "穷通宝鉴",
     "source_chapter": "八月癸水",
-    "id": "qtbj_110_000"
+    "id": "qtbj_101_000"
   },
   {
     "category": "用神",
@@ -23267,7 +22694,7 @@
     "original_text": "故取辛金为用，丙火佐之，名水暖金温",
     "source_book": "穷通宝鉴",
     "source_chapter": "八月癸水",
-    "id": "qtbj_110_001"
+    "id": "qtbj_101_001"
   },
   {
     "category": "格局",
@@ -23277,7 +22704,7 @@
     "original_text": "如丙与辛隔位同透，主科甲功名",
     "source_book": "穷通宝鉴",
     "source_chapter": "八月癸水",
-    "id": "qtbj_110_002"
+    "id": "qtbj_101_002"
   },
   {
     "category": "格局",
@@ -23287,7 +22714,7 @@
     "original_text": "或丙透辛藏，一榜之士",
     "source_book": "穷通宝鉴",
     "source_chapter": "八月癸水",
-    "id": "qtbj_110_003"
+    "id": "qtbj_101_003"
   },
   {
     "category": "格局",
@@ -23297,7 +22724,7 @@
     "original_text": "或土多克水，生意中心",
     "source_book": "穷通宝鉴",
     "source_chapter": "八月癸水",
-    "id": "qtbj_110_004"
+    "id": "qtbj_101_004"
   },
   {
     "category": "用神",
@@ -23307,7 +22734,7 @@
     "original_text": "八月癸水，丙辛怕用",
     "source_book": "穷通宝鉴",
     "source_chapter": "八月癸水",
-    "id": "qtbj_110_005"
+    "id": "qtbj_101_005"
   },
   {
     "category": "格局",
@@ -23317,7 +22744,7 @@
     "original_text": "九月癸水，失令无根，戊土司权，克制太过，专用辛金发水之源，要比肩滋甲制戊方妙。",
     "source_book": "穷通宝鉴",
     "source_chapter": "九月癸水",
-    "id": "qtbj_111_000"
+    "id": "qtbj_102_000"
   },
   {
     "category": "格局",
@@ -23327,7 +22754,7 @@
     "original_text": "或辛甲两透，支见子癸，定主平步青云",
     "source_book": "穷通宝鉴",
     "source_chapter": "九月癸水",
-    "id": "qtbj_111_001"
+    "id": "qtbj_102_001"
   },
   {
     "category": "格局",
@@ -23337,7 +22764,7 @@
     "original_text": "或癸甲两透，富贵成名",
     "source_book": "穷通宝鉴",
     "source_chapter": "九月癸水",
-    "id": "qtbj_111_002"
+    "id": "qtbj_102_002"
   },
   {
     "category": "格局",
@@ -23347,7 +22774,7 @@
     "original_text": "或有甲辛无癸者，亦有恩封",
     "source_book": "穷通宝鉴",
     "source_chapter": "九月癸水",
-    "id": "qtbj_111_003"
+    "id": "qtbj_102_003"
   },
   {
     "category": "格局",
@@ -23357,7 +22784,7 @@
     "original_text": "或有甲癸无辛者，富大贵小",
     "source_book": "穷通宝鉴",
     "source_chapter": "九月癸水",
-    "id": "qtbj_111_004"
+    "id": "qtbj_102_004"
   },
   {
     "category": "格局",
@@ -23367,7 +22794,7 @@
     "original_text": "有甲无癸辛者，常人",
     "source_book": "穷通宝鉴",
     "source_chapter": "九月癸水",
-    "id": "qtbj_111_005"
+    "id": "qtbj_102_005"
   },
   {
     "category": "格局",
@@ -23377,7 +22804,7 @@
     "original_text": "二者俱无，贫贱之格",
     "source_book": "穷通宝鉴",
     "source_chapter": "九月癸水",
-    "id": "qtbj_111_006"
+    "id": "qtbj_102_006"
   },
   {
     "category": "格局",
@@ -23387,7 +22814,7 @@
     "original_text": "或有甲见壬者，颇许衣衿",
     "source_book": "穷通宝鉴",
     "source_chapter": "九月癸水",
-    "id": "qtbj_111_007"
+    "id": "qtbj_102_007"
   },
   {
     "category": "用神",
@@ -23397,7 +22824,7 @@
     "original_text": "九月癸水，辛甲并用",
     "source_book": "穷通宝鉴",
     "source_chapter": "九月癸水",
-    "id": "qtbj_111_008"
+    "id": "qtbj_102_008"
   },
   {
     "category": "五行",
@@ -23407,7 +22834,7 @@
     "original_text": "十月癸水，旺中有弱，何也，因亥摇木，泄散元神",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月癸水",
-    "id": "qtbj_112_000"
+    "id": "qtbj_103_000"
   },
   {
     "category": "用神",
@@ -23417,7 +22844,7 @@
     "original_text": "宜用庚辛为妙，得庚辛两透，不见丁伤者，功名有准",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月癸水",
-    "id": "qtbj_112_001"
+    "id": "qtbj_103_001"
   },
   {
     "category": "格局",
@@ -23427,7 +22854,7 @@
     "original_text": "或支成木局，有丁出干，为木旺火相，制住庚辛不生水，必主清寒",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月癸水",
-    "id": "qtbj_112_002"
+    "id": "qtbj_103_002"
   },
   {
     "category": "格局",
@@ -23437,7 +22864,7 @@
     "original_text": "或成木局，干见丙丁，异路之荣",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月癸水",
-    "id": "qtbj_112_003"
+    "id": "qtbj_103_003"
   },
   {
     "category": "格局",
@@ -23447,7 +22874,7 @@
     "original_text": "或一派壬水，不见戊制，名冬水汪洋，奔波到老",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月癸水",
-    "id": "qtbj_112_004"
+    "id": "qtbj_103_004"
   },
   {
     "category": "格局",
@@ -23457,7 +22884,7 @@
     "original_text": "若得戊透，清贵堪夸",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月癸水",
-    "id": "qtbj_112_005"
+    "id": "qtbj_103_005"
   },
   {
     "category": "格局",
@@ -23467,7 +22894,7 @@
     "original_text": "或一派庚辛，得丁出制，主名利双全",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月癸水",
-    "id": "qtbj_112_006"
+    "id": "qtbj_103_006"
   },
   {
     "category": "格局",
@@ -23477,7 +22904,7 @@
     "original_text": "若不见丁，又主贫薄",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月癸水",
-    "id": "qtbj_112_007"
+    "id": "qtbj_103_007"
   },
   {
     "category": "格局",
@@ -23487,7 +22914,7 @@
     "original_text": "或四柱火多，名才多身弱，富屋贫人",
     "source_book": "穷通宝鉴",
     "source_chapter": "十月癸水",
-    "id": "qtbj_112_008"
+    "id": "qtbj_103_008"
   },
   {
     "category": "用神",
@@ -23497,7 +22924,7 @@
     "original_text": "十一月癸水，值冰冻之时，金水无交欢之象，专用丙火解冻",
     "source_book": "穷通宝鉴",
     "source_chapter": "十一月癸水",
-    "id": "qtbj_113_000"
+    "id": "qtbj_104_000"
   },
   {
     "category": "用神",
@@ -23507,7 +22934,7 @@
     "original_text": "又要辛金滋扶，无丙有辛，不妙",
     "source_book": "穷通宝鉴",
     "source_chapter": "十一月癸水",
-    "id": "qtbj_113_001"
+    "id": "qtbj_104_001"
   },
   {
     "category": "格局",
@@ -23517,7 +22944,7 @@
     "original_text": "有丙透解冻，则金温水暖，两两相生，要不见壬透，自然登科及第",
     "source_book": "穷通宝鉴",
     "source_chapter": "十一月癸水",
-    "id": "qtbj_113_002"
+    "id": "qtbj_104_002"
   },
   {
     "category": "格局",
@@ -23527,7 +22954,7 @@
     "original_text": "或一派壬水，无丙出干，寒困之士",
     "source_book": "穷通宝鉴",
     "source_chapter": "十一月癸水",
-    "id": "qtbj_113_003"
+    "id": "qtbj_104_003"
   },
   {
     "category": "格局",
@@ -23537,7 +22964,7 @@
     "original_text": "一派癸水，孤贱之流",
     "source_book": "穷通宝鉴",
     "source_chapter": "十一月癸水",
-    "id": "qtbj_113_004"
+    "id": "qtbj_104_004"
   },
   {
     "category": "格局",
@@ -23547,7 +22974,7 @@
     "original_text": "或支成水局，得丙火重出干者，又主蟒袍玉带之荣",
     "source_book": "穷通宝鉴",
     "source_chapter": "十一月癸水",
-    "id": "qtbj_113_005"
+    "id": "qtbj_104_005"
   },
   {
     "category": "格局",
@@ -23557,7 +22984,7 @@
     "original_text": "或支成金局，丙火无踪者，芒鞋革履之流",
     "source_book": "穷通宝鉴",
     "source_chapter": "十一月癸水",
-    "id": "qtbj_113_006"
+    "id": "qtbj_104_006"
   },
   {
     "category": "格局",
@@ -23567,7 +22994,7 @@
     "original_text": "如辛年，丙月，癸日，有火者，主恩荣宠锡，绕膝芝兰",
     "source_book": "穷通宝鉴",
     "source_chapter": "十一月癸水",
-    "id": "qtbj_113_007"
+    "id": "qtbj_104_007"
   },
   {
     "category": "格局",
@@ -23577,7 +23004,7 @@
     "original_text": "无火者，损资得贵，位重当朝",
     "source_book": "穷通宝鉴",
     "source_chapter": "十一月癸水",
-    "id": "qtbj_113_008"
+    "id": "qtbj_104_008"
   },
   {
     "category": "格局",
@@ -23587,7 +23014,7 @@
     "original_text": "或一派戊己，名杀重身轻，非贫即夭",
     "source_book": "穷通宝鉴",
     "source_chapter": "十一月癸水",
-    "id": "qtbj_113_009"
+    "id": "qtbj_104_009"
   },
   {
     "category": "六亲",
@@ -23597,7 +23024,7 @@
     "original_text": "用火者，木妻火子",
     "source_book": "穷通宝鉴",
     "source_chapter": "十一月癸水",
-    "id": "qtbj_113_010"
+    "id": "qtbj_104_010"
   },
   {
     "category": "六亲",
@@ -23607,7 +23034,7 @@
     "original_text": "用辛者，土妻金子",
     "source_book": "穷通宝鉴",
     "source_chapter": "十一月癸水",
-    "id": "qtbj_113_011"
+    "id": "qtbj_104_011"
   },
   {
     "category": "用神",
@@ -23617,7 +23044,7 @@
     "original_text": "十二月癸水，寒极成冰，万物不能舒泰，宜丙火解冻",
     "source_book": "穷通宝鉴",
     "source_chapter": "十二月癸水",
-    "id": "qtbj_114_000"
+    "id": "qtbj_105_000"
   },
   {
     "category": "格局",
@@ -23627,7 +23054,7 @@
     "original_text": "或丙透年时，加以壬透，支中多戊，名水辅阳光，主显达名臣，无戊者，异途之职",
     "source_book": "穷通宝鉴",
     "source_chapter": "十二月癸水",
-    "id": "qtbj_114_001"
+    "id": "qtbj_105_001"
   },
   {
     "category": "格局",
@@ -23637,7 +23064,7 @@
     "original_text": "若有丙无壬，黉门之客",
     "source_book": "穷通宝鉴",
     "source_chapter": "十二月癸水",
-    "id": "qtbj_114_002"
+    "id": "qtbj_105_002"
   },
   {
     "category": "格局",
@@ -23647,7 +23074,7 @@
     "original_text": "有壬无丙，戊又出干者，皂隶之流",
     "source_book": "穷通宝鉴",
     "source_chapter": "十二月癸水",
-    "id": "qtbj_114_003"
+    "id": "qtbj_105_003"
   },
   {
     "category": "格局",
@@ -23657,7 +23084,7 @@
     "original_text": "或支见子丑，比肩出干，即有丙透，不能解冻，此属平常",
     "source_book": "穷通宝鉴",
     "source_chapter": "十二月癸水",
-    "id": "qtbj_114_004"
+    "id": "qtbj_105_004"
   },
   {
     "category": "格局",
@@ -23667,7 +23094,7 @@
     "original_text": "或无癸水，有辛与合，亦不为美，有丁出，颇吉",
     "source_book": "穷通宝鉴",
     "source_chapter": "十二月癸水",
-    "id": "qtbj_114_005"
+    "id": "qtbj_105_005"
   },
   {
     "category": "格局",
@@ -23677,7 +23104,7 @@
     "original_text": "或一片癸己会党，年透丁火，名雪後灯光，夜生者贵，日生者否，若无丁火，又主孤贫",
     "source_book": "穷通宝鉴",
     "source_chapter": "十二月癸水",
-    "id": "qtbj_114_006"
+    "id": "qtbj_105_006"
   },
   {
     "category": "格局",
@@ -23687,7 +23114,7 @@
     "original_text": "或支成水局，无丙者，四海为家，一生劳苦",
     "source_book": "穷通宝鉴",
     "source_chapter": "十二月癸水",
-    "id": "qtbj_114_007"
+    "id": "qtbj_105_007"
   },
   {
     "category": "格局",
@@ -23697,7 +23124,7 @@
     "original_text": "或支成火局，有庚辛透者，衣食充足，无金出，孤苦零丁",
     "source_book": "穷通宝鉴",
     "source_chapter": "十二月癸水",
-    "id": "qtbj_114_008"
+    "id": "qtbj_105_008"
   },
   {
     "category": "格局",
@@ -23707,7 +23134,7 @@
     "original_text": "或支成金局，丙透得地，名金温水暖，彼此相生，定许光大门闾，声驰翰苑，乏丙者，即文章骇世，总为孙山",
     "source_book": "穷通宝鉴",
     "source_chapter": "十二月癸水",
-    "id": "qtbj_114_009"
+    "id": "qtbj_105_009"
   },
   {
     "category": "格局",
@@ -23717,7 +23144,7 @@
     "original_text": "或支成木局，泄水太过，主残病呻吟，得金出干辅救，技艺之流",
     "source_book": "穷通宝鉴",
     "source_chapter": "十二月癸水",
-    "id": "qtbj_114_010"
+    "id": "qtbj_105_010"
   },
   {
     "category": "用神",
@@ -23727,6 +23154,6 @@
     "original_text": "凡冬月用丙，须丙火得地方妙，不然，即重重丙火出干，安能轻许富贵哉",
     "source_book": "穷通宝鉴",
     "source_chapter": "十二月癸水",
-    "id": "qtbj_114_011"
+    "id": "qtbj_105_011"
   }
 ]
