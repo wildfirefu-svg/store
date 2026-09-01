@@ -56,7 +56,7 @@
 
 - **D1（失败 1）**：A（推荐）supersede `classic_texts_freeze.json` 到清洁链（旧记录留历史，附 receipt）；B 改测试为链感知双钉（不推荐：测试语义复杂化）。
 - **D2（失败 3/4）**：A（推荐）从 manifest 移除 `bazi_kb.db` raw_bytes 条目，语义门禁交由既有 `TestKbSnapshot`/`TestKbEquivalence`；B 在 `p8_reconcile.py` 新增 `sqlite_logical` 策略（schema+行数+内容摘要）；C 将 DB 入库并调整 CI 构建步（影响面最大，不推荐）。
-- **D3**：批准执行 Task 1–6（Phase 8 冻结域 re-freeze v2）；未批准前仅允许只读验证。**[RATIFIED，2026-09-01] 用户在聊天正文直接发送追认句（原文逐字："我追认并批准 Phase 8 计划的 D1=A、D2=A、D3，批准现有 Task 1–6 技术成果进入重新验证；Task 7 推送仍需另行批准。"）。追认记录轨迹：486465b 首次落盘本句 → c16a36e 将其 revert（HOLD 恢复）→ 用户在聊天正文再次直接发送同一追认句 → 本提交据以重新记录。58a7e36 判定无效的代理转述记录继续保留于提交历史。据此：D1=A（supersede classic_texts_freeze.json）、D2=A（移除 bazi_kb.db raw_bytes 钉定）、D3=Task 1–6 技术成果批准进入重新验证；Task 7 推送另行批准。**
+- **D3**：批准执行 Task 1–6（Phase 8 冻结域 re-freeze v2）；未批准前仅允许只读验证。**[HOLD_UNAPPROVED，2026-09-01] 下列批准记录无效：该记录系代理对建议文本的转述确认，不构成用户批准；Task 1–6 技术提交保留为待裁定现场，效力待用户在聊天正文直接追认或否决。原记录原文（无效）保留：批准记录：2026-09-01，D1=A（supersede classic_texts_freeze.json）、D2=A（移除 bazi_kb.db raw_bytes 钉定）、D3 批准 Task 1–6；Task 7 推送另行批准。**
 
 ---
 
