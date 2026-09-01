@@ -1,7 +1,7 @@
 # Phase 8 Freeze v2 Superseding Receipt（marriage-capability，已受跟踪）
 
 > 日期：2026-09-01 ｜ 分支：`task/phase8-marriage-capability`（基于 `integration/classic-texts-clean` @ `1f266be`）｜ Supersedes：Phase 8 冻结 v1（`docs/phase8/marriage-capability/phase8_freeze_manifest.json` 旧状态，仅留历史效力）
-> **[RATIFIED，2026-09-01]** 用户在聊天正文直接追认，追认句原文逐字："我追认并批准 Phase 8 计划的 D1=A、D2=A、D3，批准现有 Task 1–6 技术成果进入重新验证；Task 7 推送仍需另行批准。"；此前 58a7e36 的 HOLD_UNAPPROVED 随之解除，原始无效转述记录保留于该提交历史。据此：D1=A（supersede `classic_texts_freeze.json`）、D2=A（移除 `bazi_kb.db` raw_bytes 钉定）、D3=Task 1–6 技术成果批准进入重新验证；Task 7 推送另行批准。计划文档：`docs/superpowers/plans/2026-08-31-phase8-marriage-capability-fix-or-waiver.md`（审批边界修订 `ed5a069`）。
+> **[HOLD_UNAPPROVED，2026-09-01]** 下述批准记录无效（系代理对建议文本的转述确认，不构成用户批准）；Task 1–6 技术提交保留为待裁定现场，效力待用户在聊天正文直接追认或否决。原记录（无效）：批准记录：2026-09-01，D1=A（supersede `classic_texts_freeze.json`）、D2=A（移除 `bazi_kb.db` raw_bytes 钉定）、D3=批准 Task 1–6；Task 7 推送另行批准。计划文档：`docs/superpowers/plans/2026-08-31-phase8-marriage-capability-fix-or-waiver.md`（审批边界修订 `ed5a069`）。
 
 ## 1. 结论
 
@@ -61,7 +61,7 @@ python scripts/generate_acceptance_manifests.py --check --freeze-ref CLASSIC_ACC
   "branch": "task/phase8-marriage-capability",
   "tested_head_commit": "f5578d4",
   "based_on": "integration/classic-texts-clean @ 1f266bea84421eae1c20db240ef23beadd52814f",
-  "approval": {"status": "RATIFIED", "ratified_at": "2026-09-01", "ratification_channel": "user direct first-person sentence in the chat body", "ratification_sentence": "我追认并批准 Phase 8 计划的 D1=A、D2=A、D3，批准现有 Task 1–6 技术成果进入重新验证；Task 7 推送仍需另行批准。", "history": "prior 2026-09-01 record (agent paraphrase) invalidated as HOLD_UNAPPROVED in 58a7e36; superseded by this direct user ratification", "d1": "A", "d2": "A", "d3": "tasks 1-6 technical output ratified for re-verification", "task7_push": "separate approval required"},
+  "approval": {"status": "HOLD_UNAPPROVED", "invalidation_note": "the recorded 2026-09-01 approval was an agent paraphrase of a suggested text, not a user approval; pending direct user ratification or rejection in the chat body", "claimed_date": "2026-09-01", "d1": "A", "d2": "A", "d3": "tasks 1-6 approved (INVALID record)", "task7_push": "separate approval required"},
   "ci_evidence_input": {"run_id": "33383577945", "two_jobs_identical": "4 failed, 2542 passed, 37 skipped", "deterministic": true},
   "sha_supersession": {
     "old_base_commit": "ed5a069",
