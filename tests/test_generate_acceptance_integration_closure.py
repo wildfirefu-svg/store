@@ -348,7 +348,7 @@ def test_missing_flag_value_returns_usage_error():
 def test_short_sha_classification_recorded(closure):
     tl = closure["code_freeze_touch_list"]
     assert tl["short_sha_only"] == []
-    assert len(tl["binding_full_sha"]) == 12
+    assert len(tl["binding_full_sha"]) == 13
     assert "tests/test_classic_acceptance_sampling.py" not in [
         e["path"] for e in tl["binding_full_sha"]]
 
