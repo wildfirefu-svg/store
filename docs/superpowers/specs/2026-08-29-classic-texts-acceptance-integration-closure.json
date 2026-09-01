@@ -7139,7 +7139,7 @@
     "source_files": [
       {
         "path": "scripts/generate_acceptance_integration_closure.py",
-        "blob_oid_at_infrastructure_commit": "879f9d025b4817c4a7a170f43c7cd438b1bef379",
+        "blob_oid_at_infrastructure_commit": "afad07f5a5d179e7d2463a456614051bfdc638cd",
         "size": 57646,
         "group": "infrastructure_source",
         "migrated": true
@@ -7243,6 +7243,12 @@
         "path": "docs/superpowers/plans/2026-08-23-classic-texts-manual-acceptance-tooling.md",
         "full_sha_occurrences": 8,
         "short_prefix_occurrences": 9,
+        "classification": "full 40-hex candidate SHA binding or chain record; updated or regenerated at re-freeze"
+      },
+      {
+        "path": "docs/superpowers/plans/2026-08-31-phase8-marriage-capability-fix-or-waiver.md",
+        "full_sha_occurrences": 1,
+        "short_prefix_occurrences": 2,
         "classification": "full 40-hex candidate SHA binding or chain record; updated or regenerated at re-freeze"
       },
       {
