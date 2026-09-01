@@ -7139,14 +7139,14 @@
     "source_files": [
       {
         "path": "scripts/generate_acceptance_integration_closure.py",
-        "blob_oid_at_infrastructure_commit": "afad07f5a5d179e7d2463a456614051bfdc638cd",
+        "blob_oid_at_infrastructure_commit": "c22fe27f11c2e3fe3d15d7077cec02e029061559",
         "size": 57646,
         "group": "infrastructure_source",
         "migrated": true
       },
       {
         "path": "tests/test_generate_acceptance_integration_closure.py",
-        "blob_oid_at_infrastructure_commit": "ee19d9a36ee35e1e57807e133be51e866e20cd24",
+        "blob_oid_at_infrastructure_commit": "f9e6bc57d7974e3c8780416fd2fca4d8819adb5e",
         "size": 16520,
         "group": "infrastructure_source",
         "migrated": true
@@ -7239,6 +7239,12 @@
   },
   "code_freeze_touch_list": {
     "binding_full_sha": [
+      {
+        "path": "docs/superpowers/2026-09-01-phase8-freeze-v2-superseding-receipt.md",
+        "full_sha_occurrences": 1,
+        "short_prefix_occurrences": 1,
+        "classification": "full 40-hex candidate SHA binding or chain record; updated or regenerated at re-freeze"
+      },
       {
         "path": "docs/superpowers/plans/2026-08-23-classic-texts-manual-acceptance-tooling.md",
         "full_sha_occurrences": 8,
