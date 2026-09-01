@@ -574,6 +574,24 @@ class TestKbEquivalence:
             tmp_out.unlink(missing_ok=True)
 
 
+    def test_regen_paths_are_posix(self):
+        """重生成的 JSON 不得含反斜杠路径（跨平台字节可重现的前提）。"""
+        snap = _load_module(
+            "p8_kb_snapshot", "docs/phase8/marriage-capability/p8_kb_snapshot.py"
+        )
+        tmp_out = _REPO / ".tmp" / "phase8_kb_equivalence_posix_probe.json"
+        snap.run_equivalence(
+            _P8_DIR / "kb_query_set.json",
+            PROBE_QUERIES,
+            _REPO / "knowledge-base" / "bazi_kb.db",
+            _P8_DIR / "kb_snapshot.db",
+            tmp_out,
+        )
+        try:
+            assert b"\\" not in tmp_out.read_bytes()
+        finally:
+            tmp_out.unlink(missing_ok=True)
+
 class TestComputabilityProbe:
     """computability_probe.json：四态、无 current_*、双跑字节一致、缺失三态。"""
 

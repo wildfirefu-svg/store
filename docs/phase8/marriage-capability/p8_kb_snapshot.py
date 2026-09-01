@@ -184,8 +184,8 @@ def run_equivalence(qset_path: Path, probe_queries: list[dict], src_db: Path,
             results.append(record)
     payload = {
         "schema_version": "1.0",
-        "source_db": str(src_db.relative_to(REPO)),
-        "snapshot_db": str(snap_db.relative_to(REPO)),
+        "source_db": src_db.relative_to(REPO).as_posix(),
+        "snapshot_db": snap_db.relative_to(REPO).as_posix(),
         "queries": results,
         "summary": {
             "total": len(results),
