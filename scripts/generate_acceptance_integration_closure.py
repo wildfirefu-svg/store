@@ -139,7 +139,7 @@ EXPECTED = {
     "data_same_blob_on_main": 3,
     "data_changed_vs_main": 695,
     "tooling_overlap_with_main": 1,
-    "touch_binding_files": 11,
+    "touch_binding_files": 12,
     "touch_short_only_files": 0,
 }
 
