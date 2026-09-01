@@ -7146,7 +7146,7 @@
       },
       {
         "path": "tests/test_generate_acceptance_integration_closure.py",
-        "blob_oid_at_infrastructure_commit": "5ebd483257f5a84550a18ddb14cdbcf493ecf135",
+        "blob_oid_at_infrastructure_commit": "ee19d9a36ee35e1e57807e133be51e866e20cd24",
         "size": 16520,
         "group": "infrastructure_source",
         "migrated": true
