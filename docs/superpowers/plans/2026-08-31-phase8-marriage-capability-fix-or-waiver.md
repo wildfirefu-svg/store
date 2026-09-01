@@ -1,7 +1,7 @@
 # Phase 8 marriage-capability 修复/豁免实施计划
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-> **执行边界（用户指令，2026-08-31）：Task 2 起全部为批准门禁任务——未经明确批准不执行重冻结，不合并主线，不触碰 acceptance 冻结链（`CLASSIC_ACCEPTANCE_FREEZE_V2` / payload `ba7cc51…` / 两 identity manifest）。**
+> **执行边界（修订 v2，2026-09-01，采纳复审 P0）：Task 1–6 全部为批准门禁任务——Task 1 修改被 manifest 钉定的 `p8_kb_snapshot.py`，必须随后级联重冻结，不可单独收尾；未经明确批准不执行任何代码/产物修改，批准前仅允许只读验证；Task 7 推送另行批准；不合并主线，不触碰 acceptance 冻结链（`CLASSIC_ACCEPTANCE_FREEZE_V2` / payload `ba7cc51…` / 两 identity manifest）。**
 
 **Goal:** 消除 Phase 8 的 4 个 CI 失败（或按用户决策豁免），使 `integration/classic-texts-clean` 双作业 CI 全绿，解除合并主线前的最后一个独立阻断。
 
@@ -56,11 +56,11 @@
 
 - **D1（失败 1）**：A（推荐）supersede `classic_texts_freeze.json` 到清洁链（旧记录留历史，附 receipt）；B 改测试为链感知双钉（不推荐：测试语义复杂化）。
 - **D2（失败 3/4）**：A（推荐）从 manifest 移除 `bazi_kb.db` raw_bytes 条目，语义门禁交由既有 `TestKbSnapshot`/`TestKbEquivalence`；B 在 `p8_reconcile.py` 新增 `sqlite_logical` 策略（schema+行数+内容摘要）；C 将 DB 入库并调整 CI 构建步（影响面最大，不推荐）。
-- **D3**：批准执行 Task 2–6（Phase 8 冻结域 re-freeze v2）；未批准前只允许 Task 1 前的只读验证。
+- **D3**：批准执行 Task 1–6（Phase 8 冻结域 re-freeze v2）；未批准前仅允许只读验证。**批准记录：2026-09-01，D1=A（supersede classic_texts_freeze.json）、D2=A（移除 bazi_kb.db raw_bytes 钉定）、D3 批准 Task 1–6；Task 7 推送另行批准。**
 
 ---
 
-### Task 1: 路径归一化（TDD，纯代码步；提交本身不触冻结产物内容）
+### Task 1: 路径归一化（TDD；**批准门禁**——修改被 manifest 以 git_canonical_lf 钉定的 `p8_kb_snapshot.py`，其提交必须由 Task 4 的 atomic_add 级联收尾）
 
 **Files:**
 - Modify: `docs/phase8/marriage-capability/p8_kb_snapshot.py:187-188`
