@@ -41,7 +41,7 @@
    },
    {
     "path": "docs/phase8/marriage-capability/p8_kb_snapshot.py",
-    "sha256": "c855d83eb6a43f6bbdf544c224089b4878f261527e19b412e41aa157605b6a82",
+    "sha256": "cab7ffc9a7e2c88ed9abc15e6877216bbfe91c49ef223319998cf758ab908a90",
     "strategy": "git_canonical_lf"
    },
    {
@@ -78,7 +78,7 @@
    },
    {
     "path": "docs/phase8/marriage-capability/classic_texts_freeze.json",
-    "sha256": "0dd288d413a304ae136a6b7851d251949f2cb131885c8be9616d3cac10f3c3b0",
+    "sha256": "bf9d2e64ed00990b6a44d6f84fe01b04134c7ea9b5399b9b71c6a06e5d61af16",
     "strategy": "json_canonical"
    },
    {
@@ -98,7 +98,7 @@
    },
    {
     "path": "docs/phase8/marriage-capability/kb_equivalence.json",
-    "sha256": "0203cc742e6b93d4a47b4cbf7333bf6a6405f624bfeb08388e27d344aa4ebf09",
+    "sha256": "d8975364ccc85a23730a753d66e54a866fa316f2c2030e923dd8309e8f265a38",
     "strategy": "json_canonical"
    },
    {
@@ -142,17 +142,12 @@
   "raw_bytes": [
    {
     "path": "docs/phase8/marriage-capability/kb_snapshot.db",
-    "sha256": "071504d297610b0cd42cd2b7dc2d4ababe29da2ce3931bf2d456b708464c1266",
-    "strategy": "raw_bytes"
-   },
-   {
-    "path": "knowledge-base/bazi_kb.db",
-    "sha256": "115bace4efa66fd82455dc4e8c79610d7f6c751585e47769583caaf1ab7fb83e",
+    "sha256": "e06e35dcce74e53f5cced57b1529e7e815404752c8d005471d38a8a26c5d16e4",
     "strategy": "raw_bytes"
    }
   ]
  },
  "reconcile_entry": "python docs/phase8/marriage-capability/p8_reconcile.py",
- "total_entries": 27,
+ "total_entries": 26,
  "note": "total_entries 为冻结产物数（不含 provenance.json 自身，避免自引用）"
 }
