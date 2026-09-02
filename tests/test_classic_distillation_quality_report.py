@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 
 from scripts.classic_artifacts import CODE_FILE_NAMES, sha256_file, mcq_record_sha256
-from scripts.generate_quality_report import generate_report
+from scripts.generate_quality_report import generate_report, _find_git_root
 
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "scripts"
 
@@ -391,3 +391,26 @@ def test_report_remediation_pass_separate_from_end_to_end(tmp_path, monkeypatch)
         assert report["remediation_pass"] is False
         assert report["end_to_end_pass"] is False
         assert exit_code == 1
+
+
+def test_find_git_root_recognizes_git_dir(tmp_path):
+    """Normal checkout: .git is a directory."""
+    (tmp_path / ".git").mkdir()
+    assert _find_git_root(tmp_path) == tmp_path
+
+
+def test_find_git_root_recognizes_worktree_git_file(tmp_path):
+    """P0: linked worktrees carry .git as a FILE pointing at the real
+    gitdir; _find_git_root must treat that as a repository root (it
+    previously returned None in worktrees, degrading provenance checks)."""
+    (tmp_path / ".git").write_text(
+        "gitdir: G:/elsewhere/.git/worktrees/wt\n", encoding="utf-8"
+    )
+    assert _find_git_root(tmp_path) == tmp_path
+
+
+def test_find_git_root_walks_up_to_nearest_repo(tmp_path):
+    (tmp_path / ".git").mkdir()
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    assert _find_git_root(sub) == tmp_path

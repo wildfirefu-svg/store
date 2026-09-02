@@ -33,11 +33,13 @@ from scripts.classic_artifacts import validate_provenance  # noqa: E402
 SCRIPTS_DIR = ROOT / "scripts"
 
 
-def _find_git_root() -> Path | None:
-    """Walk up from ROOT to find the git repository root (P0-4)."""
-    p = ROOT
+def _find_git_root(start: Path | None = None) -> Path | None:
+    """Walk up from start (default: module ROOT) to find the git repository
+    root (P0-4). Recognizes both normal checkouts (.git directory) and
+    linked worktrees (.git file pointing at the real gitdir)."""
+    p = start if start is not None else ROOT
     while p != p.parent:
-        if (p / ".git").is_dir():
+        if (p / ".git").is_dir() or (p / ".git").is_file():
             return p
         p = p.parent
     return None
