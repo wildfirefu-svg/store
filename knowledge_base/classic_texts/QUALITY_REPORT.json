@@ -1,13 +1,15 @@
 {
-  "generated_at": "2026-08-10T17:25:21",
+  "generated_at": "2026-09-02T12:45:10",
   "validator": "scripts/validate_classic_distillation.py",
+  "validator_code_sha256": "5dd6f52b87858424095e2c323dff63d46f81d93ceaf83fd00a8fc479ec904632",
+  "validator_ran_live": true,
   "books": {
     "ditiansui": {
       "name": "滴天髓",
       "dir": "ditiansui",
       "rules": {
         "count": 799,
-        "sha256": "45b30b5023e8fbbb41d5eb0459b3108008fb51d75f2ea56ecb0b48074ae73ced",
+        "sha256": "50841758bc52deb99d07a1e7f9ddf2475f749e3b1760c8a43acc47e08deb1298",
         "categories": {
           "格局": 210,
           "六亲": 141,
@@ -26,18 +28,18 @@
       },
       "mcq": {
         "count": 646,
-        "sha256": "1a7f0b284ee131b1df990e70e44ee2483a48cd7107b126f69b99eb6de66bd96e",
+        "sha256": "f23938c54b2bdfc838db6d059a6f4702bd5b47654bf1e6f92ebe25e5c79e2d87",
         "answer_dist": {
-          "B": 162,
-          "C": 162,
-          "D": 161,
-          "A": 161
+          "C": 155,
+          "B": 149,
+          "A": 155,
+          "D": 187
         },
         "answer_pct": {
-          "B": 0.2508,
-          "C": 0.2508,
-          "D": 0.2492,
-          "A": 0.2492
+          "C": 0.2399,
+          "B": 0.2307,
+          "A": 0.2399,
+          "D": 0.2895
         }
       },
       "quarantine_rules": {
@@ -46,8 +48,10 @@
       },
       "quarantine_mcq": {
         "count": 88,
-        "sha256": "6796d318c3745b2421db6737037473e428eb177016799c8499291476ca21909a"
+        "sha256": "65d1f20b4a575b91b7de8dfc17ed28efdc0b34ce6d29bedb5a1c159799e77a66"
       },
+      "provenance": null,
+      "provenance_missing": true,
       "gates": {
         "G1_rule_id_unique": true,
         "G2_mcq_id_unique": true,
@@ -56,16 +60,77 @@
         "G5_traceability": true,
         "G6_answer_dist": true,
         "G7_chapter_complete": true,
-        "G8_mcq_well_formed": true
+        "G8_mcq_well_formed": true,
+        "G9_content_dedup": true
       },
-      "all_gates_pass": true
+      "all_gates_pass": true,
+      "gate_details": {
+        "G1_rule_id_unique": {
+          "total": 799,
+          "unique": 799,
+          "duplicates": 0,
+          "pass": true
+        },
+        "G2_mcq_id_unique": {
+          "total": 646,
+          "unique": 646,
+          "duplicates": 0,
+          "pass": true
+        },
+        "G3_schema": {
+          "bad_rules": 0,
+          "bad_mcq": 0,
+          "parse_errors": 0,
+          "pass": true
+        },
+        "G4_source_rule_id": {
+          "total_refs": 646,
+          "bad": 0,
+          "ambiguous_rule_ids": 0,
+          "pass": true
+        },
+        "G5_traceability": {
+          "total": 799,
+          "untraceable": 0,
+          "rate": 1.0,
+          "pass": true
+        },
+        "G6_answer_dist": {
+          "dist_pct": {
+            "C": 0.2399,
+            "B": 0.2307,
+            "A": 0.2399,
+            "D": 0.2895
+          },
+          "invalid_answers": 0,
+          "out_of_band": [],
+          "pass": true
+        },
+        "G7_chapter_complete": {
+          "pass": true,
+          "reason": "no chapter_list"
+        },
+        "G8_mcq_well_formed": {
+          "malformed": 0,
+          "pass": true
+        },
+        "G9_content_dedup": {
+          "rule_text_duplicate_groups": 0,
+          "rule_text_duplicate_count": 0,
+          "rule_text_duplicate_samples": {},
+          "mcq_question_duplicates": 0,
+          "pass": true
+        }
+      },
+      "provenance_ok": false,
+      "end_to_end_provenance": false
     },
     "zipingzhenquan": {
       "name": "子平真诠",
       "dir": "zipingzhenquan",
       "rules": {
         "count": 156,
-        "sha256": "be6c01562f7f47d337715801a64d4161ab24e4f9dbe6692e03222b6623230a43",
+        "sha256": "2018f0653669ff843f20a6cc190d31340fa2155a54702cc4a4661ecc2c9ab3e3",
         "categories": {
           "格局": 98,
           "大运": 29,
@@ -79,7 +144,7 @@
       },
       "mcq": {
         "count": 155,
-        "sha256": "e5ba00bd28129fba0a2b5fa5dbbed9aae67354ef4fe9a0eddf3cd850d952c779",
+        "sha256": "a3d5075adfcd5a9a6acb10fcfd56810d60fd8293bd19dee07f15c0b3c5ae890c",
         "answer_dist": {
           "A": 39,
           "B": 39,
@@ -100,6 +165,8 @@
       "quarantine_mcq": {
         "count": 0
       },
+      "provenance": null,
+      "provenance_missing": true,
       "gates": {
         "G1_rule_id_unique": true,
         "G2_mcq_id_unique": true,
@@ -108,26 +175,92 @@
         "G5_traceability": true,
         "G6_answer_dist": true,
         "G7_chapter_complete": true,
-        "G8_mcq_well_formed": true
+        "G8_mcq_well_formed": true,
+        "G9_content_dedup": true
       },
-      "all_gates_pass": true
+      "all_gates_pass": true,
+      "gate_details": {
+        "G1_rule_id_unique": {
+          "total": 156,
+          "unique": 156,
+          "duplicates": 0,
+          "pass": true
+        },
+        "G2_mcq_id_unique": {
+          "total": 155,
+          "unique": 155,
+          "duplicates": 0,
+          "pass": true
+        },
+        "G3_schema": {
+          "bad_rules": 0,
+          "bad_mcq": 0,
+          "parse_errors": 0,
+          "pass": true
+        },
+        "G4_source_rule_id": {
+          "total_refs": 155,
+          "bad": 0,
+          "ambiguous_rule_ids": 0,
+          "pass": true
+        },
+        "G5_traceability": {
+          "total": 156,
+          "untraceable": 0,
+          "rate": 1.0,
+          "pass": true
+        },
+        "G6_answer_dist": {
+          "dist_pct": {
+            "A": 0.2516,
+            "B": 0.2516,
+            "C": 0.2516,
+            "D": 0.2452
+          },
+          "invalid_answers": 0,
+          "out_of_band": [],
+          "pass": true
+        },
+        "G7_chapter_complete": {
+          "expected": 58,
+          "done": 58,
+          "missing": [],
+          "missing_count": 0,
+          "extra": [],
+          "extra_count": 0,
+          "pass": true
+        },
+        "G8_mcq_well_formed": {
+          "malformed": 0,
+          "pass": true
+        },
+        "G9_content_dedup": {
+          "rule_text_duplicate_groups": 0,
+          "rule_text_duplicate_count": 0,
+          "rule_text_duplicate_samples": {},
+          "mcq_question_duplicates": 0,
+          "pass": true
+        }
+      },
+      "provenance_ok": false,
+      "end_to_end_provenance": false
     },
     "qiongtongbaojian": {
       "name": "穷通宝鉴",
       "dir": "qiongtongbaojian",
       "rules": {
-        "count": 2373,
-        "sha256": "6f8160bf5d4890fb83934de5a20383a6319b4baad5aff5ad5e46adadd4810b50",
+        "count": 2312,
+        "sha256": "894901a1a6e9095d7201245fbe4231b94c4e09d36aea372ff9090c26502c5007",
         "categories": {
-          "格局": 1360,
-          "用神": 325,
-          "五行": 182,
+          "格局": 1338,
+          "用神": 323,
+          "五行": 177,
           "调候": 167,
-          "六亲": 131,
+          "六亲": 103,
           "十神": 54,
           "性情": 45,
-          "大运": 36,
-          "疾病": 31,
+          "大运": 34,
+          "疾病": 29,
           "吉凶": 24,
           "天干": 5,
           "地支": 5,
@@ -139,29 +272,31 @@
         }
       },
       "mcq": {
-        "count": 2176,
-        "sha256": "0a08cc1af5017793707d62442fab5ec23598dc94c30953fa1e2707040c505696",
+        "count": 2120,
+        "sha256": "a785dfb6bef72b34d648e03db2332f9b84a434d5b4a9deb6add78c77d8b64faf",
         "answer_dist": {
-          "B": 544,
-          "C": 544,
-          "D": 544,
-          "A": 544
+          "B": 539,
+          "C": 517,
+          "D": 560,
+          "A": 504
         },
         "answer_pct": {
-          "B": 0.25,
-          "C": 0.25,
-          "D": 0.25,
-          "A": 0.25
+          "B": 0.2542,
+          "C": 0.2439,
+          "D": 0.2642,
+          "A": 0.2377
         }
       },
       "quarantine_rules": {
-        "count": 126,
-        "sha256": "795d81133923bb8d1ae90c5d8c4584d581825f8de177e9c59f672819600304c3"
+        "count": 187,
+        "sha256": "10f5f5b8ad4d730e3659d1d3b1168000e295687ea4b44fa84a66d22b4f1a2231"
       },
       "quarantine_mcq": {
         "count": 123,
-        "sha256": "2eb0213059f1cd28616decf495ce4a0a1956188bc65e9bb6ea052d1e82c839f2"
+        "sha256": "f5636a10e7aca3211ffc8699f576d8d1d66dd81b0f498f922c3d127c19818204"
       },
+      "provenance": null,
+      "provenance_missing": true,
       "gates": {
         "G1_rule_id_unique": true,
         "G2_mcq_id_unique": true,
@@ -170,49 +305,138 @@
         "G5_traceability": true,
         "G6_answer_dist": true,
         "G7_chapter_complete": true,
-        "G8_mcq_well_formed": true
+        "G8_mcq_well_formed": true,
+        "G9_content_dedup": true
       },
-      "all_gates_pass": true
+      "all_gates_pass": true,
+      "gate_details": {
+        "G1_rule_id_unique": {
+          "total": 2312,
+          "unique": 2312,
+          "duplicates": 0,
+          "pass": true
+        },
+        "G2_mcq_id_unique": {
+          "total": 2120,
+          "unique": 2120,
+          "duplicates": 0,
+          "pass": true
+        },
+        "G3_schema": {
+          "bad_rules": 0,
+          "bad_mcq": 0,
+          "parse_errors": 0,
+          "pass": true
+        },
+        "G4_source_rule_id": {
+          "total_refs": 2120,
+          "bad": 0,
+          "ambiguous_rule_ids": 0,
+          "pass": true
+        },
+        "G5_traceability": {
+          "total": 2312,
+          "untraceable": 0,
+          "rate": 1.0,
+          "pass": true
+        },
+        "G6_answer_dist": {
+          "dist_pct": {
+            "B": 0.2542,
+            "C": 0.2439,
+            "D": 0.2642,
+            "A": 0.2377
+          },
+          "invalid_answers": 0,
+          "out_of_band": [],
+          "pass": true
+        },
+        "G7_chapter_complete": {
+          "expected": 114,
+          "done": 114,
+          "missing": [],
+          "missing_count": 0,
+          "extra": [],
+          "extra_count": 0,
+          "pass": true
+        },
+        "G8_mcq_well_formed": {
+          "malformed": 0,
+          "pass": true
+        },
+        "G9_content_dedup": {
+          "rule_text_duplicate_groups": 0,
+          "rule_text_duplicate_count": 0,
+          "rule_text_duplicate_samples": {},
+          "mcq_question_duplicates": 0,
+          "pass": true
+        }
+      },
+      "provenance_ok": false,
+      "end_to_end_provenance": false
     },
     "sanmingtonghui": {
       "name": "三命通会",
       "dir": "sanmingtonghui",
       "rules": {
-        "count": 1542,
-        "sha256": "f1cb68a6d55e066d0e122ae9bcece3b2defddf617d194fb37bbc40b565f8aca7",
+        "count": 8043,
+        "sha256": "6217f4c685006d6663379a0102d8b1a602fd59dec47068f56a6f1a478ad765d0",
         "categories": {
-          "五行": 553,
-          "格局": 259,
-          "其他": 185,
-          "神煞": 163,
-          "大运": 101,
-          "地支": 59,
-          "十神": 47,
-          "性情": 42,
-          "纳音": 42,
-          "六亲": 42,
-          "流年": 21,
-          "疾病": 16,
-          "用神": 7,
-          "天干": 2,
+          "格局": 2187,
+          "十神": 1197,
+          "五行": 1169,
+          "大运": 922,
+          "其他": 640,
+          "六亲": 624,
+          "神煞": 310,
+          "性情": 259,
+          "疾病": 230,
+          "地支": 136,
+          "用神": 102,
+          "流年": 71,
+          "纳音": 47,
+          "财运": 35,
+          "天干": 23,
+          "女命": 18,
+          "富贵": 10,
+          "日主": 8,
+          "干支": 6,
+          "阴阳": 5,
+          "官职": 4,
+          "旺衰": 4,
+          "冲": 4,
+          "忌神": 3,
+          "吉凶": 3,
+          "财官": 3,
+          "空亡": 3,
+          "凶煞": 3,
           "凶格": 2,
-          "财运": 1
+          "寿命": 2,
+          "凶兆": 2,
+          "禄马": 2,
+          "十二长生": 2,
+          "四柱": 2,
+          "身弱": 1,
+          "凶险": 1,
+          "官运": 1,
+          "时柱": 1,
+          "职业": 1
         }
       },
       "mcq": {
-        "count": 777,
-        "sha256": "b69e36a27b739f02557ed51472069f13c49bfc7c0f4762a6a7e240bdaf28ea0b",
+        "count": 6103,
+        "sha256": "63d436f609333deaa45ab2af117b9ea0458733b8c15773cc52d85664129d6215",
         "answer_dist": {
-          "A": 195,
-          "B": 194,
-          "C": 194,
-          "D": 194
+          "C": 1549,
+          "A": 1536,
+          "D": 1508,
+          "B": 1510
         },
         "answer_pct": {
-          "A": 0.251,
-          "B": 0.2497,
-          "C": 0.2497,
-          "D": 0.2497
+          "C": 0.2538,
+          "A": 0.2517,
+          "D": 0.2471,
+          "B": 0.2474
         }
       },
       "quarantine_rules": {
@@ -222,6 +446,8 @@
       "quarantine_mcq": {
         "count": 0
       },
+      "provenance": null,
+      "provenance_missing": true,
       "gates": {
         "G1_rule_id_unique": true,
         "G2_mcq_id_unique": true,
@@ -230,12 +456,100 @@
         "G5_traceability": true,
         "G6_answer_dist": true,
         "G7_chapter_complete": false,
-        "G8_mcq_well_formed": true
+        "G8_mcq_well_formed": true,
+        "G9_content_dedup": true
       },
-      "all_gates_pass": false
+      "all_gates_pass": false,
+      "gate_details": {
+        "G1_rule_id_unique": {
+          "total": 8043,
+          "unique": 8043,
+          "duplicates": 0,
+          "pass": true
+        },
+        "G2_mcq_id_unique": {
+          "total": 6103,
+          "unique": 6103,
+          "duplicates": 0,
+          "pass": true
+        },
+        "G3_schema": {
+          "bad_rules": 0,
+          "bad_mcq": 0,
+          "parse_errors": 0,
+          "pass": true
+        },
+        "G4_source_rule_id": {
+          "total_refs": 6103,
+          "bad": 0,
+          "ambiguous_rule_ids": 0,
+          "pass": true
+        },
+        "G5_traceability": {
+          "total": 8043,
+          "untraceable": 0,
+          "rate": 1.0,
+          "pass": true
+        },
+        "G6_answer_dist": {
+          "dist_pct": {
+            "C": 0.2538,
+            "A": 0.2517,
+            "D": 0.2471,
+            "B": 0.2474
+          },
+          "invalid_answers": 0,
+          "out_of_band": [],
+          "pass": true
+        },
+        "G7_chapter_complete": {
+          "expected": 383,
+          "done": 80,
+          "missing": [
+            "卷七·伤夫克子",
+            "卷七·和",
+            "卷七·娼",
+            "卷七·安静守分",
+            "卷七·定妇人孕生男女",
+            "卷七·招嫁不定",
+            "卷七·旺夫克子",
+            "卷七·旺子伤夫",
+            "卷七·横夭少年",
+            "卷七·正偏自处",
+            "卷七·浊",
+            "卷七·淫",
+            "卷七·清",
+            "卷七·滥",
+            "卷七·福寿两备",
+            "卷七·纯",
+            "卷七·论六亲",
+            "卷七·论女命",
+            "卷七·论小儿",
+            "卷七·论性情相貌"
+          ],
+          "missing_count": 303,
+          "extra": [],
+          "extra_count": 0,
+          "pass": false
+        },
+        "G8_mcq_well_formed": {
+          "malformed": 0,
+          "pass": true
+        },
+        "G9_content_dedup": {
+          "rule_text_duplicate_groups": 0,
+          "rule_text_duplicate_count": 0,
+          "rule_text_duplicate_samples": {},
+          "mcq_question_duplicates": 0,
+          "pass": true
+        }
+      },
+      "provenance_ok": false,
+      "end_to_end_provenance": false
     }
   },
-  "known_limitations": [
-    "三命通会 G7 章节完整性: 80/383 章已蒸馏 (卷一-卷五基础内容)，缺 303 章 (卷五-卷十二格局与赋)。需 ~606 API calls 补齐，本轮未 scope。"
-  ]
+  "known_limitations": [],
+  "remediation_pass": false,
+  "end_to_end_pass": false,
+  "overall_pass": false
 }

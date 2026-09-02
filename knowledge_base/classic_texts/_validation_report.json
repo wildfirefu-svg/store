@@ -35,10 +35,10 @@
       },
       "G6_answer_dist": {
         "dist_pct": {
-          "B": 0.2508,
-          "C": 0.2508,
-          "D": 0.2492,
-          "A": 0.2492
+          "C": 0.2399,
+          "B": 0.2307,
+          "A": 0.2399,
+          "D": 0.2895
         },
         "invalid_answers": 0,
         "out_of_band": [],
@@ -50,6 +50,13 @@
       },
       "G8_mcq_well_formed": {
         "malformed": 0,
+        "pass": true
+      },
+      "G9_content_dedup": {
+        "rule_text_duplicate_groups": 0,
+        "rule_text_duplicate_count": 0,
+        "rule_text_duplicate_samples": {},
+        "mcq_question_duplicates": 0,
         "pass": true
       }
     },
@@ -105,13 +112,23 @@
         "pass": true
       },
       "G7_chapter_complete": {
-        "progress_done": 58,
-        "chapter_list": 58,
-        "missing": 0,
+        "expected": 58,
+        "done": 58,
+        "missing": [],
+        "missing_count": 0,
+        "extra": [],
+        "extra_count": 0,
         "pass": true
       },
       "G8_mcq_well_formed": {
         "malformed": 0,
+        "pass": true
+      },
+      "G9_content_dedup": {
+        "rule_text_duplicate_groups": 0,
+        "rule_text_duplicate_count": 0,
+        "rule_text_duplicate_samples": {},
+        "mcq_question_duplicates": 0,
         "pass": true
       }
     },
@@ -126,14 +143,14 @@
     "dir": "qiongtongbaojian",
     "gates": {
       "G1_rule_id_unique": {
-        "total": 2373,
-        "unique": 2373,
+        "total": 2312,
+        "unique": 2312,
         "duplicates": 0,
         "pass": true
       },
       "G2_mcq_id_unique": {
-        "total": 2176,
-        "unique": 2176,
+        "total": 2120,
+        "unique": 2120,
         "duplicates": 0,
         "pass": true
       },
@@ -144,43 +161,53 @@
         "pass": true
       },
       "G4_source_rule_id": {
-        "total_refs": 2176,
+        "total_refs": 2120,
         "bad": 0,
         "ambiguous_rule_ids": 0,
         "pass": true
       },
       "G5_traceability": {
-        "total": 2373,
+        "total": 2312,
         "untraceable": 0,
         "rate": 1.0,
         "pass": true
       },
       "G6_answer_dist": {
         "dist_pct": {
-          "B": 0.25,
-          "C": 0.25,
-          "D": 0.25,
-          "A": 0.25
+          "B": 0.2542,
+          "C": 0.2439,
+          "D": 0.2642,
+          "A": 0.2377
         },
         "invalid_answers": 0,
         "out_of_band": [],
         "pass": true
       },
       "G7_chapter_complete": {
-        "progress_done": 217,
-        "chapter_list": 114,
-        "missing": 0,
+        "expected": 114,
+        "done": 114,
+        "missing": [],
+        "missing_count": 0,
+        "extra": [],
+        "extra_count": 0,
         "pass": true
       },
       "G8_mcq_well_formed": {
         "malformed": 0,
         "pass": true
+      },
+      "G9_content_dedup": {
+        "rule_text_duplicate_groups": 0,
+        "rule_text_duplicate_count": 0,
+        "rule_text_duplicate_samples": {},
+        "mcq_question_duplicates": 0,
+        "pass": true
       }
     },
     "passed": true,
     "totals": {
-      "rules": 2373,
-      "mcq": 2176
+      "rules": 2312,
+      "mcq": 2120
     }
   },
   {
@@ -188,14 +215,14 @@
     "dir": "sanmingtonghui",
     "gates": {
       "G1_rule_id_unique": {
-        "total": 1542,
-        "unique": 1542,
+        "total": 8043,
+        "unique": 8043,
         "duplicates": 0,
         "pass": true
       },
       "G2_mcq_id_unique": {
-        "total": 777,
-        "unique": 777,
+        "total": 6103,
+        "unique": 6103,
         "duplicates": 0,
         "pass": true
       },
@@ -206,43 +233,74 @@
         "pass": true
       },
       "G4_source_rule_id": {
-        "total_refs": 777,
+        "total_refs": 6103,
         "bad": 0,
         "ambiguous_rule_ids": 0,
         "pass": true
       },
       "G5_traceability": {
-        "total": 1542,
+        "total": 8043,
         "untraceable": 0,
         "rate": 1.0,
         "pass": true
       },
       "G6_answer_dist": {
         "dist_pct": {
-          "A": 0.251,
-          "B": 0.2497,
-          "C": 0.2497,
-          "D": 0.2497
+          "C": 0.2538,
+          "A": 0.2517,
+          "D": 0.2471,
+          "B": 0.2474
         },
         "invalid_answers": 0,
         "out_of_band": [],
         "pass": true
       },
       "G7_chapter_complete": {
-        "progress_done": 80,
-        "chapter_list": 383,
-        "missing": 303,
+        "expected": 383,
+        "done": 80,
+        "missing": [
+          "卷七·伤夫克子",
+          "卷七·和",
+          "卷七·娼",
+          "卷七·安静守分",
+          "卷七·定妇人孕生男女",
+          "卷七·招嫁不定",
+          "卷七·旺夫克子",
+          "卷七·旺子伤夫",
+          "卷七·横夭少年",
+          "卷七·正偏自处",
+          "卷七·浊",
+          "卷七·淫",
+          "卷七·清",
+          "卷七·滥",
+          "卷七·福寿两备",
+          "卷七·纯",
+          "卷七·论六亲",
+          "卷七·论女命",
+          "卷七·论小儿",
+          "卷七·论性情相貌"
+        ],
+        "missing_count": 303,
+        "extra": [],
+        "extra_count": 0,
         "pass": false
       },
       "G8_mcq_well_formed": {
         "malformed": 0,
         "pass": true
+      },
+      "G9_content_dedup": {
+        "rule_text_duplicate_groups": 0,
+        "rule_text_duplicate_count": 0,
+        "rule_text_duplicate_samples": {},
+        "mcq_question_duplicates": 0,
+        "pass": true
       }
     },
     "passed": false,
     "totals": {
-      "rules": 1542,
-      "mcq": 777
+      "rules": 8043,
+      "mcq": 6103
     }
   }
 ]
