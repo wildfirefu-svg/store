@@ -1,7 +1,7 @@
-# 经典文本历史 provenance 窄豁免设计 v24（已批准 Approved）
+# 经典文本历史 provenance 窄豁免设计 v25（已批准 Approved）
 
-状态：**v24 已批准（Approved）** ｜ 日期：2026-09-03 ｜ 冻结基点：`c5cff699fdb547bd9270acbebe1f485380848751`（branch `task/sanming-completion`）
-前版：v23 撤销无效批准并回退 Draft；v24 以有效用户正文第一人称批准句重新批准，变更见 §13。
+状态：**v25 已批准（Approved）** ｜ 日期：2026-09-03 ｜ 冻结基点：`c5cff699fdb547bd9270acbebe1f485380848751`（branch `task/sanming-completion`）
+前版：v24 批准提交被判 INVALID_APPROVAL（两句未以纯正文出现）；v25 以用户纯正文直接发送的 S 句与第一人称批准句重新批准，变更见 §13。
 **身份值约定：Git OID 一律 40 位十六进制；SHA-256 一律 64 位十六进制；全文一律完整值，禁止省略号截断。**
 
 ---
@@ -10,11 +10,12 @@
 
 - D1(c) 与 D2 公式：**已于 2026-09-03 用户在聊天正文以第一人称逐字批准**，批准锚点如下。
 - **§8 口径**：v3–v19 均提议 S；**已于 2026-09-03 用户在聊天正文逐字确认**（确认语句见 §8），记为设计口径 S。
-- **批准锚点（2026-09-03）**：
+- **批准锚点（2026-09-03，纯正文）**：
+  - S 确认语句：`选择 S：本设计不豁免三本完成书的 source 获取链；三书 source_e2e_status="FAIL"，派生 source_e2e_pass=false。`
   - 批准语句：`我批准本设计（D1(c)/D2），批准锚点按 §6 记录后启动 §10 实现。`
-  - 批准时 HEAD：`183148bbadf9c90ae91ac867e33d9d9bee4381cc`
-  - 批准前文档 SHA-256：`6F626474DC574BE177DFA0876B8117B85A4B918BDCACC9872AA64E703BB7FF55`（v23）
-- **无效批准尝试记录**：提交 `8966b1d952428f2dda39d2426ad028fd8d4ff2c4`（v22）被终审判为 `INVALID_APPROVAL`——所记批准句为流程描述/占位式措辞，非用户正文第一人称批准。**该提交不改写历史，仅保留此标记。**
+  - 批准时 HEAD：`5c5d4a3711f6fd9664603dcfa897568fe9a87211`
+  - 批准前文档 SHA-256：`1063A74835207B2F1B635DA0DB302E4C55BFEDCEE096CAC8196571FF6C10F21C`（v24）
+- **无效批准尝试记录**：提交 `8966b1d952428f2dda39d2426ad028fd8d4ff2c4`（v22，所记批准句为流程描述/占位式措辞，非用户正文第一人称批准）与 `5c5d4a3711f6fd9664603dcfa897568fe9a87211`（v24，两句仅见于附件/代理叙述，未以纯正文出现）均被判 `INVALID_APPROVAL`。**两提交不改写历史，仅保留此标记。**
 - 本设计已整体获批；§10 实施可启动。
 
 ## 1. 既有生产契约（对齐，不自创）
@@ -467,6 +468,6 @@ TDD 覆盖（详目同前）：冻结生成器（精确 schema/拒绝项/确定�
   - 静态链（`evidence_static_check`，§10-① 测试）：只比对 evidence 记录的 `verifier_blob_oid/verifier_sha256` 是否 == `HEAD:scripts/verify_sanming_source_chain.py` 的 blob OID/字节 sha256；不符 → `EVIDENCE_STATIC_MISMATCH`。
   - 执行链（`source_chain_check` 执行前，§10-③ 测试）：断言 `git hash-object <工作区 verifier 文件>` == 同 HEAD blob OID（disk==HEAD）；不符 → BLOCKED（reason `verifier_identity_mismatch`，属 §4.2 统一枚举）。
 
-## 13. v23 → v24 变更记录
+## 13. v24 → v25 变更记录
 
-1. **有效批准（流程）**：用户于 2026-09-03 在聊天正文以第一人称逐字批准 D1(c)/D2（`我批准本设计（D1(c)/D2），批准锚点按 §6 记录后启动 §10 实现。`）并逐字确认 §8 S 口径；流程状态由 Draft 转为 Approved；§0 记录批准锚点（批准语句、批准时 HEAD `183148bbadf9c90ae91ac867e33d9d9bee4381cc`、批准前文档 SHA-256）。**§10 实施可启动。**
+1. **有效批准（流程）**：用户于 2026-09-03 在聊天正文以**纯正文**直接发送 S 选择句与第一人称批准句（`我批准本设计（D1(c)/D2），批准锚点按 §6 记录后启动 §10 实现。`）；流程状态由 Draft 转为 Approved；§0 更新批准锚点（S 确认语句、批准语句、批准时 HEAD `5c5d4a3711f6fd9664603dcfa897568fe9a87211`、批准前文档 SHA-256）。v24 的 `5c5d4a3` 与 v22 的 `8966b1d` 均标记为无效批准尝试。**§10 实施可启动。**
