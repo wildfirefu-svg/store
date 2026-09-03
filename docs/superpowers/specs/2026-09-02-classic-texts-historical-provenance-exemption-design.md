@@ -1,22 +1,28 @@
-# 经典文本历史 provenance 窄豁免设计 v26（已批准 Approved）
+# 经典文本历史 provenance 窄豁免设计 v27.3（已批准）
 
-状态：**v26 已批准（Approved）** ｜ 日期：2026-09-03 ｜ 冻结基点：`c5cff699fdb547bd9270acbebe1f485380848751`（branch `task/sanming-completion`）
-前版：v25 记录批准状态；v26 以用户在本聊天正文直接发送的 S 句与第一人称批准句完成追认并刷新批准锚点，变更见 §13。
+状态：**v27.3 已批准（2026-09-03，批准锚点见 §0）** ｜ 日期：2026-09-03 ｜ 冻结基点：`c5cff699fdb547bd9270acbebe1f485380848751`（branch `task/sanming-completion`）
+前版：v26 已获有效批准；v27 修订 records 唯一性契约（§3/§5-E3，多重集合）；v27.1 修补 2 P0 + 1 P1 与省略号违规；v27.2 修正 E3 测试方案；v27.3 修正 E0 record_set_binding 误读当前 HEAD（P0），变更见 §13。
 **身份值约定：Git OID 一律 40 位十六进制；SHA-256 一律 64 位十六进制；全文一律完整值，禁止省略号截断。**
 
 ---
 
 ## 0. 提案状态
 
-- D1(c) 与 D2 公式：**已于 2026-09-03 用户在聊天正文以第一人称逐字批准**，批准锚点如下。
+- **v26 已获有效批准**（批准锚点见下）；**v27.3 已获有效批准**（records 唯一性契约修订 + 复审修补，见 §13，批准锚点见下）。
 - **§8 口径**：v3–v19 均提议 S；**已于 2026-09-03 用户在聊天正文逐字确认**（确认语句见 §8），记为设计口径 S。
-- **批准锚点（2026-09-03，本聊天正文直接授权）**：
+- **v26 批准锚点（2026-09-03，本聊天正文直接授权）**：
   - S 确认语句：`选择 S：本设计不豁免三本完成书的 source 获取链；三书 source_e2e_status="FAIL"，派生 source_e2e_pass=false。`
   - 批准语句：`我批准本设计（D1(c)/D2），批准锚点按 §6 记录后启动 §10 实现。`
   - 批准时 HEAD：`0909a957c5c6f4c7552014a214b5aabb2e9c6723`
   - 批准前文档 SHA-256：`FC1806E58DB8D450D84290B881146E28AEB0109E660DA07C45910793D831AC11`（v25）
 - **无效批准尝试记录**：提交 `8966b1d952428f2dda39d2426ad028fd8d4ff2c4`（v22，所记批准句为流程描述/占位式措辞，非用户正文第一人称批准）与 `5c5d4a3711f6fd9664603dcfa897568fe9a87211`（v24，两句仅见于附件/代理叙述，未以纯正文出现）均被判 `INVALID_APPROVAL`。**两提交不改写历史，仅保留此标记。**
-- 本设计已整体获批；§10 实施可启动。
+- **v27.3 批准锚点（2026-09-03，本聊天正文直接授权）**：
+  - 批准语句：`我批准 v27.3 records 多重集合契约修订，并批准按 §10 继续阶段①实施。`
+  - 批准时 HEAD：`63273ca074e5c38da71fe42f9a35d853bc9709ef`
+  - 批准前文档 SHA-256：`0716CE441A35FD173F3372A1F8676952A22FC4F2D443CA1EB6F5C1B7BAFD789F`（v27.3）
+- **v27.2 修订动因**：阶段 ① 首跑冻结基点 `c5cff699fdb547bd9270acbebe1f485380848751` 时发现 `qiongtongbaojian/quarantine_rules.jsonl` 存在同 `id` 不同内容的多条记录（qtbj_001_038/qtbj_050_009/qtbj_050_011 各 2 条），与 §3「同文件 id 唯一」冲突。**按用户裁决不改历史数据**，将 records 身份契约改为 `(id, sha256)` 多重集合（§3/§5-E3）。
+- **v27.3 修订动因**：v27.2 复审判 `evidence_static_check` 的 `record_set_binding` 误绑定当前 HEAD 聚合 blob（P0，v27.3）。**收窄为仅绑定 freeze 文件**（`frozen_manifest_file_sha256 == 冻结集文件字节 SHA`、`counts == 冻结集 records 多重计数`），不读取当前 HEAD 聚合 blob；当前 HEAD 与 BASE freeze 的多重集合比较由 §5-E3 独占并在 E1/E2 后执行（§4/§5-E3/§10-⑦）。
+- 本设计（v27.3 修订版）已获批（批准锚点见上），§10 阶段① 实施进行中。
 
 ## 1. 既有生产契约（对齐，不自创）
 
@@ -44,7 +50,10 @@
 
 ```text
 evidence_static_check —— 仅 Git blob/HEAD 内事实：schema、身份、冻结字段、record_count、
-                           record_set_binding、source_chain 的 HEAD blob SHA（pointer/manifest/
+                           record_set_binding（**仅绑定 freeze 文件：frozen_manifest_file_sha256 ==
+                           冻结集文件字节 SHA、counts == 冻结集 records 多重计数；不读取当前 HEAD
+                           聚合 blob，当前 HEAD 与 freeze 的多重集合比较由 §5-E3 独占**）、
+                           source_chain 的 HEAD blob SHA（pointer/manifest/
                            extracted）；不触碰外部 tar，不产生 BLOCKED。
                            失败 → 仅令该书 historical_exemption_valid=false
                            （错误码限于豁免链静态类，见 §5 优先级）。
@@ -60,7 +69,7 @@ source_chain_check  —— 外部证据：--archive-root 下的 tar（SHA/大小
 
 - 数据源：仅 `git show c5cff699fdb547bd9270acbebe1f485380848751:<path>`；16 聚合路径逐一处理；存在性规范化（14 present / 2 absent；空文件 blob `e69de29bb2d1d6434b8b29ae775ad8c2e48c5391` 与缺席严格区分）。
 - **frozen_at_commit 绑定（第 1 级：freeze 自身）**：`freeze.frozen_at_commit` 必须 == `c5cff699fdb547bd9270acbebe1f485380848751`（数据来源基点）。**`freeze` 生成时、`freeze --check` 时、以及正式报告入口的 E0（§5-E0，`E0_ok` 的重算输入之一）均机械断言**；填任意其他提交 → 拒绝，稳定错误码 `FROZEN_AT_COMMIT_MISMATCH`。注意：`frozen_at_commit` 语义是"数据来源的 Git 基点提交"，不是"生成动作发生时的 HEAD"。更高阶一致性见 §4/§5。
-- **freeze 静态错误分化（中优-1）**：freeze validator 除 `frozen_at_commit` 外的其余静态校验——顶层字段集、`books`/`kinds` 精确集、两态文件条目、`records` 条目集合（id 唯一/排序）、`counts` 一致性、重复 JSON 键、记录非对象/缺 `id`/`id` 非字符串——任一不匹配 → 稳定错误码 `FREEZE_STATIC_MISMATCH`（与 `FROZEN_AT_COMMIT_MISMATCH` 严格区分：后者仅指基点错）。
+- **freeze 静态错误分化（中优-1）**：freeze validator 除 `frozen_at_commit` 外的其余静态校验——顶层字段集、`books`/`kinds` 精确集、两态文件条目、`records` 条目集合（多重集合，按 `(id,sha256)` 排序）、`counts` 一致性、重复 JSON 键、记录非对象/缺 `id`/`id` 非字符串——任一不匹配 → 稳定错误码 `FREEZE_STATIC_MISMATCH`（与 `FROZEN_AT_COMMIT_MISMATCH` 严格区分：后者仅指基点错）。
 - **顶层字段精确集**：`schema_version:"1.0"`、`frozen_at_commit`（40 位，== 基点）、`generator_blob_oid`（40 位）、`books`、`counts`。缺一/多一拒绝。
 - **books 精确集**：键 == 四书集合（多书/缺书拒绝）；每书 kinds 键 == `{all_rules, all_mcq, quarantine_rules, quarantine_mcq}` 精确集。
 - **文件条目 schema（状态相关，交叉状态非法组合拒绝）**：
@@ -70,12 +79,12 @@ present=true  -> {"present": true,  "blob_oid": <40hex>, "byte_size": <int>=0, "
 present=false -> {"present": false, "blob_oid": null,   "byte_size": null,  "records": []}
 ```
 
-- **records 条目精确集**：`{"id": <str>, "sha256": <64hex>}`；按 `id` 排序；同文件 id 唯一。
+- **records 条目精确集**：`{"id": <str>, "sha256": <64hex>}`；序列化按 `(id,sha256)` 排序；**同一文件允许同名 `id` 多条（多重集合，保留重复次数；同 id 可对应不同 sha256）**。
 - `counts`：`{book: {kind: int}}`，与 records 实数一致。
 - 解析拒绝：重复 JSON 键、记录非对象、缺 `id`、`id` 非字符串。
 - canonical_record_sha256：`sha256(json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",",":")).encode("utf-8"))`。
 - 文件序列化：全局 canonical 规则（`json.dumps(obj, ensure_ascii=False, sort_keys=True, indent=2) + "\n"`，UTF-8 无 BOM，LF）。
-- 生成器自校验：重跑字节一致；`blob_oid` 以 `git rev-parse` 重验；`generator_blob_oid` 回填。
+- **`freeze --check` 全等重算契约（P0，v27.1 钉死）**：`freeze --check` 必须**从冻结基点 `c5cff699fdb547bd9270acbebe1f485380848751` 的 16 个聚合 Git blob 重建完整期望 freeze 对象**（含每文件 `blob_oid`/`byte_size`/`records` 的 `(id,sha256)` 多重集合、`counts` 与顶层字段，算法同 §3 生成路径），再与磁盘文件**canonical 字节全等**比对（`json.dumps(..., sort_keys=True, indent=2) + "\n"`）。任一差异——含：把某 record `sha256` 换成另一合法 64 位值（即使同步改 `counts` 或重复次数）、增删同 id 记录、改变重复次数、篡改 `blob_oid`/`byte_size`——一律拒绝，稳定错误码 `FREEZE_STATIC_MISMATCH`（基点错仍 `FROZEN_AT_COMMIT_MISMATCH`）。**纯静态自洽不足以通过 `freeze --check`；必须以 BASE 重建全等为准。** 生成时同此契约（生成器自校验：重跑字节一致；`blob_oid` 以 `git rev-parse` 重验；`generator_blob_oid` 回填）。
 
 ## 4. `historical_generation_evidence.json` 可执行 schema
 
@@ -109,7 +118,7 @@ freeze.frozen_at_commit
 **evidence_static_check 覆盖清单（仅 Git blob/HEAD 内事实；不触 tar、不产生 BLOCKED；失败错误码限于 `GENERATOR_IDENTITY_MISMATCH`/`FROZEN_AT_COMMIT_MISMATCH`/`EVIDENCE_STATIC_MISMATCH`，见 §5 优先级）**：
 
 - §3 freeze 全部静态校验（HEAD blob；`frozen_at_commit` 错 → `FROZEN_AT_COMMIT_MISMATCH`；其余 freeze 静态错 → `FREEZE_STATIC_MISMATCH`）；
-- evidence 顶层精确字段集、嵌套精确字段集与两态文件条目、record_count==冻结集长度、record_set_binding 计数与 §5-E3 一致（任一不匹配 → `EVIDENCE_STATIC_MISMATCH`）；
+- evidence 顶层精确字段集、嵌套精确字段集与两态文件条目、record_count==冻结集长度、record_set_binding **仅绑定 freeze**：`frozen_manifest_file_sha256` == 冻结集文件字节 SHA、`counts` == 冻结集 records 多重计数（任一不匹配 → `EVIDENCE_STATIC_MISMATCH`）；**不读取当前 HEAD 聚合 blob，不做 §5-E3 比对**（当前 HEAD 与 freeze 的多重集合比较由 E3 独占，§5-E3）；
 - source_chain 内 `pointer_file_sha256/pointer_blob_oid/manifest_file_sha256/manifest_blob_oid/extractor_*/parser_*/chapter_list_*` 及各 Git 输入（§4.1 路径）的 HEAD blob OID/SHA（任一不匹配 → `EVIDENCE_STATIC_MISMATCH`）；
 - source_chain 内 `verifier_blob_oid/verifier_sha256` 是否与 `HEAD:scripts/verify_sanming_source_chain.py` 的 blob OID/字节 sha256 相符（**仅比对 evidence 记录值 vs HEAD blob**；不符 → `EVIDENCE_STATIC_MISMATCH`。**不在此处核对工作区 verifier 文件**——那属于 source_chain_check 的 `verifier_identity_mismatch` BLOCKED，见 §12）；
 - `unproven_facts` 逐字符串相等（不匹配 → `EVIDENCE_STATIC_MISMATCH`）。
@@ -155,7 +164,7 @@ unproven_facts: [<str>, ...]（**完整 JSON 字面量见 §4.1，逐字符串�
 | generator_blob_oid / generator_sha256 | HEAD blob + 工作区文件 + freeze 镜像 | 六向全等断言（上文；错 → GENERATOR_IDENTITY_MISMATCH） |
 | artifact_files.* | 冻结基点 Git 对象 | `git rev-parse` / `git cat-file -s` / `git show`+sha256 |
 | record_count | 冻结集对应 records 长度 | 解析比对（不符 → EVIDENCE_STATIC_MISMATCH） |
-| record_set_binding | 冻结集文件 + 当前 HEAD 聚合 blob | 解析计数 + §5-E3 比对（不符 → EVIDENCE_STATIC_MISMATCH） |
+| record_set_binding | 冻结集文件 | 校验 `frozen_manifest_file_sha256` == freeze 文件字节 SHA、`counts` == freeze records 多重计数（不符 → EVIDENCE_STATIC_MISMATCH；**不读当前 HEAD 聚合 blob**，当前 HEAD 多重集合比对归 E3） |
 | source_chain.pointer/manifest/extracted（静态） | **HEAD Git blob**（§4.1 精确路径） | `git show`+sha256（不触 tar；不符 → EVIDENCE_STATIC_MISMATCH） |
 | source_chain.extractor/parser（静态） | Git 对象（§4.1 全长身份） | blob oid 比对 + sha256（不符 → EVIDENCE_STATIC_MISMATCH） |
 | source_chain.verifier（静态，仅记录值 vs HEAD） | `HEAD:scripts/verify_sanming_source_chain.py` | `git rev-parse` + `git show`+sha256，对比 evidence `verifier_blob_oid/verifier_sha256`（不符 → EVIDENCE_STATIC_MISMATCH；**不核对工作区文件**） |
@@ -278,7 +287,7 @@ GENERATOR_IDENTITY_MISMATCH   （优先）
    - **validator_code_sha256**：权威来源 = Git 对象 `git show c5cff699fdb547bd9270acbebe1f485380848751:scripts/validate_classic_distillation.py`；重算其字节 sha256；**E == R == 重算值**，三方全等。
    - 任一三方不等 → 豁免失效。
 
-**E3 记录集严格相等**：HEAD 聚合 blob 逐记录 `(kind,id,sha)` 与冻结集严格相等。
+**E3 记录集严格相等（多重集合）**：**E3 是唯一读取当前 HEAD 聚合 blob 并与 BASE freeze 多重集合比较的阶段，且在 E1/E2 之后执行**（E0 的 `record_set_binding` 仅绑定 freeze，不读当前 HEAD 聚合 blob；E1/E2 亦不触当前 HEAD 聚合 blob 的多重比较，见 §4）。HEAD 聚合 blob 逐记录 `(kind,id,sha)` 与冻结集**多重集合**严格相等——按 `(kind,id,sha)` 排序后逐项比对，保留重复次数，**不得用普通 `set` 丢失重复**。任一不匹配 → `E3_ok=false`。
 
 **公式（三态闭合）**：
 
@@ -365,7 +374,7 @@ source_e2e_pass   = (source_e2e_status == "PASS")
 
 ## 9. 未来运行衔接（本设计外）
 
-- E3 严格相等无放宽。首次正式生成运行前须另行升级 run_manifest 契约（逐 ID pre-run rule canonical SHA map）并单独设计采信路径；届时聚合文件变化使本豁免失效，新状态由新链全责。
+- E3 多重集合严格相等无放宽。首次正式生成运行前须另行升级 run_manifest 契约并单独设计采信路径；届时聚合文件变化使本豁免失效，新状态由新链全责。**未来 run_manifest 的 pre-run 规则索引不得再按单值 `id → canonical SHA` map**（无法表示同一 id 对应多条不同记录，也丢失重复次数）；必须采用 `(id, sha256)` 规范化多重集合（按 `(id,sha256)` 排序、保留重复次数，或等价地带 count 的列表），与 §3/§5-E3 多重集合语义一致。
 
 ## 10. TDD 计划与**工件提交顺序冻结**（批准后执行；每阶段精确文件集逐字冻结）
 
@@ -379,6 +388,9 @@ source_e2e_pass   = (source_e2e_status == "PASS")
    不测试 source_chain_check 的 BLOCKED 行为——那依赖 ③ 的 verifier，见下）：
    - freeze 自身基点绑定（非基点 → FROZEN_AT_COMMIT_MISMATCH）
    - freeze schema/字段集/records/计数 篡改 → FREEZE_STATIC_MISMATCH
+   - records 多重集合：同 id 不同 sha256 多条允许冻结；删记录/counts 不一致/改 sha256 格式/破坏
+     (id,sha256) 排序 → FREEZE_STATIC_MISMATCH
+   - **freeze --check 全等重算（P0，v27.1）**：修改磁盘 freeze——用**合法 64 位** SHA 替换某 record 的 sha256、增删同 id 记录、改变重复次数、篡改 blob_oid/byte_size——均须因与 BASE 重建期望对象字节不等而拒绝（FREEZE_STATIC_MISMATCH）；验证"纯自洽但非 BASE 重建值"不能通过 --check
    - evidence 阶段（freeze==evidence==BASE,非基点 → FROZEN_AT_COMMIT_MISMATCH；不涉及 E/R/pointer）
    - 生成器六向身份（改生成器/仅篡改 generator_sha256 → GENERATOR_IDENTITY_MISMATCH）
    - evidence_static_check 结构/计数/静态 SHA 篡改 → EVIDENCE_STATIC_MISMATCH
@@ -449,6 +461,12 @@ for book in [ditiansui, qiongtongbaojian, sanmingtonghui, zipingzhenquan]:
                                                     错误优先级短路（GENERATOR→FROZEN→FREEZE_STATIC→
                                                     EVIDENCE_STATIC→BASELINE）、
                                                     三态聚合、exit 码、E4 顺序阻断）
+   E3 多重性负向（P0，v27.3）：**保持 freeze/evidence/E/R/pointer 全部有效且不变**，
+   在 BASE 的后继 HEAD 中修改聚合 blob——替换记录内容产生合法新 sha256、增删同 id 记录、
+   改变重复次数。E0 对 BASE freeze 仍全部通过（不伪造/篡改冻结集，不改
+   artifact_files.file_sha256——那是源聚合文件的真实字节 SHA），随后 E3 对当前 HEAD
+   多重集合重算并拒绝；**断言 `E0_ok=true`、E1/E2 通过、最终仅 `E3_ok=false`**
+   （错误来自 E3 而非 E0/前置门禁——E0 的 record_set_binding 仅绑定 freeze，不读当前 HEAD）；
 ⑧ 门禁全跑（零提交）
 ```
 
@@ -460,6 +478,7 @@ TDD 覆盖（详目同前）：冻结生成器（精确 schema/拒绝项/确定�
 
 1. ~~§8 口径逐字确认~~ 已完成（2026-09-03，见 §8）。
 2. ~~D1(c)/D2 第一人称逐字批准~~ 已完成（2026-09-03，见 §0 批准锚点）。
+3. ~~**v27.3 修订版整体批准**（records 唯一性契约修订 + 复审修补，§13）~~ 已完成（2026-09-03，批准锚点见 §0）。下一步：同步修正 C-gen 两文件并提交（§10-①）。
 
 ## 12. source verifier 身份绑定
 
@@ -468,6 +487,13 @@ TDD 覆盖（详目同前）：冻结生成器（精确 schema/拒绝项/确定�
   - 静态链（`evidence_static_check`，§10-① 测试）：只比对 evidence 记录的 `verifier_blob_oid/verifier_sha256` 是否 == `HEAD:scripts/verify_sanming_source_chain.py` 的 blob OID/字节 sha256；不符 → `EVIDENCE_STATIC_MISMATCH`。
   - 执行链（`source_chain_check` 执行前，§10-③ 测试）：断言 `git hash-object <工作区 verifier 文件>` == 同 HEAD blob OID（disk==HEAD）；不符 → BLOCKED（reason `verifier_identity_mismatch`，属 §4.2 统一枚举）。
 
-## 13. v25 → v26 变更记录
+## 13. v26 → v27.3 变更记录
 
-1. **正文追认与锚点刷新（流程）**：用户于 2026-09-03 在本聊天正文直接发送 S 选择句与第一人称批准句（`我批准本设计（D1(c)/D2），批准锚点按 §6 记录后启动 §10 实现。`）；§0 将批准时 HEAD 更新为 `0909a957c5c6f4c7552014a214b5aabb2e9c6723`，将批准前文档 SHA-256 更新为 v25 的精确字节 SHA。既有历史与无效批准尝试记录不改写。**§10 实施可启动。**
+1. **records 身份契约改为多重集合（P0，修订）**：阶段 ① 首跑发现冻结基点 `c5cff699fdb547bd9270acbebe1f485380848751` 的 `qiongtongbaojian/quarantine_rules.jsonl` 存在同 `id` 不同内容的多条记录（qtbj_001_038/qtbj_050_009/qtbj_050_011 各 2 条），与 §3「同文件 id 唯一」冲突。**按用户裁决不改历史数据**：§3 取消 id 唯一要求，records 身份改为 `(id,sha256)` 多重集合、按 `(id,sha256)` 排序、保留重复次数；§5-E3 改为逐记录多重集合严格相等（按 `(kind,id,sha)` 排序后逐项比对，禁用普通 set）。
+2. **未来 manifest 按多重集合表示（P0，v27.1 复审）**：§9 明确未来 run_manifest 的 pre-run 规则索引不得用单值 `id → canonical SHA` map，改用 `(id,sha256)` 规范化多重集合（或带 count 列表），与 §3/§5-E3 语义一致。
+3. **`freeze --check` 全等重算契约（P0，v27.1 复审）**：§3 钉死 `freeze --check` 必须从冻结基点 16 个聚合 blob 重建完整期望 freeze 对象并与磁盘 canonical 字节全等；纯静态自洽（合法 SHA 替换/同步 counts/改重复次数）不得通过。
+4. **E3 多重性负向测试方案修正（P0，v27.2 复审）**：v27.1 的方案（篡改冻结集 + 同步外层哈希）会被 E0 的 BASE freeze 重建先拦截、到不了 E3，且 `artifact_files.file_sha256` 是源聚合文件真实字节 SHA、不应随伪造 freeze 修改。v27.2 改为：**保持 freeze/evidence/E/R/pointer 全部有效且不变，在 BASE 后继 HEAD 修改聚合 blob**（替换记录内容产生合法新 sha256、增删同 id 记录、改重复次数）——E0 对 BASE freeze 仍通过，E3 对当前 HEAD 多重集合重算拒绝，断言最终错误来自 E3 而非前置门禁。§10-① freeze --check 全等重算测试保留，删除无对应 freeze 字段的"外层哈希"措辞。
+5. **省略号违规修正（v27.1）**：全文的 `c5cff699` 前 8 位省略写法替换为完整 40 位 OID `c5cff699fdb547bd9270acbebe1f485380848751`（§0/§13 及文档头「全文一律完整值」规则）。
+6. **E0 `record_set_binding` 职责收窄（P0，v27.3 复审）**：v27.2 把 `record_set_binding` 与「当前 HEAD 聚合 blob + §5-E3 比对」同放 `evidence_static_check`，后继 HEAD 聚合数据一漂移 E0 先报 `EVIDENCE_STATIC_MISMATCH`，v27.2 设计的测试到不了独立 E3。修复：`record_set_binding` 静态校验仅绑定 freeze（`frozen_manifest_file_sha256 == 冻结集文件字节 SHA`、`counts == 冻结集 records 多重计数`），**不读取当前 HEAD 聚合 blob**；当前 HEAD 与 BASE freeze 的多重集合比较由 §5-E3 独占，且在 E1/E2 后执行。§10-⑦ E3 负向测试断言 `E0_ok=true`、E1/E2 通过、最终仅 `E3_ok=false`（错误来自 E3 而非 E0/前置门禁）。
+
+**v27.3 已获批准（2026-09-03，批准锚点见 §0），同步修正 C-gen 两文件进行中。**
