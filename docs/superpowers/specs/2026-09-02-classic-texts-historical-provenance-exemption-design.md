@@ -1,17 +1,21 @@
-# 经典文本历史 provenance 窄豁免设计 v23（D1(c) 提案待审）
+# 经典文本历史 provenance 窄豁免设计 v24（已批准 Approved）
 
-状态：**v23 草案待审（APPROVABLE）** ｜ 日期：2026-09-03 ｜ 冻结基点：`c5cff699fdb547bd9270acbebe1f485380848751`（branch `task/sanming-completion`）
-前版：v22 批准提交被判 INVALID_APPROVAL（授权非用户正文第一人称批准句）；v23 撤销该批准并标记无效尝试，变更见 §13。
+状态：**v24 已批准（Approved）** ｜ 日期：2026-09-03 ｜ 冻结基点：`c5cff699fdb547bd9270acbebe1f485380848751`（branch `task/sanming-completion`）
+前版：v23 撤销无效批准并回退 Draft；v24 以有效用户正文第一人称批准句重新批准，变更见 §13。
 **身份值约定：Git OID 一律 40 位十六进制；SHA-256 一律 64 位十六进制；全文一律完整值，禁止省略号截断。**
 
 ---
 
 ## 0. 提案状态
 
-- D1(c) 与 D2 公式为**提案待审**（提案来源：用户聊天正文 2026-09-02）。
-- **§8 口径**：v3–v19 均提议 S，**仍待用户在聊天正文逐字确认**（确认语句见 §11）后方可记为设计口径。
-- **无效批准尝试记录**：提交 `8966b1d952428f2dda39d2426ad028fd8d4ff2c4`（v22）被终审判为 `INVALID_APPROVAL`——所记批准句为流程描述/占位式措辞，非用户正文第一人称批准；§8 S 亦非用户正文直接确认。**该提交不改写历史，仅于此标记为无效批准尝试。**
-- 本设计整体获批前，任何实现不得引用"已批准"；§10 实施继续阻塞。
+- D1(c) 与 D2 公式：**已于 2026-09-03 用户在聊天正文以第一人称逐字批准**，批准锚点如下。
+- **§8 口径**：v3–v19 均提议 S；**已于 2026-09-03 用户在聊天正文逐字确认**（确认语句见 §8），记为设计口径 S。
+- **批准锚点（2026-09-03）**：
+  - 批准语句：`我批准本设计（D1(c)/D2），批准锚点按 §6 记录后启动 §10 实现。`
+  - 批准时 HEAD：`183148bbadf9c90ae91ac867e33d9d9bee4381cc`
+  - 批准前文档 SHA-256：`6F626474DC574BE177DFA0876B8117B85A4B918BDCACC9872AA64E703BB7FF55`（v23）
+- **无效批准尝试记录**：提交 `8966b1d952428f2dda39d2426ad028fd8d4ff2c4`（v22）被终审判为 `INVALID_APPROVAL`——所记批准句为流程描述/占位式措辞，非用户正文第一人称批准。**该提交不改写历史，仅保留此标记。**
+- 本设计已整体获批；§10 实施可启动。
 
 ## 1. 既有生产契约（对齐，不自创）
 
@@ -171,7 +175,7 @@ unproven_facts: [<str>, ...]（**完整 JSON 字面量见 §4.1，逐字符串�
 ]
 ```
 
-不豁免：三本完成书原始文本获取过程（§8=S 提案，待裁定）。
+不豁免：三本完成书原始文本获取过程（§8=S 已确认）。
 
 ```text
 BASE  = c5cff699fdb547bd9270acbebe1f485380848751
@@ -327,7 +331,7 @@ for book in 四书:
             git_root, archive_root
         )  # 即使 provenance/E0 失败也必须执行
     else:
-        source_result = FAIL  # 待批准的 S 口径；批准前不得实施
+        source_result = FAIL  # S 口径（§8 已确认）
 
     aggregate(provenance_result, source_result)
 ```
@@ -335,7 +339,7 @@ for book in 四书:
   即：即使 `evidence_static_check` / E0 失败，`source_chain_check` 仍必须执行以发现 `archive_root_missing`/`archive_*`/`verifier_identity_mismatch` 并令顶层 exit=3。**不得写成静态失败后提前 return。**
 - **参数链冻结（两个同级入口，`generate_report` 统一编排）**：CLI `--archive-root` → `generate_report(archive_root=...)`，在逐书循环内独立编排两条同级链——provenance 链 `evaluate_provenance_admissibility(book_dir, git_root)`（**不含 `archive_root` 参数、不调用 source checker**，仅 §5 三态判定 + E0 静态校验）；source 链仅 `sanmingtonghui` 调 `verify_sanming_source_chain(git_root, archive_root)`（`source_chain_check` 的执行体，即便 provenance/E0 失败仍无条件执行），其余三书 `source_result = FAIL`（§8 S 口径）。**三命通会在书集内而 `archive_root` 缺失 → fail-closed：`source_e2e_status=BLOCKED`（reason `archive_root_missing`，属 §4.2 统一枚举），CLI exit 3**，不得静默跳过。E0 同源校验在 `generate_report` 内对每本书于 §5 provenance 状态判定后执行（产出 `E0_ok`，仅 MISSING 参与 admissible）。
 - **base 冻结**：报告链强制 `base == c5cff699fdb547bd9270acbebe1f485380848751`（模块常量）；非冻结 base 拒绝。独立核验器的 `--base` 仅供诊断，不进入报告链。
-- 逐书：`content_gates_pass` = G1–G9 全过；`provenance_admissible` = §5 三态公式；`source_e2e_status` ∈ {PASS, FAIL, BLOCKED}：三命通会 = `source_chain_check`（OK→PASS，failures→FAIL，BLOCKED→BLOCKED）；三本完成书 = **FAIL**（§8，待裁定）。
+- 逐书：`content_gates_pass` = G1–G9 全过；`provenance_admissible` = §5 三态公式；`source_e2e_status` ∈ {PASS, FAIL, BLOCKED}：三命通会 = `source_chain_check`（OK→PASS，failures→FAIL，BLOCKED→BLOCKED）；三本完成书 = **FAIL**（§8，已确认 S）。
 - **顶层状态机（source BLOCKED 独立且上限；豁免链静态错误仅影响 admissible 布尔）**：
 
 ```text
@@ -351,11 +355,11 @@ source_e2e_pass   = (source_e2e_status == "PASS")
 - **CLI exit 码**：任一书 BLOCKED → **3**（与豁免链静态错误同时存在时亦为 3，BLOCKED 优先）；否则 `overall_pass=false` → **1**；全部通过 → **0**。
 - 顶层其余：`content_gates_pass = AND(四书)`；`provenance_admissible_all = AND(四书)`；`overall_pass = content_gates_pass AND provenance_admissible_all AND source_e2e_pass`（BLOCKED 时 overall 输出 false 且顶层 status=BLOCKED）。
 - 展示：`provenance_state` / `provenance_ok` / `historical_exemption_valid` / `provenance_admissible` / `source_e2e_status` 逐书分离；豁免与 S 事实入 `known_limitations`；豁免链失败错误码（GENERATOR/FROZEN/FREEZE_STATIC/EVIDENCE_STATIC/BASELINE）与 source BLOCKED reason 分列展示互不混淆。
-- 当前树预期：四书 provenance 均 MISSING；三命通会 G7 FAIL → `content_gates_pass=false`；三本书 source_e2e=FAIL（待裁定确认 S）→ `overall_pass=false`，exit 1。
+- 当前树预期：四书 provenance 均 MISSING；三命通会 G7 FAIL → `content_gates_pass=false`；三本书 source_e2e=FAIL（§8 已确认 S）→ `overall_pass=false`，exit 1。
 
 ## 8. source e2e 口径
 
-- 提议 S：三本完成书 `source_e2e_status=FAIL`（gate2 只证迁移等值，不证获取链）；本设计只处理模型 run manifest 缺失。**待用户聊天正文逐字确认（§11）。**
+- **已确认 S（2026-09-03 用户聊天正文逐字确认）**：三本完成书 `source_e2e_status=FAIL`（gate2 只证迁移等值，不证获取链）；本设计只处理模型 run manifest 缺失。确认语句：`选择 S：本设计不豁免三本完成书的 source 获取链；三书 source_e2e_status="FAIL"，派生 source_e2e_pass=false。`
 - T（如将来需要）：另立设计 + 独立审批链，绑定原文精确 blob/SHA，声明"不证明原始获取过程"。
 
 ## 9. 未来运行衔接（本设计外）
@@ -453,8 +457,8 @@ TDD 覆盖（详目同前）：冻结生成器（精确 schema/拒绝项/确定�
 
 ## 11. 待用户动作
 
-1. §8 口径逐字确认：`选择 S：本设计不豁免三本完成书的 source 获取链；三书 source_e2e_status="FAIL"，派生 source_e2e_pass=false。`
-2. 本设计整体批准（D1(c)/D2 第一人称逐字批准语句），批准锚点按 §6 记录后启动 §10 实现。
+1. ~~§8 口径逐字确认~~ 已完成（2026-09-03，见 §8）。
+2. ~~D1(c)/D2 第一人称逐字批准~~ 已完成（2026-09-03，见 §0 批准锚点）。
 
 ## 12. source verifier 身份绑定
 
@@ -463,6 +467,6 @@ TDD 覆盖（详目同前）：冻结生成器（精确 schema/拒绝项/确定�
   - 静态链（`evidence_static_check`，§10-① 测试）：只比对 evidence 记录的 `verifier_blob_oid/verifier_sha256` 是否 == `HEAD:scripts/verify_sanming_source_chain.py` 的 blob OID/字节 sha256；不符 → `EVIDENCE_STATIC_MISMATCH`。
   - 执行链（`source_chain_check` 执行前，§10-③ 测试）：断言 `git hash-object <工作区 verifier 文件>` == 同 HEAD blob OID（disk==HEAD）；不符 → BLOCKED（reason `verifier_identity_mismatch`，属 §4.2 统一枚举）。
 
-## 13. v22 → v23 变更记录
+## 13. v23 → v24 变更记录
 
-1. **撤销无效批准（P0）**：提交 `8966b1d952428f2dda39d2426ad028fd8d4ff2c4`（v22）被判 `INVALID_APPROVAL`——批准锚点文本为流程描述/占位式措辞而非用户正文第一人称批准句，§8 S 亦非用户正文直接确认。v23 不改写历史，将状态由 Approved 回退为 Draft/APPROVABLE，§0/§8/§7/§11 措辞全部恢复"待确认/待裁定"，并在 §0 记录该提交为无效批准尝试。§10 实施继续阻塞，直至用户正文直接给出 S 选择句与第一人称 D1(c)/D2 批准句。
+1. **有效批准（流程）**：用户于 2026-09-03 在聊天正文以第一人称逐字批准 D1(c)/D2（`我批准本设计（D1(c)/D2），批准锚点按 §6 记录后启动 §10 实现。`）并逐字确认 §8 S 口径；流程状态由 Draft 转为 Approved；§0 记录批准锚点（批准语句、批准时 HEAD `183148bbadf9c90ae91ac867e33d9d9bee4381cc`、批准前文档 SHA-256）。**§10 实施可启动。**
