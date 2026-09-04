@@ -1,0 +1,186 @@
+{
+  "artifact_files": {
+    "ditiansui": {
+      "all_mcq": {
+        "blob_oid": "3d5b2c5cec822fddad47c61d8fc683bda9b088cb",
+        "byte_size": 377701,
+        "file_sha256": "f23938c54b2bdfc838db6d059a6f4702bd5b47654bf1e6f92ebe25e5c79e2d87",
+        "present": true,
+        "record_count": 646
+      },
+      "all_rules": {
+        "blob_oid": "df67639d2ffbc1904f7249e1bf6212e0799ff2d8",
+        "byte_size": 342388,
+        "file_sha256": "50841758bc52deb99d07a1e7f9ddf2475f749e3b1760c8a43acc47e08deb1298",
+        "present": true,
+        "record_count": 799
+      },
+      "quarantine_mcq": {
+        "blob_oid": "74f24879474f54edda06f9336051c4e6acc10861",
+        "byte_size": 57512,
+        "file_sha256": "65d1f20b4a575b91b7de8dfc17ed28efdc0b34ce6d29bedb5a1c159799e77a66",
+        "present": true,
+        "record_count": 88
+      },
+      "quarantine_rules": {
+        "blob_oid": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "byte_size": 0,
+        "file_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "present": true,
+        "record_count": 0
+      }
+    },
+    "qiongtongbaojian": {
+      "all_mcq": {
+        "blob_oid": "f6ea4a624a906ebae5971bde9f896a9077c96bcf",
+        "byte_size": 1040860,
+        "file_sha256": "a785dfb6bef72b34d648e03db2332f9b84a434d5b4a9deb6add78c77d8b64faf",
+        "present": true,
+        "record_count": 2120
+      },
+      "all_rules": {
+        "blob_oid": "dc10d5749821e930a4ccb4af99ed25866094d0c5",
+        "byte_size": 906027,
+        "file_sha256": "894901a1a6e9095d7201245fbe4231b94c4e09d36aea372ff9090c26502c5007",
+        "present": true,
+        "record_count": 2312
+      },
+      "quarantine_mcq": {
+        "blob_oid": "0f1fb5a3096449eff6a3a4852c0e9c717debba55",
+        "byte_size": 68548,
+        "file_sha256": "f5636a10e7aca3211ffc8699f576d8d1d66dd81b0f498f922c3d127c19818204",
+        "present": true,
+        "record_count": 123
+      },
+      "quarantine_rules": {
+        "blob_oid": "e8c7c13e1152206ef406fd6fdfaeebe53a34bfca",
+        "byte_size": 72403,
+        "file_sha256": "10f5f5b8ad4d730e3659d1d3b1168000e295687ea4b44fa84a66d22b4f1a2231",
+        "present": true,
+        "record_count": 187
+      }
+    },
+    "sanmingtonghui": {
+      "all_mcq": {
+        "blob_oid": "05bbad8737e27d3378657b94b11814e30ecd35b4",
+        "byte_size": 4967120,
+        "file_sha256": "63d436f609333deaa45ab2af117b9ea0458733b8c15773cc52d85664129d6215",
+        "present": true,
+        "record_count": 6103
+      },
+      "all_rules": {
+        "blob_oid": "97716ca0455e59167944569380b5fb8c0983ba46",
+        "byte_size": 5295423,
+        "file_sha256": "6217f4c685006d6663379a0102d8b1a602fd59dec47068f56a6f1a478ad765d0",
+        "present": true,
+        "record_count": 8043
+      },
+      "quarantine_mcq": {
+        "blob_oid": null,
+        "byte_size": null,
+        "file_sha256": null,
+        "present": false,
+        "record_count": 0
+      },
+      "quarantine_rules": {
+        "blob_oid": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "byte_size": 0,
+        "file_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "present": true,
+        "record_count": 0
+      }
+    },
+    "zipingzhenquan": {
+      "all_mcq": {
+        "blob_oid": "0e4c1fec82c9e302c00c85667b2a206a70addcbc",
+        "byte_size": 81623,
+        "file_sha256": "a3d5075adfcd5a9a6acb10fcfd56810d60fd8293bd19dee07f15c0b3c5ae890c",
+        "present": true,
+        "record_count": 155
+      },
+      "all_rules": {
+        "blob_oid": "6ccf684bc1bc393050e5b2d7c95884c324648e42",
+        "byte_size": 69163,
+        "file_sha256": "2018f0653669ff843f20a6cc190d31340fa2155a54702cc4a4661ecc2c9ab3e3",
+        "present": true,
+        "record_count": 156
+      },
+      "quarantine_mcq": {
+        "blob_oid": null,
+        "byte_size": null,
+        "file_sha256": null,
+        "present": false,
+        "record_count": 0
+      },
+      "quarantine_rules": {
+        "blob_oid": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+        "byte_size": 0,
+        "file_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "present": true,
+        "record_count": 0
+      }
+    }
+  },
+  "frozen_at_commit": "c5cff699fdb547bd9270acbebe1f485380848751",
+  "generator_blob_oid": "9c9be9afe266a8acb0c37015cfac4b8937935ddd",
+  "generator_sha256": "a4c12fcca8f0bc8e3b5037bb101709dcd48c952590f3ba2e93a113de8c310820",
+  "record_set_binding": {
+    "counts": {
+      "ditiansui": {
+        "all_mcq": 646,
+        "all_rules": 799,
+        "quarantine_mcq": 88,
+        "quarantine_rules": 0
+      },
+      "qiongtongbaojian": {
+        "all_mcq": 2120,
+        "all_rules": 2312,
+        "quarantine_mcq": 123,
+        "quarantine_rules": 187
+      },
+      "sanmingtonghui": {
+        "all_mcq": 6103,
+        "all_rules": 8043,
+        "quarantine_mcq": 0,
+        "quarantine_rules": 0
+      },
+      "zipingzhenquan": {
+        "all_mcq": 155,
+        "all_rules": 156,
+        "quarantine_mcq": 0,
+        "quarantine_rules": 0
+      }
+    },
+    "frozen_manifest_file_sha256": "aeaca3d28a16b3278fdf8da1d0c1e0895fafbcbe6c5e4682b72f14ccd1675944"
+  },
+  "schema_version": "1.0",
+  "source_chain": {
+    "sanmingtonghui": {
+      "chapter_list_blob_oid": "70c5029c29c3443ea2b149a749e7ba6aef904779",
+      "extractor_blob_oid": "4bbd6e1a2717d932f0f33bb9bbce4f7ed24db463",
+      "extractor_sha256": "afa691ef3568c94cc34a04da60e75c492f1faba6cfd8c2e8c16827ac33f6ab1d",
+      "manifest_blob_oid": "662fbe6013c11b3bc58a3393ef1168ea82b05eca",
+      "manifest_file_sha256": "7024760851374217ec3c61422e70fbd2d6a1deb3d48d1fa594d120215fdace61",
+      "parser_blob_oid": "1842a8d5c732b19a233baa72fd7fec496217722d",
+      "pointer_blob_oid": "b423b726afe4890618b5f0796162ba6d4120b7da",
+      "pointer_file_sha256": "93b2b140e54c6f9e08d3d91c00a01a5e6d0443e76bd77b282f3467a6d3763c04",
+      "replay": {
+        "c1_pass": 303,
+        "c2_pass": 303,
+        "c3_pass": 303,
+        "chapters_expected": 303,
+        "failures": []
+      },
+      "tar_relative_path": "cf984581ea0a8e8028949733ed98c5bb85f54972723033c489b34e51b48d7cf9.tar",
+      "tar_sha256": "cf984581ea0a8e8028949733ed98c5bb85f54972723033c489b34e51b48d7cf9",
+      "tar_size": 7127040,
+      "verifier_blob_oid": "8298d30c7765543a8fec2baa00c2b8fb9e3080b8",
+      "verifier_sha256": "f50e0f36a1f5346187c18ef4e1c246d16322102c8ecc519054405ba1ca51f0f8"
+    }
+  },
+  "unproven_facts": [
+    "四书聚合工件集（all_rules/all_mcq/quarantine_rules/quarantine_mcq）背后没有满足正式契约的归档模型 run manifest（正式契约要求：manifest_sha256 存在，manifest.immutable 为满足冻结字段契约的对象，api_generation.verification_level 等于 full）。",
+    "本豁免仅覆盖上述历史生成运行缺正式 run manifest 这一事实，不延伸到任何未来生成运行。",
+    "三本完成书（ditiansui/zipingzhenquan/qiongtongbaojian）的原始文本获取过程不被本证据证明（见设计 §8=S）。"
+  ]
+}
