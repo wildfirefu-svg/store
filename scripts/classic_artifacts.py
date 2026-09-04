@@ -1350,6 +1350,26 @@ EXPERIMENT_ID = "sanming-303-completion"
 EXEMPT_ALLOWLIST = ("missing_upstream_response_body",)
 NON_EXEMPT_ALLOWLIST = ("artifact_integrity", "quality_gates", "future_generation_provenance")
 
+# ---------------------------------------------------------------------------
+# §6/§10-⑤：v2.0 豁免链契约（历史 provenance 窄豁免设计）
+# ---------------------------------------------------------------------------
+BASE_COMMIT = "c5cff699fdb547bd9270acbebe1f485380848751"
+V2_BOOKS = ("ditiansui", "qiongtongbaojian", "sanmingtonghui", "zipingzhenquan")
+V2_EXEMPTED_CHECKS = ("missing_formal_model_run_manifest",)
+V2_NON_EXEMPT_CHECKS = ("artifact_integrity", "quality_gates", "future_generation_provenance")
+V2_REQUEST_FIELDS = frozenset({
+    "schema_version", "book", "artifact_manifest_sha256", "baseline_commit",
+    "validator_code_sha256", "historical_record_freeze_sha256",
+    "historical_generation_evidence_sha256", "exempted_checks", "non_exempt_checks",
+    "author", "date", "parent_commit",
+})
+V2_RECEIPT_FIELDS = frozenset({
+    "schema_version", "exemption_request_sha256", "baseline_commit",
+    "artifact_manifest_sha256", "validator_code_sha256",
+    "historical_record_freeze_sha256", "historical_generation_evidence_sha256",
+    "parent_commit", "approver", "approved_at",
+})
+
 
 class HistoricalArtifactDriftError(ValueError):
     pass
@@ -1359,7 +1379,28 @@ def exemption_request_sha256(e: dict) -> str:
     return hashlib.sha256(json.dumps(e, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")).hexdigest()
 
 
+def _verify_exemption_request_v2(e: dict) -> bool:
+    # §6 v2.0 E 请求精确字段集（12 项，缺一/多一拒绝）
+    if not isinstance(e, dict) or set(e) != set(V2_REQUEST_FIELDS):
+        raise ValueError(f"v2 exemption request fields must be exactly {sorted(V2_REQUEST_FIELDS)}")
+    if e["schema_version"] != "2.0": raise ValueError("v2 exemption request schema_version must be \"2.0\"")
+    if e["book"] not in V2_BOOKS: raise ValueError(f"v2 exemption request book must be one of {V2_BOOKS}")
+    if e["baseline_commit"] != BASE_COMMIT: raise ValueError("v2 exemption request baseline_commit must equal the frozen base")
+    for f in ("artifact_manifest_sha256", "validator_code_sha256", "historical_record_freeze_sha256", "historical_generation_evidence_sha256"):
+        if not _is_64hex(e[f]): raise ValueError(f"v2 exemption request {f} must be 64-hex")
+    if list(e["exempted_checks"]) != list(V2_EXEMPTED_CHECKS): raise ValueError(f"v2 exemption request exempted_checks must be exactly {list(V2_EXEMPTED_CHECKS)}")
+    if list(e["non_exempt_checks"]) != list(V2_NON_EXEMPT_CHECKS): raise ValueError(f"v2 exemption request non_exempt_checks must be exactly {list(V2_NON_EXEMPT_CHECKS)}")
+    if not (isinstance(e["author"], str) and e["author"]): raise ValueError("v2 exemption request author must be a non-empty string")
+    if not (isinstance(e["date"], str) and e["date"]): raise ValueError("v2 exemption request date must be a non-empty string")
+    if not _is_40hex(e["parent_commit"]): raise ValueError("v2 exemption request parent_commit must be 40-hex")
+    for forbidden in ("approval_receipt_sha256", "approval_commit", "approver", "approved_at"):
+        if forbidden in e: raise ValueError(f"exemption request must not contain {forbidden}")
+    return True
+
+
 def verify_exemption_request(e: dict) -> bool:
+    if isinstance(e, dict) and e.get("schema_version") == "2.0":
+        return _verify_exemption_request_v2(e)
     for k in ("book", "artifact_manifest_sha256", "baseline_commit", "validator_code_sha256", "exempted_checks", "non_exempt_checks", "author", "date"):
         if k not in e: raise ValueError(f"exemption request missing {k}")
     if not set(e["exempted_checks"]) <= set(EXEMPT_ALLOWLIST): raise ValueError("exempted_checks outside allowlist")
@@ -1370,7 +1411,27 @@ def verify_exemption_request(e: dict) -> bool:
     return True
 
 
+def _verify_approval_receipt_v2(r: dict, e: dict) -> bool:
+    # §6 v2.0 R 回执精确字段集（10 项）+ 逐项镜像复核
+    if not isinstance(r, dict) or set(r) != set(V2_RECEIPT_FIELDS):
+        raise ValueError(f"v2 approval receipt fields must be exactly {sorted(V2_RECEIPT_FIELDS)}")
+    if r["schema_version"] != "2.0": raise ValueError("v2 approval receipt schema_version must be \"2.0\"")
+    if r["exemption_request_sha256"] != exemption_request_sha256(e): raise ValueError("approval receipt exemption_request_sha256 mismatch")
+    for f in ("baseline_commit", "artifact_manifest_sha256", "validator_code_sha256",
+              "historical_record_freeze_sha256", "historical_generation_evidence_sha256", "parent_commit"):
+        if r[f] != e.get(f): raise ValueError(f"v2 approval receipt {f} does not mirror the exemption request")
+    if not (isinstance(r["approver"], str) and r["approver"]): raise ValueError("approval receipt missing approver/approved_at")
+    if not (isinstance(r["approved_at"], str) and r["approved_at"]): raise ValueError("approval receipt missing approver/approved_at")
+    return True
+
+
 def verify_approval_receipt(r: dict, e: dict) -> bool:
+    # fail-closed 分派：E 或 R 任一声明 2.0 即走 v2 校验（v1 形态回执绑 v2 E 会被
+    # v2 精确字段集拒绝；v2 回执绑 v1 E 会因 v1 E 缺 freeze/evidence/parent 镜像被拒）
+    if (isinstance(r, dict) and r.get("schema_version") == "2.0") or (
+        isinstance(e, dict) and e.get("schema_version") == "2.0"
+    ):
+        return _verify_approval_receipt_v2(r, e)
     if r.get("exemption_request_sha256") != exemption_request_sha256(e): raise ValueError("approval receipt exemption_request_sha256 mismatch")
     if r.get("baseline_commit") != e.get("baseline_commit"): raise ValueError("approval receipt baseline_commit mismatch")
     if r.get("artifact_manifest_sha256") != e.get("artifact_manifest_sha256"): raise ValueError("approval receipt artifact_manifest_sha256 mismatch")
@@ -1392,6 +1453,85 @@ def build_artifact_manifest(book_dir, *, git_ref, git_root):
 
 def load_exemption_request(path):
     return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+# ---------------------------------------------------------------------------
+# §5-E2 权威重算（E/R 不得自证；Git 对象为唯一权威来源）
+# ---------------------------------------------------------------------------
+
+def _git_ls_tree_z(git_root, base: str, book_dir_rel: str) -> list[tuple[str, str]]:
+    """`git ls-tree -z <base> -- <book_dir>/`（非递归）。
+
+    按 NUL 分隔记录解析，每条记录格式 `<mode> SP <type> SP <oid> TAB <path>`，
+    禁止按行或空格切分（中文/空格路径会被破坏）。返回 [(name, path)]，仅 blob 类型
+    的直接子项。base 不存在或 git 失败 → ValueError。
+    """
+    import subprocess as _sp
+    r = _sp.run(
+        ["git", "-C", str(git_root), "ls-tree", "-z", base, "--", f"{book_dir_rel}/"],
+        capture_output=True,
+    )
+    if r.returncode != 0:
+        raise ValueError(f"git ls-tree failed at {base}: {r.stderr.decode('utf-8', 'replace').strip()}")
+    out = []
+    prefix = book_dir_rel + "/"
+    for record in r.stdout.split(b"\0"):
+        if not record:
+            continue
+        meta, tab, path_bytes = record.partition(b"\t")
+        if not tab:
+            raise ValueError("ls-tree record missing TAB path separator")
+        parts = meta.split(b" ")
+        if len(parts) != 3:
+            raise ValueError("ls-tree record meta must be <mode> SP <type> SP <oid>")
+        _mode, typ, _oid = parts
+        if typ != b"blob":
+            continue  # 仅 blob 类型（子目录 tree 条目排除）
+        path = path_bytes.decode("utf-8")
+        if not path.startswith(prefix) or "/" in path[len(prefix):]:
+            continue  # 仅直接子项
+        out.append((path[len(prefix):], path))
+    return out
+
+
+def recompute_artifact_manifest_sha256(git_root, base: str, book: str) -> str:
+    """§5-E2 artifact_manifest_sha256 权威重算。
+
+    生产算法（build_artifact_manifest，仅顶层、basename 键）的 Git-object 等价重算：
+    ls-tree -z 直接子项 blob，过滤后缀 ∈ {.json,.jsonl,.txt}，键 = 条目名（basename），
+    逐文件 `git show <base>:<path>` 字节 sha256，构造
+    {"sha256_by_path": {...}, "git_ref": base, "git_verified": true} 的 canonical JSON sha256。
+    """
+    if book not in V2_BOOKS:
+        raise ValueError(f"unknown book {book!r}; must be one of {V2_BOOKS}")
+    import subprocess as _sp
+    book_dir_rel = f"knowledge_base/classic_texts/{book}"
+    shas = {}
+    for name, path in _git_ls_tree_z(git_root, base, book_dir_rel):
+        if not name.endswith((".json", ".jsonl", ".txt")):
+            continue
+        blob = _sp.run(
+            ["git", "-C", str(git_root), "show", f"{base}:{path}"], capture_output=True
+        )
+        if blob.returncode != 0:
+            raise ValueError(f"git show failed for {base}:{path}")
+        shas[name] = hashlib.sha256(blob.stdout).hexdigest()
+    manifest = {"sha256_by_path": shas, "git_ref": base, "git_verified": True}
+    return hashlib.sha256(
+        json.dumps(manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
+def recompute_validator_code_sha256(git_root, base: str) -> str:
+    """§5-E2 validator_code_sha256 权威重算：`git show <base>:scripts/validate_classic_distillation.py` 字节 sha256。"""
+    import subprocess as _sp
+    r = _sp.run(
+        ["git", "-C", str(git_root), "show", f"{base}:scripts/validate_classic_distillation.py"],
+        capture_output=True,
+    )
+    if r.returncode != 0:
+        raise ValueError(f"git show failed for {base}:scripts/validate_classic_distillation.py")
+    return hashlib.sha256(r.stdout).hexdigest()
 
 
 # ---------------------------------------------------------------------------
