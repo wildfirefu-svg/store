@@ -122,8 +122,8 @@
     }
   },
   "frozen_at_commit": "c5cff699fdb547bd9270acbebe1f485380848751",
-  "generator_blob_oid": "9c9be9afe266a8acb0c37015cfac4b8937935ddd",
-  "generator_sha256": "a4c12fcca8f0bc8e3b5037bb101709dcd48c952590f3ba2e93a113de8c310820",
+  "generator_blob_oid": "55b3a7bad0eb0217d849852aa70654be703b704f",
+  "generator_sha256": "770af16bf7d87ddddf792b17b76c75b9fcad56ffd5dd170fec04aa21d9a0edbc",
   "record_set_binding": {
     "counts": {
       "ditiansui": {
@@ -151,7 +151,7 @@
         "quarantine_rules": 0
       }
     },
-    "frozen_manifest_file_sha256": "aeaca3d28a16b3278fdf8da1d0c1e0895fafbcbe6c5e4682b72f14ccd1675944"
+    "frozen_manifest_file_sha256": "b287f2f046aeee49c5ab67f30fb9182715e6efd5de6633fcc892c4a8321b2df6"
   },
   "schema_version": "1.0",
   "source_chain": {
