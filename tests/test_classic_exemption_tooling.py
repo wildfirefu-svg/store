@@ -494,3 +494,49 @@ def test_v1_cli_path_unchanged(tmp_path):
     assert e["schema_version"] == "1.0"
     assert "reason" in e
     assert "parent_commit" not in e
+# ---------------------------------------------------------------------------
+# 复审修补（NEEDS_REVISION）：未知版本降级 / v1 批准字段 / R 绑非法 v2 E
+# ---------------------------------------------------------------------------
+
+def _v1_request_with_schema(version):
+    e = _v1_request()
+    if version is not None:
+        e["schema_version"] = version
+    return e
+
+
+@pytest.mark.parametrize("version", ["3.0", "2", "1.1", ""])
+def test_v1_shaped_request_unknown_version_rejected(version):
+    # 版本单选：仅缺失/"1.0"/"2.0" 合法；v1 形态携带未知版本不得降级通过
+    with pytest.raises(ValueError):
+        verify_exemption_request(_v1_request_with_schema(version))
+
+
+@pytest.mark.parametrize("version", ["3.0", "2", "1.1", ""])
+def test_v1_shaped_receipt_unknown_version_rejected(version):
+    e = _v1_request()
+    r = {
+        "exemption_request_sha256": exemption_request_sha256(e),
+        "baseline_commit": "a" * 40,
+        "artifact_manifest_sha256": "b" * 64,
+        "approver": "lead",
+        "approved_at": "2026-08-13T00:00:00Z",
+        "schema_version": version,
+    }
+    with pytest.raises(ValueError):
+        verify_approval_receipt(r, e)
+
+
+@pytest.mark.parametrize("field", ["approver", "approved_at"])
+def test_v1_request_approval_fields_rejected(field):
+    # 两版禁含回执/批准字段：v1 E 携带 approver/approved_at 拒绝
+    with pytest.raises(ValueError):
+        verify_exemption_request({**_v1_request(), field: "x"})
+
+
+def test_receipt_with_valid_r_but_illegal_selfconsistent_e_rejected():
+    # R 与非法 v2 E（book 越界、author 为空）自洽 → 仍必须拒绝：入口先验证 E
+    e = _v2_request(book="hacker", author="")
+    r = _v2_receipt(e)
+    with pytest.raises(ValueError):
+        verify_approval_receipt(r, e)

@@ -1399,20 +1399,27 @@ def _verify_exemption_request_v2(e: dict) -> bool:
 
 
 def verify_exemption_request(e: dict) -> bool:
-    if isinstance(e, dict) and e.get("schema_version") == "2.0":
+    # 版本单选（fail-closed）：仅接受缺失/"1.0"（v1）与 "2.0"（v2），
+    # 任何其他 schema_version 立即拒绝，禁止未知版本降级到 v1 校验
+    version = e.get("schema_version") if isinstance(e, dict) else None
+    if version not in (None, "1.0", "2.0"):
+        raise ValueError(f"unknown exemption request schema_version {version!r}; only 1.0/2.0 are accepted")
+    if version == "2.0":
         return _verify_exemption_request_v2(e)
     for k in ("book", "artifact_manifest_sha256", "baseline_commit", "validator_code_sha256", "exempted_checks", "non_exempt_checks", "author", "date"):
         if k not in e: raise ValueError(f"exemption request missing {k}")
     if not set(e["exempted_checks"]) <= set(EXEMPT_ALLOWLIST): raise ValueError("exempted_checks outside allowlist")
     if not set(e["non_exempt_checks"]) <= set(NON_EXEMPT_ALLOWLIST): raise ValueError("non_exempt_checks outside allowlist")
     if set(e["exempted_checks"]) & set(e["non_exempt_checks"]): raise ValueError("overlapping exempt/non-exempt")
-    for forbidden in ("approval_receipt_sha256", "approval_commit"):
+    for forbidden in ("approval_receipt_sha256", "approval_commit", "approver", "approved_at"):
         if forbidden in e: raise ValueError(f"exemption request must not contain {forbidden}")
     return True
 
 
 def _verify_approval_receipt_v2(r: dict, e: dict) -> bool:
-    # §6 v2.0 R 回执精确字段集（10 项）+ 逐项镜像复核
+    # §6 v2.0 R 回执精确字段集（10 项）+ 逐项镜像复核；入口先验证 E 本身，
+    # 合法 R 不得绑定非法（book 越界/author 为空等）但与之自洽的 v2 E
+    _verify_exemption_request_v2(e)
     if not isinstance(r, dict) or set(r) != set(V2_RECEIPT_FIELDS):
         raise ValueError(f"v2 approval receipt fields must be exactly {sorted(V2_RECEIPT_FIELDS)}")
     if r["schema_version"] != "2.0": raise ValueError("v2 approval receipt schema_version must be \"2.0\"")
@@ -1426,11 +1433,16 @@ def _verify_approval_receipt_v2(r: dict, e: dict) -> bool:
 
 
 def verify_approval_receipt(r: dict, e: dict) -> bool:
+    # 版本单选（fail-closed）：E 与 R 的 schema_version 各自仅接受缺失/"1.0"/"2.0"，
+    # 任一侧出现其他值立即拒绝，禁止未知版本降级到 v1 校验
+    r_version = r.get("schema_version") if isinstance(r, dict) else None
+    e_version = e.get("schema_version") if isinstance(e, dict) else None
+    for side, version in (("receipt", r_version), ("request", e_version)):
+        if version not in (None, "1.0", "2.0"):
+            raise ValueError(f"unknown {side} schema_version {version!r}; only 1.0/2.0 are accepted")
     # fail-closed 分派：E 或 R 任一声明 2.0 即走 v2 校验（v1 形态回执绑 v2 E 会被
     # v2 精确字段集拒绝；v2 回执绑 v1 E 会因 v1 E 缺 freeze/evidence/parent 镜像被拒）
-    if (isinstance(r, dict) and r.get("schema_version") == "2.0") or (
-        isinstance(e, dict) and e.get("schema_version") == "2.0"
-    ):
+    if r_version == "2.0" or e_version == "2.0":
         return _verify_approval_receipt_v2(r, e)
     if r.get("exemption_request_sha256") != exemption_request_sha256(e): raise ValueError("approval receipt exemption_request_sha256 mismatch")
     if r.get("baseline_commit") != e.get("baseline_commit"): raise ValueError("approval receipt baseline_commit mismatch")
