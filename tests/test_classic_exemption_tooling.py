@@ -540,3 +540,22 @@ def test_receipt_with_valid_r_but_illegal_selfconsistent_e_rejected():
     r = _v2_receipt(e)
     with pytest.raises(ValueError):
         verify_approval_receipt(r, e)
+def test_v2_cli_writes_pure_lf_bytes(tmp_path):
+    # 指针 e_sha256 绑定 blob 字节；磁盘输出必须与提交 blob 逐字节一致（纯 LF，
+    # 无 CRLF）。write_text 在 Windows 下会把换行翻译为 CRLF，导致磁盘/blob 分裂。
+    out = tmp_path / "e2.json"
+    p = _run_make_e(
+        "--schema-version", "2.0",
+        "--book", "ditiansui",
+        "--baseline", BASE_COMMIT,
+        "--out", str(out),
+        "--git-root", str(ROOT),
+        "--freeze", str(FREEZE_PATH),
+        "--evidence", str(EVIDENCE_PATH),
+    )
+    assert p.returncode == 0, p.stderr
+    raw = out.read_bytes()
+    assert raw.count(b"\r\n") == 0
+    assert raw.endswith(b"\n")
+    e = load_exemption_request(out)
+    assert e["schema_version"] == "2.0"

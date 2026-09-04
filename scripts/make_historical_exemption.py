@@ -56,7 +56,9 @@ def main(argv=None) -> int:
         e = {"schema_version": "1.0", "book": a.book, "baseline_commit": a.baseline, "artifact_manifest_sha256": manifest_sha, "validator_code_sha256": val_sha, "exempted_checks": ["missing_upstream_response_body"], "non_exempt_checks": ["artifact_integrity", "quality_gates", "future_generation_provenance"], "author": "implementing-agent", "date": "2026-08-13", "reason": "80 章为历史导入无上游 response body，豁免缺失上游链；内容完整性与质量门不豁免"}
     verify_exemption_request(e)
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
-    Path(a.out).write_text(json.dumps(e, ensure_ascii=False, indent=2), encoding="utf-8")
+    # 纯 LF 二进制写出：指针 e_sha256 绑定 blob 字节，磁盘必须与提交 blob 逐字节一致
+    # （write_text 在 Windows 下会把换行翻译为 CRLF，导致磁盘/blob 分裂）
+    Path(a.out).write_bytes((json.dumps(e, ensure_ascii=False, indent=2) + "\n").encode("utf-8"))
     return 0
 
 if __name__ == "__main__": raise SystemExit(main())
