@@ -1,0 +1,10 @@
+{
+  "b1_commit": "d219e10d0388890ea251af5fd374cb3ae7979f7a",
+  "baseline_commit": "c5cff699fdb547bd9270acbebe1f485380848751",
+  "book": "ditiansui",
+  "e_path": "docs/superpowers/plans/notes/approvals/2026-09-02-classic-texts-provenance-exemption-ditiansui-request.json",
+  "e_sha256": "f2f8674c7311bf8d56f6e53bcd58adf6aff9582a9e21a7814a34435e748a8bc4",
+  "r_path": "docs/superpowers/plans/notes/approvals/2026-09-02-classic-texts-provenance-exemption-ditiansui-receipt.json",
+  "r_sha256": "e71ea4d06b8a452dabd424df52752291ec18c4add571b22b959bae76df7a5507",
+  "schema_version": "1.0"
+}
