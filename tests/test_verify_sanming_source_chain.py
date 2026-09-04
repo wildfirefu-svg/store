@@ -326,6 +326,19 @@ def test_verifier_identity_ok(tmp_path):
     check_verifier_identity(repo, stub)  # 不抛异常
 
 
+def test_verifier_identity_handles_unicode_and_space_git_root(tmp_path):
+    parent = tmp_path / "中文 与 space"
+    parent.mkdir()
+    repo = _tmp_git(parent)
+    scripts = repo / "scripts"
+    scripts.mkdir()
+    stub = scripts / "verify_sanming_source_chain.py"
+    stub.write_text("x = 1\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-qm", "verifier"], check=True)
+    check_verifier_identity(repo, stub)  # 参数数组保持中文和空格路径完整
+
+
 def test_verifier_identity_mismatch_blocked(tmp_path):
     repo = _tmp_git(tmp_path)
     scripts = repo / "scripts"
