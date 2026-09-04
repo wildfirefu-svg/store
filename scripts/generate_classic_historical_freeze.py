@@ -9,17 +9,20 @@ Single generator with two subcommands:
 Static checks (evidence_static_check + freeze validator) only touch Git blob/HEAD
 facts: schema, identity, frozen fields, record counts, record_set_binding and
 HEAD blob SHAs. They never touch the external tar and never produce BLOCKED.
-The source-chain verifier (verify_sanming_source_chain.py) is implemented later
-(design phase ③); until then its identity/replay are supplied by injection so
-this generator does not depend on a not-yet-existing file.
+The `evidence --out` production path (design §10-④(1)) subprocesses the phase-③
+verifier (scripts/verify_sanming_source_chain.py) with the frozen argv, classifies
+its rc × schema output and takes the verifier identity from HEAD; the phase-①
+zero fixtures remain only for module-function-level unit-test injection.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -61,6 +64,11 @@ GENERATOR_IDENTITY_MISMATCH = "GENERATOR_IDENTITY_MISMATCH"
 FROZEN_AT_COMMIT_MISMATCH = "FROZEN_AT_COMMIT_MISMATCH"
 FREEZE_STATIC_MISMATCH = "FREEZE_STATIC_MISMATCH"
 EVIDENCE_STATIC_MISMATCH = "EVIDENCE_STATIC_MISMATCH"
+
+# §10-④(1) verifier 调用稳定错误码（stderr 单行 ERROR_CODE[:reason]，BLOCKED 必附 reason）
+SOURCE_REPLAY_FAILED = "SOURCE_REPLAY_FAILED"
+SOURCE_CHAIN_BLOCKED = "SOURCE_CHAIN_BLOCKED"
+SOURCE_REPLAY_INVALID = "SOURCE_REPLAY_INVALID"
 
 FREEZE_TOP_FIELDS = {
     "schema_version",
@@ -106,6 +114,16 @@ class CheckError(Exception):
         self.code = code
         self.detail = detail
         super().__init__(f"{code}: {detail}" if detail else code)
+
+
+class VerifierCallError(Exception):
+    """§10-④(1) verifier 调用/输出失败：稳定错误码 + 退出码 + 可选 BLOCKED reason。"""
+
+    def __init__(self, code: str, exit_code: int, reason: str = "") -> None:
+        self.code = code
+        self.exit_code = exit_code
+        self.reason = reason
+        super().__init__(f"{code}:{reason}" if reason else code)
 
 
 def _is_40hex(v) -> bool:
@@ -542,12 +560,220 @@ def evidence_static_check(
 
 
 # ---------------------------------------------------------------------------
-# 阶段 ① 注入 fixture：verifier 未实现前的冻结占位身份 + 重放样本（§10-①）
-# 阶段 ④ 起以真实 verify_sanming_source_chain.py 的 HEAD blob 身份替换。
+# 阶段 ① 注入 fixture：verifier 未实现前的冻结占位身份 + 重放样本（§10-①）。
+# 阶段 ④（§10-④(1)）起 CLI 生产路径以 HEAD 的 verify_sanming_source_chain.py
+# 身份与真实重放替代；fixture 仅保留于模块函数级单测注入，不进 CLI 生产路径。
 # ---------------------------------------------------------------------------
 VERIFIER_FIXTURE_BLOB_OID = "0" * 40
 VERIFIER_FIXTURE_SHA256 = "0" * 64
 REPLAY_FIXTURE = {"chapters_expected": 303, "c1_pass": 0, "c2_pass": 0, "c3_pass": 0, "failures": []}
+
+# ---------------------------------------------------------------------------
+# §10-④(1) C-evidence-wiring：verifier 子进程调用与输出全状态分类
+# ---------------------------------------------------------------------------
+_VERIFIER_RUN = subprocess.run  # 注入点：测试捕获 argv / 模拟输出；生产路径为 subprocess.run
+
+_VERIFIER_OUTPUT_KEYS = {"schema_version", "status", "chapters_expected", "c1_pass", "c2_pass", "c3_pass", "failures"}
+_VERIFIER_BLOCKED_KEYS = {"schema_version", "status", "reason"}
+_FAILURE_ENTRY_KEYS = {"chapter", "check", "code", "detail"}
+_VERIFIER_FAILURE_CODES = frozenset({
+    "ARCHIVE_MEMBER_MISSING",
+    "C1_SHA_MISMATCH",
+    "C2_HEADING_NOT_FOUND",
+    "C2_NO_BODY",
+    "C2_EXTRACTION_ERROR",
+    "C2_SHA_MISMATCH",
+    "C3_SHA_MISMATCH",
+})
+_VERIFIER_BLOCKED_REASONS = frozenset({
+    "archive_missing",
+    "archive_sha_mismatch",
+    "archive_size_mismatch",
+    "verifier_identity_mismatch",
+    "archive_root_missing",
+})
+
+
+def _is_nonbool_int(v) -> bool:
+    return isinstance(v, int) and not isinstance(v, bool)
+
+
+def _loads_verifier_stdout(raw: bytes):
+    """严格解析 verifier stdout：拒绝重复 JSON 键（§10-④(1)）。"""
+
+    def _pairs(pairs):
+        obj = {}
+        for k, v in pairs:
+            if k in obj:
+                raise ValueError(f"duplicate JSON key: {k!r}")
+            obj[k] = v
+        return obj
+
+    return json.loads(raw.decode("utf-8"), object_pairs_hook=_pairs)
+
+
+def _verifier_counts_in_range(out: dict) -> bool:
+    """四计数非 bool int 且 ∈ [0,303]，chapters_expected==303（成功/failures 分支共用量程判据）。"""
+    for key in ("chapters_expected", "c1_pass", "c2_pass", "c3_pass"):
+        v = out[key]
+        if not _is_nonbool_int(v) or not 0 <= v <= 303:
+            return False
+    return out["chapters_expected"] == 303
+
+
+def _verifier_failures_schema_ok(out: dict) -> bool:
+    """rc==1 分支特有判据：failures 非空列表 + 条目精确键集/类型/枚举 + (chapter,check,code,detail) 排序。"""
+    failures = out["failures"]
+    if not isinstance(failures, list) or not failures:
+        return False
+    prev = None
+    for entry in failures:
+        if not isinstance(entry, dict) or set(entry) != _FAILURE_ENTRY_KEYS:
+            return False
+        if not _is_nonbool_int(entry["chapter"]):
+            return False
+        if entry["check"] not in ("C1", "C2", "C3"):
+            return False
+        if entry["code"] not in _VERIFIER_FAILURE_CODES:
+            return False
+        if not isinstance(entry["detail"], str):
+            return False
+        key = (entry["chapter"], entry["check"], entry["code"], entry["detail"])
+        if prev is not None and key < prev:
+            return False
+        prev = key
+    return True
+
+
+def _classify_verifier_output(proc) -> dict:
+    """§10-④(1) verifier 输出全状态分类（v27.7–v27.10 冻结）。
+
+    先严格解析 stdout（拒绝重复键），再按退出码 × schema 联合判断；
+    成功返回五字段 replay，失败抛 VerifierCallError，禁止其他映射。
+    """
+    try:
+        out = _loads_verifier_stdout(proc.stdout)
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+        raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+    if not isinstance(out, dict):
+        raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+
+    if proc.returncode == 0:
+        if set(out) != _VERIFIER_OUTPUT_KEYS:
+            raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+        if out["schema_version"] != "1.0" or out["status"] != "OK":
+            raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+        if not _verifier_counts_in_range(out):
+            raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+        if out["c1_pass"] != 303 or out["c2_pass"] != 303 or out["c3_pass"] != 303:
+            raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+        if out["failures"] != []:
+            raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+        return {k: out[k] for k in ("chapters_expected", "c1_pass", "c2_pass", "c3_pass", "failures")}
+
+    if proc.returncode == 1:
+        # 复用成功分支的顶层键集合、schema_version、status、字段类型及取值范围判据；
+        # 分支特有判据为 c1/c2/c3 可小于 303 且 failures 非空（v27.10）。
+        if set(out) != _VERIFIER_OUTPUT_KEYS:
+            raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+        if out["schema_version"] != "1.0" or out["status"] != "OK":
+            raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+        if not _verifier_counts_in_range(out):
+            raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+        if not _verifier_failures_schema_ok(out):
+            raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+        raise VerifierCallError(SOURCE_REPLAY_FAILED, 1)
+
+    if proc.returncode == 3:
+        if set(out) != _VERIFIER_BLOCKED_KEYS:
+            raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+        if out["schema_version"] != "1.0" or out["status"] != "BLOCKED":
+            raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+        if out["reason"] not in _VERIFIER_BLOCKED_REASONS:
+            raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+        raise VerifierCallError(SOURCE_CHAIN_BLOCKED, 3, reason=out["reason"])
+
+    raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+
+
+def _run_verifier(git_root: Path, archive_root: Path):
+    """verifier 调用契约（§10-④(1) fail-closed）：argv 逐字冻结，不经 shell。"""
+    argv = [
+        sys.executable,
+        str(git_root / "scripts" / "verify_sanming_source_chain.py"),
+        "--git-root",
+        str(git_root),
+        "--archive-root",
+        str(archive_root),
+    ]
+    return _VERIFIER_RUN(argv, capture_output=True)
+
+
+def _current_verifier_identity(git_root: Path):
+    """verifier 身份取自 HEAD blob（§10-④(1)：生成与 --check 均用 HEAD 身份）。"""
+    rel = "scripts/verify_sanming_source_chain.py"
+    blob_oid = _run_git(git_root, ["rev-parse", f"HEAD:{rel}"]).stdout.decode().strip()
+    sha256 = _sha256_bytes(_run_git(git_root, ["show", f"HEAD:{rel}"]).stdout)
+    return blob_oid, sha256
+
+
+def _write_evidence_atomically(out_path: Path, data: bytes) -> None:
+    """写出契约 ⑤–⑦（§10-④(1)）：同目录临时文件 → 读回校验字节 → os.replace。
+
+    任意失败时目标路径不存在则保持不存在、已存在则字节完全不变；临时文件在
+    异常路径 try/finally 清理，清理失败仅记录，不改变原目标文件、不掩盖原错误。
+    """
+    tmp_path = None
+    try:
+        fd, tmp_path = tempfile.mkstemp(dir=str(out_path.parent), prefix=out_path.name + ".", suffix=".tmp")
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        if Path(tmp_path).read_bytes() != data:
+            raise CheckError(EVIDENCE_STATIC_MISMATCH, "evidence temp read-back mismatch")
+        os.replace(tmp_path, out_path)
+        tmp_path = None
+    finally:
+        if tmp_path is not None:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass  # 清理失败仅记录：不改变目标文件、不抛出掩盖原错误
+
+
+def generate_evidence_file(freeze_path, out_path, git_root: Path, archive_root) -> None:
+    """§10-④(1) 正式 evidence 生产入口（v27.7 冻结顺序链 ①–⑦）。
+
+    ① verifier 成功 → ② 内存构造 candidate → ③ evidence_static_check（六向身份与
+    frozen_at_commit 第 2 级随本步执行）→ ④ canonical 序列化 → ⑤⑥⑦ 临时文件原子写出。
+    """
+    try:
+        proc = _run_verifier(git_root, Path(archive_root))
+    except OSError:
+        raise VerifierCallError(SOURCE_REPLAY_INVALID, 1)
+    replay = _classify_verifier_output(proc)
+    freeze = _loads_strict(Path(freeze_path).read_text(encoding="utf-8"))
+    gen_oid = _git_hash_object(git_root, Path(__file__))
+    gen_sha = _sha256_bytes(Path(__file__).read_bytes())
+    ver_oid, ver_sha = _current_verifier_identity(git_root)
+    evidence = build_evidence(
+        freeze,
+        git_root,
+        generator_blob_oid=gen_oid,
+        generator_sha256=gen_sha,
+        verifier_blob_oid=ver_oid,
+        verifier_sha256=ver_sha,
+        replay=replay,
+    )
+    evidence_static_check(
+        evidence,
+        freeze,
+        git_root,
+        expected_generator_blob_oid=gen_oid,
+        expected_generator_sha256=gen_sha,
+        expected_verifier_blob_oid=ver_oid,
+        expected_verifier_sha256=ver_sha,
+    )
+    _write_evidence_atomically(Path(out_path), _serialize(evidence).encode("utf-8"))
 
 
 def _current_generator_identity(git_root: Path):
@@ -574,6 +800,7 @@ def main(argv=None) -> int:
     evidence_mode.add_argument("--out")
     evidence_mode.add_argument("--check", metavar="PATH")
     p_evidence.add_argument("--git-root", default=str(ROOT))
+    p_evidence.add_argument("--archive-root")
 
     a = ap.parse_args(argv)
     git_root = Path(a.git_root)
@@ -588,37 +815,37 @@ def main(argv=None) -> int:
                 check_freeze_bytes(data, git_root, expected_generator_blob_oid=gen_oid)
                 Path(a.out).write_bytes(data)
         elif a.cmd == "evidence":
-            freeze = _loads_strict(Path(a.freeze).read_text(encoding="utf-8"))
+            # 参数模式契约（§10-④(1)）：--out 必填 --archive-root；--check 必须拒绝该参数
+            if a.check is not None and a.archive_root is not None:
+                print(SOURCE_REPLAY_INVALID, file=sys.stderr)
+                return 1
+            if a.out is not None and a.archive_root is None:
+                print(SOURCE_REPLAY_INVALID, file=sys.stderr)
+                return 1
             if a.check:
+                # --check 只执行静态身份校验：不调用 verifier、不访问归档（§10-④(1)）
+                freeze = _loads_strict(Path(a.freeze).read_text(encoding="utf-8"))
                 evidence = _loads_strict(Path(a.check).read_text(encoding="utf-8"))
                 gen_oid, gen_sha = _current_generator_identity(git_root)
-            else:
-                gen_oid = _git_hash_object(git_root, Path(__file__))
-                gen_sha = _sha256_bytes(Path(__file__).read_bytes())
-                evidence = build_evidence(
+                ver_oid, ver_sha = _current_verifier_identity(git_root)
+                evidence_static_check(
+                    evidence,
                     freeze,
                     git_root,
-                    generator_blob_oid=gen_oid,
-                    generator_sha256=gen_sha,
-                    verifier_blob_oid=VERIFIER_FIXTURE_BLOB_OID,
-                    verifier_sha256=VERIFIER_FIXTURE_SHA256,
-                    replay=REPLAY_FIXTURE,
+                    expected_generator_blob_oid=gen_oid,
+                    expected_generator_sha256=gen_sha,
+                    expected_verifier_blob_oid=ver_oid,
+                    expected_verifier_sha256=ver_sha,
                 )
-            evidence_static_check(
-                evidence,
-                freeze,
-                git_root,
-                expected_generator_blob_oid=gen_oid,
-                expected_generator_sha256=gen_sha,
-                expected_verifier_blob_oid=VERIFIER_FIXTURE_BLOB_OID,
-                expected_verifier_sha256=VERIFIER_FIXTURE_SHA256,
-            )
-            if a.out:
-                Path(a.out).write_bytes(_serialize(evidence).encode("utf-8"))
+            else:
+                generate_evidence_file(a.freeze, a.out, git_root, a.archive_root)
         return 0
     except CheckError as e:
         print(e.code, file=sys.stderr)
         return 1
+    except VerifierCallError as e:
+        print(f"{e.code}:{e.reason}" if e.reason else e.code, file=sys.stderr)
+        return e.exit_code
     except (json.JSONDecodeError, UnicodeDecodeError) as e:
         print(f"{EVIDENCE_STATIC_MISMATCH}: {e}", file=sys.stderr)
         return 1

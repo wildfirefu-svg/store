@@ -531,3 +531,273 @@ def test_evidence_unproven_facts_tampered_rejected(freeze, evidence):
     with pytest.raises(CheckError) as e:
         _check(ev, freeze)
     _assert_code(e, EVIDENCE_STATIC_MISMATCH)
+# ---------------------------------------------------------------------------
+# §10-④(1) C-evidence-wiring：正式 evidence 生产入口
+# --archive-root 参数模式 + verifier 子进程调用（argv 冻结）+ rc×schema 全状态分类
+# + 原子写出（sentinel 不覆盖）。verifier 子进程以模块级注入点驱动，不依赖真实归档。
+# ---------------------------------------------------------------------------
+
+SENTINEL = b'{"sentinel": "v1-bytes"}'
+
+_VERIFIER_ENTRY_81 = {"chapter": 81, "check": "C1", "code": "C1_SHA_MISMATCH", "detail": "sha mismatch"}
+_VERIFIER_ENTRY_82 = {"chapter": 82, "check": "C2", "code": "C2_NO_BODY", "detail": "no body"}
+
+
+def _ok_output(**overrides):
+    out = {
+        "schema_version": "1.0",
+        "status": "OK",
+        "chapters_expected": 303,
+        "c1_pass": 303,
+        "c2_pass": 303,
+        "c3_pass": 303,
+        "failures": [],
+    }
+    out.update(overrides)
+    return out
+
+
+def _failures_output(**overrides):
+    out = {
+        "schema_version": "1.0",
+        "status": "OK",
+        "chapters_expected": 303,
+        "c1_pass": 302,
+        "c2_pass": 303,
+        "c3_pass": 301,
+        "failures": [dict(_VERIFIER_ENTRY_81), dict(_VERIFIER_ENTRY_82)],
+    }
+    out.update(overrides)
+    return out
+
+
+def _blocked_output(**overrides):
+    out = {"schema_version": "1.0", "status": "BLOCKED", "reason": "archive_missing"}
+    out.update(overrides)
+    return out
+
+
+def _remove_key(obj, key):
+    return {k: v for k, v in obj.items() if k != key}
+
+
+def _fake_verifier_run(captured, rc, stdout):
+    def run(argv, capture_output):
+        captured.append(list(argv))
+        return subprocess.CompletedProcess(list(argv), rc, stdout=stdout, stderr=b"")
+
+    return run
+
+
+@pytest.fixture(scope="module")
+def freeze_file(tmp_path_factory):
+    path = tmp_path_factory.mktemp("freeze_cli") / "freeze.json"
+    assert generator.main(["freeze", "--out", str(path), "--git-root", str(ROOT)]) == 0
+    return path
+
+
+def _evidence_out_argv(out_path, freeze_file, archive_root, git_root=ROOT):
+    return [
+        "evidence", "--out", str(out_path), "--freeze", str(freeze_file),
+        "--archive-root", str(archive_root), "--git-root", str(git_root),
+    ]
+
+
+def _assert_target_untouched(out_path, tmp_path, *, sentinel):
+    if sentinel:
+        assert out_path.read_bytes() == SENTINEL
+        assert hashlib.sha256(out_path.read_bytes()).hexdigest() == hashlib.sha256(SENTINEL).hexdigest()
+    else:
+        assert not out_path.exists()
+    assert not list(tmp_path.glob("*.tmp"))
+
+
+def test_evidence_out_without_archive_root_rejected(tmp_path, freeze_file, capsys):
+    out_path = tmp_path / "evidence.json"
+    rc = generator.main(["evidence", "--out", str(out_path), "--freeze", str(freeze_file), "--git-root", str(ROOT)])
+    assert rc == 1
+    assert capsys.readouterr().err.strip() == generator.SOURCE_REPLAY_INVALID
+    assert not out_path.exists()
+
+
+def test_evidence_check_with_archive_root_rejected(tmp_path, freeze_file, capsys):
+    out_path = tmp_path / "evidence.json"
+    out_path.write_bytes(SENTINEL)
+    rc = generator.main([
+        "evidence", "--check", str(out_path), "--freeze", str(freeze_file),
+        "--archive-root", str(tmp_path / "archive"), "--git-root", str(ROOT),
+    ])
+    assert rc == 1
+    assert capsys.readouterr().err.strip() == generator.SOURCE_REPLAY_INVALID
+    assert out_path.read_bytes() == SENTINEL
+
+
+def test_evidence_wiring_success_writes_and_check_passes(tmp_path, monkeypatch, freeze_file):
+    out_path = tmp_path / "evidence.json"
+    archive_root = tmp_path / "archive"
+    captured = []
+    monkeypatch.setattr(
+        generator, "_VERIFIER_RUN",
+        _fake_verifier_run(captured, 0, json.dumps(_ok_output()).encode("utf-8")),
+        raising=False,
+    )
+    assert generator.main(_evidence_out_argv(out_path, freeze_file, archive_root)) == 0
+    # argv 逐字冻结（§10-④(1)）：sys.executable + <git_root> 树内 verifier + --git-root/--archive-root
+    assert captured == [[
+        sys.executable,
+        str(ROOT / "scripts" / "verify_sanming_source_chain.py"),
+        "--git-root", str(ROOT),
+        "--archive-root", str(archive_root),
+    ]]
+    assert out_path.read_bytes().endswith(b"\n")
+    assert not list(tmp_path.glob("*.tmp"))
+    # --check 通过（模拟提交后 HEAD==工作区：注入工作区生成器身份）且零 verifier 调用
+    monkeypatch.setattr(
+        generator, "_current_generator_identity",
+        lambda git_root: (_gen_blob_oid(), _gen_sha256()),
+        raising=False,
+    )
+    calls = len(captured)
+    rc = generator.main(["evidence", "--check", str(out_path), "--freeze", str(freeze_file), "--git-root", str(ROOT)])
+    assert rc == 0
+    assert len(captured) == calls
+
+
+def test_evidence_verifier_exit1_source_replay_failed(tmp_path, monkeypatch, freeze_file, capsys):
+    out_path = tmp_path / "evidence.json"
+    out_path.write_bytes(SENTINEL)
+    monkeypatch.setattr(
+        generator, "_VERIFIER_RUN",
+        _fake_verifier_run([], 1, json.dumps(_failures_output()).encode("utf-8")),
+        raising=False,
+    )
+    rc = generator.main(_evidence_out_argv(out_path, freeze_file, tmp_path / "archive"))
+    assert rc == 1
+    assert capsys.readouterr().err.strip() == generator.SOURCE_REPLAY_FAILED
+    _assert_target_untouched(out_path, tmp_path, sentinel=True)
+
+
+def test_evidence_verifier_exit1_target_absent_stays_absent(tmp_path, monkeypatch, freeze_file, capsys):
+    out_path = tmp_path / "evidence.json"
+    monkeypatch.setattr(
+        generator, "_VERIFIER_RUN",
+        _fake_verifier_run([], 1, json.dumps(_failures_output()).encode("utf-8")),
+        raising=False,
+    )
+    rc = generator.main(_evidence_out_argv(out_path, freeze_file, tmp_path / "archive"))
+    assert rc == 1
+    assert capsys.readouterr().err.strip() == generator.SOURCE_REPLAY_FAILED
+    _assert_target_untouched(out_path, tmp_path, sentinel=False)
+
+
+@pytest.mark.parametrize("reason", [
+    "archive_missing",
+    "archive_sha_mismatch",
+    "archive_size_mismatch",
+    "verifier_identity_mismatch",
+    "archive_root_missing",
+])
+def test_evidence_verifier_exit3_source_chain_blocked(tmp_path, monkeypatch, freeze_file, capsys, reason):
+    out_path = tmp_path / "evidence.json"
+    out_path.write_bytes(SENTINEL)
+    monkeypatch.setattr(
+        generator, "_VERIFIER_RUN",
+        _fake_verifier_run([], 3, json.dumps(_blocked_output(reason=reason)).encode("utf-8")),
+        raising=False,
+    )
+    rc = generator.main(_evidence_out_argv(out_path, freeze_file, tmp_path / "archive"))
+    assert rc == 3
+    assert capsys.readouterr().err.strip() == f"SOURCE_CHAIN_BLOCKED:{reason}"
+    _assert_target_untouched(out_path, tmp_path, sentinel=True)
+
+
+def test_evidence_verifier_startup_oserror_rejected(tmp_path, monkeypatch, freeze_file, capsys):
+    out_path = tmp_path / "evidence.json"
+    out_path.write_bytes(SENTINEL)
+
+    def boom(argv, capture_output):
+        raise FileNotFoundError("python or verifier missing")
+
+    monkeypatch.setattr(generator, "_VERIFIER_RUN", boom, raising=False)
+    rc = generator.main(_evidence_out_argv(out_path, freeze_file, tmp_path / "archive"))
+    assert rc == 1
+    assert capsys.readouterr().err.strip() == generator.SOURCE_REPLAY_INVALID
+    _assert_target_untouched(out_path, tmp_path, sentinel=True)
+
+
+def test_evidence_verifier_path_missing_rejected(tmp_path, freeze_file, capsys):
+    # 真实 subprocess：--git-root 指向无 verifier 的目录 → 解释器无法打开脚本 → rc 2 → 未知退出码
+    fake_git_root = tmp_path / "fake_git_root"
+    fake_git_root.mkdir()
+    out_path = tmp_path / "evidence.json"
+    out_path.write_bytes(SENTINEL)
+    rc = generator.main(_evidence_out_argv(out_path, freeze_file, tmp_path / "archive", git_root=fake_git_root))
+    assert rc == 1
+    assert capsys.readouterr().err.strip() == generator.SOURCE_REPLAY_INVALID
+    assert out_path.read_bytes() == SENTINEL
+    assert not list(tmp_path.glob("*.tmp"))
+
+
+def _invalid_cases():
+    ok = _ok_output()
+    fo = _failures_output()
+    bo = _blocked_output()
+    entry = dict(_VERIFIER_ENTRY_81)
+    dup_keys = (
+        '{"schema_version": "1.0", "schema_version": "1.0", "status": "OK", '
+        '"chapters_expected": 303, "c1_pass": 303, "c2_pass": 303, "c3_pass": 303, "failures": []}'
+    ).encode("utf-8")
+    return [
+        # 未知退出码
+        (2, json.dumps(ok).encode("utf-8")),
+        # stdout 非合法 JSON / 非对象 / 重复 JSON 键
+        (0, b"not-json"),
+        (0, b"[1, 2, 3]"),
+        (0, b'"OK"'),
+        (0, dup_keys),
+        # rc==0 成功分支判据违规（v27.8）
+        (0, json.dumps({**ok, "extra": 1}).encode("utf-8")),
+        (0, json.dumps(_remove_key(ok, "schema_version")).encode("utf-8")),
+        (0, json.dumps({**ok, "schema_version": "2.0"}).encode("utf-8")),
+        (0, json.dumps({**ok, "status": "FAIL"}).encode("utf-8")),
+        (0, json.dumps({**ok, "chapters_expected": 302}).encode("utf-8")),
+        (0, json.dumps({**ok, "c1_pass": True}).encode("utf-8")),
+        (0, json.dumps({**ok, "c1_pass": 304}).encode("utf-8")),
+        (0, json.dumps({**ok, "c1_pass": -1}).encode("utf-8")),
+        (0, json.dumps({**ok, "c1_pass": 302}).encode("utf-8")),
+        (0, json.dumps({**ok, "failures": [entry]}).encode("utf-8")),
+        # rc==1 failures 分支同层级判据违规（v27.9/v27.10）
+        (1, json.dumps({**fo, "extra": 1}).encode("utf-8")),
+        (1, json.dumps(_remove_key(fo, "schema_version")).encode("utf-8")),
+        (1, json.dumps({**fo, "schema_version": "2.0"}).encode("utf-8")),
+        (1, json.dumps({**fo, "status": "FAIL"}).encode("utf-8")),
+        (1, json.dumps({**fo, "chapters_expected": 302}).encode("utf-8")),
+        (1, json.dumps({**fo, "c1_pass": True}).encode("utf-8")),
+        (1, json.dumps({**fo, "c1_pass": 304}).encode("utf-8")),
+        # rc==1 failures 列表/条目判据违规
+        (1, json.dumps({**fo, "failures": []}).encode("utf-8")),
+        (1, json.dumps({**fo, "failures": {}}).encode("utf-8")),
+        (1, json.dumps({**fo, "failures": [123]}).encode("utf-8")),
+        (1, json.dumps({**fo, "failures": [{**entry, "extra": 1}]}).encode("utf-8")),
+        (1, json.dumps({**fo, "failures": [_remove_key(entry, "detail")]}).encode("utf-8")),
+        (1, json.dumps({**fo, "failures": [{**entry, "check": "C4"}]}).encode("utf-8")),
+        (1, json.dumps({**fo, "failures": [{**entry, "code": "BOGUS_CODE"}]}).encode("utf-8")),
+        (1, json.dumps({**fo, "failures": [{**entry, "chapter": True}]}).encode("utf-8")),
+        (1, json.dumps({**fo, "failures": [dict(_VERIFIER_ENTRY_82), dict(_VERIFIER_ENTRY_81)]}).encode("utf-8")),
+        # rc==3 BLOCKED 分支判据违规
+        (3, json.dumps({**bo, "extra": 1}).encode("utf-8")),
+        (3, json.dumps(_remove_key(bo, "reason")).encode("utf-8")),
+        (3, json.dumps({**bo, "reason": "bogus_reason"}).encode("utf-8")),
+        (3, json.dumps({**bo, "status": "OK"}).encode("utf-8")),
+    ]
+
+
+@pytest.mark.parametrize("verifier_rc,stdout", _invalid_cases())
+def test_evidence_verifier_invalid_classifications(tmp_path, monkeypatch, freeze_file, capsys, verifier_rc, stdout):
+    out_path = tmp_path / "evidence.json"
+    out_path.write_bytes(SENTINEL)
+    monkeypatch.setattr(generator, "_VERIFIER_RUN", _fake_verifier_run([], verifier_rc, stdout), raising=False)
+    rc = generator.main(_evidence_out_argv(out_path, freeze_file, tmp_path / "archive"))
+    assert rc == 1
+    assert capsys.readouterr().err.strip() == generator.SOURCE_REPLAY_INVALID
+    _assert_target_untouched(out_path, tmp_path, sentinel=True)
