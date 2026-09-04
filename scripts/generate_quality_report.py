@@ -442,10 +442,12 @@ def generate_report(
     base = base_path or BASE
     book_map = books or BOOKS
     git_root = _find_git_root()
-    approval_b2_valid = True
+    # §5.1 fail-closed：B2 常量校验失败（含 git_root 缺失无法校验）→ 报告不得 PASS
+    approval_b2_valid = False
     if git_root is not None:
         try:
             validate_approval_b2_constant(git_root)
+            approval_b2_valid = True
         except (ValueError, RuntimeError):
             approval_b2_valid = False
 
@@ -617,7 +619,8 @@ def generate_report(
     report["overall_pass"] = (
         report["content_gates_pass"]
         and report["provenance_admissible_all"]
-        and report["source_e2e_pass"])
+        and report["source_e2e_pass"]
+        and approval_b2_valid)
     if "BLOCKED" in statuses:
         report["status"] = "BLOCKED"
         report["overall_pass"] = False

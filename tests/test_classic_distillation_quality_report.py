@@ -628,10 +628,8 @@ def test_e3_multiset_negative_only_e3_fails(monkeypatch, mode):
         return (json.dumps(obj, ensure_ascii=False) + "\n").encode("utf-8")
 
     monkeypatch.setattr("scripts.generate_quality_report._git_head_blob", fake)
-    monkeypatch.setattr(
-        "scripts.generate_quality_report._e0_static_check",
-        lambda gr: {"ok": True, "error_code": None},
-    )
+    # 不 stub E0/E1/E2：freeze/evidence/E/R/pointer 均未改动，真实链必须通过，
+    # 最终仅 E3 对当前 HEAD 多重集合重算并拒绝（v27.3 P0 契约）
     adm = evaluate_provenance_admissibility(
         ROOT / "knowledge_base" / "classic_texts" / "sanmingtonghui", ROOT)
     assert adm["provenance_state"] == "MISSING"
@@ -836,15 +834,51 @@ def test_report_exit_zero_when_all_pass(tmp_path, monkeypatch):
             "E2_ok": True, "E3_ok": True, "historical_exemption_valid": True,
             "provenance_admissible": True, "exemption_error_code": None})
     _spy_source(monkeypatch, {"status": "PASS", "reason": None})
-    monkeypatch.setattr("scripts.generate_quality_report._find_git_root", lambda: None)
+    monkeypatch.setattr("scripts.generate_quality_report._find_git_root", lambda: ROOT)
     report, exit_code = generate_report(
         base_path=tmp_path, books={"sanmingtonghui": "三命通会"}, archive_root=tmp_path)
+    assert report["approval_b2_constant_valid"] is True
     assert report["status"] == "PASS"
     assert report["overall_pass"] is True
     assert report["content_gates_pass"] is True
     assert report["provenance_admissible_all"] is True
     assert report["source_e2e_pass"] is True
     assert exit_code == 0
+
+
+def test_report_b2_constant_invalid_fails_closed(tmp_path, monkeypatch):
+    """§5.1 报告级 fail-closed：其他门全部通过，仅 B2 常量校验失败 →
+    approval_b2_constant_valid=False、overall_pass=False、status=FAIL、exit 1。"""
+    _setup_passing_book(tmp_path, dir_key="sanmingtonghui")
+    (tmp_path / "sanmingtonghui" / "provenance.json").unlink()
+    monkeypatch.setattr(
+        "scripts.generate_quality_report.evaluate_provenance_admissibility",
+        lambda bd, gr: {
+            "provenance_state": "MISSING", "E0_ok": True, "E1_ok": True,
+            "E2_ok": True, "E3_ok": True, "historical_exemption_valid": True,
+            "provenance_admissible": True, "exemption_error_code": None})
+    _spy_source(monkeypatch, {"status": "PASS", "reason": None})
+    monkeypatch.setattr("scripts.generate_quality_report._find_git_root", lambda: ROOT)
+
+    def _bad(git_root, constant=None):
+        raise ValueError("tampered constant")
+
+    monkeypatch.setattr(
+        "scripts.generate_quality_report.validate_approval_b2_constant", _bad)
+    report, exit_code = generate_report(
+        base_path=tmp_path, books={"sanmingtonghui": "三命通会"}, archive_root=tmp_path)
+    assert report["approval_b2_constant_valid"] is False
+    assert report["overall_pass"] is False
+    assert report["status"] == "FAIL"
+    assert exit_code == 1
+
+
+def test_report_b2_constant_unverifiable_without_git_root(tmp_path, monkeypatch):
+    """git_root 缺失 → 常量无法校验 → fail-closed 记 False（不得记 True）。"""
+    _setup_passing_book(tmp_path)
+    monkeypatch.setattr("scripts.generate_quality_report._find_git_root", lambda: None)
+    report, _ = generate_report(base_path=tmp_path, books={"zipingzhenquan": "子平真诠"})
+    assert report["approval_b2_constant_valid"] is False
 
 
 def test_report_top_level_state_machine_keys(tmp_path, monkeypatch):
