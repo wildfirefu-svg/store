@@ -1,14 +1,14 @@
-# 经典文本历史 provenance 窄豁免设计 v27.10（已获有效批准）
+# 经典文本历史 provenance 窄豁免设计 v28（已获有效批准）
 
-状态：**v27.10 已获有效批准（批准锚点见 §0）** ｜ 日期：2026-09-04 ｜ 冻结基点：`c5cff699fdb547bd9270acbebe1f485380848751`（branch `task/sanming-completion`）
-前版：v26 已获有效批准；v27 修订 records 唯一性契约（§3/§5-E3，多重集合）；v27.1 修补 2 P0 + 1 P1 与省略号违规；v27.2 修正 E3 测试方案；v27.3 修正 E0 record_set_binding 误读当前 HEAD（P0）；v27.4 补正式 evidence 生产入口纠正链（P0）；v27.5 修补 v27.4 复审 3 P0；v27.6 修补 v27.5 复审 2 P0；v27.7 修补 v27.6 复审 2 P0；v27.8 小修补 v27.7 复审；v27.9 小修补 v27.8 复审 1 P0（rc==1 完整字段判据）+ 1 P1（校验时点归属步骤 ③）；v27.10 小修补 v27.9 复审 1 P0（「复用全部判据」措辞矛盾），变更见 §13。
+状态：**v28 已获有效批准（A′ 批准锚点见 §0）** ｜ 日期：2026-09-05 ｜ 冻结基点：`c5cff699fdb547bd9270acbebe1f485380848751`（branch `task/sanming-completion`）
+前版：v26 已获有效批准；v27 修订 records 唯一性契约（§3/§5-E3，多重集合）；v27.1 修补 2 P0 + 1 P1 与省略号违规；v27.2 修正 E3 测试方案；v27.3 修正 E0 record_set_binding 误读当前 HEAD（P0）；v27.4 补正式 evidence 生产入口纠正链（P0）；v27.5 修补 v27.4 复审 3 P0；v27.6 修补 v27.5 复审 2 P0；v27.7 修补 v27.6 复审 2 P0；v27.8 小修补 v27.7 复审；v27.9 小修补 v27.8 复审 1 P0（rc==1 完整字段判据）+ 1 P1（校验时点归属步骤 ③）；v27.10 小修补 v27.9 复审 1 P0（「复用全部判据」措辞矛盾）；v28 新增 extractor 锚点自包含迁移条款（A′：CI 不可达旧锚点的重钉与全链重建，§4.1/§13），变更见 §13。
 **身份值约定：Git OID 一律 40 位十六进制；SHA-256 一律 64 位十六进制；全文一律完整值，禁止省略号截断。**
 
 ---
 
 ## 0. 提案状态
 
-- **v26 已获有效批准**（批准锚点见下）；**v27.3 已获有效批准**（records 唯一性契约修订 + 复审修补，见 §13，批准锚点见下）；**v27.4 未获批准**（复审 NEEDS_REVISION，由 v27.5 取代）；**v27.5 未获批准**（复审 NEEDS_REVISION，由 v27.6 取代）；**v27.6 未获批准**（复审 NEEDS_REVISION，由 v27.7 取代）；**v27.7 未获批准**（复审 NEEDS_REVISION，由 v27.8 取代）；**v27.8 未获批准**（复审 NEEDS_REVISION，由 v27.9 取代）；**v27.9 未获批准**（复审 NEEDS_REVISION，由 v27.10 取代）；**v27.10 已获有效批准**（纠正链小修，见 §13，批准锚点见下）。
+- **v26 已获有效批准**（批准锚点见下）；**v27.3 已获有效批准**（records 唯一性契约修订 + 复审修补，见 §13，批准锚点见下）；**v27.4 未获批准**（复审 NEEDS_REVISION，由 v27.5 取代）；**v27.5 未获批准**（复审 NEEDS_REVISION，由 v27.6 取代）；**v27.6 未获批准**（复审 NEEDS_REVISION，由 v27.7 取代）；**v27.7 未获批准**（复审 NEEDS_REVISION，由 v27.8 取代）；**v27.8 未获批准**（复审 NEEDS_REVISION，由 v27.9 取代）；**v27.9 未获批准**（复审 NEEDS_REVISION，由 v27.10 取代）；**v27.10 已获有效批准**（纠正链小修，见 §13，批准锚点见下）；**v28 已获有效批准**（extractor 锚点自包含迁移 A′，见 §13，批准锚点见下）。
 - **§8 口径**：v3–v19 均提议 S；**已于 2026-09-03 用户在聊天正文逐字确认**（确认语句见 §8），记为设计口径 S。
 - **v26 批准锚点（2026-09-03，本聊天正文直接授权）**：
   - S 确认语句：`选择 S：本设计不豁免三本完成书的 source 获取链；三书 source_e2e_status="FAIL"，派生 source_e2e_pass=false。`
@@ -27,6 +27,10 @@
   - 经终审 v27.10 草案 SHA-256：`03C3B022BB61B463E5ABA613CC86C2CF1700481EE0FA25D2732E9BED4D5CA5B3`
   - 追认前工作区文档 SHA-256：`F9400AE96FA0A8F0EE96A9901D25751819DADC52CBBC238C051AF6CB999C629D`
   - 追认提交：`a046555af87a12e15424778ffc3fd3ed26177d1c`、`53aabebd0fc0fa27b1eb9a5a546736c16bea0b92`、`6f09ee290a0781b80c4707ae2dc6a6ceb4833abc`
+- **v28 批准锚点（2026-09-05，本聊天正文直接授权）**：
+  - 批准语句：`批准按 A′ 执行 extractor 自包含重钉，并按依赖顺序重建 freeze/evidence 与四书批准链。`
+  - 批准时 HEAD：`aceef18fd8da6677c711b70de32442d57b9e6ea6`
+  - 批准前文档 SHA-256：`D936F0B7BB897AD1F0AAF7D872753A8CD7BDFDC057060A58AE71C3865C1942F2`（v27.10）
 - **v27.2 修订动因**：阶段 ① 首跑冻结基点 `c5cff699fdb547bd9270acbebe1f485380848751` 时发现 `qiongtongbaojian/quarantine_rules.jsonl` 存在同 `id` 不同内容的多条记录（qtbj_001_038/qtbj_050_009/qtbj_050_011 各 2 条），与 §3「同文件 id 唯一」冲突。**按用户裁决不改历史数据**，将 records 身份契约改为 `(id, sha256)` 多重集合（§3/§5-E3）。
 - **v27.3 修订动因**：v27.2 复审判 `evidence_static_check` 的 `record_set_binding` 误绑定当前 HEAD 聚合 blob（P0，v27.3）。**收窄为仅绑定 freeze 文件**（`frozen_manifest_file_sha256 == 冻结集文件字节 SHA`、`counts == 冻结集 records 多重计数`），不读取当前 HEAD 聚合 blob；当前 HEAD 与 BASE freeze 的多重集合比较由 §5-E3 独占并在 E1/E2 后执行（§4/§5-E3/§10-⑦）。
 - **v27.4 修订动因**：阶段④ 复审判正式 `evidence` 生产入口未闭合（P0，v27.4）：CLI `evidence` 子命令仍以阶段①的零值 verifier fixture（OID/SHA 全零、空 replay）传入 `evidence_static_check` 且无 `--archive-root`，对已提交 evidence 执行原生 `--check` 必得 `EVIDENCE_STATIC_MISMATCH`（exit 1）；阶段④ 以未提交一次性驱动生成 evidence，不满足 §10 要求的真实 generator→verifier 生产联调。修复需改动生成器（其 blob OID 随之变化）→ 新增三阶段纠正链（§10-④）：C-evidence-wiring → C-freeze-r2 → C-evidence-r2；历史尝试 `c22b5b12d3ba5dd9ce7a9ebd5f914d4efde1109f`（freeze v1）与 `cbb00baf7b0e4c4cbf20257f6a8a85b840e3b953`（evidence v1）保留不改写。
@@ -208,22 +212,24 @@ pointer    = <SNAP>/RESPONSE_ARCHIVE_POINTER.json   blob b423b726afe4890618b5f07
 manifest   = <SNAP>/source_manifest.json            blob 662fbe6013c11b3bc58a3393ef1168ea82b05eca  216377 B sha256 7024760851374217ec3c61422e70fbd2d6a1deb3d48d1fa594d120215fdace61
 active_ptr = knowledge_base/classic_texts/sanmingtonghui/formal/active_source_snapshot.json
                                                       blob 4de1c1a6565e559bd86d6ca411c7582f07cbce82  187 B    sha256 dadf5b253961500d86a8c1e22841e0f2f96dee56d62b005f76285f16a1540eca
-parser     = scripts/fetch_sanming_chapters.py      blob 1842a8d5c732b19a233baa72fd7fec496217722d（BASE 与锚点 f64a25ddd8ef43aef9ad75e189e72a4f9d373938 同 blob，已实测）
+parser     = scripts/fetch_sanming_chapters.py      blob 1842a8d5c732b19a233baa72fd7fec496217722d（BASE 与新旧锚点 f64a25ddd8ef43aef9ad75e189e72a4f9d373938/054db22d6cc319aaa9db47443d1c9c7a7dfb9046 同 blob，已实测）
 chapters   = knowledge_base/classic_texts/sanmingtonghui/chapter_list.txt
                                                       blob 70c5029c29c3443ea2b149a749e7ba6aef904779（BASE 与锚点同 blob，已实测）
 extracted  = <SNAP>/extracted/raw_001.txt .. raw_383.txt  （383 个，HEAD Git blob 读取）
 tar        = <archive-root>/cf984581ea0a8e8028949733ed98c5bb85f54972723033c489b34e51b48d7cf9.tar
                                                       7,127,040 B  sha256 cf984581ea0a8e8028949733ed98c5bb85f54972723033c489b34e51b48d7cf9（archive-root 为运行参数，相对路径/SHA/大小冻结于此与指针）
-extractor  = git 对象 f64a25ddd8ef43aef9ad75e189e72a4f9d373938:scripts/fetch_sanming_full.py
+extractor  = git 对象 054db22d6cc319aaa9db47443d1c9c7a7dfb9046:scripts/fetch_sanming_full.py
                                                       blob 4bbd6e1a2717d932f0f33bb9bbce4f7ed24db463  sha256 afa691ef3568c94cc34a04da60e75c492f1faba6cfd8c2e8c16827ac33f6ab1d
 ```
 
 注：`active_ptr` 记录的 `source_manifest_sha256:"ed06d58273072ac8bafffa29962ce95e88a85b7e8edb3b430cde1b42b8bd0b5d"` 语义未钉（实测 ≠ manifest 文件字节 SHA `7024760851374217ec3c61422e70fbd2d6a1deb3d48d1fa594d120215fdace61`，≠ sort_keys canonical 形式 `b5b3eef94242b19133c8ae37a3c63dd2d0a008298b5945fd6f117c5d4c61f7aa`）——**不作为重算事实**，仅历史 builder 输出原样记录；证据绑定以文件字节 SHA 为准。
 
+**extractor 锚点迁移条款（v28/A′）**：旧锚点 `f64a25ddd8ef43aef9ad75e189e72a4f9d373938` 仅存在于未推送的本地历史，正式 CI checkout 不可达（PR #3 全量测试 36 项异常同源于此）。允许将 extractor 提交锚点迁移至新提交，**唯一充要条件**：`git rev-parse <新锚点>:scripts/fetch_sanming_full.py` 严格等于 blob `4bbd6e1a2717d932f0f33bb9bbce4f7ed24db463`（字节全等，sha256 `afa691ef3568c94cc34a04da60e75c492f1faba6cfd8c2e8c16827ac33f6ab1d` 不变）。现锚点迁移至 `054db22d6cc319aaa9db47443d1c9c7a7dfb9046`（该提交将 extractor 原始字节入当前分支，`git hash-object` 实测全等）。**迁移后果（强制，不可省略）**：generator/verifier 的 `EXTRACTOR_COMMIT` 常量更新 → 两脚本 blob 变化 → freeze 内嵌 generator 身份与 evidence 内嵌 generator/verifier 身份失效 → 必须按 §10 顺序重生成 freeze/evidence（真实 303/303 重放）→ 四书 E→R→B1→B2 批准链整体重建 → B3 常量与 closure 工件刷新 → 本地全门禁后推送重跑 CI。旧 freeze/evidence/E/R/B1/B2/B3 常量与 closure 保留历史不改写，由新链取代。
+
 ### 4.2 source 链核验器（Git 跟踪入口，精确输出 schema）
 
 - 调用：`python scripts/verify_sanming_source_chain.py --base <40hex> --archive-root <dir>`（`--base` 默认冻结基点常量；**正式报告链禁止非冻结 base**，见 §7）。本核验器即 `source_chain_check` 的执行体。
-- **实现冻结**：`_FOOTER` 与 `_extract_content` 从 Git 对象 `4bbd6e1a2717d932f0f33bb9bbce4f7ed24db463`（提交 `f64a25ddd8ef43aef9ad75e189e72a4f9d373938` 的树内 blob）**AST 提取**后执行，禁止手工副本；同源测试断言提取片段字节 == blob 内源码段。`parse_chapter_list` 从 Git blob `1842a8d5c732b19a233baa72fd7fec496217722d` 加载；`chapter_list.txt` 从 Git blob `70c5029c29c3443ea2b149a749e7ba6aef904779` 读取。
+- **实现冻结**：`_FOOTER` 与 `_extract_content` 从 Git 对象 `4bbd6e1a2717d932f0f33bb9bbce4f7ed24db463`（提交 `054db22d6cc319aaa9db47443d1c9c7a7dfb9046` 的树内 blob；与未推送历史提交 `f64a25ddd8ef43aef9ad75e189e72a4f9d373938` 同 blob，见 §4.1 迁移条款）**AST 提取**后执行，禁止手工副本；同源测试断言提取片段字节 == blob 内源码段。`parse_chapter_list` 从 Git blob `1842a8d5c732b19a233baa72fd7fec496217722d` 加载；`chapter_list.txt` 从 Git blob `70c5029c29c3443ea2b149a749e7ba6aef904779` 读取。
 - Git 输入一律 Git blob 读取；tar 从 `--archive-root` 读取并以 evidence `source_chain.tar_*` 及指针 `archive_sha256`/`archive_size` 自钉；**归档缺失/损坏/身份不符 → BLOCKED 状态（独立于 C1 失败，亦独立于豁免链静态错误）**。**BLOCKED reason 统一枚举（五值，报告层同用此枚举）**：
 
 ```text
@@ -608,6 +614,8 @@ TDD 覆盖（详目同前）：冻结生成器（精确 schema/拒绝项/确定�
 8. ~~**v27.8 修订版整体批准**（纠正链小修，§13）~~ 未获批准（复审 NEEDS_REVISION：rc==1 判据不完整 / 校验时点与步骤 ③ 冲突），由 v27.9 取代。
 9. ~~**v27.9 修订版整体批准**（纠正链小修，§13）~~ 未获批准（复审 NEEDS_REVISION：「复用全部判据」措辞使 rc==1 分支自相矛盾），由 v27.10 取代。
 10. ~~**v27.10 修订版整体批准与 §10-④ 纠正链实施**（纠正链小修，§13）~~ **已完成**（2026-09-04，有效批准与追认锚点见 §0）：C-evidence-wiring `a046555af87a12e15424778ffc3fd3ed26177d1c` → C-freeze-r2 `53aabebd0fc0fa27b1eb9a5a546736c16bea0b92` → C-evidence-r2 `6f09ee290a0781b80c4707ae2dc6a6ceb4833abc`。
+11. ~~**v28 修订版整体批准**（extractor 锚点自包含迁移 A′，§13）~~ **已完成**（2026-09-05，批准锚点见 §0）。
+12. **四书 R 批准（A′ 重建链）**：A′-④ 重生成 freeze/evidence 后逐书重新生成 E，等待用户对每书 R 回执的第一人称批准及 B1/B2 追认。
 
 ## 12. source verifier 身份绑定
 
@@ -616,7 +624,7 @@ TDD 覆盖（详目同前）：冻结生成器（精确 schema/拒绝项/确定�
   - 静态链（`evidence_static_check`，§10-① 测试）：只比对 evidence 记录的 `verifier_blob_oid/verifier_sha256` 是否 == `HEAD:scripts/verify_sanming_source_chain.py` 的 blob OID/字节 sha256；不符 → `EVIDENCE_STATIC_MISMATCH`。
   - 执行链（`source_chain_check` 执行前，§10-③ 测试）：断言 `git hash-object <工作区 verifier 文件>` == 同 HEAD blob OID（disk==HEAD）；不符 → BLOCKED（reason `verifier_identity_mismatch`，属 §4.2 统一枚举）。
 
-## 13. v26 → v27.10 变更记录
+## 13. v26 → v28 变更记录
 
 1. **records 身份契约改为多重集合（P0，修订）**：阶段 ① 首跑发现冻结基点 `c5cff699fdb547bd9270acbebe1f485380848751` 的 `qiongtongbaojian/quarantine_rules.jsonl` 存在同 `id` 不同内容的多条记录（qtbj_001_038/qtbj_050_009/qtbj_050_011 各 2 条），与 §3「同文件 id 唯一」冲突。**按用户裁决不改历史数据**：§3 取消 id 唯一要求，records 身份改为 `(id,sha256)` 多重集合、按 `(id,sha256)` 排序、保留重复次数；§5-E3 改为逐记录多重集合严格相等（按 `(kind,id,sha)` 排序后逐项比对，禁用普通 set）。
 2. **未来 manifest 按多重集合表示（P0，v27.1 复审）**：§9 明确未来 run_manifest 的 pre-run 规则索引不得用单值 `id → canonical SHA` map，改用 `(id,sha256)` 规范化多重集合（或带 count 列表），与 §3/§5-E3 语义一致。
@@ -637,4 +645,6 @@ TDD 覆盖（详目同前）：冻结生成器（精确 schema/拒绝项/确定�
 
 13. **v27.9 复审 1 P0 小修（v27.10）**：「逐字段复用成功分支全部判据」措辞按字面包含 c1/c2/c3==303 与 failures==[]，与 rc==1 分支特有判据（计数允许 <303、failures 非空）自相矛盾，改为「**复用成功分支的顶层键集合、schema_version、status、字段类型及取值范围判据；分支特有判据为 c1/c2/c3 可小于 303 且 failures 非空**」（§10-④(1) 与本条同步修正）。
 
-**v27.10 已获有效批准并追认 §10-④ 三笔实施提交（有效锚点见 §0）；纠正链已完成。**
+14. **extractor 锚点自包含迁移（v28/A′）**：正式 CI（PR #3，run `33940977967`）全量测试 36 项异常同源——旧 extractor 锚点 `f64a25ddd8ef43aef9ad75e189e72a4f9d373938` 仅存在于未推送本地历史，CI checkout 不可达（`rev-parse` 失败）。按用户 A′ 批准执行：① 本设计新增 §4.1 锚点迁移条款（唯一充要条件 = 新锚点树内 `scripts/fetch_sanming_full.py` 的 blob 严格等于 `4bbd6e1a2717d932f0f33bb9bbce4f7ed24db463`，extractor 字节与 sha256 `afa691ef3568c94cc34a04da60e75c492f1faba6cfd8c2e8c16827ac33f6ab1d` 不变）；② extractor 原始字节入当前分支（提交 `054db22d6cc319aaa9db47443d1c9c7a7dfb9046`，`git hash-object` 实测全等）；③ 更新 `scripts/generate_classic_historical_freeze.py` 与 `scripts/verify_sanming_source_chain.py` 的 `EXTRACTOR_COMMIT` 常量及相关负向测试；④ 重生成 freeze/evidence（真实 303/303 重放，替换 `53aabebd0fc0fa27b1eb9a5a546736c16bea0b92`/`6f09ee290a0781b80c4707ae2dc6a6ceb4833abc` 版本，历史保留不改写）；⑤ 因 evidence SHA 变化，四书 E→R→B1→B2 批准链整体重建（逐书等用户 R 批准）；⑥ B3 常量与 closure 工件刷新；⑦ 本地全门禁后推送，重跑 PR #3 CI；⑧ CI 全绿后方完成 §10-⑧。不合并本地 `main` 的 69 个独有提交；不推送指向旧提交的 tag。
+
+**v27.10 已获有效批准并追认 §10-④ 三笔实施提交（有效锚点见 §0）；纠正链已完成；v28 已获有效批准（A′ 锚点见 §0），A′ 重钉链执行中。**
