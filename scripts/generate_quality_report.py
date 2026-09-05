@@ -66,10 +66,10 @@ VERIFIER_REL = "scripts/verify_sanming_source_chain.py"
 
 # §5.1 B3 常量：四书 B2 完整 SHA（冻结于四笔 B2 提交之后；报告不接受任何 CLI SHA）
 APPROVAL_B2_BY_BOOK = {
-    "ditiansui": "722d3ff1a383ec49cc4da697f83a45b61d4e8124",
-    "qiongtongbaojian": "05fb1e04effd253d4ad3da33126a83e1e37f2578",
-    "sanmingtonghui": "46069f494c2a8673d6e2389a8e76ff13420d95c8",
-    "zipingzhenquan": "8140ed5660232b35461717e05d948bb9d75576a9",
+    "ditiansui": "d59461c4ba4159c640bc523107af1342e8841c05",
+    "qiongtongbaojian": "22e988ced5ef6411862ea81f2ca4afa9c6f11f5f",
+    "sanmingtonghui": "ccb833a46977c8274c0fb8c8c79c1b2f5d494c5e",
+    "zipingzhenquan": "45004f44304241018a51d755c6f88a24f536905c",
 }
 
 _POINTER_FIELDS = frozenset({
