@@ -7213,8 +7213,11 @@
       "docs/phase8/marriage-capability/non_e2e_gate_receipt.json"
     ],
     "knowledge_base_remainder": {
-      "count": 0,
-      "paths": [],
+      "count": 2,
+      "paths": [
+        "knowledge_base/classic_texts/_validation_report.json",
+        "knowledge_base/classic_texts/qiongtongbaojian/progress.json"
+      ],
       "note": "changed knowledge_base paths outside the manifest read closure and the oversized list (ledger archives, progress/distill logs, validation reports)"
     }
   },
