@@ -49,7 +49,7 @@ POINTER_REL = f"{SNAP}/RESPONSE_ARCHIVE_POINTER.json"
 MANIFEST_REL = f"{SNAP}/source_manifest.json"
 PARSER_REL = "scripts/fetch_sanming_chapters.py"
 CHAPTER_LIST_REL = "knowledge_base/classic_texts/sanmingtonghui/chapter_list.txt"
-EXTRACTOR_COMMIT = "f64a25ddd8ef43aef9ad75e189e72a4f9d373938"
+EXTRACTOR_COMMIT = "054db22d6cc319aaa9db47443d1c9c7a7dfb9046"
 EXTRACTOR_REL = "scripts/fetch_sanming_full.py"
 
 # §4.1 未证事实完整 JSON 字面量（逐字符串冻结）
