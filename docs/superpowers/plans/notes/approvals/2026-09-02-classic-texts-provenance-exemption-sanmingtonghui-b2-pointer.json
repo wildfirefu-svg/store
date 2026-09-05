@@ -1,10 +1,10 @@
 {
-  "b1_commit": "b20075e0ece74ad49e6730d7ed9e8331f6b9222a",
+  "b1_commit": "76720380ec87bb99c3cf7074e8d8b601e5ec91cb",
   "baseline_commit": "c5cff699fdb547bd9270acbebe1f485380848751",
   "book": "sanmingtonghui",
   "e_path": "docs/superpowers/plans/notes/approvals/2026-09-02-classic-texts-provenance-exemption-sanmingtonghui-request.json",
-  "e_sha256": "f48269756724162b2122ac2fd093d814cbfabd4ef03cd416288da6eb6f5b740c",
+  "e_sha256": "ed43fb98472ef2412f72f4d5809bd7dad933b76a22d02d9008a6daecbd9743c0",
   "r_path": "docs/superpowers/plans/notes/approvals/2026-09-02-classic-texts-provenance-exemption-sanmingtonghui-receipt.json",
-  "r_sha256": "d0159ea5bfd0d9195c8891f66d390622b4add4430d58af9b86bf130e07476834",
+  "r_sha256": "ea3eea01331bf14faa533f11c806d075c43fa507a3f8ff03fc7e6a91e2bfd32a",
   "schema_version": "1.0"
 }
