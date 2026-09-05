@@ -1,12 +1,12 @@
 {
-  "approved_at": "2026-09-04T10:00:00+08:00",
+  "approved_at": "2026-09-05T10:00:00+08:00",
   "approver": "owner",
   "artifact_manifest_sha256": "6c028c1c8242bbf63b456fdc1728c959663fdc80691f2a73acbd76617f539609",
   "baseline_commit": "c5cff699fdb547bd9270acbebe1f485380848751",
-  "exemption_request_sha256": "b6a604f645c163495d2f448143be1eda3461510ae19a07268e5fcd64361102ad",
-  "historical_generation_evidence_sha256": "36f99d4381bffdbb8d2e270477396671e92c51188c01ac2c157bfaf34e56919f",
-  "historical_record_freeze_sha256": "b287f2f046aeee49c5ab67f30fb9182715e6efd5de6633fcc892c4a8321b2df6",
-  "parent_commit": "e2a029b90f5fc618b8d39b4e0cd63741a3196808",
+  "exemption_request_sha256": "a87c49afc1ed3307a73d035c47df7967eb3c6d5d553c336ef62576c12b2b9a7a",
+  "historical_generation_evidence_sha256": "7d8c27b01c03c130b193d1657ad24d25be01053ddfba6f483dd51a0c5d004d23",
+  "historical_record_freeze_sha256": "4967631cd872d17cc36f8b10f9a0e93273ec8a03e895828f9d6e036f9d787eb8",
+  "parent_commit": "7f353c38c608cd99ba0a090eca1cb887372a02c0",
   "schema_version": "2.0",
   "validator_code_sha256": "5dd6f52b87858424095e2c323dff63d46f81d93ceaf83fd00a8fc479ec904632"
 }
