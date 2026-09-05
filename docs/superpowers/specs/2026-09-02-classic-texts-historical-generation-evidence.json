@@ -122,8 +122,8 @@
     }
   },
   "frozen_at_commit": "c5cff699fdb547bd9270acbebe1f485380848751",
-  "generator_blob_oid": "55b3a7bad0eb0217d849852aa70654be703b704f",
-  "generator_sha256": "770af16bf7d87ddddf792b17b76c75b9fcad56ffd5dd170fec04aa21d9a0edbc",
+  "generator_blob_oid": "2a2914d62ed251520f3952ecddf30353f0c15ce1",
+  "generator_sha256": "39b04d2a39a6dedccf6ea7991d150cf40c144e4b5f90ae97e6c6933a56cd74a1",
   "record_set_binding": {
     "counts": {
       "ditiansui": {
@@ -151,7 +151,7 @@
         "quarantine_rules": 0
       }
     },
-    "frozen_manifest_file_sha256": "b287f2f046aeee49c5ab67f30fb9182715e6efd5de6633fcc892c4a8321b2df6"
+    "frozen_manifest_file_sha256": "4967631cd872d17cc36f8b10f9a0e93273ec8a03e895828f9d6e036f9d787eb8"
   },
   "schema_version": "1.0",
   "source_chain": {
@@ -174,8 +174,8 @@
       "tar_relative_path": "cf984581ea0a8e8028949733ed98c5bb85f54972723033c489b34e51b48d7cf9.tar",
       "tar_sha256": "cf984581ea0a8e8028949733ed98c5bb85f54972723033c489b34e51b48d7cf9",
       "tar_size": 7127040,
-      "verifier_blob_oid": "8298d30c7765543a8fec2baa00c2b8fb9e3080b8",
-      "verifier_sha256": "f50e0f36a1f5346187c18ef4e1c246d16322102c8ecc519054405ba1ca51f0f8"
+      "verifier_blob_oid": "a1ef7420aac38470db95d16174344adb8805345a",
+      "verifier_sha256": "d3d16724ec97b7c39df84de9df161e8e208b30149cfdf0de95467d466e457ac7"
     }
   },
   "unproven_facts": [
