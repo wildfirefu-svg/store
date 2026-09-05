@@ -4,8 +4,8 @@
   "artifact_manifest_sha256": "8b8dbbdff269a51cfdee7314cce6eacf3376c798282fd10725be6e7993eb332e",
   "baseline_commit": "c5cff699fdb547bd9270acbebe1f485380848751",
   "validator_code_sha256": "5dd6f52b87858424095e2c323dff63d46f81d93ceaf83fd00a8fc479ec904632",
-  "historical_record_freeze_sha256": "b287f2f046aeee49c5ab67f30fb9182715e6efd5de6633fcc892c4a8321b2df6",
-  "historical_generation_evidence_sha256": "36f99d4381bffdbb8d2e270477396671e92c51188c01ac2c157bfaf34e56919f",
+  "historical_record_freeze_sha256": "4967631cd872d17cc36f8b10f9a0e93273ec8a03e895828f9d6e036f9d787eb8",
+  "historical_generation_evidence_sha256": "7d8c27b01c03c130b193d1657ad24d25be01053ddfba6f483dd51a0c5d004d23",
   "exempted_checks": [
     "missing_formal_model_run_manifest"
   ],
@@ -15,6 +15,6 @@
     "future_generation_provenance"
   ],
   "author": "implementing-agent",
-  "date": "2026-09-04",
-  "parent_commit": "05fb1e04effd253d4ad3da33126a83e1e37f2578"
+  "date": "2026-09-05",
+  "parent_commit": "22e988ced5ef6411862ea81f2ca4afa9c6f11f5f"
 }
