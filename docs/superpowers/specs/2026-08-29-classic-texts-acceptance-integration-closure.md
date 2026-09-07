@@ -29,7 +29,7 @@
 
 - 3 个超大 blob（不在读取闭包内）：`QUALITY_REPORT.json`（354001243）、`provenance.json`（314130603）、`remediation_meta.json`（312701489）
 - 蒸馏轨道 10 路径、Phase 8 证据 2 路径（单独任务）
-- `knowledge_base` 其余变更 0 个
+- `knowledge_base` 其余变更 2 个
 
 ## 3. 构造政策与可执行门禁
 

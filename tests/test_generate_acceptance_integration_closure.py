@@ -285,6 +285,12 @@ def test_nolegacy_missing_candidate_generate_raises():
                           base_commit=gic.MERGE_BASE, use_legacy=False)
 
 
+def test_nolegacy_missing_base_generate_raises():
+    with pytest.raises(RuntimeError):
+        gic.build_closure(candidate_commit=gic.OLD_CANDIDATE,
+                          base_commit="1" * 40, use_legacy=False)
+
+
 def test_tooling_pin_commit_is_full_sha_roundtripped():
     assert len(gic.TOOLING_PIN_COMMIT) == 40
     assert gic.resolve_commit(gic.TOOLING_PIN_COMMIT) == gic.TOOLING_PIN_COMMIT

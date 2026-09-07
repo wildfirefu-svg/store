@@ -1,0 +1,12 @@
+{
+  "approved_at": "2026-09-05T10:00:00+08:00",
+  "approver": "owner",
+  "artifact_manifest_sha256": "8b8dbbdff269a51cfdee7314cce6eacf3376c798282fd10725be6e7993eb332e",
+  "baseline_commit": "c5cff699fdb547bd9270acbebe1f485380848751",
+  "exemption_request_sha256": "1cbc5f61d49fbace59cb0d765b6d35aea58bfb2ba2673ef1637321ece402a1a7",
+  "historical_generation_evidence_sha256": "7d8c27b01c03c130b193d1657ad24d25be01053ddfba6f483dd51a0c5d004d23",
+  "historical_record_freeze_sha256": "4967631cd872d17cc36f8b10f9a0e93273ec8a03e895828f9d6e036f9d787eb8",
+  "parent_commit": "22e988ced5ef6411862ea81f2ca4afa9c6f11f5f",
+  "schema_version": "2.0",
+  "validator_code_sha256": "5dd6f52b87858424095e2c323dff63d46f81d93ceaf83fd00a8fc479ec904632"
+}

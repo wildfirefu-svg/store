@@ -425,6 +425,8 @@ def build_closure(candidate_commit=OLD_CANDIDATE, base_commit=MERGE_BASE,
     if cand is None:
         raise RuntimeError(f"data source tree {data_ref} not in object store")
     flags_tree = ls_tree(flags_ref)
+    if flags_tree is None:
+        raise RuntimeError(f"flags base reference {flags_ref} not in object store")
     pin_tree = ls_tree(tooling_ref)
     if pin_tree is None:
         raise RuntimeError(f"tooling reference {tooling_ref} not in object store")

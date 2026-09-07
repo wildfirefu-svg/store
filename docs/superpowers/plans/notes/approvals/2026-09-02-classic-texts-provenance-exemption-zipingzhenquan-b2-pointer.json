@@ -1,0 +1,10 @@
+{
+  "b1_commit": "2a5f267a82a3b9a314d7cb652c208bddb831100a",
+  "baseline_commit": "c5cff699fdb547bd9270acbebe1f485380848751",
+  "book": "zipingzhenquan",
+  "e_path": "docs/superpowers/plans/notes/approvals/2026-09-02-classic-texts-provenance-exemption-zipingzhenquan-request.json",
+  "e_sha256": "2fd49bdb3007ef16576a0b02a9f49861417c78bee5ffc3cf537f74b704bad716",
+  "r_path": "docs/superpowers/plans/notes/approvals/2026-09-02-classic-texts-provenance-exemption-zipingzhenquan-receipt.json",
+  "r_sha256": "a893494804229cc8569100ba8246b8daea438c5127933e6124052e426e4e72f4",
+  "schema_version": "1.0"
+}
