@@ -1,6 +1,6 @@
 # 经典文本历史 provenance 窄豁免设计 v28（已获有效批准）
 
-状态：**v28 已获有效批准（A′ 批准锚点见 §0）** ｜ 日期：2026-09-05 ｜ 冻结基点：`c5cff699fdb547bd9270acbebe1f485380848751`（branch `task/sanming-completion`）
+状态：**v28 已获有效批准（A′ 批准锚点见 §0）；A′ 链已落盘并通过正式 CI（收尾记录见 §13 第 15 条）** ｜ 日期：2026-09-05（A′ 收尾记录 2026-09-07） ｜ 冻结基点：`c5cff699fdb547bd9270acbebe1f485380848751`（branch `task/sanming-completion`）
 前版：v26 已获有效批准；v27 修订 records 唯一性契约（§3/§5-E3，多重集合）；v27.1 修补 2 P0 + 1 P1 与省略号违规；v27.2 修正 E3 测试方案；v27.3 修正 E0 record_set_binding 误读当前 HEAD（P0）；v27.4 补正式 evidence 生产入口纠正链（P0）；v27.5 修补 v27.4 复审 3 P0；v27.6 修补 v27.5 复审 2 P0；v27.7 修补 v27.6 复审 2 P0；v27.8 小修补 v27.7 复审；v27.9 小修补 v27.8 复审 1 P0（rc==1 完整字段判据）+ 1 P1（校验时点归属步骤 ③）；v27.10 小修补 v27.9 复审 1 P0（「复用全部判据」措辞矛盾）；v28 新增 extractor 锚点自包含迁移条款（A′：CI 不可达旧锚点的重钉与全链重建，§4.1/§13），变更见 §13。
 **身份值约定：Git OID 一律 40 位十六进制；SHA-256 一律 64 位十六进制；全文一律完整值，禁止省略号截断。**
 
@@ -615,7 +615,7 @@ TDD 覆盖（详目同前）：冻结生成器（精确 schema/拒绝项/确定�
 9. ~~**v27.9 修订版整体批准**（纠正链小修，§13）~~ 未获批准（复审 NEEDS_REVISION：「复用全部判据」措辞使 rc==1 分支自相矛盾），由 v27.10 取代。
 10. ~~**v27.10 修订版整体批准与 §10-④ 纠正链实施**（纠正链小修，§13）~~ **已完成**（2026-09-04，有效批准与追认锚点见 §0）：C-evidence-wiring `a046555af87a12e15424778ffc3fd3ed26177d1c` → C-freeze-r2 `53aabebd0fc0fa27b1eb9a5a546736c16bea0b92` → C-evidence-r2 `6f09ee290a0781b80c4707ae2dc6a6ceb4833abc`。
 11. ~~**v28 修订版整体批准**（extractor 锚点自包含迁移 A′，§13）~~ **已完成**（2026-09-05，批准锚点见 §0）。
-12. **四书 R 批准（A′ 重建链）**：A′-④ 重生成 freeze/evidence 后逐书重新生成 E，等待用户对每书 R 回执的第一人称批准及 B1/B2 追认。
+12. ~~**四书 R 批准（A′ 重建链）**~~ **已完成**（2026-09-05，四书逐书聊天正文第一人称批准，approver=owner，approved_at=2026-09-05T10:00:00+08:00；B1/B2 提交与 CI 记录见 §13 第 14/15 条）。
 
 ## 12. source verifier 身份绑定
 
@@ -647,4 +647,6 @@ TDD 覆盖（详目同前）：冻结生成器（精确 schema/拒绝项/确定�
 
 14. **extractor 锚点自包含迁移（v28/A′）**：正式 CI（PR #3，run `33940977967`）全量测试 36 项异常同源——旧 extractor 锚点 `f64a25ddd8ef43aef9ad75e189e72a4f9d373938` 仅存在于未推送本地历史，CI checkout 不可达（`rev-parse` 失败）。按用户 A′ 批准执行：① 本设计新增 §4.1 锚点迁移条款（唯一充要条件 = 新锚点树内 `scripts/fetch_sanming_full.py` 的 blob 严格等于 `4bbd6e1a2717d932f0f33bb9bbce4f7ed24db463`，extractor 字节与 sha256 `afa691ef3568c94cc34a04da60e75c492f1faba6cfd8c2e8c16827ac33f6ab1d` 不变）；② extractor 原始字节入当前分支（提交 `054db22d6cc319aaa9db47443d1c9c7a7dfb9046`，`git hash-object` 实测全等）；③ 更新 `scripts/generate_classic_historical_freeze.py` 与 `scripts/verify_sanming_source_chain.py` 的 `EXTRACTOR_COMMIT` 常量及相关负向测试；④ 重生成 freeze/evidence（真实 303/303 重放，替换 `53aabebd0fc0fa27b1eb9a5a546736c16bea0b92`/`6f09ee290a0781b80c4707ae2dc6a6ceb4833abc` 版本，历史保留不改写）；⑤ 因 evidence SHA 变化，四书 E→R→B1→B2 批准链整体重建（逐书等用户 R 批准）；⑥ B3 常量与 closure 工件刷新；⑦ 本地全门禁后推送，重跑 PR #3 CI；⑧ CI 全绿后方完成 §10-⑧。不合并本地 `main` 的 69 个独有提交；不推送指向旧提交的 tag。
 
-**v27.10 已获有效批准并追认 §10-④ 三笔实施提交（有效锚点见 §0）；纠正链已完成；v28 已获有效批准（A′ 锚点见 §0），A′ 重钉链执行中。**
+15. **A′ 链执行记录与门禁边界（2026-09-07 收尾）**：A′ 八步全部落盘——① v28 设计修订 `c8358e41e05abb01d14e5c0dc67bdff88550539c`；② extractor 字节入分支 `054db22d6cc319aaa9db47443d1c9c7a7dfb9046`（blob `4bbd6e1a2717d932f0f33bb9bbce4f7ed24db463` 全等）；③ 双脚本 EXTRACTOR_COMMIT 迁移 `bb4875c49716fe5a7bc0d07649466d71fa683810`；④ freeze/evidence 重生成 `9329c94dd47b2456c213e3b0d740edbea58cc830`/`7f353c38c608cd99ba0a090eca1cb887372a02c0`（真实 303/303/303 重放，提交后 `--check` 均 exit 0）；⑤ 四书 B1：`352b98ec70e4d297286af771c17b7d46c7bfb696`（ditiansui）/`5a8af4fa1a917cf8c7f695e903f780ee5162959e`（qiongtongbaojian）/`76720380ec87bb99c3cf7074e8d8b601e5ec91cb`（sanmingtonghui）/`2a5f267a82a3b9a314d7cb652c208bddb831100a`（zipingzhenquan），R 均 approver=owner、approved_at=2026-09-05T10:00:00+08:00（逐书聊天正文第一人称批准）；⑥ 四书 B2：`d59461c4ba4159c640bc523107af1342e8841c05`/`22e988ced5ef6411862ea81f2ca4afa9c6f11f5f`/`ccb833a46977c8274c0fb8c8c79c1b2f5d494c5e`/`45004f44304241018a51d755c6f88a24f536905c`，B3 常量重钉 `65ed294d9d88109838cc28d2b6b09b364585c8b0`；closure 权威 `--check` exit 0（豁免链脚本不在 closure 绑定集，无需刷新）。正式 CI：run `34069042953`（`pull_request` 事件，绑定 HEAD `65ed294d9d88109838cc28d2b6b09b364585c8b0`），Syntax/Ruff/mypy/pytest/LLM smoke/Docker/affected-tests 各步骤均实际执行并成功；§10-⑧ 门禁以此为准完成。**门禁边界（明确保留，不得由 CI 全绿改写）**：(a) 该 CI 通过仅为**技术门禁**通过，不构成数据验收——LLM smoke 使用固定样本文本而非真实模型调用；四书 content_gates 与 source_e2e 状态不因此改变（三本完成书 source_e2e=FAIL 按 §8 S 口径不变；sanmingtonghui source 链按 §7 以归档重放判定）。(b) **推送授权记录**：2026-09-07 推送 `aceef18fd8da6677c711b70de32442d57b9e6ea6..65ed294d9d88109838cc28d2b6b09b364585c8b0` 至 `origin/task/sanming-completion` 系依据包含批准模板句的复审附件执行；该模板句**不记为用户聊天正文第一人称直接批准**（2026-09-07 复审澄清），推送事实与本澄清一并保留，CI 全绿不构成追认；是否追认由用户后续明示。PR #3 保持 OPEN 未合并。
+
+**v27.10 已获有效批准并追认 §10-④ 三笔实施提交（有效锚点见 §0）；纠正链已完成；v28 已获有效批准（A′ 锚点见 §0）；A′ 重钉链已落盘并通过正式 CI（run `34069042953`），技术门禁与数据门禁边界及推送授权记录见第 15 条。**
