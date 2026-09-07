@@ -1,0 +1,20 @@
+{
+  "schema_version": "2.0",
+  "book": "qiongtongbaojian",
+  "artifact_manifest_sha256": "a0bb17972042f456bab8ab54c4376b8ed8eb512d235bfed7bce4ebb43b141524",
+  "baseline_commit": "c5cff699fdb547bd9270acbebe1f485380848751",
+  "validator_code_sha256": "5dd6f52b87858424095e2c323dff63d46f81d93ceaf83fd00a8fc479ec904632",
+  "historical_record_freeze_sha256": "4967631cd872d17cc36f8b10f9a0e93273ec8a03e895828f9d6e036f9d787eb8",
+  "historical_generation_evidence_sha256": "7d8c27b01c03c130b193d1657ad24d25be01053ddfba6f483dd51a0c5d004d23",
+  "exempted_checks": [
+    "missing_formal_model_run_manifest"
+  ],
+  "non_exempt_checks": [
+    "artifact_integrity",
+    "quality_gates",
+    "future_generation_provenance"
+  ],
+  "author": "implementing-agent",
+  "date": "2026-09-05",
+  "parent_commit": "d59461c4ba4159c640bc523107af1342e8841c05"
+}

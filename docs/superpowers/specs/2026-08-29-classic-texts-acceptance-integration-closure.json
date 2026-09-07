@@ -7139,15 +7139,15 @@
     "source_files": [
       {
         "path": "scripts/generate_acceptance_integration_closure.py",
-        "blob_oid_at_infrastructure_commit": "c22fe27f11c2e3fe3d15d7077cec02e029061559",
-        "size": 57646,
+        "blob_oid_at_infrastructure_commit": "0aa6db22f194616275a886e89283e52f5813d3e0",
+        "size": 57757,
         "group": "infrastructure_source",
         "migrated": true
       },
       {
         "path": "tests/test_generate_acceptance_integration_closure.py",
-        "blob_oid_at_infrastructure_commit": "f9e6bc57d7974e3c8780416fd2fca4d8819adb5e",
-        "size": 16520,
+        "blob_oid_at_infrastructure_commit": "7257a77934234822639e9ed054e0d8083a239818",
+        "size": 16738,
         "group": "infrastructure_source",
         "migrated": true
       }
@@ -7213,8 +7213,11 @@
       "docs/phase8/marriage-capability/non_e2e_gate_receipt.json"
     ],
     "knowledge_base_remainder": {
-      "count": 0,
-      "paths": [],
+      "count": 2,
+      "paths": [
+        "knowledge_base/classic_texts/_validation_report.json",
+        "knowledge_base/classic_texts/qiongtongbaojian/progress.json"
+      ],
       "note": "changed knowledge_base paths outside the manifest read closure and the oversized list (ledger archives, progress/distill logs, validation reports)"
     }
   },
