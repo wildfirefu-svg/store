@@ -1,14 +1,14 @@
 # 经典文本历史 provenance 窄豁免设计 v28（已获有效批准）
 
-状态：**v28 已获有效批准（A′ 批准锚点见 §0）；A′ 链已落盘并通过正式 CI（收尾记录见 §13 第 15 条）** ｜ 日期：2026-09-05（A′ 收尾记录 2026-09-07） ｜ 冻结基点：`c5cff699fdb547bd9270acbebe1f485380848751`（branch `task/sanming-completion`）
-前版：v26 已获有效批准；v27 修订 records 唯一性契约（§3/§5-E3，多重集合）；v27.1 修补 2 P0 + 1 P1 与省略号违规；v27.2 修正 E3 测试方案；v27.3 修正 E0 record_set_binding 误读当前 HEAD（P0）；v27.4 补正式 evidence 生产入口纠正链（P0）；v27.5 修补 v27.4 复审 3 P0；v27.6 修补 v27.5 复审 2 P0；v27.7 修补 v27.6 复审 2 P0；v27.8 小修补 v27.7 复审；v27.9 小修补 v27.8 复审 1 P0（rc==1 完整字段判据）+ 1 P1（校验时点归属步骤 ③）；v27.10 小修补 v27.9 复审 1 P0（「复用全部判据」措辞矛盾）；v28 新增 extractor 锚点自包含迁移条款（A′：CI 不可达旧锚点的重钉与全链重建，§4.1/§13），变更见 §13。
+状态：**v28 已获有效批准（A′ 批准锚点见 §0）；A′ 链已落盘并通过正式 CI（收尾记录见 §13 第 15 条）；v29.3 已获有效批准（v29 批准锚点见 §0）** ｜ 日期：2026-09-05（A′ 收尾记录 2026-09-07；v29 整合与 v29.1/v29.2/v29.3 修补及批准 2026-09-08） ｜ 冻结基点：`c5cff699fdb547bd9270acbebe1f485380848751`（branch `task/sanming-completion`）
+前版：v26 已获有效批准；v27 修订 records 唯一性契约（§3/§5-E3，多重集合）；v27.1 修补 2 P0 + 1 P1 与省略号违规；v27.2 修正 E3 测试方案；v27.3 修正 E0 record_set_binding 误读当前 HEAD（P0）；v27.4 补正式 evidence 生产入口纠正链（P0）；v27.5 修补 v27.4 复审 3 P0；v27.6 修补 v27.5 复审 2 P0；v27.7 修补 v27.6 复审 2 P0；v27.8 小修补 v27.7 复审；v27.9 小修补 v27.8 复审 1 P0（rc==1 完整字段判据）+ 1 P1（校验时点归属步骤 ③）；v27.10 小修补 v27.9 复审 1 P0（「复用全部判据」措辞矛盾）；v28 新增 extractor 锚点自包含迁移条款（A′：CI 不可达旧锚点的重钉与全链重建，§4.1/§13），变更见 §13；v29 新增 §5-R 修订溯源双轨契约（未批准），v29.1 修补整合版复审 3 P0 + 2 同步遗漏（§13 第 17 条），v29.2 修补附录复审 1 P0 + 2 P1（§13 第 18 条），v29.3 小修补附录复审 2 处措辞（§13 第 19 条）。
 **身份值约定：Git OID 一律 40 位十六进制；SHA-256 一律 64 位十六进制；全文一律完整值，禁止省略号截断。**
 
 ---
 
 ## 0. 提案状态
 
-- **v26 已获有效批准**（批准锚点见下）；**v27.3 已获有效批准**（records 唯一性契约修订 + 复审修补，见 §13，批准锚点见下）；**v27.4 未获批准**（复审 NEEDS_REVISION，由 v27.5 取代）；**v27.5 未获批准**（复审 NEEDS_REVISION，由 v27.6 取代）；**v27.6 未获批准**（复审 NEEDS_REVISION，由 v27.7 取代）；**v27.7 未获批准**（复审 NEEDS_REVISION，由 v27.8 取代）；**v27.8 未获批准**（复审 NEEDS_REVISION，由 v27.9 取代）；**v27.9 未获批准**（复审 NEEDS_REVISION，由 v27.10 取代）；**v27.10 已获有效批准**（纠正链小修，见 §13，批准锚点见下）；**v28 已获有效批准**（extractor 锚点自包含迁移 A′，见 §13，批准锚点见下）。
+- **v26 已获有效批准**（批准锚点见下）；**v27.3 已获有效批准**（records 唯一性契约修订 + 复审修补，见 §13，批准锚点见下）；**v27.4 未获批准**（复审 NEEDS_REVISION，由 v27.5 取代）；**v27.5 未获批准**（复审 NEEDS_REVISION，由 v27.6 取代）；**v27.6 未获批准**（复审 NEEDS_REVISION，由 v27.7 取代）；**v27.7 未获批准**（复审 NEEDS_REVISION，由 v27.8 取代）；**v27.8 未获批准**（复审 NEEDS_REVISION，由 v27.9 取代）；**v27.9 未获批准**（复审 NEEDS_REVISION，由 v27.10 取代）；**v27.10 已获有效批准**（纠正链小修，见 §13，批准锚点见下）；**v28 已获有效批准**（extractor 锚点自包含迁移 A′，见 §13，批准锚点见下）。**v29.3 已获有效批准**（批准锚点见下；v29.3 含 v29.1-v29.3 修补链：整合落盘版（SHA-256 `A0FEB49F19CDD80DF8C607E9F661EFC9B2F8A13BC4054FE2CB0CB8BB0D8FE022`）2026-09-08 复审 NEEDS_REVISION——3 P0 + 2 同步遗漏，由 v29.1 修补；v29.1（SHA-256 `868509A7067EB95F63533B78EACCB0E74E26B4BE0999A8CBD0A0DF45C4E54624`）附录复审（2026-09-08）NEEDS_REVISION——1 P0 + 2 P1，由 v29.2 修补；v29.2（SHA-256 `8A8BC9637DFEFF3213B3A6D132275CA0A76D7A86569DFE59B55258592CD04E5C`）附录复审（2026-09-08）APPROVABLE_WITH_MINOR_FIX——2 处精确性措辞，由 v29.3 修补；v29.3 落盘稿 SHA-256 `D759077EEAC6AB2BC98F8B9F09A7608B975C2AB0C7BFF68F1300ACB59EF552F9`，复审（2026-09-08）APPROVABLE（设计层）后获批，修补史见 §13 第 17-19 条）。**v29/v29.1/v29.2 未批准稿均未实施**。
 - **§8 口径**：v3–v19 均提议 S；**已于 2026-09-03 用户在聊天正文逐字确认**（确认语句见 §8），记为设计口径 S。
 - **v26 批准锚点（2026-09-03，本聊天正文直接授权）**：
   - S 确认语句：`选择 S：本设计不豁免三本完成书的 source 获取链；三书 source_e2e_status="FAIL"，派生 source_e2e_pass=false。`
@@ -31,6 +31,11 @@
   - 批准语句：`批准按 A′ 执行 extractor 自包含重钉，并按依赖顺序重建 freeze/evidence 与四书批准链。`
   - 批准时 HEAD：`aceef18fd8da6677c711b70de32442d57b9e6ea6`
   - 批准前文档 SHA-256：`D936F0B7BB897AD1F0AAF7D872753A8CD7BDFDC057060A58AE71C3865C1942F2`（v27.10）
+- **v29.3 批准锚点（2026-09-08，本聊天正文直接授权）**：
+  - 批准语句：`我批准 v29.3，按 §0 记录锚点并提交设计文档，随后编写 TDD 实施计划`
+  - 批准时 HEAD：`03c02bb571dec9e2da1f7d503a292da229415d8f`
+  - 批准前文档 SHA-256：`D759077EEAC6AB2BC98F8B9F09A7608B975C2AB0C7BFF68F1300ACB59EF552F9`（v29.3，130,868 bytes，纯 LF）
+  - 批准范围：v29 §5-R 修订溯源双轨契约全文（5-R.0~5-R.13）+ §14 附录 A + §7/§9 同步增补；QUALITY_REPORT.json 不随设计批准一并提交
 - **v27.2 修订动因**：阶段 ① 首跑冻结基点 `c5cff699fdb547bd9270acbebe1f485380848751` 时发现 `qiongtongbaojian/quarantine_rules.jsonl` 存在同 `id` 不同内容的多条记录（qtbj_001_038/qtbj_050_009/qtbj_050_011 各 2 条），与 §3「同文件 id 唯一」冲突。**按用户裁决不改历史数据**，将 records 身份契约改为 `(id, sha256)` 多重集合（§3/§5-E3）。
 - **v27.3 修订动因**：v27.2 复审判 `evidence_static_check` 的 `record_set_binding` 误绑定当前 HEAD 聚合 blob（P0，v27.3）。**收窄为仅绑定 freeze 文件**（`frozen_manifest_file_sha256 == 冻结集文件字节 SHA`、`counts == 冻结集 records 多重计数`），不读取当前 HEAD 聚合 blob；当前 HEAD 与 BASE freeze 的多重集合比较由 §5-E3 独占并在 E1/E2 后执行（§4/§5-E3/§10-⑦）。
 - **v27.4 修订动因**：阶段④ 复审判正式 `evidence` 生产入口未闭合（P0，v27.4）：CLI `evidence` 子命令仍以阶段①的零值 verifier fixture（OID/SHA 全零、空 replay）传入 `evidence_static_check` 且无 `--archive-root`，对已提交 evidence 执行原生 `--check` 必得 `EVIDENCE_STATIC_MISMATCH`（exit 1）；阶段④ 以未提交一次性驱动生成 evidence，不满足 §10 要求的真实 generator→verifier 生产联调。修复需改动生成器（其 blob OID 随之变化）→ 新增三阶段纠正链（§10-④）：C-evidence-wiring → C-freeze-r2 → C-evidence-r2；历史尝试 `c22b5b12d3ba5dd9ce7a9ebd5f914d4efde1109f`（freeze v1）与 `cbb00baf7b0e4c4cbf20257f6a8a85b840e3b953`（evidence v1）保留不改写。
@@ -40,6 +45,7 @@
 - **v27.8 修订动因（小修）**：v27.7 复审判 1 P0 + 1 P1：① 「精确 schema」未真正冻结——未钉死顶层键集合、`schema_version`、字段类型（bool 会被当作 int）与 failures 排序，实现仍可能接受额外字段/错误版本/bool 计数；② 「生成前机械断言六向身份」措辞与顺序链不一致（易被实现为 candidate 构造前校验，此时 evidence candidate 尚不存在）。修复见 §13 第 11 条。
 - **v27.9 修订动因（小修）**：v27.8 复审判 1 P0 + 1 P1：① rc==1 failures 分支未复用完整字段判据——status 仅要求「字符串」、code 仅要求「非空字符串」，且未冻结 `schema_version`/计数字段类型与范围，仍允许 schema_version 错误、status 非 "OK"、bool/越界计数、§4.2 枚举外 code 被误归类 `SOURCE_REPLAY_FAILED`；② 校验时点「顺序链 ② 与 ③ 之间执行」与步骤 ③ 冲突（步骤 ③ 本身即「evidence_static_check 连同六向身份与 frozen_at_commit 断言一起执行」）。修复见 §13 第 12 条。
 - **v27.10 修订动因（小修）**：v27.9 复审判 1 P0 措辞矛盾：rc==1 failures schema「逐字段复用成功分支全部判据」按字面包含 `c1_pass==c2_pass==c3_pass==303` 与 `failures==[]`，与紧随其后的分支特有判据（c1/c2/c3 允许 <303、failures 非空）自相矛盾，按字面实现 rc==1 分支永远无法命中。修复见 §13 第 13 条。
+- **v29 修订动因**：四书内容验收复核中确认三命通会存在三章零产出（#25 曾有产出后被未记录操作移出、#56/#72 原因未知）与 #112 零 MCQ。补全聚合数据会使现行 E3 严格相等失效，而整体重冻结等于重跑 A′ 级全链且使旧记录历史豁免身份失效。经 v2→v18 评审循环收敛为**修订溯源双轨契约（§5-R）**：旧记录保留原历史豁免（Legacy 分区），新修订记录由修订清单 + 验收锚链 + 工具链登记独立溯源（Revision 分区），报告层组合判定；冻结工件（freeze/evidence/E/R/B1/B2/closure）全部不动。设计契约层复审 APPROVABLE（2026-09-07），待批准。
 - 本设计（v27.10）已获有效批准并追认 §10-④ 三笔实施提交（2026-09-04，锚点见上）；纠正链已完成。
 
 ## 1. 既有生产契约（对齐，不自创）
@@ -307,7 +313,7 @@ GENERATOR_IDENTITY_MISMATCH   （优先）
    - **validator_code_sha256**：权威来源 = Git 对象 `git show c5cff699fdb547bd9270acbebe1f485380848751:scripts/validate_classic_distillation.py`；重算其字节 sha256；**E == R == 重算值**，三方全等。
    - 任一三方不等 → 豁免失效。
 
-**E3 记录集严格相等（多重集合）**：**E3 是唯一读取当前 HEAD 聚合 blob 并与 BASE freeze 多重集合比较的阶段，且在 E1/E2 之后执行**（E0 的 `record_set_binding` 仅绑定 freeze，不读当前 HEAD 聚合 blob；E1/E2 亦不触当前 HEAD 聚合 blob 的多重比较，见 §4）。HEAD 聚合 blob 逐记录 `(kind,id,sha)` 与冻结集**多重集合**严格相等——按 `(kind,id,sha)` 排序后逐项比对，保留重复次数，**不得用普通 `set` 丢失重复**。任一不匹配 → `E3_ok=false`。
+**E3 记录集严格相等（多重集合）**：**E3 是唯一读取当前 HEAD 聚合 blob 并与 BASE freeze 多重集合比较的阶段，且在 E1/E2 之后执行**（E0 的 `record_set_binding` 仅绑定 freeze，不读当前 HEAD 聚合 blob；E1/E2 亦不触当前 HEAD 聚合 blob 的多重比较，见 §4）。HEAD 聚合 blob 逐记录 `(kind,id,sha)` 与冻结集**多重集合**严格相等——按 `(kind,id,sha)` 排序后逐项比对，保留重复次数，**不得用普通 `set` 丢失重复**。任一不匹配 → `E3_ok=false`。**v29（已获 v29.3 批准；条款随 §5-R 实施启用）**：启用 §5-R 修订溯源后，本条由 §5-R.5 ⑤ 等式 `Counter(HEAD) == Counter(freeze) + Counter(manifest)` 取代（Legacy 分区逐条严格相等 + Revision 分区被清单逐条覆盖）；未启用修订（manifest 不存在且无已验收锚）时本条语义不变。
 
 **公式（三态闭合）**：
 
@@ -334,6 +340,199 @@ APPROVAL_B2_BY_BOOK = {"ditiansui": "<40hex>", "qiongtongbaojian": "<40hex>",
 ```
 
 验证规则：键集合 == 四书精确集（缺书/多书拒绝）；值匹配 `^[0-9a-f]{40}$`（占位符/全零拒绝）；四值互异；`HEAD` 是每个 B2 的后代（`merge-base --is-ancestor b2 HEAD`）；任一违反 → 报告直接 fail-closed。
+
+### 5-R. 修订溯源双轨契约（revision rail；v29 新增、v29.1/v29.2/v29.3 修补，已获 v29.3 批准生效）
+
+**5-R.0 总则与适用范围**：
+
+- **双轨模型**：对每本书、每种聚合（`KINDS` 全集，含 `quarantine_rules`/`quarantine_mcq`），HEAD 记录多重集合（按 `(id, sha256)`）分解为两个不相交分区——**Legacy 分区** = HEAD ∩ BASE freeze（沿用现行 E0-E3 历史豁免，身份不变）；**Revision 分区** = HEAD − BASE freeze（不适用历史豁免，须由修订清单独立溯源）。组合判定：`provenance_admissible = 豁免链 OK ∧ (Revision 分区为空 ∨ revision manifest 校验通过)`。
+- **整体重冻结路径否决**：`BASE_COMMIT` 固定 `c5cff699fdb547bd9270acbebe1f485380848751`，重跑 freeze 只重导出同一历史基点；冻结修复后 HEAD 须换基点并重定义豁免范围，成本等于 A′ 级全链且使旧记录历史豁免身份失效。本设计冻结工件（freeze/evidence/E/R/B1/B2/closure）**全部不动**。
+- E1 与 E2 不受 HEAD 聚合修改影响，语义不变，但二者职责不同：**E1 消费批准提交（B1/B2）与 HEAD 工件并交叉绑定**（§5-E1 (a)-(i)：从 B1/B2 树与 HEAD 树读取 E/R/指针 blob 并做双树一致核验）；**E2 才从冻结基点 `c5cff699fdb547bd9270acbebe1f485380848751` 重算** `artifact_manifest_sha256`/`validator_code_sha256`（§5-E2：`git ls-tree`/`git show <base>` 权威重算）。不得把两者混写为「都读 BASELINE 历史 blob」。
+- **适用书**：仅具 evidence `source_chain` 锚的书（当前仅 sanmingtonghui）；其他书目录出现 revision manifest → fail-closed（`REVISION_SOURCE_UNVERIFIABLE`），不静默放行。
+- 不更新 `progress.json`（除非单独批准）；不动隔离区存量（另案分诊）。
+
+**5-R.1 工件、路径与信任根**：
+
+| 工件 | 路径 | 性质 |
+|---|---|---|
+| 修订清单 | `knowledge_base/classic_texts/sanmingtonghui/revision_manifest.json` | 被跟踪，随内容提交 C 更新 |
+| 验收锚 | `docs/superpowers/plans/notes/approvals/revisions/sanmingtonghui/accepted_anchors.jsonl` | 被跟踪，append-only |
+| 工具链登记 | `docs/superpowers/plans/notes/approvals/revisions/sanmingtonghui/toolchain_registry.jsonl` | 被跟踪，append-only |
+| 信任根常量 | `REVISION_ANCHOR_HEAD` / `TOOLCHAIN_REGISTRY_HEAD`（`scripts/generate_quality_report.py`） | 代码常量，分别仅随 V / R 提交更新 |
+
+- **初始质量基线**（仅首批门禁向量重跑点，冻结字面量）：`03c02bb571dec9e2da1f7d503a292da229415d8f`。
+- **初始工具链基点 T₀**：实现本 §5-R 并通过评审的真实提交（OID 于实现验收时冻结入本文档；**不得由 `03c02bb571dec9e2da1f7d503a292da229415d8f` 兼任**——旧基线无修订工具链）。
+- 信任边界声明：哈希链与登记结构**不认证批准人身份**；两个头常量是受评审流程控制的信任根，其更新仅经 R/V 提交（diff 可见）。
+
+**5-R.2 修订清单 schema**：
+
+- 顶层字段集（缺一/多一拒绝）：`schema_version=="1.0"`、`book=="sanmingtonghui"`、`freeze_base_commit=="c5cff699fdb547bd9270acbebe1f485380848751"`、`batches`。
+- **空基线 manifest 字面量**（零批次的规范形态，设计冻结）：`{"schema_version":"1.0","book":"sanmingtonghui","freeze_base_commit":"c5cff699fdb547bd9270acbebe1f485380848751","batches":[]}`。
+- 批次字段集：`batch_id`（`R25`/`B56`…，全局单调不重复）、`date`（ISO-8601）、`author`（纯信息字段，不构成身份认证）、`records`。
+- 记录字段集：`kind` ∈ {`rule`,`mcq`}、`id`、`sha256`、`source_chapter`、`snapshot_path`、`snapshot_sha256`、`historical_basis`（可为 null——全新命题）。
+- `sha256` 冻结算法：对 HEAD 聚合中该记录调用既有 `_record_entry`（`sha256(_canonical(record).encode("utf-8"))`，`_canonical` 即 §3 canonical_record_sha256：`json.dumps(sort_keys=True, ensure_ascii=False, separators=(",",":"))`）；不另造序列化。
+- `historical_basis`（恢复类记录必填，全新命题为 null）：`{commit, path, source_chapter, record_content_sha256, match_count}`——验证器从 `git show <commit>:<path>` 重算：按 `source_chapter` 过滤后，与 `record_content_sha256`（该历史记录 `_canonical` 序列化字节 SHA-256）匹配的记录必须**恰好 1 条**；不得使用冲突 id 定位。
+- `snapshot_path` **路径白名单**：仅允许 `<SNAP>/extracted/raw_{NNN:03d}.txt`（NNN 由 `source_chapter` 经 chapter_list 唯一反解）；根目录 `raw_*.txt`、任何 `..` 逃逸、错章一律拒绝。
+
+**5-R.3 锚、genesis 与登记 schema**：
+
+- **genesis 对象**（设计冻结）：`{"schema":"sanmingtonghui-revision-genesis-v1","book":"sanmingtonghui","freeze_base_commit":"c5cff699fdb547bd9270acbebe1f485380848751","b2_commit":"ccb833a46977c8274c0fb8c8c79c1b2f5d494c5e"}`；`genesis_sha = sha256(_canonical(genesis对象).encode("utf-8"))`（64-hex，实现重算比对）。
+- 锚条目字段集（拒绝未知字段）：`{batch_id, content_commit(40-hex), manifest_sha256_after(64-hex), prev_anchor_sha256(64-hex), toolchain_commit(40-hex), date(ISO-8601)}`。JSONL 一行一锚；每行须满足「行字节(去换行) == `_canonical(解析对象).encode("utf-8")`」（格式自检）。
+- **锚链哈希**：`h_0 = genesis_sha`；`h_i = sha256(h_prev.encode("ascii") + _canonical(anchor_i).encode("utf-8")).hexdigest()`；`REVISION_ANCHOR_HEAD` 常量 == h_n。首条 `prev_anchor_sha256 = genesis_sha`。
+- `manifest_sha256_after = sha256(_canonical(manifest@content_commit).encode("utf-8"))`（canonical 层，非原始文件字节；文件缩进/换行格式自由但内容被锚定）。
+- 登记条目字段集：`{toolchain_commit(40-hex), date, review_ref, prev_registry_sha256(64-hex，首条 = genesis_sha)}`；登记链哈希与锚链同公式；`TOOLCHAIN_REGISTRY_HEAD` 常量 == 登记链头。
+- 空锚文件（存在但零行）：链头 = genesis_sha，仅当常量同值时合法；常量为后续值 → `REVISION_CHAIN_STALE`。锚文件缺失：走 MISSING×不存在矩阵行。
+
+**5-R.4 提交流程（T → R → C → 候选验证 → 批准 → V → 默认复验）**：
+
+- **T（工具链提交）**：普通评审提交，diff 限于冻结工具链文件集 `{scripts/generate_quality_report.py, scripts/classic_artifacts.py}` ∪ 对应测试文件；自身不含指向自己的引用（无自引用）。首个 T 即 T₀；工具链升级 = 新 T 走独立评审。
+- **R（登记提交）**：diff 限 `{toolchain_registry.jsonl, scripts/generate_quality_report.py}`——登记文件追加一行 + 脚本**唯一替换** `TOOLCHAIN_REGISTRY_HEAD` 值（替换该常量值后两版本其余字节完全相同）；@R 常量 == @R 登记链头。登记是过去时操作：候选验证时 T 必已在登记集。
+- **C（内容提交）**：聚合数据追加 + manifest 增量批次；**manifest 不记录自身 commit/SHA**（无自引用）。C 落地时修订未接纳是预期状态（该时点报告允许 FAIL）。
+- **候选验证**（§5-R.6 CLI）：exit 4 + `revision_state=PENDING_ACCEPTANCE` 后由用户聊天正文批准。
+- **V（验收提交）**：diff 限 `{accepted_anchors.jsonl, scripts/generate_quality_report.py}`——锚追加一行（引用 C 的 OID 与候选所用 T，**不含 V 自身 OID**）+ 脚本唯一替换 `REVISION_ANCHOR_HEAD`（**单常量**——V 不得顺带改 `TOOLCHAIN_REGISTRY_HEAD`，工具链准入变更只能走 R）。V 可按普通 Git 流程构造，无循环。V 的唯一父提交可为 C（内容提交）或工具链升级提交，**不要求 P 自身已验收**。
+- **默认复验**：V 落地后在 HEAD 运行默认模式；「复验通过」= `revision_state=ACCEPTED` ∧ 指定检查通过 ∧ 无退化——**不要求整体 exit 0**（允许红项保留时默认退出仍为 1）。V 成为下一批的验收基线提交。
+
+**5-R.5 唯一执行入口与管线（顺序即错误优先级，单次读取 HEAD 输入）**：
+
+`evaluate_revision_rail(git_root, book, freeze, evidence)` 是修订验证的**唯一入口**，完整执行①-⑦；现行 `_e3_multiset_check` 并入（rail 输出即 E3 结果）；`evaluate_provenance_admissibility` 调用一次、只消费结果；报告组合层零二次调用。各阶段短路，重算不信任文件自述：
+
+```text
+① manifest 解析（strict JSON，UTF-8，BOM/尾随内容拒绝）        → REVISION_MANIFEST_MALFORMED
+② schema/路径白名单/记录哈希重算(_record_entry)/重复拒绝        → REVISION_MANIFEST_MALFORMED
+③ 锚链核验（链哈希逐条 + 链头==REVISION_ANCHOR_HEAD@HEAD）      → REVISION_CHAIN_STALE
+④ HEAD manifest vs 基线比较（见下）                            → REVISION_HISTORY_DRIFT / REVISION_UNACCEPTED / REVISION_CHAIN_STALE
+⑤ 多重集合等式：Counter(HEAD) == Counter(freeze) + Counter(manifest)（全 KINDS，Counter 计数，禁 set）→ REVISION_PARTITION_MISMATCH
+⑥ 源身份重算（§5-R.8 锚定链）                                   → REVISION_SOURCE_UNVERIFIABLE
+⑦ 内容检查（original_text 去空白子串匹配对应 extracted 文件；mcq 外键指向 HEAD 存在规则、G8 形态）→ REVISION_SOURCE_UNVERIFIABLE
+```
+
+- **④ 比较规则**（canonical 层：两侧均解析后 `_canonical(obj).encode("utf-8")` 比较，原始文件字节格式不参与）：
+  - 默认模式：`_canonical(HEAD manifest) == _canonical(最新已验收 C 的 manifest)` → 通过；HEAD == C + 恰好一个全新批次（前缀逐对象相等）→ `REVISION_UNACCEPTED`（合法候选形态但未验收）；HEAD 批次集 ⊂ C（删批）→ `REVISION_CHAIN_STALE`；其他（同 ID 改内容/改前缀/多批追加）→ `REVISION_HISTORY_DRIFT`。
+  - 候选模式：`n = len(accepted.batches)`（零锚时空基线的 `batches=[]`）；要求 `len(candidate.batches) == n+1` ∧ `candidate.batches[:n]` 与已验收数组**逐对象** canonical 相等 ∧ `candidate.batches[n].batch_id` 全新；违者按删批/改前缀/多批分别归 STALE/DRIFT/UNACCEPTED。
+  - ⑤ 等式失败附三分类明细：`legacy_mutated`（freeze 内记录被改）/ `unmanifested_extra`（清单外新增）/ `manifest_orphan`（清单条目在 HEAD 缺失）。
+- **manifest 重复规则**：manifest 内同一 `(id, sha256)` 出现两次 → malformed；manifest 与 freeze 交集非空（同一记录双列）→ malformed；`batch_id` 重复 → malformed。
+- 零锚时「最新已验收 C」= 空基线 manifest 字面量（不读取不存在的 C）。
+
+**5-R.6 候选模式 CLI 与入口前置核验**：
+
+```text
+generate_quality_report.py --pending-batch <batch_id> --baseline-commit <V-OID> --toolchain-commit <T-OID>
+```
+
+三个参数在候选模式下均必选（缺失 → exit 2）。入口前置检查（先于任何门禁）：
+
+1. **T 准入**：`--toolchain-commit` ∈ 登记集（`toolchain_registry.jsonl` @HEAD 解析、登记链哈希核验、链头 == `TOOLCHAIN_REGISTRY_HEAD` @HEAD）；
+2. **执行来源核验**：**磁盘工具链文件**（实际将执行的代码，`Path.read_bytes()` 原始字节）与 `git cat-file blob @T` 原始字节比较——允许规范化 `REVISION_ANCHOR_HEAD` 与 `TOOLCHAIN_REGISTRY_HEAD` 两个常量值，其余字节（含 `classic_artifacts.py` 全部）完全相同；两常量实际值分别与 @HEAD 锚链/登记链头交叉核验。**不用 `git hash-object` 默认行为**（clean/filter 会消除 CRLF 等差异）；磁盘文件须同时 == HEAD blob（read_bytes vs cat-file 原始字节，未提交篡改即被拦截）；
+3. 任一失败 → `REVISION_TOOLCHAIN_INVALID`（exit 1），不运行门禁；
+4. 通过后候选门禁在当前 worktree 运行（磁盘即执行体）；基线重跑在基线提交（非首批 = V，首批 = `03c02bb571dec9e2da1f7d503a292da229415d8f`）的干净 worktree、以基线提交自带脚本运行。
+
+**首批初始化路径**：当且仅当 **HEAD 锚链经 genesis 验证为空**（锚文件不存在或零行 ∧ `REVISION_ANCHOR_HEAD` @HEAD == genesis_sha）时：`--baseline-commit` 必须等于 `03c02bb571dec9e2da1f7d503a292da229415d8f`、`--toolchain-commit` 必须等于 T₀（冻结 OID）；例外由 HEAD 实测状态触发，**非参数值短路**——非首批传 `03c02bb571dec9e2da1f7d503a292da229415d8f` → exit 2，首批传其他 → exit 2。
+
+**5-R.7 V 结构定点验证（不扫描历史，无 merge/revert 歧义路径）**：
+
+1. **唯一父提交**：`git rev-list --parents -n 1 V` 恰好 2 个 OID（V + 唯一父 P）；合并提交（3+）拒绝；
+2. **diff 路径** == `{accepted_anchors.jsonl, scripts/generate_quality_report.py}`，无其他路径；
+3. **锚增量**：锚文件 blob @V == blob @P + 末尾追加一行（@P 行集为 @V 真前缀），新行即当前 HEAD 锚链末条；
+4. **常量增量**：脚本 blob @V 与 @P 比较——唯一替换 `REVISION_ANCHOR_HEAD` 值，其余字节完全相同；@V 常量 == @V 锚链头，@P 常量 == @P 锚链头；
+5. **C 绑定**：新锚 `content_commit` C 存在 ∧ 为 V 祖先 ∧ `sha256(_canonical(manifest@C).encode("utf-8")) == manifest_sha256_after`；
+6. **P 的工具链身份**：`script@P` vs `script@T_v`（T_v = 该 V 锚条目 `toolchain_commit`）——**双常量规范化比较**（允许 `REVISION_ANCHOR_HEAD`/`TOOLCHAIN_REGISTRY_HEAD` 两值差异，其余字节完全相同；`classic_artifacts.py` 逐字节相等）；两常量实际值分别匹配 **@P 同一提交中的**锚链头与登记链头（从 @P blob 重算，**不使用 HEAD 的链头验证历史提交**）；P 本身不要求已验收（可为内容提交/工具链升级提交）；
+7. **V 与 HEAD 锚状态一致**：锚 blob @V == @HEAD ∧ 常量 @V == @HEAD。
+
+**5-R.8 源身份锚定链（防自证）**：
+
+可信锚点从**已验证 evidence 链**取得——E1 的 (i) 校验 **E 登记的 evidence/freeze SHA-256 == B2 树 blob sha256 == HEAD 树 blob sha256**（双树一致），BASELINE 绑定是另一项 (j) 六方一致检查。rail ⑥ 从**该链锁定的 HEAD 树 evidence** 取得锚：
+
+```text
+evidence@HEAD.source_chain.sanmingtonghui 钉住两个独立身份值：
+  manifest_blob_oid  = 662fbe6013c11b3bc58a3393ef1168ea82b05eca（Git 对象 OID，40-hex）
+  manifest_file_sha256 = 7024760851374217ec3c61422e70fbd2d6a1deb3d48d1fa594d120215fdace61（文件字节 SHA-256，64-hex）
+⑥ 分开校验（OID 与 SHA-256 不得混为一个值）：
+  ⑥-1  git rev-parse HEAD:<SNAP>/source_manifest.json == manifest_blob_oid（对象身份）
+  ⑥-2  sha256(git cat-file blob HEAD:<SNAP>/source_manifest.json 的原始字节) == manifest_file_sha256（内容身份）
+    → source_manifest.chapters[NNN-1].extracted_text_sha256 钉住每章
+      → ⑥ 重算 sha256(HEAD:<SNAP>/extracted/raw_{NNN}.txt 原始字节) == extracted_text_sha256 逐章比对
+        → ⑦ original_text 去空白子串匹配于该已验文件
+```
+
+「源文件 + source_manifest + 修订清单同步篡改」负向测试必测：三者同 commit 篡改后 `HEAD:source_manifest.json` 与 E1 冻结 evidence 所钉 OID/SHA 不符 → `REVISION_SOURCE_UNVERIFIABLE`；篡改 evidence 本身已被现行 E1 拦截。
+
+**基线重验必要条件（先于重跑执行；任一不满足 → `REVISION_BASELINE_INVALID`，exit 1）**：
+
+- **非首批**：`--baseline-commit` 所指 V 必须存在于对象库 ∧ 为 HEAD 祖先（`git merge-base --is-ancestor V HEAD`）∧ 为最新验收提交（§5-R.13「后续 = 最新 V 提交」；即其锚追加为当前链头的 V）。
+- **首批**：基线为冻结字面量 `03c02bb571dec9e2da1f7d503a292da229415d8f`（历史门禁向量重跑点，在 main 历史上天然满足祖先条件；该提交早于 §5-R，无修订结构要求）。
+
+**「合格基线报告」完整定义**（rc 表中「合格」的判据；rc 0 与 rc 1 行共用；基线报告一律由**基线提交自带脚本**于其干净 worktree 重算取得，不读旧报告 JSON）：
+
+- **非首批（V 基线）**：报告须同时满足——① `revision_state=="ACCEPTED"`；② E0/E1/E2 通过（`exemption_stages.E0_ok/E1_ok/E2_ok` 全 true；E3 已并入 rail（§5-R.5，rail 输出即 E3 结果），`ACCEPTED` 蕴含 E3 通过）；③ `approval_b2_constant_valid==true`；④ G1-G9 全部实际执行（`validator_ran_live==true` ∧ 逐书 `gates`/`gate_details` 九键齐备且为实测值）；⑤ 无 `REVISION_*` 错误（默认模式下 ① 蕴含）。
+- **首批例外（显式恢复，实现不得自行推断）**：`03c02bb571dec9e2da1f7d503a292da229415d8f` 时点脚本早于 §5-R，基线报告**不含 `revision_state`/`revision_provenance_valid`——该两字段缺失不判不合格**，条件①⑤不适用；条件②③④照旧（该时点脚本已产出 `exemption_stages`/`approval_b2_constant_valid`/`validator_ran_live`/`gates`/`gate_details`/`status` 等全部非修订字段，实测字段于该基线全部可得）。
+
+**基线重跑结果分类**（基线提交重跑，基线提交自带脚本，干净 worktree；非首批 = V，首批 = `03c02bb571dec9e2da1f7d503a292da229415d8f`）：
+
+| rc | 报告状态 | 判定 |
+|---|---|---|
+| 0 | 合格且 overall_pass=true | 合格基线 |
+| 1 | 合格 FAIL 报告，失败项 ⊆ 允许红项集合 | 合格基线 |
+| 3 | 合法 BLOCKED schema | **上抛 exit 3**（非 REVISION_BASELINE_INVALID） |
+| 其他 rc / 信号退出 / 超时 / rc 与报告状态不一致（完整合格 stdout + 异常退出码等） | — | `REVISION_BASELINE_INVALID` 拒绝 |
+
+**允许红项 = 上界子集规则**（非「必须保持红」）：实际失败项 ⊆ 允许集合即可；允许项改善为 PASS **接受**。计数上界（冻结常量，随允许清单变更走评审）：`sanmingtonghui.G7.missing_count ≤ 303`（改善向下不设限，恶化超限拒绝）。**三书 source 政策（独立于质量门改善规则，先批准后生效）**：当前三书 `source_e2e` 必须为 FAIL；出现 PASS **不自动接纳**（判失败）；仅当独立 source 验证链与政策变更**先获批**、对应工具链与允许清单**先更新**后，才按新政策接受 PASS。
+
+**门禁字段三分类全序比较**（跨版本基线，无交集漏洞）：
+
+| 分类 | 判定 |
+|---|---|
+| 共有字段（B ∩ N） | 直接退化比较（PASS 不转 FAIL、计数不劣化） |
+| 新增字段（N − B） | 按字段类型定义通过条件：布尔门禁 → 必须 PASS；数值计数 → 不得超冻结上限；枚举 → 须在**候选可接纳值集**（与 schema 合法值集分离；如新增 `revision_state` 候选要求 `=PENDING_ACCEPTANCE`） |
+| 旧有字段消失（B − N） | **一律拒绝**：未声明兼容迁移时旧版必需门禁字段不得删除/改名/改语义；缺失或不可比较 → 拒绝候选验收 |
+
+**流程阶段字段例外（v29.2）**：`revision_state`/`revision_provenance_valid` 表达流程阶段而非质量——已验收基线 V（`ACCEPTED`/true）与下一批候选（`PENDING_ACCEPTANCE`/false）的正常推进**不构成退化**，退出上表共有字段通用退化比较，改按运行模式校验：非首批基线必须 `ACCEPTED`/true（本节「合格基线报告」定义①），候选必须 `PENDING_ACCEPTANCE`/false（§5-R.4/§5-R.9），默认复验通过必须 `ACCEPTED`/true（§5-R.4）。其余字段照旧适用三分类比较。
+
+字段 schema（字段名 → 类型/单位/分母/取值域/比较方向/上限/枚举可接纳值的字面定义表）**已落盘于本文档 §14 附录 A**（随 T₀ 工具链版本冻结；T₀ 在 `scripts/generate_quality_report.py` 内嵌同构机器可读表 `REPORT_FIELD_SCHEMA`，与附录逐字段一致）；共有字段比较前先核对两侧 schema 一致，不一致按 B−N 拒绝。兼容迁移另走独立批准（设计修订 + 新基线向量冻结 + 允许清单更新 + 附录 A 换版），不自动取交集。
+
+**5-R.9 退出码与报告状态（候选与默认统一）**：
+
+| 序 | 条件 | exit |
+|---|---|---|
+| 1 | CLI 参数错误（未知标志/缺值/畸形值/首批与非首批基线不符） | 2 |
+| 2 | 任何 source BLOCKED（含基线重跑上抛；现行语义不变） | 3 |
+| 3 | `REVISION_*` 失败，或 E0/E1/E2 任一失败，或 `approval_b2_constant_valid=false`，或相对验收基线退化（非允许项 PASS→FAIL / 允许项计数超上限或恶化） | 1 |
+| 4 | 候选模式：全项合格（修订链①-⑦ + E0-E2 + B2 常量 + G1-G9 实际执行 + 基线零退化）且仅待批准 | 4 |
+| 5 | 默认模式 overall_pass=true | 0 |
+| 6 | 兜底：其余一切（默认模式修订已 ACCEPTED 但既有允许红项使 overall_pass=false） | 1 |
+
+- **报告字段分离**：`status` 沿用现行词表（PASS/FAIL/BLOCKED），不引入 PENDING；`revision_state` 独立字段 ∈ {`NONE`,`ACCEPTED`,`PENDING_ACCEPTANCE`,`FAILED`}（NONE=manifest 不存在且无已验收锚，沿现行 MISSING 语义）；`revision_provenance_valid` 兼容字段 = (state == ACCEPTED)。exit 4 的前置显式含 E0/E1/E2 与 B2 常量通过——非 `REVISION_*` 错误一律阻止 exit 4。
+
+**5-R.10 provenance 状态 × manifest 状态矩阵（逐格冻结）**：
+
+| provenance 状态 | manifest 不存在 | 空/非法 JSON/schema 非法 | schema 合法且 batches=[] | schema 合法且非空 |
+|---|---|---|---|---|
+| VALID | admissible=true（现行不变） | `REVISION_UNSUPPORTED_STATE`，false | `REVISION_UNSUPPORTED_STATE`，false | `REVISION_UNSUPPORTED_STATE`，false |
+| INVALID | false（现行不变） | false（现行不变） | false | false |
+| MISSING | 无已验收锚：E0-E2 过 ∧ 分区等式（HEAD==freeze）→ admissible 沿现行 E3 语义；**有已验收锚 → `REVISION_CHAIN_STALE`**（已验收修订被整体抹除） | `REVISION_MANIFEST_MALFORMED`，false | 无已验收锚：合法空清单=无修订，分区等式通过 → 按现行；**有已验收锚 → `REVISION_CHAIN_STALE`**（清空已有修订） | rail ①-⑦ 过 → admissible=true（默认模式须全锚）；否则对应错误码，false |
+
+VALID + manifest 文件存在（任何形态）→ `REVISION_UNSUPPORTED_STATE` 是**对现行唯一的行为修改**（现行 VALID 在 E1 前提前返回、不检测修订；VALID 书的 provenance.json 证明的是未修订内容，聚合被修订即与其断言矛盾）。
+
+**5-R.11 双常量比较矩阵（v17+v18 冻结）**：
+
+| 比较 | 允许差异 | 核验交叉 |
+|---|---|---|
+| R（登记提交）：脚本 @R vs @P | 唯一替换 `TOOLCHAIN_REGISTRY_HEAD` 值，其余字节相同 | @R 常量 == @R 登记链头 |
+| V（验收提交）：脚本 @V vs @P | 唯一替换 `REVISION_ANCHOR_HEAD` 值，其余字节相同 | @V 常量 == @V 锚链头 |
+| 任意被验证提交 S 的工具链 vs @T（含历史 V 的父提交 P） | 允许规范化 `REVISION_ANCHOR_HEAD` 与 `TOOLCHAIN_REGISTRY_HEAD` 两值，其余字节（含 classic_artifacts.py）完全相同 | 两实际值分别匹配 **S 同一提交中的**锚链头与登记链头（从 @S blob 重算，不用 HEAD 链头验证历史提交） |
+
+「历史基线永不失效」收窄为：**不会仅因 HEAD 工具链 OID 改变而产生身份不匹配**；运行环境变更或报告协议不兼容升级仍可能使历史 V 不可用，此时走基线迁移路径。
+
+**5-R.12 测试矩阵（TDD；端到端经 `generate_report`/CLI 驱动，辅助函数单测仅补充）**：
+
+正向：首次初始化 `T₀ → R₀ → C₁ → 候选验证 → V₁`（R₀ 登记 T₀ 为前置——§5-R.6 入口核验 1 要求候选验证时 T 已在登记集；含 V₁ 结构判据全过、锚链头==常量）；**两批连续验收**（`V₁` 基线重跑 `ACCEPTED`/true → `C₂` 候选验证 `PENDING_ACCEPTANCE`/false **不判退化**——流程阶段字段按运行模式校验（§5-R.8 例外/附录 A.1），其余字段照常退化比较 → 批准后 `V₂` 默认复验 `ACCEPTED`/true ∧ 锚链两锚 ∧ 常量==链头 ∧ `V₂` 成为下批基线——**不止测首批字段缺失特例**）；`T₁ → R₁ → C₁ → 候选验证 → V₁` 全程普通 Git 流程（合法登记不被字节门禁拦截）；升级后历史兼容（T₁ 落地后验证 V₀ 用其锚内 T₀ 仍通过，下一批以 V₁ 为基线推进）；R₂ 追加后重新验证旧 V₁ 仍通过（不拿 HEAD 新登记头要求旧提交）；候选改善（允许项 PASS 化、G7 计数下降）被接受。
+负向：同 batch_id 改记录并同步全部候选 SHA（C/A/常量全不动，仅改 HEAD）→ `REVISION_HISTORY_DRIFT`；锚文件篡改（含同步改 manifest_sha256_after 但常量不动）→ `REVISION_CHAIN_STALE`；删批 → STALE；未锚合法追加（默认模式）→ UNACCEPTED；manifest 畸形/未知字段/重复 (id,sha)/与 freeze 交集 → MALFORMED；分区不对称三分类各一 → MISMATCH；源三件套同步篡改 → SOURCE_UNVERIFIABLE；snapshot 路径逃逸/错章 → 拒绝；original_text 非子串 → 拒绝；mcq 外键悬空 → 拒绝；VALID 书出现 manifest → UNSUPPORTED_STATE；基线重跑完整合格 stdout + 异常退出码（rc=7）→ 拒绝；基线含允许集合外 FAIL（如 G3）→ 拒绝不进退化比较；门禁字段删除/同名字段改分母（schema 不一致）→ 拒绝；新增布尔字段 FAIL / 数值字段超上限 / 枚举值 schema 合法但不在可接纳集 → 拒绝；磁盘未提交篡改（仅换行差异）→ 拒绝；已提交篡改未登记 → 拒绝；非空隔离存量书（如穷通宝鉴模拟修订）在等式中保留隔离多重性；参数错误各一 → exit 2；首批/非首批基线错配 → exit 2。
+
+**5-R.13 内容批次范围（不扩大；#112 补题与 B72 拆分待后续单独裁决）**：
+
+- **R25**：#25 卷二·论坐命宫恢复+修订——`smth_077_000/001`（前缀 77-79 空闲；语义为旧批次 ch_order 追加序）；original_text 展开为 raw_025 精确连续引文（满足 G5 整串命中）；「甲已」保留原文，校读仅入 `textual_note` 附加字段（不断言笔误）；2 条人工 MCQ（全局顺序后缀，现最大 0776，自 0777 起）；修订记录属**新修订产物**（非原样恢复，绑 historical_basis），不适用原历史豁免身份。
+- **B56**：#56 卷三·论学堂词馆离线人工命题——`smth_078_00N`；候选片段（阅读清单，**非配额**）：学堂/词馆定义、学堂会禄、学堂会食、生处见克、学堂会贵、总忌。
+- **B72**：#72 卷五·论正官离线人工命题——`smth_079_00N`；候选片段：正官定义、月令为正、支藏干透、破格诸忌、时为归息、明干取官、贪合忘官、逢官看印、三等官、诸乡、真五行克纳音、古歌集萃。
+- 每批验收基线：R25 基线 = `03c02bb571dec9e2da1f7d503a292da229415d8f` 门禁向量；后续 = 最新 V 提交。基线向量于基线提交干净 worktree 重新执行取得（不读旧报告 JSON）。G5 每批实际执行并记录（extracted 子串检查为叠加项不替代 G5）。
 
 ## 6. E→R→B1→B2→B3 流程与 schema 版本化
 
@@ -382,7 +581,7 @@ source_e2e_status（四书聚合）= BLOCKED 若任一书 BLOCKED
 source_e2e_pass   = (source_e2e_status == "PASS")
 ```
 
-- **CLI exit 码**：任一书 BLOCKED → **3**（与豁免链静态错误同时存在时亦为 3，BLOCKED 优先）；否则 `overall_pass=false` → **1**；全部通过 → **0**。
+- **CLI exit 码**：任一书 BLOCKED → **3**（与豁免链静态错误同时存在时亦为 3，BLOCKED 优先）；否则 `overall_pass=false` → **1**；全部通过 → **0**。**v29（已获 v29.3 批准；条款随 §5-R 实施启用）**：修订溯源启用后按 §5-R.9 完整表——参数错误 → 2；BLOCKED → 3（优先级不变）；修订链/E0-E2/B2 常量失败或基线退化 → 1；候选全项合格仅待批准 → 4；默认 `overall_pass=true` → 0；其余 → 1。`status` 词表不变（PASS/FAIL/BLOCKED），修订状态由独立字段 `revision_state` 承担（§5-R.9）。
 - 顶层其余：`content_gates_pass = AND(四书)`；`provenance_admissible_all = AND(四书)`；`overall_pass = content_gates_pass AND provenance_admissible_all AND source_e2e_pass`（BLOCKED 时 overall 输出 false 且顶层 status=BLOCKED）。
 - 展示：`provenance_state` / `provenance_ok` / `historical_exemption_valid` / `provenance_admissible` / `source_e2e_status` 逐书分离；豁免与 S 事实入 `known_limitations`；豁免链失败错误码（GENERATOR/FROZEN/FREEZE_STATIC/EVIDENCE_STATIC/BASELINE）与 source BLOCKED reason 分列展示互不混淆。
 - 当前树预期：四书 provenance 均 MISSING；三命通会 G7 FAIL → `content_gates_pass=false`；三本书 source_e2e=FAIL（§8 已确认 S）→ `overall_pass=false`，exit 1。
@@ -394,7 +593,7 @@ source_e2e_pass   = (source_e2e_status == "PASS")
 
 ## 9. 未来运行衔接（本设计外）
 
-- E3 多重集合严格相等无放宽。首次正式生成运行前须另行升级 run_manifest 契约并单独设计采信路径；届时聚合文件变化使本豁免失效，新状态由新链全责。**未来 run_manifest 的 pre-run 规则索引不得再按单值 `id → canonical SHA` map**（无法表示同一 id 对应多条不同记录，也丢失重复次数）；必须采用 `(id, sha256)` 规范化多重集合（按 `(id,sha256)` 排序、保留重复次数，或等价地带 count 的列表），与 §3/§5-E3 多重集合语义一致。
+- E3 多重集合严格相等无放宽（**v29 修订例外，已获 v29.3 批准，条款随 §5-R 实施启用**：经 §5-R 修订溯源双轨的 Revision 分区记录，按 §5-R.5 ⑤ 等式 `Counter(HEAD) == Counter(freeze) + Counter(manifest)` 纳入；Legacy 分区仍逐条严格相等）。首次正式生成运行前须另行升级 run_manifest 契约并单独设计采信路径；届时聚合文件变化使本豁免失效，新状态由新链全责。**未来 run_manifest 的 pre-run 规则索引不得再按单值 `id → canonical SHA` map**（无法表示同一 id 对应多条不同记录，也丢失重复次数）；必须采用 `(id, sha256)` 规范化多重集合（按 `(id,sha256)` 排序、保留重复次数，或等价地带 count 的列表），与 §3/§5-E3 多重集合语义一致。
 
 ## 10. TDD 计划与**工件提交顺序冻结**（批准后执行；每阶段精确文件集逐字冻结）
 
@@ -624,7 +823,7 @@ TDD 覆盖（详目同前）：冻结生成器（精确 schema/拒绝项/确定�
   - 静态链（`evidence_static_check`，§10-① 测试）：只比对 evidence 记录的 `verifier_blob_oid/verifier_sha256` 是否 == `HEAD:scripts/verify_sanming_source_chain.py` 的 blob OID/字节 sha256；不符 → `EVIDENCE_STATIC_MISMATCH`。
   - 执行链（`source_chain_check` 执行前，§10-③ 测试）：断言 `git hash-object <工作区 verifier 文件>` == 同 HEAD blob OID（disk==HEAD）；不符 → BLOCKED（reason `verifier_identity_mismatch`，属 §4.2 统一枚举）。
 
-## 13. v26 → v28 变更记录
+## 13. v26 → v29.3 变更记录
 
 1. **records 身份契约改为多重集合（P0，修订）**：阶段 ① 首跑发现冻结基点 `c5cff699fdb547bd9270acbebe1f485380848751` 的 `qiongtongbaojian/quarantine_rules.jsonl` 存在同 `id` 不同内容的多条记录（qtbj_001_038/qtbj_050_009/qtbj_050_011 各 2 条），与 §3「同文件 id 唯一」冲突。**按用户裁决不改历史数据**：§3 取消 id 唯一要求，records 身份改为 `(id,sha256)` 多重集合、按 `(id,sha256)` 排序、保留重复次数；§5-E3 改为逐记录多重集合严格相等（按 `(kind,id,sha)` 排序后逐项比对，禁用普通 set）。
 2. **未来 manifest 按多重集合表示（P0，v27.1 复审）**：§9 明确未来 run_manifest 的 pre-run 规则索引不得用单值 `id → canonical SHA` map，改用 `(id,sha256)` 规范化多重集合（或带 count 列表），与 §3/§5-E3 语义一致。
@@ -650,3 +849,79 @@ TDD 覆盖（详目同前）：冻结生成器（精确 schema/拒绝项/确定�
 15. **A′ 链执行记录与门禁边界（2026-09-07 收尾）**：A′ 八步全部落盘——① v28 设计修订 `c8358e41e05abb01d14e5c0dc67bdff88550539c`；② extractor 字节入分支 `054db22d6cc319aaa9db47443d1c9c7a7dfb9046`（blob `4bbd6e1a2717d932f0f33bb9bbce4f7ed24db463` 全等）；③ 双脚本 EXTRACTOR_COMMIT 迁移 `bb4875c49716fe5a7bc0d07649466d71fa683810`；④ freeze/evidence 重生成 `9329c94dd47b2456c213e3b0d740edbea58cc830`/`7f353c38c608cd99ba0a090eca1cb887372a02c0`（真实 303/303/303 重放，提交后 `--check` 均 exit 0）；⑤ 四书 B1：`352b98ec70e4d297286af771c17b7d46c7bfb696`（ditiansui）/`5a8af4fa1a917cf8c7f695e903f780ee5162959e`（qiongtongbaojian）/`76720380ec87bb99c3cf7074e8d8b601e5ec91cb`（sanmingtonghui）/`2a5f267a82a3b9a314d7cb652c208bddb831100a`（zipingzhenquan），R 均 approver=owner、approved_at=2026-09-05T10:00:00+08:00（逐书聊天正文第一人称批准）；⑥ 四书 B2：`d59461c4ba4159c640bc523107af1342e8841c05`/`22e988ced5ef6411862ea81f2ca4afa9c6f11f5f`/`ccb833a46977c8274c0fb8c8c79c1b2f5d494c5e`/`45004f44304241018a51d755c6f88a24f536905c`，B3 常量重钉 `65ed294d9d88109838cc28d2b6b09b364585c8b0`；closure 权威 `--check` exit 0（豁免链脚本不在 closure 绑定集，无需刷新）。正式 CI：run `34069042953`（`pull_request` 事件，绑定 HEAD `65ed294d9d88109838cc28d2b6b09b364585c8b0`），Syntax/Ruff/mypy/pytest/LLM smoke/Docker/affected-tests 各步骤均实际执行并成功；§10-⑧ 门禁以此为准完成。**门禁边界（明确保留，不得由 CI 全绿改写）**：(a) 该 CI 通过仅为**技术门禁**通过，不构成数据验收——LLM smoke 使用固定样本文本而非真实模型调用；四书 content_gates 与 source_e2e 状态不因此改变（三本完成书 source_e2e=FAIL 按 §8 S 口径不变；sanmingtonghui source 链按 §7 以归档重放判定）。(b) **推送授权记录**：2026-09-07 推送 `aceef18fd8da6677c711b70de32442d57b9e6ea6..65ed294d9d88109838cc28d2b6b09b364585c8b0` 至 `origin/task/sanming-completion` 系依据包含批准模板句的复审附件执行；该模板句**不记为用户聊天正文第一人称直接批准**（2026-09-07 复审澄清），推送事实与本澄清一并保留，CI 全绿不构成追认；是否追认由用户后续明示。PR #3 保持 OPEN 未合并。
 
 **v27.10 已获有效批准并追认 §10-④ 三笔实施提交（有效锚点见 §0）；纠正链已完成；v28 已获有效批准（A′ 锚点见 §0）；A′ 重钉链已落盘并通过正式 CI（run `34069042953`），技术门禁与数据门禁边界及推送授权记录见第 15 条。**
+
+16. **v29（未获批准，设计契约层复审 APPROVABLE 2026-09-07）**：新增 §5-R 修订溯源双轨契约（5-R.0~5-R.13）——双轨分区模型（Legacy 沿用 E0-E3 / Revision 由 manifest 独立溯源）、修订清单与锚/登记 schema（genesis 锚定、C→R→V 非循环提交流程）、唯一执行入口七阶段管线与错误码族（REVISION_MANIFEST_MALFORMED/CHAIN_STALE/UNACCEPTED/HISTORY_DRIFT/PARTITION_MISMATCH/SOURCE_UNVERIFIABLE/BASELINE_INVALID/TOOLCHAIN_INVALID/UNSUPPORTED_STATE）、源身份 evidence 锚定链（E1(i) 双树一致 + source_manifest 逐章 SHA）、V 结构定点验证（唯一父/diff 路径/锚增量/单常量替换/P 工具链双常量比较匹配 @P 链头）、退出码完整表（含候选 exit 4 与参数 exit 2）、provenance×manifest 状态矩阵、允许红项上界子集规则与三书 source 先批准后生效、门禁字段三分类全序比较、磁盘/blob 原始字节执行来源核验、测试矩阵与内容批次范围（R25/B56/B72，#112 待裁决）。§7/§9 同步增补（均标注未批准不生效）。经 v2→v18 十七轮评审循环收敛（中间稿全部作废，最终条款以本版为准）。**整合落盘版（SHA-256 `A0FEB49F19CDD80DF8C607E9F661EFC9B2F8A13BC4054FE2CB0CB8BB0D8FE022`）复审（2026-09-08）：NEEDS_REVISION——P0-1 §5-R.8 源身份公式把 Git OID 与文件字节 SHA-256 混为一个值；P0-2 基线重验必要条件（非首批 V 存在 ∧ HEAD 祖先；「合格基线报告」完整定义；首批旧报告无修订字段例外）在整合时被省略；P0-3 字段 schema 附录被引用但未落盘；另两处同步遗漏（§5-R.12 首次初始化正向测试缺 R₀ 登记、§5-R.0 E1/E2 职责混写为「读取 BASELINE 历史 blob」）。由 v29.1 修补，见第 17 条。**
+
+17. **v29.1（未获批准，修补整合版复审 3 P0 + 2 同步遗漏，2026-09-08；只修设计，不进入实施）**：① **P0-1 源身份公式拆分**：§5-R.8 ⑥ 拆为 ⑥-1 对象身份（`git rev-parse HEAD:<SNAP>/source_manifest.json` == `manifest_blob_oid`）与 ⑥-2 内容身份（blob 原始字节 SHA-256 == `manifest_file_sha256`）两步，身份值恢复完整 40/64 位（`662fbe6013c11b3bc58a3393ef1168ea82b05eca` / `7024760851374217ec3c61422e70fbd2d6a1deb3d48d1fa594d120215fdace61`，与 evidence 实测一致）。② **P0-2 基线重验硬条件恢复**：基线提交存在 ∧ HEAD 祖先（非首批另须为最新验收提交）；「合格基线报告」完整定义（非首批：`revision_state=ACCEPTED` ∧ E0-E2 通过 ∧ `approval_b2_constant_valid=true` ∧ G1-G9 实际执行 ∧ 无修订错误）；首批例外显式恢复（`03c02bb571dec9e2da1f7d503a292da229415d8f` 时点脚本无修订字段，缺失不判不合格）。③ **P0-3 字段 schema 附录落盘**：新增 §14 附录 A（顶层/门禁布尔/计数含分母·比较方向·冻结上限/枚举含候选可接纳值；随 T₀ 冻结，内嵌 `REPORT_FIELD_SCHEMA` 同构；§5-R.8 引用改指 §14）。④ **两处同步遗漏**：§5-R.12 首次初始化正向测试补 R₀（`T₀ → R₀ → C₁ → 候选验证 → V₁`）；§5-R.0 E1/E2 职责准确区分（E1 消费批准提交与 HEAD 工件并交叉绑定，E2 从冻结基点权威重算，不混写「都读 BASELINE 历史 blob」）。⑤ 全文 `03c02bb` 截断写法恢复完整 40 位（§5-R.1/§5-R.6/§5-R.13；§13 第 5 条与本条对截断形态的描述性引用保留原状）。设计稿与工作区已刷新的 `QUALITY_REPORT.json` 分开处理，不随设计批准一并提交。
+
+18. **v29.2（未获批准，修补 v29.1 附录复审 1 P0 + 2 P1，2026-09-08；只修设计，不进入实施）**：① **P0 流程阶段字段退出退化比较**：附录 A.1 原规则（`revision_state`「ACCEPTED→其他值拒绝」、`revision_provenance_valid`「true→false 拒绝」）会把正常第二批候选（基线 `ACCEPTED`/true → 候选 `PENDING_ACCEPTANCE`/false）误判为退化；二者退出通用退化比较，改按运行模式校验（非首批基线 `ACCEPTED`/true、候选 `PENDING_ACCEPTANCE`/false、默认复验通过 `ACCEPTED`/true），§5-R.8 三分类表后新增流程阶段字段例外条款，§5-R.12 新增「两批连续验收」全链正向测试（不止测首批字段缺失特例）。② **P1-1 G6/G7 定义对齐生产算法**（对照 `scripts/validate_classic_distillation.py` 与实际报告输出）：G6 分母 = 有效答案数（答案 ∈ {A,B,C,D}；≠ `G2_mcq_id_unique.total`，非法答案另计 `invalid_answers`，除法用 `max(1, 有效答案数)` 防零除）；`dist_pct` schema 合法域改 [0,1]（[0.18,0.32] 为通过区间，非合法数据范围）；G7.expected = 规范化（去首尾+内部空白、去空串、set 去重）章节集合大小（非原始 `len(chapter_list)`）；G7.done 允许超 expected（超出即 `extra`，属可报告失败，非 schema 畸形）。③ **P1-2 G6 判定字段补齐**：A.3 新增 `G6_answer_dist.invalid_answers`（int，≥0，==0）与 `G6_answer_dist.out_of_band`（字母列表，==[]）两行，显式冻结 G6 通过规则 = `out_of_band` 空 ∧ `invalid_answers`==0（不得仅凭比例区间重建），A.2「九门由 A.3 实测推导」随之成立；另补 G7 规范化定义与诊断数组说明（`missing`/`extra` 截取前 20 项，跨版本比较用计数字段）。
+
+19. **v29.3（未获批准，小修补 v29.2 复审 APPROVABLE_WITH_MINOR_FIX 的 2 处措辞，2026-09-08；只修设计，不进入实施）**：① **G7 规范化顺序照录生产实现**：v29.2 附录原写「去首尾空白 ∧ 去内部全部空白 ∧ 去空串 ∧ set 去重」，隐含「规范化后再去空串」；生产实现（`scripts/validate_classic_distillation.py`：`{_norm_ch(c) for c in expected_chapters if c}`）实为**先按原值过滤空条目（`if c` 按原始值判真），再逐名规范化，set 去重**——纯空白原值为真、通过过滤，其规范化结果 `""` 仍进入集合。A.3 G7 行与表后注按生产顺序改写（本轮不改生产算法，附录不暗中改变契约）。② **G6 分母措辞**：A.3 原文「**≠ `G2_mcq_id_unique.total`**」改为「**不保证等于 `G2_mcq_id_unique.total`（全部答案合法时二者相等）**」，消除字面恒不等含义。复审判定：修正后即可请求设计批准，再编写 TDD 计划；`QUALITY_REPORT.json` 继续分开处理。
+
+## 14. 附录 A：门禁字段 schema 表（v29.1 落盘、v29.2/v29.3 修订，已获 v29.3 批准生效；随 T₀ 工具链版本冻结）
+
+**A.0 总则**：
+
+- 本附录是 §5-R.8「门禁字段三分类全序比较」的权威 schema 依据（字段名 → 类型/单位/分母/取值域/比较方向/上限/枚举可接纳值）。T₀ 工具链在 `scripts/generate_quality_report.py` 内嵌同构机器可读表 `REPORT_FIELD_SCHEMA`（`schema_version=="1.0"`），与本附录逐字段一致；不一致即实现缺陷（TDD 断言）。
+- 「单位/分母」列参与比较语义：同名字段改类型、单位或分母 → schema 不一致 → 按 B−N 拒绝（§5-R.8）。「同名字段改分母必须拒绝」的测试以本附录为权威比较依据。
+- 「候选可接纳值」仅约束 N−B 新增字段的候选验收；共有字段（B∩N）按「比较方向」列退化比较（PASS 不转 FAIL、计数不劣化、枚举不劣化）。
+- 派生布尔（随来源字段联动的 `overall_pass` 与逐书 `all_gates_pass` 等）比较方向一律 false→true 接受、true→false 拒绝。
+- 非门禁字段（`generated_at`、`validator_code_sha256`、逐书 `rules`/`mcq`/`quarantine_*` 的 `count`/`sha256`/`categories`/`answer_dist`/`answer_pct`、顶层 `remediation_pass`/`end_to_end_pass` 等）随内容与运行合法变化，不参与劣化比较；同名字段改类型仍按 schema 不一致拒绝。
+
+**A.1 报告顶层字段**：
+
+| 字段 | 类型 | 单位/分母 | 取值域 | 候选可接纳值（N−B 时） | 共有字段比较方向 |
+|---|---|---|---|---|---|
+| `status` | enum | — | {PASS, FAIL, BLOCKED} | {FAIL}（当前 S 口径下 `source_e2e_pass` 恒 false、`overall_pass` 恒 false；政策变更须先批准并换版附录） | PASS 不转 FAIL；BLOCKED 属 exit 3 上抛路径 |
+| `overall_pass` | bool（派生） | — | {true, false} | false | true→false 拒绝 |
+| `content_gates_pass` | bool（派生） | — | {true, false} | false（允许红项保留） | true→false 拒绝 |
+| `provenance_admissible_all` | bool（派生） | — | {true, false} | true（必须） | true→false 拒绝 |
+| `approval_b2_constant_valid` | bool | — | {true, false} | true（exit 4 前置） | true→false 拒绝 |
+| `source_e2e_pass` | bool（派生） | — | {true, false} | false（三书 S 口径） | true→false 拒绝 |
+| `validator_ran_live` | bool | — | {true, false} | true（必须） | true→false 拒绝 |
+| `revision_state` | enum | — | {NONE, ACCEPTED, PENDING_ACCEPTANCE, FAILED} | {PENDING_ACCEPTANCE}（唯一） | **不参与通用退化比较**（流程阶段字段，§5-R.8 例外）：按运行模式校验——非首批基线必须 `ACCEPTED`；候选必须 `PENDING_ACCEPTANCE`；默认复验通过必须 `ACCEPTED`（复验未通过属各自失败路径，不进退化比较） |
+| `revision_provenance_valid` | bool（兼容字段，=（`revision_state`==ACCEPTED）） | — | {true, false} | false | **不参与通用退化比较**；随 `revision_state` 按运行模式联动（非首批基线/默认复验通过 = true，候选 = false） |
+
+**A.2 逐书门禁布尔字段（`books.{book}.gates.*`，九键齐备、实测推导）**：
+
+| 字段 | 类型 | PASS 判据 | 比较方向 |
+|---|---|---|---|
+| `G1_rule_id_unique`、`G2_mcq_id_unique`、`G3_schema`、`G4_source_rule_id`、`G5_traceability`、`G6_answer_dist`、`G7_chapter_complete`、`G8_mcq_well_formed`、`G9_content_dedup` | bool | 由 A.3 对应计数字段/列表字段实测推导（非缺省值；G6 通过 = `out_of_band` 空 ∧ `invalid_answers`==0，见 A.3） | 非允许项 PASS→FAIL 拒绝；允许红项（§5-R.8 允许集合）FAIL 保留 |
+
+**A.3 逐书计数字段（`books.{book}.gate_details.*`；「劣化」= 按比较方向列变化 → 拒绝；改善 → 接受）**：
+
+| 字段 | 类型 | 单位/分母 | 取值域 | 比较方向（劣化） | PASS 判据 / 冻结上限 |
+|---|---|---|---|---|---|
+| `G1_rule_id_unique.total`、`G2_mcq_id_unique.total` | int | 条（规模分母：规则总数 / 有效 MCQ 总数） | ≥0 | 规模字段：不劣化比较；分母定义不得变更 | — |
+| `G1_rule_id_unique.duplicates`、`G2_mcq_id_unique.duplicates` | int | 条 | ≥0 | 增大 | ==0 |
+| `G3_schema.bad_rules`、`G3_schema.bad_mcq`、`G3_schema.parse_errors` | int | 条 | ≥0 | 增大 | ==0 |
+| `G4_source_rule_id.bad`、`G4_source_rule_id.ambiguous_rule_ids` | int | 条（分母 = `G4_source_rule_id.total_refs`） | ≥0 | 增大 | ==0 |
+| `G5_traceability.untraceable` | int | 条（分母 = `G5_traceability.total`） | ≥0 | 增大 | ==0 |
+| `G5_traceability.rate` | float | 分母 = `G5_traceability.total` | [0, 1] | 下降 | ==1.0 |
+| `G6_answer_dist.dist_pct.{A,B,C,D}` | float | 分母 = **有效答案数**（答案 ∈ {A,B,C,D} 的已解析 MCQ 计数；**不保证等于 `G2_mcq_id_unique.total`**（全部答案合法时二者相等）——非法/缺失答案不计入分母，另计 `invalid_answers`；除法用 `max(1, 有效答案数)` 防零除） | [0, 1]（schema 合法域，四舍五入 4 位；**[0.18, 0.32]（冻结常量 `ANSWER_MIN_PCT`/`ANSWER_MAX_PCT`）是通过区间，不是合法数据范围**） | 越出 [0.18, 0.32]（验证器将其计入 `out_of_band`） | 由 G6 通过规则判定（见表后注；**不得仅凭比例区间重建**） |
+| `G6_answer_dist.invalid_answers` | int | 条（分母 = 已解析 MCQ 总数；答案 ∉ {A,B,C,D} 者计入） | ≥0 | 增大 | ==0 |
+| `G6_answer_dist.out_of_band` | list[str] | 字母（元素 ⊆ {A,B,C,D}，仅含 `dist_pct` 中实际出现且越界的字母） | — | 空→非空 拒绝 | == [] |
+| `G7_chapter_complete.expected` | int | 章（**规范化章节集合大小**：先按原值过滤空条目（falsy 原值不进入），再逐名规范化（去首尾空白 ∧ 去内部全部空白），set 去重后的元素数——纯空白原值为真、通过过滤，其规范化结果 `""` 仍进入集合（照录生产顺序）；**非原始 `len(chapter_list)`**；改分母定义 = 改语义 → schema 不一致拒绝） | ≥0 | 分母定义不得变更 | — |
+| `G7_chapter_complete.done` | int | 章（= 规范化 `progress.done` 集合大小，同一规范化规则） | ≥0（**可超 `expected`**——超出即 `extra` 来源，属可报告失败（`extra_count`>0），**非 schema 畸形**） | 下降 | — |
+| `G7_chapter_complete.missing_count` | int | 章（= 规范化 expected 集合 − done 集合的元素数） | [0, expected] | 增大 | G7 PASS 判据 ==0（且 `extra_count`==0）；**sanmingtonghui 允许红项冻结上限 ≤303**（§5-R.8；改善向下不设限）；其余书无允许红项 |
+| `G7_chapter_complete.extra_count` | int | 章（= 规范化 done 集合 − expected 集合的元素数） | ≥0 | 增大 | ==0 |
+| `G8_mcq_well_formed.malformed` | int | 条（分母 = `G2_mcq_id_unique.total`） | ≥0 | 增大 | ==0 |
+| `G9_content_dedup.rule_text_duplicate_groups`、`G9_content_dedup.rule_text_duplicate_count`、`G9_content_dedup.mcq_question_duplicates` | int | 组 / 条 | ≥0 | 增大 | ==0 |
+
+**G6 通过规则（显式，v29.2）**：`G6_answer_dist.pass` ==（`out_of_band` == [] ∧ `invalid_answers` == 0）；比例越界由验证器折算入 `out_of_band`，通过判定**不得仅凭比例区间重建**。`dist_pct` 仅含实际出现于答案集的 A–D 字母键（字母未出现则无该键、不参与 `out_of_band` 判定）。
+
+**G7 规范化与诊断数组（v29.2；顺序措辞 v29.3 修正）**：集合构建 = **先按原值过滤空条目（`if c` 按原始值判真），再逐名规范化（去首尾空白 ∧ 去内部全部空白），set 去重**——纯空白原值为真、通过过滤，其规范化结果 `""` 仍进入集合（附录照录生产实现顺序，不改变契约）；`expected`/`done`/`missing_count`/`extra_count` 均基于规范化集合计算（G7 通过 = `missing_count`==0 ∧ `extra_count`==0）。`missing`/`extra` 为诊断数组（规范化后排序、各截取前 20 项——如 `missing_count`=303 时数组仅 20 项），跨版本比较一律使用计数字段。
+
+**A.4 逐书 provenance/exemption/source 字段**：
+
+| 字段 | 类型 | 取值域（schema 合法值集） | 候选可接纳值（N−B 时） | 比较方向 |
+|---|---|---|---|---|
+| `provenance_state` | enum | {VALID, INVALID, MISSING}（三态语义 §5） | — | 退化为 INVALID 拒绝 |
+| `provenance_admissible` | bool | {true, false} | true（必须） | true→false 拒绝 |
+| `historical_exemption_valid` | bool | {true, false} | true（必须） | true→false 拒绝 |
+| `exemption_stages.E0_ok`/`E1_ok`/`E2_ok`/`E3_ok` | bool | {true, false} | true（E0-E2 为 exit 4 前置） | true→false 拒绝 |
+| `exemption_error_code` | enum ∪ null | {GENERATOR_IDENTITY_MISMATCH, FROZEN_AT_COMMIT_MISMATCH, FREEZE_STATIC_MISMATCH, EVIDENCE_STATIC_MISMATCH, BASELINE_COMMIT_MISMATCH} ∪ {null} | null（必须） | null→非 null 拒绝 |
+| `source_e2e_status`（逐书） | enum | {PASS, FAIL, BLOCKED} | 三本完成书 {FAIL}（§8 S 口径政策，PASS 不自动接纳）；sanmingtonghui {PASS}（按归档重放实测） | PASS→FAIL/BLOCKED 拒绝 |
+| `source_blocked_reason` | enum ∪ null | {archive_missing, archive_sha_mismatch, archive_size_mismatch, verifier_identity_mismatch, archive_root_missing} ∪ {null}（§4.2 五值） | null（必须） | null→非 null 拒绝 |
+
+**A.5 首批基线（`03c02bb571dec9e2da1f7d503a292da229415d8f`）字段可用性（v29.1 显式）**：该时点脚本已产出 A.1（除 `revision_state`/`revision_provenance_valid` 两字段外全部）、A.2、A.3、A.4 全部字段；`revision_state`/`revision_provenance_valid` 于该基线报告缺失属预期（§5-R.8 首批例外），在 B/N 三分类中按**基线报告实际键集**计算——缺失修订字段不计为「旧有字段消失」，候选侧出现时按 N−B 新增字段规则（候选可接纳值 = `PENDING_ACCEPTANCE` / false）校验。
