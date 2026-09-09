@@ -1701,3 +1701,81 @@ def verify_batch_anchors(anchors, git_root, genesis_commit, final_commit=None):
             if man.get("snapshot_sha256") != a["source_snapshot_sha256"]: return False
         parent = c
     return _is_ancestor(git_root, parent, final_commit)
+
+# ---------------------------------------------------------------------------
+# §5-R 修订溯源双轨契约：纯函数原语（设计 v29.3 §5-R.2/5-R.3；无 git 依赖）
+# ---------------------------------------------------------------------------
+# 注意：_canonical 使用本模块第 67 行既有实现（与 generate_classic_historical_
+# freeze._canonical 逐字节等价），不从 freeze 重复导入以免遮蔽；仅导入缺失的
+# _loads_strict（计划 Step 3 的对应调整）。
+from scripts.generate_classic_historical_freeze import _loads_strict  # noqa: E402
+
+REVISION_GENESIS = {
+    "schema": "sanmingtonghui-revision-genesis-v1",
+    "book": "sanmingtonghui",
+    "freeze_base_commit": "c5cff699fdb547bd9270acbebe1f485380848751",
+    "b2_commit": "ccb833a46977c8274c0fb8c8c79c1b2f5d494c5e",
+}
+GENESIS_SHA = hashlib.sha256(
+    _canonical(REVISION_GENESIS).encode("utf-8")).hexdigest()
+EMPTY_BASELINE_MANIFEST = {
+    "schema_version": "1.0", "book": "sanmingtonghui",
+    "freeze_base_commit": REVISION_GENESIS["freeze_base_commit"],
+    "batches": []}
+
+REVISION_MANIFEST_TOP_FIELDS = frozenset(
+    {"schema_version", "book", "freeze_base_commit", "batches"})
+REVISION_BATCH_FIELDS = frozenset({"batch_id", "date", "author", "records"})
+REVISION_RECORD_FIELDS = frozenset(
+    {"kind", "id", "sha256", "source_chapter", "snapshot_path",
+     "snapshot_sha256", "historical_basis"})
+REVISION_ANCHOR_FIELDS = frozenset(
+    {"batch_id", "content_commit", "manifest_sha256_after",
+     "prev_anchor_sha256", "toolchain_commit", "date"})
+REVISION_REGISTRY_FIELDS = frozenset(
+    {"toolchain_commit", "date", "review_ref", "prev_registry_sha256"})
+
+
+class RevisionArtifactError(ValueError):
+    """修订工件解析/校验失败（fail-closed，由调用方映射稳定错误码）。"""
+
+
+def parse_jsonl_line(raw: bytes) -> dict:
+    """严格解析一行 JSONL 并做 canonical 行字节自检（设计 5-R.3）。
+
+    行字节（去换行）必须 == _canonical(解析对象).encode("utf-8")；
+    拒绝重复 JSON 键、CRLF、尾随内容、非对象。
+    """
+    if raw.endswith(b"\n"):
+        raw = raw[:-1]
+    if raw.endswith(b"\r"):
+        raise RevisionArtifactError("CRLF line ending rejected")
+    try:
+        obj = _loads_strict(raw.decode("utf-8"))
+    except Exception as e:  # noqa: BLE001 - 统一转为稳定错误
+        raise RevisionArtifactError(f"jsonl line malformed: {e}") from e
+    if not isinstance(obj, dict):
+        raise RevisionArtifactError("jsonl line not an object")
+    if raw != _canonical(obj).encode("utf-8"):
+        raise RevisionArtifactError("jsonl line not canonical bytes")
+    return obj
+
+
+def chain_head(entries: list[dict], genesis_sha: str, *,
+               prev_field: str = "prev_anchor_sha256",
+               fields: frozenset = REVISION_ANCHOR_FIELDS) -> str:
+    """重算哈希链头：h_0 = genesis_sha；
+    h_i = sha256(h_prev.encode("ascii") + _canonical(entry_i).encode("utf-8"))。
+
+    逐条校验字段集（拒绝未知/缺字段）与 prev 链接（首条 prev == genesis_sha，
+    其余 == 前条链头）；违者抛 RevisionArtifactError（设计 5-R.3）。
+    """
+    h = genesis_sha
+    for i, e in enumerate(entries):
+        if set(e) != set(fields):
+            raise RevisionArtifactError(f"entry {i} fields != {sorted(fields)}")
+        if e[prev_field] != h:
+            raise RevisionArtifactError(f"entry {i} {prev_field} link mismatch")
+        h = hashlib.sha256(
+            h.encode("ascii") + _canonical(e).encode("utf-8")).hexdigest()
+    return h
