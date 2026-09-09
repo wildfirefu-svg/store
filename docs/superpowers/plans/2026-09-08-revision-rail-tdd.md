@@ -1100,21 +1100,27 @@ git commit -m "feat(revision-rail): seven-phase pipeline core (parse/schema/anch
 - Modify: `scripts/generate_quality_report.py`
 - Test: `tests/test_revision_rail.py`
 
-- [ ] **Step 1：写失败测试**（执行修正 v2：⑥ 负向须先建 V₁ 验收基线，
-⑦ 负向改为直接测 `_source_identity_and_content` 纯函数——见 Self-Review 11）
+- [ ] **Step 1：写失败测试**（执行修正 v3：⑥ 负向须先建 V₁ 验收基线、
+⑦ 负向直接测 `_source_identity_and_content` 纯函数并带 good 对照；
+P0-1 补 historical_basis 真实 Git 重算，P0-2 补删除/空引文/非字符串
+answer 稳定错误码——见 Self-Review 11/12）
 
 ```python
 class TestRailSourceAndContent:
     """⑥ 源身份锚定链 + ⑦ 内容检查。
 
     ⑥ 负向走整链：先建 V₁（验收锚 + 常量对齐，④⑤⑥⑦ 全过、前置断言
-    ACCEPTED），再篡改 evidence 钉住的源（raw_025 / source_manifest）→
-    ⑥ 逐章 sha / OID+SHA 不符 → SOURCE_UNVERIFIABLE。
+    ACCEPTED），再篡改/删除 evidence 钉住的源（raw_025 / source_manifest）
+    → ⑥ 逐章 sha / OID+SHA 不符 → SOURCE_UNVERIFIABLE（删除同样稳定报错，
+    不抛 RuntimeError）。
     ⑦ 内容检查无法在默认 rail 单点触发——未验收新增批次被 ④ UNACCEPTED
     拦截、已验收批次记录被改被 ⑤ PARTITION_MISMATCH 拦截；故直接测
     _source_identity_and_content 纯函数（构造已验 source 状态 + 合法
     ⑥ 前置的 manifest_recs），每个负向测试先跑同状态 good 对照断言 None，
     再断言坏例 == SOURCE_UNVERIFIABLE（证明 ⑥ 通过、⑦ 才是拦截点）。
+    historical_basis（P0-1，设计 5-R.2）：真实 git show <commit>:<path>
+    重算，按章过滤 + canonical sha 匹配恰好 1 条；commit/path 不存在、
+    零/多匹配、SHA 不符均拒绝，不信任 match_count。
     """
 
     def _v1(self, rail_wt, monkeypatch) -> str:
@@ -1238,16 +1244,215 @@ class TestRailSourceAndContent:
         assert gqr._source_identity_and_content(
             rail_wt.path, "sanmingtonghui", ev,
             [rec_rule, rec_bad]) == "REVISION_SOURCE_UNVERIFIABLE"
+
+    # ---- P0-2 入口级：删除源文件 → 稳定错误码（不抛 RuntimeError）----
+
+    def test_source_manifest_deleted(self, rail_wt, monkeypatch):
+        """P0-2：V₁ 后删除 source_manifest.json → ⑥-1 rev-parse 缺失 →
+        稳定 REVISION_SOURCE_UNVERIFIABLE（异常不冒泡）。"""
+        self._v1(rail_wt, monkeypatch)
+        (rail_wt.path / (SNAP_REL + "/source_manifest.json")).unlink()
+        rail_wt.commit("deleted source_manifest")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_SOURCE_UNVERIFIABLE"
+
+    def test_source_raw025_deleted(self, rail_wt, monkeypatch):
+        """P0-2：V₁ 后删除 raw_025.txt → ⑥ 逐章 blob 缺失 → 稳定
+        REVISION_SOURCE_UNVERIFIABLE（异常不冒泡）。"""
+        self._v1(rail_wt, monkeypatch)
+        (rail_wt.path / RAW025_REL).unlink()
+        rail_wt.commit("deleted raw025")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_SOURCE_UNVERIFIABLE"
+
+    # ---- 非阻断补证：OID 匹配、SHA 不匹配（⑥-2 分支独立触发）----
+
+    def test_source_manifest_sha_branch(self, rail_wt):
+        """⑥-2：OID 匹配（真实 HEAD blob OID）但钉住 blob sha256 不符 →
+        SOURCE_UNVERIFIABLE。good 对照（双身份均真实）先断言 None，证明
+        ⑥-2 分支独立拦截、非 ⑥-1 抢先。"""
+        core = TestRailCore()
+        manifest = core._make_c1(rail_wt)
+        rail_wt.commit("C1")
+        recs = [r for b in manifest["batches"] for r in b["records"]]
+        ev = _evidence_of(rail_wt)
+        assert gqr._source_identity_and_content(
+            rail_wt.path, "sanmingtonghui", ev, recs) is None
+        sc = dict(ev["source_chain"]["sanmingtonghui"])
+        sc["manifest_file_sha256"] = "0" * 64  # OID 不动、仅 SHA 伪造
+        ev["source_chain"]["sanmingtonghui"] = sc
+        err = gqr._source_identity_and_content(
+            rail_wt.path, "sanmingtonghui", ev, recs)
+        assert err == "REVISION_SOURCE_UNVERIFIABLE"
+
+    # ---- P0-2：空/非字符串引文、非字符串 answer（异常不冒泡）----
+
+    def test_original_text_empty_rejected(self, rail_wt):
+        """⑦：rule.original_text 缺失/非字符串/去空白为空 → 拒绝（空串恒为
+        子串，不得放行）。good 对照（probe）→ None。"""
+        snap_sha = _sha256(rail_wt.blob("HEAD", RAW025_REL))
+        src_text = rail_wt.blob("HEAD", RAW025_REL).decode("utf-8", "replace")
+        probe = re.sub(r"\s+", "", src_text)[:30]
+        good = _mk_rule("smth_t_good", "卷二·论坐命宫", "规则")
+        good["original_text"] = probe
+        bads = []
+        for i, ot in (("smth_t_empty", ""), ("smth_t_ws", " \t\n "),
+                      ("smth_t_int", 42)):
+            r = _mk_rule(i, "卷二·论坐命宫", "规则")
+            r["original_text"] = ot
+            bads.append(r)
+        from scripts.generate_classic_historical_freeze import _record_entry
+        rules_rel = "knowledge_base/classic_texts/sanmingtonghui/all_rules.json"
+        arr = json.loads(rail_wt.blob("HEAD", rules_rel).decode("utf-8"))
+        arr.append(good)
+        arr.extend(bads)
+        rail_wt.write(rules_rel,
+                      json.dumps(arr, ensure_ascii=False).encode("utf-8"))
+        rail_wt.commit("empty/ws/non-string original_text head records")
+        ev = _evidence_of(rail_wt)
+
+        def _rec(r):
+            return {"kind": "rule", "id": r["id"],
+                    "sha256": _record_entry(r)["sha256"],
+                    "source_chapter": "卷二·论坐命宫",
+                    "snapshot_path": RAW025_REL,
+                    "snapshot_sha256": snap_sha, "historical_basis": None}
+        assert gqr._source_identity_and_content(
+            rail_wt.path, "sanmingtonghui", ev, [_rec(good)]) is None
+        for b in bads:
+            err = gqr._source_identity_and_content(
+                rail_wt.path, "sanmingtonghui", ev, [_rec(b)])
+            assert err == "REVISION_SOURCE_UNVERIFIABLE", (b["id"], err)
+
+    def test_mcq_answer_nonstring_rejected(self, rail_wt):
+        """⑦：mcq.answer 非字符串（None）→ SOURCE_UNVERIFIABLE（G8 形态
+        需字符串前置判断，不抛 TypeError）。good 对照（answer='A'）→ None。"""
+        snap_sha = _sha256(rail_wt.blob("HEAD", RAW025_REL))
+        src_text = rail_wt.blob("HEAD", RAW025_REL).decode("utf-8", "replace")
+        probe = re.sub(r"\s+", "", src_text)[:30]
+        rule = _mk_rule("smth_t_001", "卷二·论坐命宫", "规则")
+        rule["original_text"] = probe
+        mcq_ok = _mk_mcq("smth_t_001_m1", "smth_t_001")
+        mcq_bad = _mk_mcq("smth_t_001_m2", "smth_t_001")
+        mcq_bad["answer"] = None
+        from scripts.generate_classic_historical_freeze import _record_entry
+        mcq_rel = "knowledge_base/classic_texts/sanmingtonghui/all_mcq.jsonl"
+        rail_wt.write(mcq_rel, rail_wt.blob("HEAD", mcq_rel)
+                      + (_canonical(mcq_ok) + "\n").encode("utf-8")
+                      + (_canonical(mcq_bad) + "\n").encode("utf-8"))
+        rules_rel = "knowledge_base/classic_texts/sanmingtonghui/all_rules.json"
+        arr = json.loads(rail_wt.blob("HEAD", rules_rel).decode("utf-8"))
+        arr.append(rule)
+        rail_wt.write(rules_rel,
+                      json.dumps(arr, ensure_ascii=False).encode("utf-8"))
+        rail_wt.commit("non-string answer head records")
+        ev = _evidence_of(rail_wt)
+        rec_rule = {"kind": "rule", "id": rule["id"],
+                    "sha256": _record_entry(rule)["sha256"],
+                    "source_chapter": "卷二·论坐命宫",
+                    "snapshot_path": RAW025_REL,
+                    "snapshot_sha256": snap_sha, "historical_basis": None}
+        rec_ok = {"kind": "mcq", "id": mcq_ok["id"],
+                  "sha256": _record_entry(mcq_ok)["sha256"],
+                  "source_chapter": "卷二·论坐命宫",
+                  "snapshot_path": RAW025_REL,
+                  "snapshot_sha256": snap_sha, "historical_basis": None}
+        assert gqr._source_identity_and_content(
+            rail_wt.path, "sanmingtonghui", ev,
+            [rec_rule, rec_ok]) is None
+        rec_bad = {"kind": "mcq", "id": mcq_bad["id"],
+                   "sha256": _record_entry(mcq_bad)["sha256"],
+                   "source_chapter": "卷二·论坐命宫",
+                   "snapshot_path": RAW025_REL,
+                   "snapshot_sha256": snap_sha, "historical_basis": None}
+        err = gqr._source_identity_and_content(
+            rail_wt.path, "sanmingtonghui", ev,
+            [rec_rule, rec_bad])
+        assert err == "REVISION_SOURCE_UNVERIFIABLE"
+
+    # ---- P0-1：historical_basis 真实 Git 重算（设计 5-R.2）----
+
+    def test_historical_basis_consumed(self, rail_wt):
+        """P0-1：historical_basis 从 git show <commit>:<path> 重算——按
+        source_chapter 过滤后与 record_content_sha256（该历史记录 _canonical
+        序列化字节 SHA-256）匹配必须恰好 1 条。正向（恰 1 条）→ None；
+        commit 不存在 / path 不存在 / 零匹配（错章）/ 多匹配（同内容 2 条）/
+        SHA 不符 → 均 SOURCE_UNVERIFIABLE；不信任 match_count。"""
+        core = TestRailCore()
+        manifest = core._make_c1(rail_wt)
+        c1 = rail_wt.commit("C1")
+        ev = _evidence_of(rail_wt)
+        snap_sha = _sha256(rail_wt.blob("HEAD", RAW025_REL))
+        # good 与 _make_c1 写入 HEAD 的规则逐字段一致（_mk_rule + probe 覆写）
+        src_text = rail_wt.blob("HEAD", RAW025_REL).decode("utf-8", "replace")
+        good = _mk_rule("smth_t_001", "卷二·论坐命宫", "测试修订规则")
+        good["original_text"] = re.sub(r"\s+", "", src_text)[:30]
+        from scripts.generate_classic_historical_freeze import _record_entry
+        hrule = _mk_rule("hist_001", "卷二·论坐命宫", "历史恢复规则")
+        S = _sha256(_canonical(hrule).encode("utf-8"))
+        hist_dir = "knowledge_base/classic_texts/sanmingtonghui/formal/kb_hist"
+        rail_wt.write(hist_dir + "/histA.json",
+                      json.dumps([hrule], ensure_ascii=False).encode("utf-8"))
+        rail_wt.write(hist_dir + "/histB.json",
+                      json.dumps([hrule, hrule], ensure_ascii=False)
+                      .encode("utf-8"))
+        H = rail_wt.commit("historical basis fixtures")
+        histA, histB = hist_dir + "/histA.json", hist_dir + "/histB.json"
+
+        def _rec(hb):
+            return {"kind": "rule", "id": good["id"],
+                    "sha256": _record_entry(good)["sha256"],
+                    "source_chapter": "卷二·论坐命宫",
+                    "snapshot_path": RAW025_REL,
+                    "snapshot_sha256": snap_sha, "historical_basis": hb}
+
+        def _hb(commit=H, path=histA, chapter="卷二·论坐命宫",
+                sha=S, count=1):
+            return {"commit": commit, "path": path, "source_chapter": chapter,
+                    "record_content_sha256": sha, "match_count": count}
+
+        # 正向：恰 1 条匹配 → 通过（⑥⑦ + historical 重算全过）
+        assert gqr._source_identity_and_content(
+            rail_wt.path, "sanmingtonghui", ev, [_rec(_hb())]) is None
+        # 负向：commit 不存在
+        err = gqr._source_identity_and_content(
+            rail_wt.path, "sanmingtonghui", ev,
+            [_rec(_hb(commit="0" * 40))])
+        assert err == "REVISION_SOURCE_UNVERIFIABLE", err
+        # 负向：path 不存在
+        err = gqr._source_identity_and_content(
+            rail_wt.path, "sanmingtonghui", ev,
+            [_rec(_hb(path=hist_dir + "/nope.json"))])
+        assert err == "REVISION_SOURCE_UNVERIFIABLE", err
+        # 负向：零匹配（章过滤后无记录）
+        err = gqr._source_identity_and_content(
+            rail_wt.path, "sanmingtonghui", ev,
+            [_rec(_hb(chapter="卷一·原造化之始"))])
+        assert err == "REVISION_SOURCE_UNVERIFIABLE", err
+        # 负向：多匹配（同内容 2 条）
+        err = gqr._source_identity_and_content(
+            rail_wt.path, "sanmingtonghui", ev,
+            [_rec(_hb(path=histB))])
+        assert err == "REVISION_SOURCE_UNVERIFIABLE", err
+        # 负向：SHA 不符（record_content_sha256 与历史记录不匹配）
+        err = gqr._source_identity_and_content(
+            rail_wt.path, "sanmingtonghui", ev,
+            [_rec(_hb(sha="0" * 64))])
+        assert err == "REVISION_SOURCE_UNVERIFIABLE", err
 ```
 
 - [ ] **Step 2：跑测试确认失败**
 
 Run: `python -m pytest tests/test_revision_rail.py::TestRailSourceAndContent -q`
-Expected: FAIL——⑥ 两用例在占位实现下不命中（返回 None）；⑦ 两用例在
-V₁ 验收基线上篡改/坏例应被拒。执行修正（Self-Review 11）：原计划整链触发
-设计被 ④⑤ 提前拦截（新批次报 UNACCEPTED、已验收批次改记录报
-PARTITION_MISMATCH/HISTORY_DRIFT），⑥ 改为"先 V₁ 验收再篡改"、⑦ 改为
-直接测纯函数并带 good 对照——GREEN 证据 4/4 见提交说明。
+Expected: FAIL——原整链设计被 ④⑤ 提前拦截（新批次报 UNACCEPTED、已验收批次
+改记录报 PARTITION_MISMATCH/HISTORY_DRIFT），⑥ 改为先 V₁ 验收再篡改、⑦ 改为
+直接测纯函数（Self-Review 11）。复审 RED 实测：删 source_manifest/raw_025 抛
+RuntimeError、空 original_text 被放行、answer=None 抛 TypeError、
+historical_basis 负向误返回 None——5 failed。修复后 GREEN 10/10。
 
 - [ ] **Step 3：实现（替换 `_source_identity_and_content` 占位）**
 
@@ -1256,11 +1461,16 @@ _WS_RE = re.compile(r"\s+")
 
 
 def _find_head_record(git_root: Path, book: str, rec: dict) -> dict | None:
-    """按 (id, sha256) 在 HEAD 对应聚合中找回完整记录 dict。"""
+    """按 (id, sha256) 在 HEAD 对应聚合中找回完整记录 dict（聚合缺失 → None）。"""
     kind_map = {"rule": "all_rules", "mcq": "all_mcq"}
     kind = kind_map[rec["kind"]]
-    data = _git_head_blob(git_root, _book_rel(book, kind))
-    arr = _parse_records(data, kind)
+    data = _git_show_optional_at(git_root, "HEAD", _book_rel(book, kind))
+    if data is None:
+        return None
+    try:
+        arr = _parse_records(data, kind)
+    except Exception:
+        return None
     for r in arr:
         e = _record_entry(r)
         if e["id"] == rec["id"] and e["sha256"] == rec["sha256"]:
@@ -1277,22 +1487,32 @@ def _source_identity_and_content(git_root: Path, book: str, evidence: dict,
        ⑥-2 sha256(blob 原始字节) == manifest_file_sha256
        逐章：sha256(HEAD:<SNAP>/extracted/raw_{NNN}.txt) ==
              source_manifest.chapters[NNN-1].extracted_text_sha256
+       （任一源文件缺失/畸形 → REVISION_SOURCE_UNVERIFIABLE，异常不冒泡）
+    historical_basis（恢复类记录，设计 5-R.2）：从 git show <commit>:<path>
+    重算，按 source_chapter 过滤后与 record_content_sha256（该历史记录
+    _canonical 序列化字节 SHA-256）匹配必须恰好 1 条；不信任 match_count。
     ⑦ 每条 manifest 记录：snapshot_path 与章序一致 ∧ snapshot_sha256 ==
-       对应章 blob sha；rule.original_text 去空白 ⊆ 该章文本去空白；
-       mcq 外键指向 HEAD 存在规则 ∧ G8 形态（options 含 ABCD ∧
-       answer ∈ ABCD）。
+       对应章 blob sha；rule.original_text 去空白 ⊆ 该章文本去空白（缺失/
+       非字符串/去空白为空拒绝）；mcq 外键指向 HEAD 存在规则 ∧ G8 形态
+       （options 含 ABCD ∧ answer 为字符串 ∈ ABCD）。
     """
     sc = (evidence.get("source_chain") or {}).get(book)
     if not isinstance(sc, dict):
         return "REVISION_SOURCE_UNVERIFIABLE"
-    oid = _git_rev_parse(git_root, f"HEAD:{SNAP}/source_manifest.json")
-    if oid != sc["manifest_blob_oid"]:
+    sm_oid = _git_rev_parse_optional(
+        git_root, f"HEAD:{SNAP}/source_manifest.json")
+    if sm_oid is None or sm_oid != sc["manifest_blob_oid"]:
         return "REVISION_SOURCE_UNVERIFIABLE"
-    sm_bytes = _git_show_blob(git_root, "HEAD", f"{SNAP}/source_manifest.json")
-    if hashlib.sha256(sm_bytes).hexdigest() != sc["manifest_file_sha256"]:
+    sm_bytes = _git_show_optional_at(git_root, "HEAD",
+                                     f"{SNAP}/source_manifest.json")
+    if sm_bytes is None or hashlib.sha256(sm_bytes).hexdigest() != \
+            sc["manifest_file_sha256"]:
         return "REVISION_SOURCE_UNVERIFIABLE"
-    sm = _loads_strict(sm_bytes.decode("utf-8"))
-    chapters = sm["chapters"]  # 列表序 == 章序（NNN-1 索引）
+    try:
+        sm = _loads_strict(sm_bytes.decode("utf-8"))
+        chapters = sm["chapters"]  # 列表序 == 章序（NNN-1 索引）
+    except Exception:
+        return "REVISION_SOURCE_UNVERIFIABLE"
     chap_blob: dict[str, tuple[int, bytes]] = {}
     for r in manifest_recs:
         nnn = next((i for i, c in enumerate(chapters, 1)
@@ -1303,17 +1523,27 @@ def _source_identity_and_content(git_root: Path, book: str, evidence: dict,
         if rel != r["snapshot_path"]:
             return "REVISION_SOURCE_UNVERIFIABLE"  # 路径与章不匹配
         if r["source_chapter"] not in chap_blob:
-            blob = _git_show_blob(git_root, "HEAD", rel)
-            if hashlib.sha256(blob).hexdigest() != \
+            blob = _git_show_optional_at(git_root, "HEAD", rel)
+            if blob is None or hashlib.sha256(blob).hexdigest() != \
                     chapters[nnn - 1]["extracted_text_sha256"]:
                 return "REVISION_SOURCE_UNVERIFIABLE"
             chap_blob[r["source_chapter"]] = (nnn, blob)
         _, blob = chap_blob[r["source_chapter"]]
         if hashlib.sha256(blob).hexdigest() != r["snapshot_sha256"]:
             return "REVISION_SOURCE_UNVERIFIABLE"
+        hb = r.get("historical_basis")
+        if hb is not None and not _historical_basis_ok(git_root, hb):
+            return "REVISION_SOURCE_UNVERIFIABLE"
     # ⑦ 内容检查
-    head_rule_ids = {_record_entry(r)["id"] for r in _parse_records(
-        _git_head_blob(git_root, _book_rel(book, "all_rules")), "all_rules")}
+    rules_data = _git_show_optional_at(git_root, "HEAD",
+                                       _book_rel(book, "all_rules"))
+    if rules_data is None:
+        return "REVISION_SOURCE_UNVERIFIABLE"
+    try:
+        head_rule_ids = {_record_entry(rr)["id"] for rr in
+                         _parse_records(rules_data, "all_rules")}
+    except Exception:
+        return "REVISION_SOURCE_UNVERIFIABLE"
     for r in manifest_recs:
         rec = _find_head_record(git_root, book, r)
         if rec is None:
@@ -1321,19 +1551,58 @@ def _source_identity_and_content(git_root: Path, book: str, evidence: dict,
         _, blob = chap_blob[r["source_chapter"]]
         chap_ws = _WS_RE.sub("", blob.decode("utf-8", "replace"))
         if r["kind"] == "rule":
-            if _WS_RE.sub("", rec.get("original_text", "")) not in chap_ws:
+            ot = rec.get("original_text")
+            if (not isinstance(ot, str) or not _WS_RE.sub("", ot)
+                    or _WS_RE.sub("", ot) not in chap_ws):
                 return "REVISION_SOURCE_UNVERIFIABLE"
         else:
             if rec.get("source_rule_id") not in head_rule_ids:
                 return "REVISION_SOURCE_UNVERIFIABLE"
             opts, ans = rec.get("options"), rec.get("answer")
             if (not isinstance(opts, dict) or not set("ABCD").issubset(opts)
-                    or ans not in "ABCD"):
+                    or not isinstance(ans, str) or ans not in "ABCD"):
                 return "REVISION_SOURCE_UNVERIFIABLE"
     return None
+
+
+def _historical_basis_ok(git_root: Path, hb: dict) -> bool:
+    """P0-1：消费 historical_basis（设计 5-R.2）。
+
+    从 git show <commit>:<path> 重算：按 hb.source_chapter 过滤后，与
+    record_content_sha256（该历史记录 _canonical 序列化字节 SHA-256）匹配
+    的记录必须恰好 1 条。commit/path 不存在、解析失败、零/多匹配均拒绝；
+    不得只信任 match_count 字段，也不得用 id 定位。
+    """
+    data = _git_show_optional_at(git_root, hb["commit"], hb["path"])
+    if data is None:
+        return False
+    try:
+        text = data.decode("utf-8")
+        if hb["path"].endswith(".jsonl"):
+            records = [_loads_strict(line)
+                       for line in text.splitlines() if line.strip()]
+        else:
+            arr = _loads_strict(text)
+            if not isinstance(arr, list):
+                return False
+            records = arr
+    except Exception:
+        return False
+    n = 0
+    for rec in records:
+        if not isinstance(rec, dict) or \
+                rec.get("source_chapter") != hb["source_chapter"]:
+            continue
+        if hashlib.sha256(
+                _canonical(rec).encode("utf-8")).hexdigest() == \
+                hb["record_content_sha256"]:
+            n += 1
+    return n == 1
 ```
 
-（`SNAP` 已在 Task 3 导入；`re` 已在文件头导入。）
+（`SNAP` 已在 Task 3 导入；`re`/`hashlib`/`_canonical`/`_record_entry`
+已在文件头导入；`_git_rev_parse_optional`/`_git_show_optional_at` 新增于
+`_git_show_optional` 之后，缺失返回 None 不抛 RuntimeError。）
 
 - [ ] **Step 4：跑测试确认通过 + ruff + 提交**
 
@@ -2226,4 +2495,22 @@ T₀ = 本提交（Part A 中间提交为其祖先；T₀ OID 在 Part B R₀ �
 ⑥ 通过、⑦ 才是拦截点），再断言坏例 `SOURCE_UNVERIFIABLE`——original_text
 非章子串、mcq 悬空外键各一。章节映射前置核验：真实 `source_manifest.json`
 chapters[24].title == 「卷二·论坐命宫」↔ `raw_025.txt`（E1 双树一致成立）。
+
+12. **执行复审（Task 4 NEEDS_REVISION，2 P0 + 1 非阻断）同步记录**：
+P0-1 `historical_basis` 此前只验形状、未消费——指向虚构 commit/path 的合法
+输入仍返回 None；现于 `_source_identity_and_content` ⑥ 循环内逐记录消费：从
+`git show <commit>:<path>` 读取（`_git_show_optional_at`，缺失/解析失败 → False），
+按 `source_chapter` 过滤后与 `record_content_sha256`（历史记录 `_canonical`
+序列化字节 SHA-256）匹配须恰好 1 条（`_historical_basis_ok`，不信任
+match_count、不用 id 定位）；补正负向：恰 1 条 → None，commit/path 不存在、
+零匹配（错章）、多匹配（同内容 2 条）、SHA 不符 → SOURCE_UNVERIFIABLE。
+P0-2 稳定错误码：(a) 源文件读取原 `_git_rev_parse`/`_git_show_blob` 在缺失时
+抛 RuntimeError——新增 `_git_rev_parse_optional`/`_git_show_optional_at` 返回
+None，⑥ 各读取点缺失/畸形均映射 SOURCE_UNVERIFIABLE，`_find_head_record`
+聚合缺失 → None；(b) G8 `ans not in "ABCD"` 对 `answer=None` 抛 TypeError——
+补 `isinstance(ans, str)` 前置；(c) 空 original_text 恒为子串被放行——补缺失/
+非字符串/去空白为空三重拒绝。补删 source_manifest/raw_025 两个入口级测试
+（改字节之外覆盖删除）。非阻断：source_manifest 篡改测试先在 OID 比较失败、
+未单独证 SHA 分支——新增 `test_source_manifest_sha_branch`（OID 匹配真实、
+仅钉住 sha256 伪造 → ⑥-2 独立触发，good 对照先 None）。
 
