@@ -506,3 +506,40 @@ class TestRailCore:
             rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
             _evidence_of(rail_wt))
         assert res["error_code"] == "REVISION_CHAIN_STALE"
+
+    def test_rail_other_books_none_after_sanming_acceptance(self, rail_wt,
+                                                             monkeypatch):
+        """执行复审 P0：三命通会合法 C→V 落地后，其他三书不受锚链影响
+        ——仍 NONE 且本书历史分区通过（不读三命通会锚、不套用其常量规则）；
+        三命通会本身经 ①-⑦ 走到 ACCEPTED。V₁ 后执行体常量 == @HEAD 链头
+        （monkeypatch 对齐进程内常量与 HEAD 脚本常量，模拟真实部署同源）。"""
+        manifest = self._make_c1(rail_wt)
+        c1 = rail_wt.commit("C1")
+        anchor = _anchor_line("B01", c1, _sha256(_canonical_bytes(manifest)),
+                              GENESIS_SHA, rail_wt.head0)
+        rail_wt.append_line(gqr.REVISION_ANCHOR_REL, anchor)
+        head = chain_head([json.loads(anchor.decode())], GENESIS_SHA)
+        rail_wt.replace_constant("REVISION_ANCHOR_HEAD", head)
+        rail_wt.commit("V1")
+        monkeypatch.setattr(gqr, "REVISION_ANCHOR_HEAD", head)
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["revision_state"] == "ACCEPTED"
+        assert res["ok"] is True
+        for book in ("ditiansui", "qiongtongbaojian", "zipingzhenquan"):
+            r = gqr.evaluate_revision_rail(
+                rail_wt.path, book, _freeze_of(rail_wt), _evidence_of(rail_wt))
+            assert r["revision_state"] == "NONE"
+            assert r["ok"] is True and r["e3_ok"] is True
+
+    def test_rail_double_corruption_reports_manifest_first(self, rail_wt):
+        """执行复审 P1：manifest 与锚同时损坏 → 按冻结优先级报阶段①
+        REVISION_MANIFEST_MALFORMED（锚解析不得抢在阶段①之前）。"""
+        rail_wt.write(MANIFEST_REL, b'{"schema_version":"1.0",')
+        rail_wt.append_line(gqr.REVISION_ANCHOR_REL, b'{"bad":\n')
+        rail_wt.commit("double corruption")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_MANIFEST_MALFORMED"

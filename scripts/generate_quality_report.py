@@ -393,20 +393,26 @@ def evaluate_revision_rail(git_root: Path, book: str,
             f"knowledge_base/classic_texts/{book}/revision_manifest.json"
             ) is not None:
         return _fail("REVISION_SOURCE_UNVERIFIABLE")
-    try:
-        anchors = _rail_anchor_entries(git_root)
-    except RevisionArtifactError:
-        # 执行复审 P0-3：锚文件畸形行 → 稳定错误码，不抛未处理异常
-        return _fail("REVISION_CHAIN_STALE")
+
     if raw is None:
-        if anchors:  # manifest 抹除但锚存在 → 已验收修订被整体移除
-            return _fail("REVISION_CHAIN_STALE")
+        # 执行复审 P0：锚文件与信任根常量仅属三命通会——其他书只做本书
+        # 历史分区校验（合法 NONE），不读三命通会锚、不套用其常量规则。
+        anchors = None
+        if book == "sanmingtonghui":
+            try:
+                anchors = _rail_anchor_entries(git_root)
+            except RevisionArtifactError:
+                # 执行复审 P0-3：锚文件畸形行 → 稳定错误码，不抛未处理异常
+                return _fail("REVISION_CHAIN_STALE")
+            if anchors:  # manifest 抹除但锚存在 → 已验收修订被整体移除
+                return _fail("REVISION_CHAIN_STALE")
         e3 = _partition_equation(git_root, book, freeze, manifest_recs=[])
         if not e3["ok"]:
             return _fail("REVISION_PARTITION_MISMATCH",
                          partition_detail=e3["detail"])
         # 执行复审 P0-2：缺失（None）与空（[]）同样必须核对信任根
-        if not anchors and chain_head([], GENESIS_SHA) != REVISION_ANCHOR_HEAD:
+        if (book == "sanmingtonghui" and not anchors
+                and chain_head([], GENESIS_SHA) != REVISION_ANCHOR_HEAD):
             return _fail("REVISION_CHAIN_STALE")
         return {"ok": True, "revision_state": "NONE", "error_code": None,
                 "e3_ok": True}
@@ -427,7 +433,12 @@ def evaluate_revision_rail(git_root: Path, book: str,
             if (r["id"], r["sha256"]) in freeze_ids:
                 return _fail("REVISION_MANIFEST_MALFORMED",
                              reason="record double-listed with freeze")
-    # ③ 锚链（逐条链哈希 + 链头==常量@HEAD）
+    # ③ 锚链（执行复审 P1：锚解析在阶段①②之后，双重损坏按①报告；
+    # 逐条链哈希 + 链头==常量@HEAD）
+    try:
+        anchors = _rail_anchor_entries(git_root)
+    except RevisionArtifactError:
+        return _fail("REVISION_CHAIN_STALE")
     try:
         head = chain_head(anchors or [], GENESIS_SHA)
     except RevisionArtifactError:

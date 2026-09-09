@@ -796,6 +796,43 @@ class TestRailCore:
             rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
             _evidence_of(rail_wt))
         assert res["error_code"] == "REVISION_CHAIN_STALE"
+
+    def test_rail_other_books_none_after_sanming_acceptance(self, rail_wt,
+                                                             monkeypatch):
+        """执行复审 P0：三命通会合法 C→V 落地后，其他三书不受锚链影响
+        ——仍 NONE 且本书历史分区通过（不读三命通会锚、不套用其常量规则）；
+        三命通会本身经 ①-⑦ 走到 ACCEPTED。V₁ 后执行体常量 == @HEAD 链头
+        （monkeypatch 对齐进程内常量与 HEAD 脚本常量，模拟真实部署同源）。"""
+        manifest = self._make_c1(rail_wt)
+        c1 = rail_wt.commit("C1")
+        anchor = _anchor_line("B01", c1, _sha256(_canonical_bytes(manifest)),
+                              GENESIS_SHA, rail_wt.head0)
+        rail_wt.append_line(gqr.REVISION_ANCHOR_REL, anchor)
+        head = chain_head([json.loads(anchor.decode())], GENESIS_SHA)
+        rail_wt.replace_constant("REVISION_ANCHOR_HEAD", head)
+        rail_wt.commit("V1")
+        monkeypatch.setattr(gqr, "REVISION_ANCHOR_HEAD", head)
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["revision_state"] == "ACCEPTED"
+        assert res["ok"] is True
+        for book in ("ditiansui", "qiongtongbaojian", "zipingzhenquan"):
+            r = gqr.evaluate_revision_rail(
+                rail_wt.path, book, _freeze_of(rail_wt), _evidence_of(rail_wt))
+            assert r["revision_state"] == "NONE"
+            assert r["ok"] is True and r["e3_ok"] is True
+
+    def test_rail_double_corruption_reports_manifest_first(self, rail_wt):
+        """执行复审 P1：manifest 与锚同时损坏 → 按冻结优先级报阶段①
+        REVISION_MANIFEST_MALFORMED（锚解析不得抢在阶段①之前）。"""
+        rail_wt.write(MANIFEST_REL, b'{"schema_version":"1.0",')
+        rail_wt.append_line(gqr.REVISION_ANCHOR_REL, b'{"bad":\n')
+        rail_wt.commit("double corruption")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_MANIFEST_MALFORMED"
 ```
 
 - [ ] **Step 2：跑测试确认失败**
@@ -880,20 +917,26 @@ def evaluate_revision_rail(git_root: Path, book: str,
             f"knowledge_base/classic_texts/{book}/revision_manifest.json"
             ) is not None:
         return _fail("REVISION_SOURCE_UNVERIFIABLE")
-    try:
-        anchors = _rail_anchor_entries(git_root)
-    except RevisionArtifactError:
-        # 执行复审 P0-3：锚文件畸形行 → 稳定错误码，不抛未处理异常
-        return _fail("REVISION_CHAIN_STALE")
+
     if raw is None:
-        if anchors:  # manifest 抹除但锚存在 → 已验收修订被整体移除
-            return _fail("REVISION_CHAIN_STALE")
+        # 执行复审 P0：锚文件与信任根常量仅属三命通会——其他书只做本书
+        # 历史分区校验（合法 NONE），不读三命通会锚、不套用其常量规则。
+        anchors = None
+        if book == "sanmingtonghui":
+            try:
+                anchors = _rail_anchor_entries(git_root)
+            except RevisionArtifactError:
+                # 执行复审 P0-3：锚文件畸形行 → 稳定错误码，不抛未处理异常
+                return _fail("REVISION_CHAIN_STALE")
+            if anchors:  # manifest 抹除但锚存在 → 已验收修订被整体移除
+                return _fail("REVISION_CHAIN_STALE")
         e3 = _partition_equation(git_root, book, freeze, manifest_recs=[])
         if not e3["ok"]:
             return _fail("REVISION_PARTITION_MISMATCH",
                          partition_detail=e3["detail"])
         # 执行复审 P0-2：缺失（None）与空（[]）同样必须核对信任根
-        if not anchors and chain_head([], GENESIS_SHA) != REVISION_ANCHOR_HEAD:
+        if (book == "sanmingtonghui" and not anchors
+                and chain_head([], GENESIS_SHA) != REVISION_ANCHOR_HEAD):
             return _fail("REVISION_CHAIN_STALE")
         return {"ok": True, "revision_state": "NONE", "error_code": None,
                 "e3_ok": True}
@@ -914,7 +957,12 @@ def evaluate_revision_rail(git_root: Path, book: str,
             if (r["id"], r["sha256"]) in freeze_ids:
                 return _fail("REVISION_MANIFEST_MALFORMED",
                              reason="record double-listed with freeze")
-    # ③ 锚链（逐条链哈希 + 链头==常量@HEAD）
+    # ③ 锚链（执行复审 P1：锚解析在阶段①②之后，双重损坏按①报告；
+    # 逐条链哈希 + 链头==常量@HEAD）
+    try:
+        anchors = _rail_anchor_entries(git_root)
+    except RevisionArtifactError:
+        return _fail("REVISION_CHAIN_STALE")
     try:
         head = chain_head(anchors or [], GENESIS_SHA)
     except RevisionArtifactError:
@@ -2125,3 +2173,5 @@ T₀ = 本提交（Part A 中间提交为其祖先；T₀ OID 在 Part B R₀ �
 9. **复审（第 5 轮 NEEDS_REVISION，1 P0 + 1 非阻断）修订记录**：P0 BLOCKED 判据不验报告完整性（ghost 残缺对象可获 exit 3）——新增 `_report_structure_ok` 结构校验层作 rc==3 判 BLOCKED 前置：顶层 15 键/类型 + `books` 键集精确四书 + 逐书 15 键/九门 gates/gate_details 类型 + 逐书 reason-status 耦合（BLOCKED⇒五值 str、PASS/FAIL⇒None）+ 聚合一致性（§7 实测）；**只验形态不验门禁通过**（红门/红 source 不拒，合法 BLOCKED 不误拒）；补未知书名（ghost）/缺书/缺必需字段/`source_e2e_pass=true` 与 BLOCKED 矛盾四负向测试。键集依据修正：03c02bb 自带脚本已产出全字段（`source_e2e_status`/`status`/`approval_b2`/`exemption_stages` 实测在源码），跟踪的旧 QUALITY_REPORT.json 为旧脚本过期产物、重跑前被新生成守卫删除——fixture docstring 键集判据措辞同步修正并补 `known_limitations`。非阻断：1290 行 diff 示例围栏 python → diff。
 
 9. **执行修正（Task 1-3 复审 NEEDS_REVISION，3 P0）同步记录**：P0-1 `_partition_equation` 缺席 KIND 由 present 跳过改为 **baseline Counter 为空 + `_git_show_optional` 读取 HEAD**（新增记录计入 `unmanifested_extra`，不得沿用旧 E3 跳过语义），补 absent-kind 负向测试；P0-2 NONE 分支信任根核对由 `anchors == []` 放宽为 `not anchors`（锚文件缺失同样核对，非 genesis → CHAIN_STALE），补"缺失 manifest+锚 + 非 genesis 常量 → STALE"负向测试（monkeypatch 进程常量——rail 读取运行中执行体的常量，与评审内存注入复现同源）；P0-3 `validate_revision_manifest` 批次标量字段（batch_id/date/author）类型检查前置（unhashable 不再 TypeError 冒泡），`_rail_anchor_entries` 异常包 try 映射 REVISION_CHAIN_STALE，补 unhashable 与 malformed-anchor 两个负向测试。
+
+10. **执行修正（Task 1-3 复审第 2 轮，1 P0 + 1 P1）同步记录**：P0 三命通会锚链误伤其他三书——`evaluate_revision_rail` 对**所有书**读取同一份三命通会锚文件，三命通会有锚时其他书（无自身 manifest 的合法状态）在第 402 行被误判 manifest 删除；改为**书籍分流**：其他三书拒绝自身 revision manifest，但仅执行本书历史分区校验（`_partition_equation`），不读三命通会锚、不套用其"锚存在而 manifest 缺失"规则；补"三命通会 C→V 落地后其余三书仍 NONE 且历史分区通过"正向测试（V₁ 后执行体常量== @HEAD 链头，monkeypatch 对齐进程内常量，与真实部署同源）。P1 锚解析抢在阶段①之前——同时损坏 manifest 与锚时实测报 CHAIN_STALE 而非冻结优先级要求的 MANIFEST_MALFORMED；改为有 manifest 时锚解析移到①②之后（无 manifest 分支另行处理），补"双重损坏只报阶段①"测试。
