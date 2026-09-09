@@ -546,9 +546,84 @@ def _baseline_compare(git_root: Path, head_manifest: dict,
     return "REVISION_HISTORY_DRIFT"
 
 
+_WS_RE = re.compile(r"\s+")
+
+
+def _find_head_record(git_root: Path, book: str, rec: dict) -> dict | None:
+    """按 (id, sha256) 在 HEAD 对应聚合中找回完整记录 dict。"""
+    kind_map = {"rule": "all_rules", "mcq": "all_mcq"}
+    kind = kind_map[rec["kind"]]
+    data = _git_head_blob(git_root, _book_rel(book, kind))
+    arr = _parse_records(data, kind)
+    for r in arr:
+        e = _record_entry(r)
+        if e["id"] == rec["id"] and e["sha256"] == rec["sha256"]:
+            return r
+    return None
+
+
 def _source_identity_and_content(git_root: Path, book: str, evidence: dict,
                                  manifest_recs: list[dict]) -> str | None:
-    """⑥⑦ 占位（Task 4 实现完整锚定链）。"""
+    """⑥⑦ 源身份锚定链 + 内容检查（设计 5-R.8）。返回错误码或 None。
+
+    ⑥ 锚点来自 evidence@HEAD.source_chain.{book}（E1 已验证双树一致）：
+       ⑥-1 rev-parse HEAD:<SNAP>/source_manifest.json == manifest_blob_oid
+       ⑥-2 sha256(blob 原始字节) == manifest_file_sha256
+       逐章：sha256(HEAD:<SNAP>/extracted/raw_{NNN}.txt) ==
+             source_manifest.chapters[NNN-1].extracted_text_sha256
+    ⑦ 每条 manifest 记录：snapshot_path 与章序一致 ∧ snapshot_sha256 ==
+       对应章 blob sha；rule.original_text 去空白 ⊆ 该章文本去空白；
+       mcq 外键指向 HEAD 存在规则 ∧ G8 形态（options 含 ABCD ∧
+       answer ∈ ABCD）。
+    """
+    sc = (evidence.get("source_chain") or {}).get(book)
+    if not isinstance(sc, dict):
+        return "REVISION_SOURCE_UNVERIFIABLE"
+    oid = _git_rev_parse(git_root, f"HEAD:{SNAP}/source_manifest.json")
+    if oid != sc["manifest_blob_oid"]:
+        return "REVISION_SOURCE_UNVERIFIABLE"
+    sm_bytes = _git_show_blob(git_root, "HEAD", f"{SNAP}/source_manifest.json")
+    if hashlib.sha256(sm_bytes).hexdigest() != sc["manifest_file_sha256"]:
+        return "REVISION_SOURCE_UNVERIFIABLE"
+    sm = _loads_strict(sm_bytes.decode("utf-8"))
+    chapters = sm["chapters"]  # 列表序 == 章序（NNN-1 索引）
+    chap_blob: dict[str, tuple[int, bytes]] = {}
+    for r in manifest_recs:
+        nnn = next((i for i, c in enumerate(chapters, 1)
+                    if c["title"] == r["source_chapter"]), None)
+        if nnn is None:
+            return "REVISION_SOURCE_UNVERIFIABLE"  # chapter_list 反解失败（错章）
+        rel = f"{SNAP}/extracted/raw_{nnn:03d}.txt"
+        if rel != r["snapshot_path"]:
+            return "REVISION_SOURCE_UNVERIFIABLE"  # 路径与章不匹配
+        if r["source_chapter"] not in chap_blob:
+            blob = _git_show_blob(git_root, "HEAD", rel)
+            if hashlib.sha256(blob).hexdigest() != \
+                    chapters[nnn - 1]["extracted_text_sha256"]:
+                return "REVISION_SOURCE_UNVERIFIABLE"
+            chap_blob[r["source_chapter"]] = (nnn, blob)
+        _, blob = chap_blob[r["source_chapter"]]
+        if hashlib.sha256(blob).hexdigest() != r["snapshot_sha256"]:
+            return "REVISION_SOURCE_UNVERIFIABLE"
+    # ⑦ 内容检查
+    head_rule_ids = {_record_entry(r)["id"] for r in _parse_records(
+        _git_head_blob(git_root, _book_rel(book, "all_rules")), "all_rules")}
+    for r in manifest_recs:
+        rec = _find_head_record(git_root, book, r)
+        if rec is None:
+            return "REVISION_SOURCE_UNVERIFIABLE"
+        _, blob = chap_blob[r["source_chapter"]]
+        chap_ws = _WS_RE.sub("", blob.decode("utf-8", "replace"))
+        if r["kind"] == "rule":
+            if _WS_RE.sub("", rec.get("original_text", "")) not in chap_ws:
+                return "REVISION_SOURCE_UNVERIFIABLE"
+        else:
+            if rec.get("source_rule_id") not in head_rule_ids:
+                return "REVISION_SOURCE_UNVERIFIABLE"
+            opts, ans = rec.get("options"), rec.get("answer")
+            if (not isinstance(opts, dict) or not set("ABCD").issubset(opts)
+                    or ans not in "ABCD"):
+                return "REVISION_SOURCE_UNVERIFIABLE"
     return None
 
 
