@@ -43,6 +43,7 @@ from scripts.generate_classic_historical_freeze import (  # noqa: E402
     KINDS,
     CheckError,
     _book_rel,
+    _canonical,
     _loads_strict,
     _parse_records,
     _record_entry,
@@ -71,6 +72,28 @@ APPROVAL_B2_BY_BOOK = {
     "sanmingtonghui": "ccb833a46977c8274c0fb8c8c79c1b2f5d494c5e",
     "zipingzhenquan": "45004f44304241018a51d755c6f88a24f536905c",
 }
+
+# §5-R 修订溯源双轨契约（设计 v29.3；批准锚点见设计 §0）
+from scripts.verify_sanming_source_chain import SNAP  # noqa: E402
+
+# 空链规范值 == GENESIS_SHA 的确定 64-hex 字面量（设计 5-R.6 首批路径要求
+# REVISION_ANCHOR_HEAD@HEAD == genesis_sha）。P0-2 复审：不得用裸名
+# GENESIS_SHA 初始化——fixture 替换器只接受 `NAME = "<64位hex>"` 形态，
+# 首次 R/V 常量替换才能命中；两行不得带行尾注释（保持替换器正则
+# `^NAME = "[0-9a-f]{64}"$` 精确匹配）；字面量由 Task 3 Step 1 的
+# test_trust_roots_start_at_genesis 重算验证。
+REVISION_ANCHOR_HEAD = "da56658f061d2487877ef7819a18ef548fdb4eff5aa546609abe3a64141c48c0"
+TOOLCHAIN_REGISTRY_HEAD = "da56658f061d2487877ef7819a18ef548fdb4eff5aa546609abe3a64141c48c0"
+REVISION_ANCHOR_REL = ("docs/superpowers/plans/notes/approvals/revisions/"
+                       "sanmingtonghui/accepted_anchors.jsonl")
+REVISION_REGISTRY_REL = ("docs/superpowers/plans/notes/approvals/revisions/"
+                         "sanmingtonghui/toolchain_registry.jsonl")
+REVISION_MANIFEST_REL = ("knowledge_base/classic_texts/sanmingtonghui/"
+                         "revision_manifest.json")
+REVISION_ALLOWED_RED_ITEMS = {  # 允许红项上界（附录 A.3；仅 sanmingtonghui.G7）
+    "sanmingtonghui": {"G7_chapter_complete.missing_count": 303},
+}
+
 
 _POINTER_FIELDS = frozenset({
     "schema_version", "baseline_commit", "book", "b1_commit",
@@ -321,6 +344,194 @@ def _e3_multiset_check(git_root: Path, freeze: dict) -> dict:
             if head_ms != fz_ms:
                 return fail
     return {"ok": True, "error_code": None}
+
+
+def _git_show_optional(git_root: Path, rel: str) -> bytes | None:
+    r = subprocess.run(["git", "-C", str(git_root), "show", f"HEAD:{rel}"],
+                       capture_output=True)
+    return r.stdout if r.returncode == 0 else None
+
+
+def _rail_manifest_bytes(git_root: Path) -> bytes | None:
+    return _git_show_optional(git_root, REVISION_MANIFEST_REL)
+
+
+def _rail_anchor_entries(git_root: Path) -> list[dict] | None:
+    """@HEAD 锚文件条目；文件不存在 → None；存在（含零行）→ 条目列表。"""
+    from scripts.classic_artifacts import RevisionArtifactError, parse_jsonl_line
+    raw = _git_show_optional(git_root, REVISION_ANCHOR_REL)
+    if raw is None:
+        return None
+    entries = []
+    for line in raw.splitlines(keepends=True):
+        if not line.strip():
+            raise RevisionArtifactError("blank anchor line")
+        entries.append(parse_jsonl_line(line))
+    return entries
+
+
+def evaluate_revision_rail(git_root: Path, book: str,
+                           freeze: dict, evidence: dict) -> dict:
+    """§5-R.5 唯一执行入口：①-⑦ 管线，顺序即错误优先级，单次读取 HEAD。
+
+    返回 {ok, revision_state, error_code, e3_ok, partition_detail?}。
+    无 manifest 且无锚 → NONE（沿现行 E3 语义，⑤ 退化为 HEAD==freeze）。
+    """
+    from scripts.classic_artifacts import (
+        GENESIS_SHA, RevisionArtifactError, chain_head,
+        validate_revision_manifest)
+
+    def _fail(code: str, **extra) -> dict:
+        return {"ok": False, "revision_state": "FAILED", "error_code": code,
+                "e3_ok": False, **extra}
+
+    raw = None
+    if book == "sanmingtonghui":
+        raw = _rail_manifest_bytes(git_root)
+    elif _git_show_optional(
+            git_root,
+            f"knowledge_base/classic_texts/{book}/revision_manifest.json"
+            ) is not None:
+        return _fail("REVISION_SOURCE_UNVERIFIABLE")
+    anchors = _rail_anchor_entries(git_root)
+    if raw is None:
+        if anchors:  # manifest 抹除但锚存在 → 已验收修订被整体移除
+            return _fail("REVISION_CHAIN_STALE")
+        e3 = _partition_equation(git_root, book, freeze, manifest_recs=[])
+        if not e3["ok"]:
+            return _fail("REVISION_PARTITION_MISMATCH",
+                         partition_detail=e3["detail"])
+        if anchors == [] and chain_head([], GENESIS_SHA) != REVISION_ANCHOR_HEAD:
+            return _fail("REVISION_CHAIN_STALE")  # 空锚文件 + 常量非 genesis
+        return {"ok": True, "revision_state": "NONE", "error_code": None,
+                "e3_ok": True}
+
+    # ① 解析（strict JSON；BOM/尾随内容拒绝）
+    try:
+        obj = _loads_strict(raw.decode("utf-8"))
+    except Exception:
+        return _fail("REVISION_MANIFEST_MALFORMED")
+    # ② schema/记录身份/与 freeze 交集
+    try:
+        validate_revision_manifest(obj)
+    except RevisionArtifactError:
+        return _fail("REVISION_MANIFEST_MALFORMED")
+    freeze_ids = set(_freeze_identities(freeze, book))
+    for b in obj["batches"]:
+        for r in b["records"]:
+            if (r["id"], r["sha256"]) in freeze_ids:
+                return _fail("REVISION_MANIFEST_MALFORMED",
+                             reason="record double-listed with freeze")
+    # ③ 锚链（逐条链哈希 + 链头==常量@HEAD）
+    try:
+        head = chain_head(anchors or [], GENESIS_SHA)
+    except RevisionArtifactError:
+        return _fail("REVISION_CHAIN_STALE")
+    if head != REVISION_ANCHOR_HEAD:
+        return _fail("REVISION_CHAIN_STALE")
+    # ④ HEAD manifest vs 已验收基线（默认模式）
+    drift = _baseline_compare(git_root, obj, anchors or [])
+    if drift is not None:
+        return _fail(drift)
+    # ⑤ 分区等式（全 KINDS；Counter 计数，禁 set）
+    manifest_recs = [r for b in obj["batches"] for r in b["records"]]
+    e3 = _partition_equation(git_root, book, freeze, manifest_recs)
+    if not e3["ok"]:
+        return _fail("REVISION_PARTITION_MISMATCH", partition_detail=e3["detail"])
+    # ⑥⑦ 源身份 + 内容检查（Task 4 实现；本任务接线占位通过）
+    src = _source_identity_and_content(git_root, book, evidence, manifest_recs)
+    if src is not None:
+        return _fail(src)
+    return {"ok": True, "revision_state": "ACCEPTED", "error_code": None,
+            "e3_ok": True}
+
+
+def _freeze_identities(freeze: dict, book: str) -> list[tuple[str, str]]:
+    return [(rec["id"], rec["sha256"])
+            for kind in KINDS
+            for rec in freeze["books"][book][kind]["records"]]
+
+
+def _partition_equation(git_root: Path, book: str, freeze: dict,
+                        manifest_recs: list[dict]) -> dict:
+    """⑤ Counter(HEAD) == Counter(freeze) + Counter(manifest)（全 KINDS）。
+
+    三分类明细：legacy_mutated / unmanifested_extra / manifest_orphan。
+    manifest_recs 为空时退化为现行 E3（HEAD == freeze）。
+    """
+    from collections import Counter
+    kind_map = {"rule": "all_rules", "mcq": "all_mcq"}
+    head_c, base_c, mani_c = Counter(), Counter(), Counter()
+    for kind in KINDS:
+        if not freeze["books"][book][kind]["present"]:
+            continue  # 文件不存在的 KIND 与现行 E3 同语义跳过（_e3_multiset_check）
+        rel = _book_rel(book, kind)
+        data = _git_head_blob(git_root, rel)
+        try:
+            # P0-1：JSON 数组（all_rules.json）与 JSONL（*_mcq.jsonl 等）
+            # 统一经 _parse_records 按扩展名分派；_loads_strict 直读 JSONL 会失败。
+            records = _parse_records(data, kind)
+        except Exception:
+            return {"ok": False, "detail": {"parse_error": rel}}
+        for rec in records:
+            e = _record_entry(rec)
+            head_c[(kind, e["id"], e["sha256"])] += 1
+        for rec in freeze["books"][book][kind]["records"]:
+            base_c[(kind, rec["id"], rec["sha256"])] += 1
+    for r in manifest_recs:
+        mani_c[(kind_map[r["kind"]], r["id"], r["sha256"])] += 1
+    if head_c == base_c + mani_c:
+        return {"ok": True, "detail": {}}
+    expected = base_c + mani_c
+    detail = {"legacy_mutated": 0, "unmanifested_extra": 0, "manifest_orphan": 0}
+    for key in set(head_c) | set(expected):
+        h, e = head_c.get(key, 0), expected.get(key, 0)
+        b, m = base_c.get(key, 0), mani_c.get(key, 0)
+        if h > e:
+            detail["unmanifested_extra"] += h - e
+        elif h < e:
+            missing = e - h
+            from_base = min(b, missing)
+            detail["legacy_mutated"] += from_base
+            detail["manifest_orphan"] += missing - from_base
+    return {"ok": False, "detail": detail}
+
+
+def _baseline_compare(git_root: Path, head_manifest: dict,
+                      anchors: list[dict]) -> str | None:
+    """④ 默认模式（canonical 层比较）。返回错误码或 None（通过）。
+
+    - 锚空 → 基线 = 空基线 manifest 字面量；
+    - HEAD == 基线 → 通过；HEAD == 基线+1 全新批次 → UNACCEPTED；
+    - HEAD 批次集 ⊂ 基线（删批）→ CHAIN_STALE；其余 → HISTORY_DRIFT。
+    """
+    from scripts.classic_artifacts import EMPTY_BASELINE_MANIFEST
+    if anchors:
+        c_oid = anchors[-1]["content_commit"]
+        r = subprocess.run(["git", "-C", str(git_root), "show",
+                            f"{c_oid}:{REVISION_MANIFEST_REL}"],
+                           capture_output=True)
+        if r.returncode != 0:
+            return "REVISION_CHAIN_STALE"
+        base = _loads_strict(r.stdout.decode("utf-8"))
+    else:
+        base = EMPTY_BASELINE_MANIFEST
+    hb, bb = head_manifest["batches"], base["batches"]
+    if _canonical(hb) == _canonical(bb):
+        return None
+    if (len(hb) == len(bb) + 1
+            and _canonical(hb[:len(bb)]) == _canonical(bb)
+            and hb[-1]["batch_id"] not in {b["batch_id"] for b in bb}):
+        return "REVISION_UNACCEPTED"
+    if {b["batch_id"] for b in hb} < {b["batch_id"] for b in bb}:
+        return "REVISION_CHAIN_STALE"
+    return "REVISION_HISTORY_DRIFT"
+
+
+def _source_identity_and_content(git_root: Path, book: str, evidence: dict,
+                                 manifest_recs: list[dict]) -> str | None:
+    """⑥⑦ 占位（Task 4 实现完整锚定链）。"""
+    return None
 
 
 def evaluate_provenance_admissibility(book_dir: Path, git_root: Path | None) -> dict:

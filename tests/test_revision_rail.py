@@ -203,3 +203,262 @@ class TestManifestSchema:
               "records": [bad]}
         with pytest.raises(RevisionArtifactError):
             validate_revision_manifest(_manifest_with(b2))
+
+# --- linked worktree fixture（5-R.12 端到端基底）-------------------------------
+import re
+
+import scripts.generate_quality_report as gqr
+
+
+def _git(root: Path, *args: str) -> str:
+    r = subprocess.run(["git", "-C", str(root), *args], capture_output=True)
+    assert r.returncode == 0, r.stderr.decode("utf-8", "replace")
+    return r.stdout.decode("utf-8")
+
+
+class RailWorktree:
+    """隔离测试仓库（linked worktree + 临时分支）；退出时强制清理。
+
+    从真实仓库 HEAD 检出（自带 freeze/evidence/E/R/B1/B2/聚合，E0-E2 天然
+    通过），但 HEAD 看不到主工作区未提交的开发中代码——因此构造**合成 T 提交**：
+    把主工作区当前待测脚本字节（scripts/generate_quality_report.py、
+    scripts/classic_artifacts.py）复制入 worktree 并提交，R→C→V 全部建立在
+    该 T 之上（P0-4 复审修复："实现后、提交前 GREEN"才成立，不以先提交生产
+    实现代替 TDD）。
+    """
+
+    def __init__(self, tmp_path: Path):
+        self.path = tmp_path / "wt"
+        self.branch = f"rail-test-{uuid4().hex[:8]}"
+        _git(ROOT, "worktree", "add", "-b", self.branch, str(self.path), "HEAD")
+        self.sync_synthetic_t()
+
+    def sync_synthetic_t(self) -> None:
+        """复制主工作区当前待测脚本字节入 worktree；有差异才提交合成 T，
+        无差异（代码已提交——干净 CI 命中）则保持 HEAD 为 T（P0-2：普通
+        `git commit` 在无改动时会失败，须先查 `status --porcelain`）。"""
+        for rel in ("scripts/generate_quality_report.py",
+                    "scripts/classic_artifacts.py"):
+            self.write(rel, (ROOT / rel).read_bytes())
+        dirty = _git(self.path, "status", "--porcelain", "--",
+                     "scripts/generate_quality_report.py",
+                     "scripts/classic_artifacts.py").strip()
+        if dirty:
+            self.commit("T: synthetic toolchain (in-development working-tree bytes)")
+        self.toolchain_commit = self.rev("HEAD")
+        self.head0 = self.toolchain_commit
+
+    def rev(self, rev: str) -> str:
+        return _git(self.path, "rev-parse", rev).strip()
+
+    def blob(self, rev: str, rel: str) -> bytes:
+        r = subprocess.run(["git", "-C", str(self.path), "show", f"{rev}:{rel}"],
+                           capture_output=True)
+        assert r.returncode == 0, r.stderr.decode("utf-8", "replace")
+        return r.stdout
+
+    def write(self, rel: str, data: bytes) -> None:
+        p = self.path / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(data)
+
+    def append_line(self, rel: str, line: bytes) -> None:
+        p = self.path / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with p.open("ab") as f:
+            f.write(line)
+
+    def replace_constant(self, name: str, value: str) -> None:
+        """唯一替换脚本常量值（其余字节不动；V/R 提交形态）。"""
+        rel = "scripts/generate_quality_report.py"
+        src = (self.path / rel).read_bytes().decode("utf-8")
+        new, n = re.subn(
+            rf'^{name} = "[0-9a-f]{{64}}"$', f'{name} = "{value}"',
+            src, count=1, flags=re.M)
+        assert n == 1, f"constant {name} not found"
+        self.write(rel, new.encode("utf-8"))
+
+    def commit(self, msg: str) -> str:
+        _git(self.path, "add", "-A")
+        _git(self.path, "commit", "-m", msg, "--no-verify")
+        return self.rev("HEAD")
+
+    def cleanup(self) -> None:
+        subprocess.run(["git", "-C", str(ROOT), "worktree", "remove", "--force",
+                        str(self.path)], capture_output=True)
+        subprocess.run(["git", "-C", str(ROOT), "branch", "-D", self.branch],
+                       capture_output=True)
+
+
+@pytest.fixture()
+def rail_wt(tmp_path):
+    wt = RailWorktree(tmp_path)
+    yield wt
+    wt.cleanup()
+
+
+def _anchor_line(batch_id: str, content_commit: str, manifest_sha: str,
+                 prev: str, toolchain: str) -> bytes:
+    obj = {"batch_id": batch_id, "content_commit": content_commit,
+           "manifest_sha256_after": manifest_sha, "prev_anchor_sha256": prev,
+           "toolchain_commit": toolchain, "date": "2026-09-08"}
+    return (_canonical(obj) + "\n").encode("utf-8")
+
+
+def _registry_line(toolchain: str, prev: str, review_ref: str = "test") -> bytes:
+    obj = {"toolchain_commit": toolchain, "date": "2026-09-08",
+           "review_ref": review_ref, "prev_registry_sha256": prev}
+    return (_canonical(obj) + "\n").encode("utf-8")
+
+
+def _canonical_bytes(obj) -> bytes:
+    return _canonical(obj).encode("utf-8")
+
+
+def _freeze_of(wt: RailWorktree) -> dict:
+    return json.loads(wt.blob("HEAD", gqr.FREEZE_REL))
+
+
+def _evidence_of(wt: RailWorktree) -> dict:
+    return json.loads(wt.blob("HEAD", gqr.EVIDENCE_REL))
+
+
+def _mk_rule(id_: str, chapter: str, text: str) -> dict:
+    return {"id": id_, "category": "格局", "subject": "测试", "condition": "测试",
+            "rule": text, "original_text": text, "source_book": "三命通会",
+            "source_chapter": chapter}
+
+
+def _mk_mcq(id_: str, rule_id: str) -> dict:
+    return {"id": id_, "question": "测试题干？", "options": {"A": "甲", "B": "乙",
+            "C": "丙", "D": "丁"}, "answer": "A", "explanation": "测试",
+            "source_rule_id": rule_id, "source_book": "三命通会",
+            "source_chapter": "卷二·论坐命宫"}
+
+
+SNAP_REL = ("knowledge_base/classic_texts/sanmingtonghui/formal/"
+            "source_snapshots/b4e9be580dbecd3e233d3adbe163299f06c6ca517"
+            "4309dc83e8f14433796aaa2")
+RAW025_REL = SNAP_REL + "/extracted/raw_025.txt"
+
+
+class TestRailCore:
+    """rail ①-⑤：解析→schema→锚链→基线比较→分区等式（合成 B01 批次）。"""
+
+    def _make_c1(self, wt: RailWorktree, batch_id: str = "B01",
+                 rule_text: str = "测试修订规则") -> dict:
+        """在 worktree 构造 C₁：聚合追加 1 rule + 1 mcq + manifest 批次。"""
+        rules_rel = "knowledge_base/classic_texts/sanmingtonghui/all_rules.json"
+        mcq_rel = "knowledge_base/classic_texts/sanmingtonghui/all_mcq.jsonl"
+        snap_sha = _sha256(wt.blob("HEAD", RAW025_REL))
+        # original_text 取该章原文去空白前 30 字（保证 ⑦ 子串命中）
+        src_text = wt.blob("HEAD", RAW025_REL).decode("utf-8", "replace")
+        probe = re.sub(r"\s+", "", src_text)[:30]
+        rule = _mk_rule("smth_t_001", "卷二·论坐命宫", rule_text)
+        rule["original_text"] = probe
+        mcq = _mk_mcq("smth_t_001_m1", "smth_t_001")
+        from scripts.generate_classic_historical_freeze import _record_entry
+        rec_rule = {"kind": "rule", "id": rule["id"],
+                    "sha256": _record_entry(rule)["sha256"],
+                    "source_chapter": "卷二·论坐命宫", "snapshot_path": RAW025_REL,
+                    "snapshot_sha256": snap_sha, "historical_basis": None}
+        rec_mcq = {"kind": "mcq", "id": mcq["id"],
+                   "sha256": _record_entry(mcq)["sha256"],
+                   "source_chapter": "卷二·论坐命宫", "snapshot_path": RAW025_REL,
+                   "snapshot_sha256": snap_sha, "historical_basis": None}
+        # P0-1：all_rules.json 是 JSON 数组（非 JSONL）——解析数组、追加
+        # 对象、序列化数组；all_mcq.jsonl 才按 JSONL 追加。
+        rules_arr = json.loads(wt.blob("HEAD", rules_rel).decode("utf-8"))
+        rules_arr.append(rule)
+        wt.write(rules_rel,
+                 json.dumps(rules_arr, ensure_ascii=False).encode("utf-8"))
+        wt.write(mcq_rel, wt.blob("HEAD", mcq_rel)
+                 + (_canonical(mcq) + "\n").encode("utf-8"))
+        manifest = {"schema_version": "1.0", "book": "sanmingtonghui",
+                    "freeze_base_commit":
+                        "c5cff699fdb547bd9270acbebe1f485380848751",
+                    "batches": [{"batch_id": batch_id, "date": "2026-09-08",
+                                 "author": "test",
+                                 "records": [rec_rule, rec_mcq]}]}
+        wt.write(MANIFEST_REL, _canonical_bytes(manifest) + b"\n")
+        return manifest
+
+    def test_rail_none_when_no_manifest(self, rail_wt):
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["revision_state"] == "NONE"
+        assert res["ok"] is True  # 无修订：沿现行 E3 语义（HEAD==freeze）
+        assert res["error_code"] is None
+
+    def test_rail_candidate_unaccepted_default_mode(self, rail_wt):
+        """默认模式遇未锚合法追加 → REVISION_UNACCEPTED（④）。"""
+        self._make_c1(rail_wt)
+        rail_wt.commit("C1")  # rail 读 HEAD blob——写入必须提交（计划 Step 4 预期）
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["ok"] is False
+        assert res["error_code"] == "REVISION_UNACCEPTED"
+
+    def test_rail_malformed_manifest(self, rail_wt):
+        rail_wt.write(MANIFEST_REL, b'{"schema_version":"1.0",')
+        rail_wt.commit("malformed manifest")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_MANIFEST_MALFORMED"
+
+    def test_rail_partition_mismatch_unmanifested_extra(self, rail_wt):
+        """清单外新增（聚合加了记录、manifest 不列）→ ⑤ MISMATCH +
+        unmanifested_extra 明细。"""
+        rules_rel = "knowledge_base/classic_texts/sanmingtonghui/all_rules.json"
+        rule = _mk_rule("smth_t_002", "卷二·论坐命宫", "清单外记录")
+        rules_arr = json.loads(rail_wt.blob("HEAD", rules_rel).decode("utf-8"))
+        rules_arr.append(rule)
+        rail_wt.write(rules_rel,
+                      json.dumps(rules_arr, ensure_ascii=False).encode("utf-8"))
+        rail_wt.commit("unmanifested extra")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_PARTITION_MISMATCH"
+        assert res["partition_detail"]["unmanifested_extra"] >= 1
+
+    def test_rail_legacy_mutated_detail(self, rail_wt):
+        """freeze 内记录被改（改首条规则 category）→ ⑤ MISMATCH +
+        legacy_mutated 明细。"""
+        rules_rel = "knowledge_base/classic_texts/sanmingtonghui/all_rules.json"
+        arr = json.loads(rail_wt.blob("HEAD", rules_rel).decode("utf-8"))
+        arr[0] = {**arr[0], "category": "tampered"}
+        rail_wt.write(rules_rel,
+                      json.dumps(arr, ensure_ascii=False).encode("utf-8"))
+        rail_wt.commit("legacy mutated")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_PARTITION_MISMATCH"
+        assert res["partition_detail"]["legacy_mutated"] >= 1
+
+    def test_rail_other_book_manifest_rejected(self, rail_wt):
+        """非锚书出现 manifest → REVISION_SOURCE_UNVERIFIABLE（5-R.0）。"""
+        rail_wt.write("knowledge_base/classic_texts/ditiansui/revision_manifest.json",
+                      _canonical_bytes(EMPTY_BASELINE_MANIFEST) + b"\n")
+        rail_wt.commit("ditiansui manifest")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "ditiansui", _freeze_of(rail_wt), _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_SOURCE_UNVERIFIABLE"
+
+    def test_trust_roots_start_at_genesis(self):
+        """P0-2：两信任根以确定 64-hex 字面量初始化且 == genesis_sha
+        （测试重算验证；满足设计 5-R.6 首批路径的空链规范值）。"""
+        assert gqr.REVISION_ANCHOR_HEAD == GENESIS_SHA
+        assert gqr.TOOLCHAIN_REGISTRY_HEAD == GENESIS_SHA
+
+    def test_fixture_no_diff_synthetic_t(self, rail_wt):
+        """P0-2：T 已提交后再同步（字节无差异）→ 不产生新提交、T 不变
+        （覆盖"代码已提交"的干净场景；普通 commit 在无改动时会失败）。"""
+        before = rail_wt.toolchain_commit
+        rail_wt.sync_synthetic_t()
+        assert rail_wt.toolchain_commit == before
+        assert rail_wt.rev("HEAD") == before
