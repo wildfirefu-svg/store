@@ -104,3 +104,102 @@ class TestParseJsonlLine:
         raw = (_canonical(obj) + "\r\n").encode("utf-8")
         with pytest.raises(RevisionArtifactError):
             parse_jsonl_line(raw)
+
+
+from scripts.classic_artifacts import validate_revision_manifest
+
+EMPTY_BASELINE_MANIFEST = {
+    "schema_version": "1.0", "book": "sanmingtonghui",
+    "freeze_base_commit": "c5cff699fdb547bd9270acbebe1f485380848751",
+    "batches": []}
+
+
+def _manifest_with(batch: dict) -> dict:
+    return {**EMPTY_BASELINE_MANIFEST, "batches": [batch]}
+
+
+def _record(**over) -> dict:
+    r = {"kind": "rule", "id": "smth_t_001", "sha256": "a" * 64,
+         "source_chapter": "卷二·论坐命宫", "snapshot_path":
+         "knowledge_base/classic_texts/sanmingtonghui/formal/source_snapshots/"
+         "b4e9be580dbecd3e233d3adbe163299f06c6ca5174309dc83e8f14433796aaa2"
+         "/extracted/raw_025.txt",
+         "snapshot_sha256": "b" * 64, "historical_basis": None}
+    r.update(over)
+    return r
+
+
+class TestManifestSchema:
+    def test_empty_baseline_literal_passes(self):
+        validate_revision_manifest(EMPTY_BASELINE_MANIFEST)
+
+    def test_top_field_add_rejected(self):
+        m = {**EMPTY_BASELINE_MANIFEST, "extra": 1}
+        with pytest.raises(RevisionArtifactError):
+            validate_revision_manifest(m)
+
+    def test_top_field_missing_rejected(self):
+        m = {k: v for k, v in EMPTY_BASELINE_MANIFEST.items() if k != "book"}
+        with pytest.raises(RevisionArtifactError):
+            validate_revision_manifest(m)
+
+    def test_wrong_book_rejected(self):
+        m = {**EMPTY_BASELINE_MANIFEST, "book": "ditiansui"}
+        with pytest.raises(RevisionArtifactError):
+            validate_revision_manifest(m)
+
+    def test_batch_unknown_field_rejected(self):
+        b = {"batch_id": "B01", "date": "2026-09-08", "author": "owner",
+             "records": [], "x": 1}
+        with pytest.raises(RevisionArtifactError):
+            validate_revision_manifest(_manifest_with(b))
+
+    @pytest.mark.parametrize("bad", [
+        {"kind": "other"},                      # kind 枚举外
+        {"sha256": "short"},                    # sha256 非 64-hex
+        {"snapshot_path": "../escape.txt"},     # 路径逃逸
+        {"snapshot_path": "raw_025.txt"},       # 根目录 raw 文件
+        {"snapshot_sha256": "z" * 63},          # 非 64-hex
+    ])
+    def test_record_shapes_rejected(self, bad):
+        b = {"batch_id": "B01", "date": "2026-09-08", "author": "owner",
+             "records": [_record(**bad)]}
+        with pytest.raises(RevisionArtifactError):
+            validate_revision_manifest(_manifest_with(b))
+
+    def test_record_unknown_field_rejected(self):
+        rec = {**_record(), "unknown_field": 1}
+        b = {"batch_id": "B01", "date": "2026-09-08", "author": "owner",
+             "records": [rec]}
+        with pytest.raises(RevisionArtifactError):
+            validate_revision_manifest(_manifest_with(b))
+
+    def test_duplicate_record_identity_rejected(self):
+        rec = _record()
+        b = {"batch_id": "B01", "date": "2026-09-08", "author": "owner",
+             "records": [rec, dict(rec)]}
+        with pytest.raises(RevisionArtifactError):
+            validate_revision_manifest(_manifest_with(b))
+
+    def test_duplicate_batch_id_rejected(self):
+        b1 = {"batch_id": "B01", "date": "2026-09-08", "author": "o",
+              "records": [_record()]}
+        b2 = {"batch_id": "B01", "date": "2026-09-08", "author": "o",
+              "records": []}
+        m = {**EMPTY_BASELINE_MANIFEST, "batches": [b1, b2]}
+        with pytest.raises(RevisionArtifactError):
+            validate_revision_manifest(m)
+
+    def test_historical_basis_shape(self):
+        hb = {"commit": "1" * 40, "path": "knowledge_base/classic_texts/"
+               "sanmingtonghui/all_rules.json", "source_chapter": "卷二·论坐命宫",
+               "record_content_sha256": "c" * 64, "match_count": 1}
+        rec = _record(historical_basis=hb)
+        b = {"batch_id": "B01", "date": "2026-09-08", "author": "o",
+             "records": [rec]}
+        validate_revision_manifest(_manifest_with(b))
+        bad = _record(historical_basis={**hb, "match_count": 2})
+        b2 = {"batch_id": "B01", "date": "2026-09-08", "author": "o",
+              "records": [bad]}
+        with pytest.raises(RevisionArtifactError):
+            validate_revision_manifest(_manifest_with(b2))

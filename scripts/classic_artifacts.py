@@ -1779,3 +1779,91 @@ def chain_head(entries: list[dict], genesis_sha: str, *,
         h = hashlib.sha256(
             h.encode("ascii") + _canonical(e).encode("utf-8")).hexdigest()
     return h
+
+_SNAP_PREFIX = ("knowledge_base/classic_texts/sanmingtonghui/"
+                "formal/source_snapshots/")
+
+
+def _is_hex(s: str, n: int) -> bool:
+    return (isinstance(s, str) and len(s) == n
+            and all(c in "0123456789abcdef" for c in s))
+
+
+def _valid_snapshot_path(p: str) -> bool:
+    """白名单：仅 <SNAP>/extracted/raw_{NNN:03d}.txt（设计 5-R.2）。
+
+    SNAP 含快照哈希目录层：source_snapshots/<64hex>/extracted/raw_NNN.txt
+    （SNAP 字面量见计划前置事实；哈希段必须 64-hex，防目录逃逸）。
+    """
+    if not isinstance(p, str) or not p.startswith(_SNAP_PREFIX):
+        return False
+    parts = p[len(_SNAP_PREFIX):].split("/")
+    if len(parts) != 3 or not _is_hex(parts[0], 64) or parts[1] != "extracted":
+        return False
+    name = parts[2]
+    return (len(name) == 11 and name.startswith("raw_")
+            and name[4:7].isdigit() and name[7:] == ".txt")
+
+
+def validate_revision_manifest(obj: object) -> None:
+    """修订清单 schema 校验（rail ② 的纯函数部分；设计 5-R.2）。
+
+    strict：顶层/批次/记录字段集缺一多一均拒绝；kind ∈ {rule,mcq}；
+    sha256/snapshot_sha256 64-hex；snapshot_path 白名单；
+    historical_basis 形态与 match_count==1；批内 (id,sha256) 重复拒绝；
+    batch_id 全局不重复。不做 git 依赖校验（记录哈希重算、freeze 交集、
+    源身份在 rail 内做）。
+    """
+    err = RevisionArtifactError
+    if not isinstance(obj, dict):
+        raise err("manifest not an object")
+    if set(obj) != set(REVISION_MANIFEST_TOP_FIELDS):
+        raise err(f"manifest top fields != {sorted(REVISION_MANIFEST_TOP_FIELDS)}")
+    if obj["schema_version"] != "1.0":
+        raise err("manifest schema_version != 1.0")
+    if obj["book"] != "sanmingtonghui":
+        raise err("manifest book != sanmingtonghui")
+    if obj["freeze_base_commit"] != REVISION_GENESIS["freeze_base_commit"]:
+        raise err("manifest freeze_base_commit mismatch")
+    batches = obj["batches"]
+    if not isinstance(batches, list):
+        raise err("batches not a list")
+    seen_batches, seen_ids = set(), set()
+    for b in batches:
+        if not isinstance(b, dict) or set(b) != set(REVISION_BATCH_FIELDS):
+            raise err(f"batch fields != {sorted(REVISION_BATCH_FIELDS)}")
+        if b["batch_id"] in seen_batches:
+            raise err(f"duplicate batch_id {b['batch_id']!r}")
+        seen_batches.add(b["batch_id"])
+        if not isinstance(b["records"], list):
+            raise err("batch records not a list")
+        for r in b["records"]:
+            if not isinstance(r, dict) or set(r) != set(REVISION_RECORD_FIELDS):
+                raise err(f"record fields != {sorted(REVISION_RECORD_FIELDS)}")
+            if r["kind"] not in ("rule", "mcq"):
+                raise err(f"record kind {r['kind']!r} not in (rule, mcq)")
+            if not isinstance(r["id"], str) or not r["id"]:
+                raise err("record id empty/non-string")
+            if not _is_hex(r["sha256"], 64):
+                raise err("record sha256 not 64-hex")
+            if not _valid_snapshot_path(r["snapshot_path"]):
+                raise err(f"snapshot_path not whitelisted: {r['snapshot_path']!r}")
+            if not _is_hex(r["snapshot_sha256"], 64):
+                raise err("snapshot_sha256 not 64-hex")
+            if not isinstance(r["source_chapter"], str) or not r["source_chapter"]:
+                raise err("source_chapter empty")
+            key = (r["id"], r["sha256"])
+            if key in seen_ids:
+                raise err(f"duplicate (id, sha256) in manifest: {key}")
+            seen_ids.add(key)
+            hb = r["historical_basis"]
+            if hb is not None:
+                if (not isinstance(hb, dict)
+                        or set(hb) != {"commit", "path", "source_chapter",
+                                       "record_content_sha256", "match_count"}
+                        or not _is_hex(hb["commit"], 40)
+                        or not isinstance(hb["path"], str) or not hb["path"]
+                        or not isinstance(hb["source_chapter"], str)
+                        or not _is_hex(hb["record_content_sha256"], 64)
+                        or hb["match_count"] != 1):
+                    raise err("historical_basis malformed / match_count != 1")
