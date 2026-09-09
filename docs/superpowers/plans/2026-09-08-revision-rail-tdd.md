@@ -376,6 +376,14 @@ class TestManifestSchema:
               "records": [bad]}
         with pytest.raises(RevisionArtifactError):
             validate_revision_manifest(_manifest_with(b2))
+
+    def test_batch_id_unhashable_rejected(self):
+        """执行复审 P0-3：batch_id 非法类型（unhashable）→ 稳定
+        RevisionArtifactError，不得 TypeError 冒泡。"""
+        b = {"batch_id": [], "date": "2026-09-08", "author": "o",
+             "records": []}
+        with pytest.raises(RevisionArtifactError):
+            validate_revision_manifest(_manifest_with(b))
 ```
 
 - [ ] **Step 2：跑测试确认失败**
@@ -434,6 +442,13 @@ def validate_revision_manifest(obj: object) -> None:
     for b in batches:
         if not isinstance(b, dict) or set(b) != set(REVISION_BATCH_FIELDS):
             raise err(f"batch fields != {sorted(REVISION_BATCH_FIELDS)}")
+        # 执行复审 P0-3：先验批次标量字段类型（unhashable 值不得进集合操作）
+        if not isinstance(b["batch_id"], str) or not b["batch_id"]:
+            raise err("batch_id empty/non-string")
+        if not isinstance(b["date"], str) or not b["date"]:
+            raise err("batch date empty/non-string")
+        if not isinstance(b["author"], str) or not b["author"]:
+            raise err("batch author empty/non-string")
         if b["batch_id"] in seen_batches:
             raise err(f"duplicate batch_id {b['batch_id']!r}")
         seen_batches.add(b["batch_id"])
@@ -745,6 +760,42 @@ class TestRailCore:
         rail_wt.sync_synthetic_t()
         assert rail_wt.toolchain_commit == before
         assert rail_wt.rev("HEAD") == before
+
+    def test_rail_absent_kind_added_record_mismatch(self, rail_wt):
+        """执行复审 P0-1：冻结时缺席的 KIND（quarantine_mcq）在 HEAD 新增
+        记录 → ⑤ MISMATCH（缺席 KIND 的 baseline Counter 为空而非忽略
+        HEAD——不得沿用旧 E3 的 present 跳过语义）。"""
+        qrel = ("knowledge_base/classic_texts/sanmingtonghui/"
+                "quarantine_mcq.jsonl")
+        mcq = _mk_mcq("smth_q_001", "smth_t_001")
+        rail_wt.write(qrel, (_canonical(mcq) + "\n").encode("utf-8"))
+        rail_wt.commit("absent-kind record added")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_PARTITION_MISMATCH"
+        assert res["partition_detail"]["unmanifested_extra"] >= 1
+
+    def test_rail_missing_anchor_nongenesis_constant_stale(self, rail_wt,
+                                                            monkeypatch):
+        """执行复审 P0-2：manifest 与锚文件均缺失 + 信任根常量非 genesis →
+        CHAIN_STALE（缺失与空锚同样必须核对信任根，不得退回 NONE）。
+        rail 读取运行中执行体的进程内常量（与评审内存注入复现同源）。"""
+        monkeypatch.setattr(gqr, "REVISION_ANCHOR_HEAD", "f" * 64)
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_CHAIN_STALE"
+
+    def test_rail_malformed_anchor_line_stale(self, rail_wt):
+        """执行复审 P0-3：畸形锚行 → 解析异常映射 REVISION_CHAIN_STALE
+        返回结构，不向上抛未处理异常。"""
+        rail_wt.append_line(gqr.REVISION_ANCHOR_REL, b'{"bad":\n')
+        rail_wt.commit("malformed anchor line")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_CHAIN_STALE"
 ```
 
 - [ ] **Step 2：跑测试确认失败**
@@ -829,7 +880,11 @@ def evaluate_revision_rail(git_root: Path, book: str,
             f"knowledge_base/classic_texts/{book}/revision_manifest.json"
             ) is not None:
         return _fail("REVISION_SOURCE_UNVERIFIABLE")
-    anchors = _rail_anchor_entries(git_root)
+    try:
+        anchors = _rail_anchor_entries(git_root)
+    except RevisionArtifactError:
+        # 执行复审 P0-3：锚文件畸形行 → 稳定错误码，不抛未处理异常
+        return _fail("REVISION_CHAIN_STALE")
     if raw is None:
         if anchors:  # manifest 抹除但锚存在 → 已验收修订被整体移除
             return _fail("REVISION_CHAIN_STALE")
@@ -837,8 +892,9 @@ def evaluate_revision_rail(git_root: Path, book: str,
         if not e3["ok"]:
             return _fail("REVISION_PARTITION_MISMATCH",
                          partition_detail=e3["detail"])
-        if anchors == [] and chain_head([], GENESIS_SHA) != REVISION_ANCHOR_HEAD:
-            return _fail("REVISION_CHAIN_STALE")  # 空锚文件 + 常量非 genesis
+        # 执行复审 P0-2：缺失（None）与空（[]）同样必须核对信任根
+        if not anchors and chain_head([], GENESIS_SHA) != REVISION_ANCHOR_HEAD:
+            return _fail("REVISION_CHAIN_STALE")
         return {"ok": True, "revision_state": "NONE", "error_code": None,
                 "e3_ok": True}
 
@@ -903,18 +959,22 @@ def _partition_equation(git_root: Path, book: str, freeze: dict,
     head_c, base_c, mani_c = Counter(), Counter(), Counter()
     for kind in KINDS:
         rel = _book_rel(book, kind)
-        data = _git_head_blob(git_root, rel)
+        # 执行复审 P0-1：缺席 KIND 的 baseline Counter 为空而非忽略 HEAD——
+        # freeze 无记录但 HEAD 新增文件仍须被检出（unmanifested_extra）。
+        for rec in freeze["books"][book][kind]["records"]:
+            base_c[(kind, rec["id"], rec["sha256"])] += 1
+        data = _git_show_optional(git_root, rel)  # 文件缺失 → None → 空记录
+        if data is None:
+            continue
         try:
-            # P0-1：JSON 数组（all_rules.json）与 JSONL（*_mcq.jsonl 等）
-            # 统一经 _parse_records 按扩展名分派；_loads_strict 直读 JSONL 会失败。
+            # JSON 数组（all_rules.json）与 JSONL（*_mcq.jsonl 等）经
+            # _parse_records 按扩展名分派；_loads_strict 直读 JSONL 会失败。
             records = _parse_records(data, kind)
         except Exception:
             return {"ok": False, "detail": {"parse_error": rel}}
         for rec in records:
             e = _record_entry(rec)
             head_c[(kind, e["id"], e["sha256"])] += 1
-        for rec in freeze["books"][book][kind]["records"]:
-            base_c[(kind, rec["id"], rec["sha256"])] += 1
     for r in manifest_recs:
         mani_c[(kind_map[r["kind"]], r["id"], r["sha256"])] += 1
     if head_c == base_c + mani_c:
@@ -2063,3 +2123,5 @@ T₀ = 本提交（Part A 中间提交为其祖先；T₀ OID 在 Part B R₀ �
 
 8. **复审（第 4 轮 NEEDS_REVISION，3 P0）修订记录**：P0-1 `_classify_baseline_rc` 的 BLOCKED 判定改按**真实 QUALITY_REPORT.json 形态**——顶层 `status=="BLOCKED"` ∧ `source_e2e_status=="BLOCKED"` ∧ 存在逐书 `source_e2e_status=="BLOCKED"` 且 `source_blocked_reason` ∈ §4.2 五值（原顶层键精确 `{schema_version,status,reason}` 是 source verifier CLI 输出形态，run_baseline 读的是完整质量报告，合法 BLOCKED 基线必被误拒）；新增 `_blocked_report_fixture`（生产形态正向 fixture）、verifier 三字段对象冒充与顶层 BLOCKED 无 BLOCKED 书负向测试。P0-2 候选测试 `verify_source_chain` fake 改真实接口 `(output_dict, exit_code)`（status=="OK"、code=0，经 `_run_source_chain_check` 转换；原单键 dict 会被 `out, code = ...` 解包成键名字符串致 `out.get` 崩溃）。P0-3 `first_batch` 由 `_candidate_mode` 首批路径判定（已验证锚链 genesis 空）产出，显式传入 `run_baseline` → `_classify_baseline_rc` → `_qualified_baseline_report`，不从报告缺字段推断；新增成对测试（同一缺修订字段报告：首批 QUALIFIED、非首批 INVALID）。
 9. **复审（第 5 轮 NEEDS_REVISION，1 P0 + 1 非阻断）修订记录**：P0 BLOCKED 判据不验报告完整性（ghost 残缺对象可获 exit 3）——新增 `_report_structure_ok` 结构校验层作 rc==3 判 BLOCKED 前置：顶层 15 键/类型 + `books` 键集精确四书 + 逐书 15 键/九门 gates/gate_details 类型 + 逐书 reason-status 耦合（BLOCKED⇒五值 str、PASS/FAIL⇒None）+ 聚合一致性（§7 实测）；**只验形态不验门禁通过**（红门/红 source 不拒，合法 BLOCKED 不误拒）；补未知书名（ghost）/缺书/缺必需字段/`source_e2e_pass=true` 与 BLOCKED 矛盾四负向测试。键集依据修正：03c02bb 自带脚本已产出全字段（`source_e2e_status`/`status`/`approval_b2`/`exemption_stages` 实测在源码），跟踪的旧 QUALITY_REPORT.json 为旧脚本过期产物、重跑前被新生成守卫删除——fixture docstring 键集判据措辞同步修正并补 `known_limitations`。非阻断：1290 行 diff 示例围栏 python → diff。
+
+9. **执行修正（Task 1-3 复审 NEEDS_REVISION，3 P0）同步记录**：P0-1 `_partition_equation` 缺席 KIND 由 present 跳过改为 **baseline Counter 为空 + `_git_show_optional` 读取 HEAD**（新增记录计入 `unmanifested_extra`，不得沿用旧 E3 跳过语义），补 absent-kind 负向测试；P0-2 NONE 分支信任根核对由 `anchors == []` 放宽为 `not anchors`（锚文件缺失同样核对，非 genesis → CHAIN_STALE），补"缺失 manifest+锚 + 非 genesis 常量 → STALE"负向测试（monkeypatch 进程常量——rail 读取运行中执行体的常量，与评审内存注入复现同源）；P0-3 `validate_revision_manifest` 批次标量字段（batch_id/date/author）类型检查前置（unhashable 不再 TypeError 冒泡），`_rail_anchor_entries` 异常包 try 映射 REVISION_CHAIN_STALE，补 unhashable 与 malformed-anchor 两个负向测试。

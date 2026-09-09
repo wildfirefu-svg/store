@@ -1832,6 +1832,13 @@ def validate_revision_manifest(obj: object) -> None:
     for b in batches:
         if not isinstance(b, dict) or set(b) != set(REVISION_BATCH_FIELDS):
             raise err(f"batch fields != {sorted(REVISION_BATCH_FIELDS)}")
+        # 执行复审 P0-3：先验批次标量字段类型（unhashable 值不得进集合操作）
+        if not isinstance(b["batch_id"], str) or not b["batch_id"]:
+            raise err("batch_id empty/non-string")
+        if not isinstance(b["date"], str) or not b["date"]:
+            raise err("batch date empty/non-string")
+        if not isinstance(b["author"], str) or not b["author"]:
+            raise err("batch author empty/non-string")
         if b["batch_id"] in seen_batches:
             raise err(f"duplicate batch_id {b['batch_id']!r}")
         seen_batches.add(b["batch_id"])

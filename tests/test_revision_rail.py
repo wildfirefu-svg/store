@@ -204,6 +204,14 @@ class TestManifestSchema:
         with pytest.raises(RevisionArtifactError):
             validate_revision_manifest(_manifest_with(b2))
 
+    def test_batch_id_unhashable_rejected(self):
+        """执行复审 P0-3：batch_id 非法类型（unhashable）→ 稳定
+        RevisionArtifactError，不得 TypeError 冒泡。"""
+        b = {"batch_id": [], "date": "2026-09-08", "author": "o",
+             "records": []}
+        with pytest.raises(RevisionArtifactError):
+            validate_revision_manifest(_manifest_with(b))
+
 # --- linked worktree fixture（5-R.12 端到端基底）-------------------------------
 import re
 
@@ -462,3 +470,39 @@ class TestRailCore:
         rail_wt.sync_synthetic_t()
         assert rail_wt.toolchain_commit == before
         assert rail_wt.rev("HEAD") == before
+
+    def test_rail_absent_kind_added_record_mismatch(self, rail_wt):
+        """执行复审 P0-1：冻结时缺席的 KIND（quarantine_mcq）在 HEAD 新增
+        记录 → ⑤ MISMATCH（缺席 KIND 的 baseline Counter 为空而非忽略
+        HEAD——不得沿用旧 E3 的 present 跳过语义）。"""
+        qrel = ("knowledge_base/classic_texts/sanmingtonghui/"
+                "quarantine_mcq.jsonl")
+        mcq = _mk_mcq("smth_q_001", "smth_t_001")
+        rail_wt.write(qrel, (_canonical(mcq) + "\n").encode("utf-8"))
+        rail_wt.commit("absent-kind record added")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_PARTITION_MISMATCH"
+        assert res["partition_detail"]["unmanifested_extra"] >= 1
+
+    def test_rail_missing_anchor_nongenesis_constant_stale(self, rail_wt,
+                                                            monkeypatch):
+        """执行复审 P0-2：manifest 与锚文件均缺失 + 信任根常量非 genesis →
+        CHAIN_STALE（缺失与空锚同样必须核对信任根，不得退回 NONE）。
+        rail 读取运行中执行体的进程内常量（与评审内存注入复现同源）。"""
+        monkeypatch.setattr(gqr, "REVISION_ANCHOR_HEAD", "f" * 64)
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_CHAIN_STALE"
+
+    def test_rail_malformed_anchor_line_stale(self, rail_wt):
+        """执行复审 P0-3：畸形锚行 → 解析异常映射 REVISION_CHAIN_STALE
+        返回结构，不向上抛未处理异常。"""
+        rail_wt.append_line(gqr.REVISION_ANCHOR_REL, b'{"bad":\n')
+        rail_wt.commit("malformed anchor line")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_CHAIN_STALE"

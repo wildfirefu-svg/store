@@ -393,7 +393,11 @@ def evaluate_revision_rail(git_root: Path, book: str,
             f"knowledge_base/classic_texts/{book}/revision_manifest.json"
             ) is not None:
         return _fail("REVISION_SOURCE_UNVERIFIABLE")
-    anchors = _rail_anchor_entries(git_root)
+    try:
+        anchors = _rail_anchor_entries(git_root)
+    except RevisionArtifactError:
+        # 执行复审 P0-3：锚文件畸形行 → 稳定错误码，不抛未处理异常
+        return _fail("REVISION_CHAIN_STALE")
     if raw is None:
         if anchors:  # manifest 抹除但锚存在 → 已验收修订被整体移除
             return _fail("REVISION_CHAIN_STALE")
@@ -401,8 +405,9 @@ def evaluate_revision_rail(git_root: Path, book: str,
         if not e3["ok"]:
             return _fail("REVISION_PARTITION_MISMATCH",
                          partition_detail=e3["detail"])
-        if anchors == [] and chain_head([], GENESIS_SHA) != REVISION_ANCHOR_HEAD:
-            return _fail("REVISION_CHAIN_STALE")  # 空锚文件 + 常量非 genesis
+        # 执行复审 P0-2：缺失（None）与空（[]）同样必须核对信任根
+        if not anchors and chain_head([], GENESIS_SHA) != REVISION_ANCHOR_HEAD:
+            return _fail("REVISION_CHAIN_STALE")
         return {"ok": True, "revision_state": "NONE", "error_code": None,
                 "e3_ok": True}
 
@@ -463,21 +468,23 @@ def _partition_equation(git_root: Path, book: str, freeze: dict,
     kind_map = {"rule": "all_rules", "mcq": "all_mcq"}
     head_c, base_c, mani_c = Counter(), Counter(), Counter()
     for kind in KINDS:
-        if not freeze["books"][book][kind]["present"]:
-            continue  # 文件不存在的 KIND 与现行 E3 同语义跳过（_e3_multiset_check）
         rel = _book_rel(book, kind)
-        data = _git_head_blob(git_root, rel)
+        # 执行复审 P0-1：缺席 KIND 的 baseline Counter 为空而非忽略 HEAD——
+        # freeze 无记录但 HEAD 新增文件仍须被检出（unmanifested_extra）。
+        for rec in freeze["books"][book][kind]["records"]:
+            base_c[(kind, rec["id"], rec["sha256"])] += 1
+        data = _git_show_optional(git_root, rel)  # 文件缺失 → None → 空记录
+        if data is None:
+            continue
         try:
-            # P0-1：JSON 数组（all_rules.json）与 JSONL（*_mcq.jsonl 等）
-            # 统一经 _parse_records 按扩展名分派；_loads_strict 直读 JSONL 会失败。
+            # JSON 数组（all_rules.json）与 JSONL（*_mcq.jsonl 等）经
+            # _parse_records 按扩展名分派；_loads_strict 直读 JSONL 会失败。
             records = _parse_records(data, kind)
         except Exception:
             return {"ok": False, "detail": {"parse_error": rel}}
         for rec in records:
             e = _record_entry(rec)
             head_c[(kind, e["id"], e["sha256"])] += 1
-        for rec in freeze["books"][book][kind]["records"]:
-            base_c[(kind, rec["id"], rec["sha256"])] += 1
     for r in manifest_recs:
         mani_c[(kind_map[r["kind"]], r["id"], r["sha256"])] += 1
     if head_c == base_c + mani_c:
