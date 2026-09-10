@@ -1101,18 +1101,22 @@ class TestRailReportTopLevel:
             p = _make_passing_book(tmp_path, k, head)
             (p / "provenance.json").unlink()  # → MISSING（走 E0-E2 + rail）
 
+    _NO_ARCHIVE = object()  # 哨兵：区分"未传（默认 tmp_path）"与"显式 None"
+
     def _stub_source(self, monkeypatch, status="PASS", reason=None):
         monkeypatch.setattr(
             "scripts.generate_quality_report._run_source_chain_check",
             lambda gr, ar: {"status": status, "reason": reason})
 
-    def _run_report(self, tmp_path, monkeypatch, books=None, archive_root=None):
+    def _run_report(self, tmp_path, monkeypatch, books=None,
+                    archive_root=_NO_ARCHIVE):
         monkeypatch.setattr("scripts.generate_quality_report._find_git_root",
                             lambda: ROOT)
         return gqr.generate_report(
             base_path=tmp_path,
             books=books if books is not None else {k: "书" for k in self.FOUR},
-            archive_root=tmp_path if archive_root is None else archive_root)
+            archive_root=(tmp_path if archive_root is self._NO_ARCHIVE
+                          else archive_root))
 
     def test_report_top_level_none_and_single_rail_call_per_book(
             self, tmp_path, monkeypatch):
@@ -1202,9 +1206,11 @@ class TestRailReportTopLevel:
         (p / "provenance.json").unlink()
         report, exit_code = self._run_report(
             tmp_path, monkeypatch, books={"sanmingtonghui": "三命通会"},
-            archive_root=None)  # → BLOCKED(archive_root_missing)
+            archive_root=None)  # 显式 None → BLOCKED(archive_root_missing)
         assert report["status"] == "BLOCKED"
         assert report["overall_pass"] is False
         assert exit_code == 3
+        assert (report["books"]["sanmingtonghui"]["source_blocked_reason"]
+                == "archive_root_missing")
         assert report["revision_state"] == "NONE"
         assert report["revision_provenance_valid"] is False

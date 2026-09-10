@@ -2830,3 +2830,10 @@ NONE。helper 泛化：`_make_passing_book(base, dir_key, head)`，
 ROOT HEAD）。RED：5 × KeyError('revision_state')；GREEN：5/5 + 全量
 105 项（57 rail + 53 报告 + 5 中重叠）+ ruff 通过。
 
+15. **执行复审（Task 5 PASS 轮非阻断测试修正）同步记录**：
+`_run_report` 原 `archive_root=None` 默认值使"显式 None"与"未传"不可
+区分——BLOCKED 测试实际拿到 `tmp_path`，未证明注释所称的
+`archive_root_missing`。改为类级哨兵 `_NO_ARCHIVE`：未传 → tmp_path，
+显式 None → 真实传 None；并补断言
+`books.sanmingtonghui.source_blocked_reason == "archive_root_missing"`。
+
