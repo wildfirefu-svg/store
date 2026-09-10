@@ -841,6 +841,7 @@ def generate_report(
 
     remediation_pass = True
     end_to_end_pass = True
+    adm_by_book: dict[str, dict] = {}
 
     for dir_key, name in book_map.items():
         p = base / dir_key
@@ -952,6 +953,7 @@ def generate_report(
         entry["exemption_error_code"] = adm["exemption_error_code"]
         entry["revision_state"] = adm["revision_state"]
         entry["revision_provenance_valid"] = adm["revision_provenance_valid"]
+        adm_by_book[dir_key] = adm
         entry["exemption_stages"] = {
             "E0_ok": adm["E0_ok"], "E1_ok": adm["E1_ok"],
             "E2_ok": adm["E2_ok"], "E3_ok": adm["E3_ok"],
@@ -988,6 +990,14 @@ def generate_report(
         e.get("all_gates_pass") is True for e in report["books"].values())
     report["provenance_admissible_all"] = all(
         e.get("provenance_admissible") is True for e in report["books"].values())
+    # 5-R.9/A.1：顶层修订字段从已计算的三命通会结果派生（不再次调用 rail）。
+    # rail 未评（E0/E1/E2 提前失败或 VALID/INVALID 短路 → revision_state 为
+    # None）时 fail-closed 写 FAILED——顶层枚举仅允许 {NONE, ACCEPTED,
+    # PENDING_ACCEPTANCE, FAILED}，不得写 None。
+    sm_adm = adm_by_book.get("sanmingtonghui")
+    sm_state = sm_adm["revision_state"] if sm_adm is not None else None
+    report["revision_state"] = sm_state if sm_state is not None else "FAILED"
+    report["revision_provenance_valid"] = report["revision_state"] == "ACCEPTED"
     report["approval_b2_constant_valid"] = approval_b2_valid
     report["overall_pass"] = (
         report["content_gates_pass"]

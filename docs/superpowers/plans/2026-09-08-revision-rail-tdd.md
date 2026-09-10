@@ -1825,6 +1825,132 @@ class TestRailIntegration:
 
 既有测试更新（`tests/test_classic_distillation_quality_report.py`，四处）：
 
+```
+
+复审 P0 补强测试（报告层顶层修订字段，Self-Review 14）：
+
+```python
+class TestRailReportTopLevel:
+    """Task 5 复审 P0：报告顶层修订字段（设计 A.1）——从已计算的三命通会
+    结果派生、不再调 rail；E0/E1/E2 提前失败（rail 未评）→ 顶层 FAILED
+    （顶层枚举仅允许四值，不得写 None）；每书 rail 恰调用一次；
+    source BLOCKED 优先于修订字段的 status/exit。"""
+
+    FOUR = ("ditiansui", "qiongtongbaojian", "sanmingtonghui", "zipingzhenquan")
+
+    def _four_missing_books(self, tmp_path):
+        head = _git(ROOT, "rev-parse", "HEAD").strip()
+        for k in self.FOUR:
+            p = _make_passing_book(tmp_path, k, head)
+            (p / "provenance.json").unlink()  # → MISSING（走 E0-E2 + rail）
+
+    def _stub_source(self, monkeypatch, status="PASS", reason=None):
+        monkeypatch.setattr(
+            "scripts.generate_quality_report._run_source_chain_check",
+            lambda gr, ar: {"status": status, "reason": reason})
+
+    def _run_report(self, tmp_path, monkeypatch, books=None, archive_root=None):
+        monkeypatch.setattr("scripts.generate_quality_report._find_git_root",
+                            lambda: ROOT)
+        return gqr.generate_report(
+            base_path=tmp_path,
+            books=books if books is not None else {k: "书" for k in self.FOUR},
+            archive_root=tmp_path if archive_root is None else archive_root)
+
+    def test_report_top_level_none_and_single_rail_call_per_book(
+            self, tmp_path, monkeypatch):
+        """四书 MISSING + 真实 rail → 顶层 NONE；每书 rail 恰一次（不重复）。"""
+        self._four_missing_books(tmp_path)
+        calls = []
+        real = gqr.evaluate_revision_rail
+
+        def spy(git_root, book, freeze, evidence):
+            calls.append(book)
+            return real(git_root, book, freeze, evidence)
+
+        monkeypatch.setattr(gqr, "evaluate_revision_rail", spy)
+        self._stub_source(monkeypatch)
+        report, exit_code = self._run_report(tmp_path, monkeypatch)
+        assert len(calls) == 4 and set(calls) == set(self.FOUR)
+        assert report["revision_state"] == "NONE"
+        assert report["revision_provenance_valid"] is False
+        assert report["provenance_admissible_all"] is True
+        assert report["status"] == "FAIL"  # 三书 S 口径 source FAIL
+        assert exit_code == 1
+
+    def test_report_top_level_accepted(self, tmp_path, monkeypatch):
+        """三命通会 rail ACCEPTED（fake rail 记录调用次数）→ 顶层 ACCEPTED、
+        revision_provenance_valid=True。"""
+        self._four_missing_books(tmp_path)
+        calls = []
+
+        def fake_rail(git_root, book, freeze, evidence):
+            calls.append(book)
+            return {"ok": True, "revision_state": "ACCEPTED",
+                    "error_code": None, "e3_ok": True}
+
+        monkeypatch.setattr(gqr, "evaluate_revision_rail", fake_rail)
+        self._stub_source(monkeypatch)
+        report, exit_code = self._run_report(tmp_path, monkeypatch)
+        assert len(calls) == 4  # 每书一次，不重复
+        assert report["revision_state"] == "ACCEPTED"
+        assert report["revision_provenance_valid"] is True
+        assert report["provenance_admissible_all"] is True
+        assert exit_code == 1  # source FAIL 仍压 overall（S 口径）
+
+    def test_report_top_level_revision_failed(self, tmp_path, monkeypatch):
+        """rail FAILED → 顶层 FAILED、revision_provenance_valid=False、
+        provenance_admissible_all=False。"""
+        self._four_missing_books(tmp_path)
+        monkeypatch.setattr(
+            gqr, "evaluate_revision_rail",
+            lambda gr, book, fr, ev: {"ok": False, "revision_state": "FAILED",
+                                      "error_code": "REVISION_SOURCE_UNVERIFIABLE",
+                                      "e3_ok": False})
+        self._stub_source(monkeypatch)
+        report, exit_code = self._run_report(tmp_path, monkeypatch)
+        assert report["revision_state"] == "FAILED"
+        assert report["revision_provenance_valid"] is False
+        assert report["provenance_admissible_all"] is False
+        assert report["status"] == "FAIL"
+        assert exit_code == 1
+
+    def test_report_top_level_failed_when_e0_short_circuits(
+            self, tmp_path, monkeypatch):
+        """E0 提前失败 → rail 未运行（revision_state=None）→ 顶层必须
+        fail-closed 写 FAILED（不得把 None 写入四值枚举）。"""
+        head = _git(ROOT, "rev-parse", "HEAD").strip()
+        p = _make_passing_book(tmp_path, "sanmingtonghui", head)
+        (p / "provenance.json").unlink()
+        rail_calls = []
+        monkeypatch.setattr(
+            gqr, "evaluate_revision_rail",
+            lambda gr, book, fr, ev: rail_calls.append(book) or {})
+        monkeypatch.setattr(
+            "scripts.generate_quality_report._e0_static_check",
+            lambda gr: {"ok": False, "error_code": "FREEZE_STATIC_MISMATCH"})
+        self._stub_source(monkeypatch)
+        report, exit_code = self._run_report(
+            tmp_path, monkeypatch, books={"sanmingtonghui": "三命通会"})
+        assert rail_calls == []  # E0 短路，rail 未运行
+        assert report["revision_state"] == "FAILED"
+        assert report["revision_provenance_valid"] is False
+        assert exit_code == 1
+
+    def test_report_source_blocked_takes_precedence(self, tmp_path, monkeypatch):
+        """source BLOCKED → status=BLOCKED/exit 3 优先；顶层 revision_state
+        仍照实输出真实 rail 结果（NONE），不被 BLOCKED 改写。"""
+        head = _git(ROOT, "rev-parse", "HEAD").strip()
+        p = _make_passing_book(tmp_path, "sanmingtonghui", head)
+        (p / "provenance.json").unlink()
+        report, exit_code = self._run_report(
+            tmp_path, monkeypatch, books={"sanmingtonghui": "三命通会"},
+            archive_root=None)  # → BLOCKED(archive_root_missing)
+        assert report["status"] == "BLOCKED"
+        assert report["overall_pass"] is False
+        assert exit_code == 3
+        assert report["revision_state"] == "NONE"
+        assert report["revision_provenance_valid"] is False
 ```diff
 -    _e3_multiset_check,
 +    _git_show_optional,
@@ -1862,7 +1988,15 @@ real-head E3 经 rail NONE、E0 短路 stub 名单。另：VALID 用例首跑暴
    短路 stub 名单 `_e3_multiset_check` → `evaluate_revision_rail`）。
 3. `generate_report` 逐书 entry 新增 `revision_state` /
    `revision_provenance_valid` 两键（直取 adm，未评书籍为 null）。
-4. 顶层退出码：`REVISION_*` 失败经 `provenance_admissible=false` →
+4. （复审 P0 补记，Self-Review 14）顶层修订字段：`generate_report` 经
+   `adm_by_book` 收集各书 adm，顶层 `revision_state` 取三命通会 adm 的
+   `revision_state`——为 None（E0/E1/E2 提前失败或 VALID/INVALID 短路，
+   rail 未评）时 fail-closed 写 `FAILED`（A.1 顶层枚举仅
+   {NONE, ACCEPTED, PENDING_ACCEPTANCE, FAILED}，不得写 None）；
+   `revision_provenance_valid = (顶层 revision_state == ACCEPTED)` 联动
+   派生；不再次调用 rail。source BLOCKED 与其正交：status/exit 优先，
+   `revision_state` 照实输出。
+5. 顶层退出码：`REVISION_*` 失败经 `provenance_admissible=false` →
    `overall_pass=false` → exit 1 覆盖，无独立分支（维持计划原判）。
 
 - [ ] **Step 4：跑测试确认通过（含既有文件全量）**
@@ -2678,4 +2812,21 @@ rail ⑤ `_partition_equation` 经后者读 HEAD 聚合（Task 3 执行修正遗
 `evaluate_provenance_admissibility` stub 迁移到新接口形状（补
 `revision_state="NONE"` / `revision_provenance_valid=False`，与模拟的
 MISSING+豁免通过语义一致）——entry 直取新键，旧形状 stub 会 KeyError。
+
+14. **执行复审（Task 5 P0：顶层修订字段遗漏）同步记录**：原 Step 3
+只要求逐书 entry 两键，遗漏设计 A.1 顶层 `revision_state` /
+`revision_provenance_valid`——三命通会已 ACCEPTED 的完整报告仍缺字段，
+无法成为合格下一批基线。修正：`generate_report` 经 `adm_by_book` 收集
+各书 adm，顶层 `revision_state` 取三命通会 adm 值；rail 未评（E0/E1/E2
+提前失败或 VALID/INVALID 短路 → None）时 fail-closed 写 `FAILED`；
+`revision_provenance_valid` 按 A.1 联动派生（== ACCEPTED）；不再次调用
+rail。测试提升到报告层（`TestRailReportTopLevel` 5 用例）：四书 MISSING
++ 真实 rail → 顶层 NONE ∧ 每书 rail 恰一次（spy 去重断言）；fake rail
+ACCEPTED → 顶层 ACCEPTED；rail FAILED → 顶层 FAILED ∧
+admissible_all=False；E0 短路 → rail 零调用 ∧ 顶层 FAILED（None 不入
+枚举）；archive_root=None → BLOCKED exit 3/status 优先 ∧ 顶层仍照实
+NONE。helper 泛化：`_make_passing_book(base, dir_key, head)`，
+`_setup_passing_book_in_wt` 变薄封装，报告层测试复用（tmp_path +
+ROOT HEAD）。RED：5 × KeyError('revision_state')；GREEN：5/5 + 全量
+105 项（57 rail + 53 报告 + 5 中重叠）+ ruff 通过。
 
