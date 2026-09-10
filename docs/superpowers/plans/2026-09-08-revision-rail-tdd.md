@@ -2002,7 +2002,8 @@ real-head E3 经 rail NONE、E0 短路 stub 名单。另：VALID 用例首跑暴
 - [ ] **Step 4：跑测试确认通过（含既有文件全量）**
 
 Run: `python -m pytest tests/test_revision_rail.py tests/test_classic_distillation_quality_report.py -q`
-Expected: PASS（全量）
+Expected: PASS（全量）——初审 136 passed；复审轮聚焦 36 passed（新增 10 探针
+10 failed → GREEN），全量复跑通过。
 
 - [ ] **Step 5：ruff + 提交**
 
@@ -2431,7 +2432,8 @@ REPORT_FIELD_SCHEMA = {
 执行补记（Self-Review 16）：
 1. 条件② E0/E1/E2 校验落在**逐书** `exemption_stages`（`books.{book}.exemption_stages` 为 A.4 逐书字段；读顶层会因 `all()` 空转恒过，对齐 fixture 实际形态后修正）。
 2. `_report_structure_ok` 逐书键类型校验补 `provenance_state` str（A.4 类型列）。
-3. `compare_gate_fields` B∩N 数值比较范围 = 计划枚举的布尔 / 计数(int) / 列表三类；`G5_traceability.rate`（float 下降）、`dist_pct`（dist_pct_map，越界由验证器折算入 `out_of_band`）与 size 字段不进该层比较（rate 劣化由 G5 门布尔 true→false 兜底）；A.4 逐书 provenance/source 字段不进通用比较，其退化由 rail（候选模式）与合格判据承担。
+3. `compare_gate_fields` B∩N 数值比较覆盖布尔 / 计数(int) / 列表 / float（rate 下降）四类；`dist_pct`（dist_pct_map，越界由验证器折算入 `out_of_band`）与 size 字段不做数值劣化比较；A.4 逐书 provenance/source 字段经 `book_fields` 纳入比较（复审 P0-2 修正原"不进通用比较"之记）。
+4. 复审 P0-1/P0-2/P0-3 修复落地：upper_bound 字段上限与"不高于基线"双条件、明细 B−N/N−B + `_spec_type_ok` 类型校验 + `_MISSING` 哨兵、`book_fields`（A.4 十字段）、结构前置 + source 政策 + 计数上限（详见 Self-Review 17）。
 
 - [ ] **Step 4：跑测试确认通过 + ruff + 提交**
 
@@ -2850,4 +2852,25 @@ ROOT HEAD）。RED：5 × KeyError('revision_state')；GREEN：5/5 + 全量
 (b) `_report_structure_ok` 补 `provenance_state` str 类型校验（A.4）。
 (c) `compare_gate_fields` B∩N 数值比较仅覆盖布尔/计数(int)/列表三类，
 `rate`/`dist_pct`/size 跳过（理由与兜底路径见 Task 6 Step 3 补记 3）。
+
+17. **执行复审（Task 6 NEEDS_REVISION，3 P0）同步记录**：
+(a) P0-1 允许红项相对恶化——`compare_gate_fields` 对 upper_bound 字段只查
+冻结上限、跳过与基线比较（304 超限能拒、10→11 漏检）→ 改为上限与"不高于
+基线"双条件（`{nv}>{cap}` 优先、否则 `{nv}>{bv}`），"改善向下不设限"仅
+指向相对减小。
+(b) P0-2 字段全序比较不完整——明细字段遇缺失直接 `continue`（删
+`G3_schema.bad_rules` 返回 `[]`）、A.4 逐书 provenance/source 字段未纳入
+（`provenance_admissible` true→false 返回 `[]`）→ 补 `_MISSING` 哨兵区分
+"键缺失"与"值为 None"；明细 B−N（removed）/N−B（类型 + upper_bound 上限
+校验）；`book_fields` 新增 A.4 十字段（bool 方向 / `provenance_state`
+degrade_bad=INVALID / `source_e2e_status` degrade_from PASS→FAIL/BLOCKED /
+`exemption_error_code`、`source_blocked_reason` null_to_non_null_bad）；
+所有 B∩N 前置 `_spec_type_ok` 类型校验（A.0：同名字段改类型拒）。
+(c) P0-3 非法基线判 QUALIFIED——`_classify_baseline_rc` 仅 rc=3 分支执行
+结构检查，rc=0/1 资格检查缺 source 政策与计数上限（sm source PASS→FAIL、
+G7 missing_count=304、删 generated_at 均误判 QUALIFIED）→ 统一先验
+`_report_structure_ok` 再分派（rc 0/1/3 一律先结构）；`_qualified_baseline_report`
+增 ⑤ source 政策（sm PASS、三书 FAIL、source_blocked_reason 须 None）与
+⑥ upper_bound 计数上限（sm.G7 missing_count ≤303）。10 新探针 10 failed →
+修后聚焦 36 passed；全量复跑 + ruff 通过后提交。
 

@@ -853,7 +853,72 @@ REPORT_FIELD_SCHEMA = {
         {"name": "G9_content_dedup.mcq_question_duplicates", "type": "int",
          "direction": "increase_bad", "pass_value": 0},
     ],
+    "book_fields": [  # A.4：逐书 provenance/exemption/source 字段（复审 P0-2 纳入比较）
+        {"name": "provenance_state", "type": "enum",
+         "values": ["VALID", "INVALID", "MISSING"],
+         "degrade_bad": "INVALID"},  # 退化为 INVALID 拒（A.4 方向列）
+        {"name": "provenance_admissible", "type": "bool",
+         "direction": "true_to_false_bad", "candidate_accept": [True]},
+        {"name": "historical_exemption_valid", "type": "bool",
+         "direction": "true_to_false_bad", "candidate_accept": [True]},
+        {"name": "exemption_stages.E0_ok", "type": "bool",
+         "direction": "true_to_false_bad", "candidate_accept": [True]},
+        {"name": "exemption_stages.E1_ok", "type": "bool",
+         "direction": "true_to_false_bad", "candidate_accept": [True]},
+        {"name": "exemption_stages.E2_ok", "type": "bool",
+         "direction": "true_to_false_bad", "candidate_accept": [True]},
+        {"name": "exemption_stages.E3_ok", "type": "bool",
+         "direction": "true_to_false_bad", "candidate_accept": [True]},
+        {"name": "exemption_error_code", "type": "enum_or_null",
+         "values": ["GENERATOR_IDENTITY_MISMATCH", "FROZEN_AT_COMMIT_MISMATCH",
+                    "FREEZE_STATIC_MISMATCH", "EVIDENCE_STATIC_MISMATCH",
+                    "BASELINE_COMMIT_MISMATCH"], "null_ok": True,
+         "candidate_accept": [None], "null_to_non_null_bad": True},
+        {"name": "source_e2e_status", "type": "enum",
+         "values": ["PASS", "FAIL", "BLOCKED"],
+         "candidate_accept": {"sanmingtonghui": ["PASS"], "*": ["FAIL"]},
+         "degrade_from": "PASS", "degrade_to": ["FAIL", "BLOCKED"]},
+        {"name": "source_blocked_reason", "type": "enum_or_null",
+         "values": ["archive_missing", "archive_sha_mismatch",
+                    "archive_size_mismatch", "verifier_identity_mismatch",
+                    "archive_root_missing"], "null_ok": True,
+         "candidate_accept": [None], "null_to_non_null_bad": True},
+    ],
 }
+
+
+_MISSING = object()  # 哨兵：区分"字段缺失"与"值为 None"（P0-2）
+
+
+def _spec_type_ok(spec: dict, v) -> bool:
+    """按 schema 类型列校验值（P0-2 类型/语义校验；A.0：同名字段改类型拒）。"""
+    t = spec["type"]
+    if t == "int":
+        return isinstance(v, int) and not isinstance(v, bool)
+    if t == "bool":
+        return isinstance(v, bool)
+    if t == "float":
+        return isinstance(v, (int, float)) and not isinstance(v, bool)
+    if t == "list":
+        return isinstance(v, list)
+    if t == "enum":
+        return v in spec["values"]
+    if t == "enum_or_null":
+        return v is None or v in spec["values"]
+    if t == "dist_pct_map":
+        return isinstance(v, dict)
+    return True
+
+
+def _book_field_value(entry: dict, dotted: str):
+    """嵌套取值：'exemption_stages.E0_ok' → entry['exemption_stages']['E0_ok']；
+    缺路径返回 _MISSING。"""
+    cur = entry
+    for part in dotted.split("."):
+        if not isinstance(cur, dict) or part not in cur:
+            return _MISSING
+        cur = cur[part]
+    return cur
 
 
 def compare_gate_fields(baseline: dict, candidate: dict, *,
@@ -878,7 +943,9 @@ def compare_gate_fields(baseline: dict, candidate: dict, *,
         if in_b and not in_n:
             bad.append(f"{name}: removed")
         elif in_b and in_n:
-            if (f["type"] == "bool"
+            if not _spec_type_ok(f, candidate[name]):
+                bad.append(f"{name}: type-changed")
+            elif (f["type"] == "bool"
                     and f.get("direction") == "true_to_false_bad"
                     and baseline[name] is True and candidate[name] is False):
                 bad.append(f"{name}: PASS->FAIL")
@@ -908,28 +975,80 @@ def compare_gate_fields(baseline: dict, candidate: dict, *,
         for spec in REPORT_FIELD_SCHEMA["book_gate_details"]:
             fname = spec["name"]
             gate, key = fname.split(".", 1)
-            if gate not in b_det:
+            b_g = b_det.get(gate) if isinstance(b_det, dict) else None
+            n_g = n_det.get(gate) if isinstance(n_det, dict) else None
+            bv = b_g.get(key) if isinstance(b_g, dict) and key in b_g else _MISSING
+            nv = n_g.get(key) if isinstance(n_g, dict) and key in n_g else _MISSING
+            if bv is _MISSING and nv is _MISSING:
                 continue
-            if gate not in n_det:
+            if bv is not _MISSING and nv is _MISSING:
                 bad.append(f"{book}.{fname}: removed")
                 continue
-            bv = (b_det.get(gate) or {}).get(key)
-            nv = (n_det.get(gate) or {}).get(key)
-            if bv is None or nv is None or spec["type"] == "size" \
-                    or spec.get("direction") == "size":
+            if bv is _MISSING and nv is not _MISSING:
+                if not _spec_type_ok(spec, nv):
+                    bad.append(f"{book}.{fname}: type-changed")
+                else:
+                    cap = (spec.get("upper_bound") or {}).get(book)
+                    if cap is not None and nv > cap:
+                        bad.append(f"{book}.{fname}: {nv}>{cap}")
+                continue
+            if not _spec_type_ok(spec, nv):
+                bad.append(f"{book}.{fname}: type-changed")
+                continue
+            if spec.get("direction") in ("size", None) \
+                    or spec["type"] == "dist_pct_map":
                 continue
             if spec["type"] == "int":
                 cap = (spec.get("upper_bound") or {}).get(book)
                 if cap is not None:
-                    if nv > cap:  # 允许红项：改善不设限，超上限即拒
+                    # P0-1：允许红项须同时满足冻结上限与"不高于基线"
+                    if nv > cap:
                         bad.append(f"{book}.{fname}: {nv}>{cap}")
+                    elif nv > bv:
+                        bad.append(f"{book}.{fname}: {nv}>{bv}")
                 elif spec.get("direction") == "increase_bad" and nv > bv:
                     bad.append(f"{book}.{fname}: {nv}>{bv}")
                 elif spec.get("direction") == "decrease_bad" and nv < bv:
                     bad.append(f"{book}.{fname}: {nv}<{bv}")
+            elif spec["type"] == "float":
+                if spec.get("direction") == "decrease_bad" and nv < bv:
+                    bad.append(f"{book}.{fname}: {nv}<{bv}")
             elif spec["type"] == "list":
                 if not bv and nv:
                     bad.append(f"{book}.{fname}: empty->nonempty")
+        # A.4 逐书 provenance/exemption/source 字段（复审 P0-2）
+        for spec in REPORT_FIELD_SCHEMA["book_fields"]:
+            name = spec["name"]
+            bv = _book_field_value(b_entry, name)
+            nv = _book_field_value(n_entry, name)
+            if bv is _MISSING and nv is _MISSING:
+                continue
+            if bv is not _MISSING and nv is _MISSING:
+                bad.append(f"{book}.{name}: removed")
+                continue
+            if bv is _MISSING and nv is not _MISSING:
+                accept = spec.get("candidate_accept")
+                if isinstance(accept, dict):
+                    accept = accept.get(book, accept.get("*"))
+                if not _spec_type_ok(spec, nv):
+                    bad.append(f"{book}.{name}: type-changed")
+                elif accept is not None and nv not in accept:
+                    bad.append(f"{book}.{name}: new-invalid")
+                continue
+            if not _spec_type_ok(spec, nv):
+                bad.append(f"{book}.{name}: type-changed")
+            elif spec.get("null_to_non_null_bad") \
+                    and bv is None and nv is not None:
+                bad.append(f"{book}.{name}: null->non-null")
+            elif (spec.get("degrade_bad") is not None
+                    and bv != spec["degrade_bad"] and nv == spec["degrade_bad"]):
+                bad.append(f"{book}.{name}: {bv}->{nv}")
+            elif (spec.get("degrade_from")
+                    and bv == spec["degrade_from"]
+                    and nv in (spec.get("degrade_to") or ())):
+                bad.append(f"{book}.{name}: {bv}->{nv}")
+            elif spec["type"] == "bool" and bv is True and nv is False:
+                bad.append(f"{book}.{name}: PASS->FAIL")
     return bad
 
 
@@ -964,22 +1083,27 @@ def _gate_consistent(gates: dict, gate_details: dict) -> bool:
 def _qualified_baseline_report(rc: int, report: dict, *,
                                first_batch: bool) -> bool:
     """设计 5-R.8 合格基线判据（只接收 rc∈{0,1}；rc==3 由
-    _classify_baseline_rc 先行联合分类）。
+    _classify_baseline_rc 先行联合分类；复审 P0-3：统一先验报告结构再验策略）。
 
+    先验 _report_structure_ok（表单/类型/聚合一致），再依次：
     ① 非首批须 revision_state==ACCEPTED ∧ revision_provenance_valid==true
       （两者齐备；首批例外：缺失不判不合格）；
-    ② E0/E1/E2 全 true；③ approval_b2_constant_valid；④ validator_ran_live
-      ∧ 四书精确齐备 ∧ 逐书九门 gates/gate_details 键集齐备 ∧ 布尔与明细
-      推导一致（_gate_consistent）；
+    ② 逐书 E0/E1/E2 全 true；③ approval_b2_constant_valid；④
+      validator_ran_live ∧ 逐书九门 gates/gate_details 键集齐备 ∧ 布尔与
+      明细推导一致（_gate_consistent）；
+    ⑤ source 政策（A.4 候选可接纳值）：sanmingtonghui source_e2e_status
+      ==PASS、其余三书 ==FAIL，且逐书 source_blocked_reason 为 None；
+    ⑥ 允许计数上限：逐书 gate_details 中 upper_bound 字段不得超上限
+      （仅 sanmingtonghui.G7 missing_count ≤ 303）；
     rc==0 须 status==PASS ∧ overall_pass；rc==1 须 status==FAIL ∧ 失败门
       ⊆ 允许红项（仅 sanmingtonghui.G7_chapter_complete）。rc 与状态不一致
       → False。
     """
     if rc not in (0, 1) or not isinstance(report, dict):
         return False
-    books = report.get("books")
-    if not isinstance(books, dict) or set(books) != set(FREEZE_BOOKS):
+    if not _report_structure_ok(report):
         return False
+    books = report["books"]
     if not first_batch and (
             report.get("revision_state") != "ACCEPTED"
             or report.get("revision_provenance_valid") is not True):
@@ -988,22 +1112,29 @@ def _qualified_baseline_report(rc: int, report: dict, *,
         return False
     if report.get("validator_ran_live") is not True:
         return False
-    for entry in books.values():
-        if not isinstance(entry, dict):
-            return False
-        gates = entry.get("gates")
-        details = entry.get("gate_details")
-        if (not isinstance(gates, dict) or set(gates) != set(_REPORT_GATES)
-                or not isinstance(details, dict)
-                or set(details) != set(_REPORT_GATES)):
-            return False
-        stages = entry.get("exemption_stages")
-        if not isinstance(stages, dict) or not all(
-                stages.get(k) is True
-                for k in ("E0_ok", "E1_ok", "E2_ok")):
+    for book, entry in books.items():
+        gates = entry["gates"]
+        details = entry["gate_details"]
+        stages = entry["exemption_stages"]
+        if not all(stages.get(k) is True
+                   for k in ("E0_ok", "E1_ok", "E2_ok")):
             return False
         if not _gate_consistent(gates, details):
             return False
+        # ⑤ source 政策（A.4）：sm PASS、三书 FAIL；BLOCKED 走 rc==3 路径
+        expect_src = "PASS" if book == "sanmingtonghui" else "FAIL"
+        if entry["source_e2e_status"] != expect_src \
+                or entry["source_blocked_reason"] is not None:
+            return False
+        # ⑥ 允许计数上限（upper_bound 字段，仅 sm.G7 missing_count ≤ 303）
+        for spec in REPORT_FIELD_SCHEMA["book_gate_details"]:
+            cap = (spec.get("upper_bound") or {}).get(book)
+            if cap is None:
+                continue
+            gate, key = spec["name"].split(".", 1)
+            val = (details.get(gate) or {}).get(key)
+            if val is not None and val > cap:
+                return False
     if rc == 0:
         return (report.get("status") == "PASS"
                 and report.get("overall_pass") is True)
@@ -1115,22 +1246,24 @@ def _report_structure_ok(report: dict) -> bool:
 
 def _classify_baseline_rc(rc: int, report: dict, *,
                           first_batch: bool) -> str:
-    """rc × 合法报告状态联合分类（round-4 P0-1/P0-3 + round-5 P0）。
+    """rc × 合法报告状态联合分类（round-4 P0-1/P0-3 + round-5 P0 + 复审
+    P0-3：统一先验报告结构再分派）。
 
-    rc==3：须完整质量报告结构（_report_structure_ok）+ 顶层 BLOCKED +
-    overall False + 存在书 source BLOCKED 且 reason ∈ §4.2 五值 →
-    "BLOCKED"（调用方上抛 exit 3）；其余一律 "INVALID"。rc∈{0,1} 交
-    _qualified_baseline_report。first_batch 由调用方按已验证锚链状态显式
+    任何分支先 _report_structure_ok（表单/类型/聚合一致）→ 不过一律
+    "INVALID"。rc==3：结构过 ∧ 顶层 BLOCKED ∧ overall False ∧ 存在书
+    source BLOCKED 且 reason ∈ §4.2 五值 → "BLOCKED"（调用方上抛 exit 3）；
+    否则 "INVALID"。rc∈{0,1}：交 _qualified_baseline_report（其内再验
+    模式/source 政策/允许失败集合/计数上限）。first_batch 由调用方显式
     传入，不从报告缺字段推断。verifier CLI 三字段对象不得冒充质量报告。
     """
+    if not _report_structure_ok(report):
+        return "INVALID"
     if rc == 3:
-        blocked_book = isinstance(report, dict) and any(
+        blocked_book = any(
             (e or {}).get("source_e2e_status") == "BLOCKED"
             and (e or {}).get("source_blocked_reason") in _REPORT_BLOCKED_REASONS
-            for e in ((report.get("books") or {}).values()
-                      if isinstance(report.get("books"), dict) else ()))
-        if (_report_structure_ok(report)
-                and report.get("status") == "BLOCKED"
+            for e in report["books"].values())
+        if (report.get("status") == "BLOCKED"
                 and report.get("source_e2e_status") == "BLOCKED"
                 and report.get("overall_pass") is False
                 and blocked_book):

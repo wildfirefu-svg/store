@@ -1266,6 +1266,70 @@ class TestFieldSchema:
         cand = {"books": {"x": {"gates": {}}}}  # 旧有门禁字段消失
         assert cmp(base, cand, mode="candidate") == ["x.G3_schema: removed"]
 
+    def test_allowed_red_relative_increase_rejected(self):
+        """P0-1：允许红项相对恶化——missing_count 10→11（未超冻结上限 303）
+        也是相对增大，必须拒绝（不能只查上限、跳过与基线比较）。"""
+        cmp = gqr.compare_gate_fields
+        base = {"books": {"sanmingtonghui": {"gate_details": {
+            "G7_chapter_complete": {"missing_count": 10}}}}}
+        worse = {"books": {"sanmingtonghui": {"gate_details": {
+            "G7_chapter_complete": {"missing_count": 11}}}}}
+        assert cmp(base, worse, mode="candidate") == [
+            "sanmingtonghui.G7_chapter_complete.missing_count: 11>10"]
+
+    def test_detail_field_removed_rejected(self):
+        """P0-2：明细字段 B−N——基线含 G3_schema.bad_rules、候选缺该键 → removed。"""
+        cmp = gqr.compare_gate_fields
+        base = {"books": {"x": {"gate_details": {"G3_schema": {
+            "bad_rules": 1, "bad_mcq": 0, "parse_errors": 0}}}}}
+        cand = {"books": {"x": {"gate_details": {"G3_schema": {
+            "bad_mcq": 0, "parse_errors": 0}}}}}
+        assert cmp(base, cand, mode="candidate") == [
+            "x.G3_schema.bad_rules: removed"]
+
+    def test_detail_field_new_in_candidate_cap_enforced(self):
+        """P0-2：明细字段 N−B——候选新增 G7 missing_count（sm）超冻结上限
+        303 → 拒（新字段按 schema 上限校验，不得静默跳过）。"""
+        cmp = gqr.compare_gate_fields
+        base = {"books": {"sanmingtonghui": {"gate_details": {}}}}
+        cand = {"books": {"sanmingtonghui": {"gate_details": {
+            "G7_chapter_complete": {"missing_count": 400}}}}}
+        assert cmp(base, cand, mode="candidate") == [
+            "sanmingtonghui.G7_chapter_complete.missing_count: 400>303"]
+
+    def test_detail_field_type_changed_rejected(self):
+        """P0-2：类型/语义校验——同名字段改类型（int → str）→ 拒（A.0）。"""
+        cmp = gqr.compare_gate_fields
+        base = {"books": {"x": {"gate_details": {"G3_schema": {"bad_rules": 0}}}}}
+        cand = {"books": {"x": {"gate_details": {"G3_schema": {"bad_rules": "0"}}}}}
+        assert cmp(base, cand, mode="candidate") == [
+            "x.G3_schema.bad_rules: type-changed"]
+
+    def test_a4_provenance_admissible_degradation_rejected(self):
+        """P0-2：A.4 逐书 provenance_admissible true→false → 拒
+        （不能靠当前布尔门替代完整字段契约）。"""
+        cmp = gqr.compare_gate_fields
+        base = {"books": {"x": {"provenance_admissible": True}}}
+        cand = {"books": {"x": {"provenance_admissible": False}}}
+        assert cmp(base, cand, mode="candidate") == [
+            "x.provenance_admissible: PASS->FAIL"]
+
+    def test_a4_field_removed_rejected(self):
+        """P0-2：A.4 字段 B−N——候选书缺 source_e2e_status → removed。"""
+        cmp = gqr.compare_gate_fields
+        base = {"books": {"x": {"source_e2e_status": "FAIL"}}}
+        cand = {"books": {"x": {}}}
+        assert cmp(base, cand, mode="candidate") == [
+            "x.source_e2e_status: removed"]
+
+    def test_a4_provenance_state_degrade_invalid_rejected(self):
+        """P0-2：A.4 provenance_state 退化为 INVALID → 拒。"""
+        cmp = gqr.compare_gate_fields
+        base = {"books": {"x": {"provenance_state": "VALID"}}}
+        cand = {"books": {"x": {"provenance_state": "INVALID"}}}
+        assert cmp(base, cand, mode="candidate") == [
+            "x.provenance_state: VALID->INVALID"]
+
 
 _BOOK_META = {
     "ditiansui": "滴天髓",
@@ -1545,3 +1609,27 @@ class TestBaselineQualification:
         rep = _blocked_report_fixture()
         rep["source_e2e_pass"] = True
         assert gqr._classify_baseline_rc(3, rep, first_batch=True) == "INVALID"
+
+    def test_baseline_sm_source_policy_enforced(self):
+        """P0-3：source 政策（A.4）——三命通会 source_e2e_status 必须 PASS
+        （S 口径），改 FAIL → 不合格/INVALID。"""
+        rep = _baseline_report_fixture()
+        rep["books"]["sanmingtonghui"]["source_e2e_status"] = "FAIL"
+        assert gqr._qualified_baseline_report(1, rep, first_batch=True) is False
+        assert gqr._classify_baseline_rc(1, rep, first_batch=True) == "INVALID"
+
+    def test_baseline_g7_cap_enforced(self):
+        """P0-3：允许计数上限——三命通会 G7 missing_count=304 > 303 → 不合格。"""
+        rep = _baseline_report_fixture()
+        rep["books"]["sanmingtonghui"]["gate_details"]["G7_chapter_complete"] = {
+            "expected": 384, "done": 80, "missing": [], "missing_count": 304,
+            "extra": [], "extra_count": 0, "pass": False}
+        assert gqr._qualified_baseline_report(1, rep, first_batch=True) is False
+
+    def test_baseline_missing_required_field_invalid(self):
+        """P0-3：统一先验报告结构——rc=1 删必需字段 generated_at →
+        INVALID/不合格（此前仅 rc=3 分支执行结构检查）。"""
+        rep = _baseline_report_fixture()
+        del rep["generated_at"]
+        assert gqr._classify_baseline_rc(1, rep, first_batch=True) == "INVALID"
+        assert gqr._qualified_baseline_report(1, rep, first_batch=True) is False
