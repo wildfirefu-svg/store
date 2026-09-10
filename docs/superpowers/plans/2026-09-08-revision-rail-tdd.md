@@ -2354,10 +2354,12 @@ class TestBaselineQualification:
 
 - [ ] **Step 2：跑测试确认失败**
 
-Run: `python -m pytest tests/test_revision_rail.py -q`
-Expected: FAIL（`REPORT_FIELD_SCHEMA`/`compare_gate_fields`/`_qualified_baseline_report` 不存在）
+Run: `python -m pytest "tests/test_revision_rail.py::TestFieldSchema" "tests/test_revision_rail.py::TestBaselineQualification" -q`
+Expected: FAIL——实测 26 failed（全部 AttributeError：`REPORT_FIELD_SCHEMA`/
+`compare_gate_fields`/`_qualified_baseline_report`/`_classify_baseline_rc`/
+`run_baseline` 未定义）。
 
-- [ ] **Step 3：实现**
+- [ ] **Step 3：实现**（实际落地与原计划一致，另含三处执行细节，见本 Step 末执行补记）
 
 `REPORT_FIELD_SCHEMA`（与附录 A 同构的机器可读表；**字段全集以设计 §14 附录 A 为权威转录源**——A.1 顶层 9 字段、A.2 门禁布尔 9、A.3 计数全字段（含 G6 `invalid_answers`/`out_of_band`、`dist_pct` 合法域 [0,1] 与通过区间 [0.18,0.32]、G7 规范化集合语义、分母标注）、A.4 枚举（含 `exemption_error_code` 五值、BLOCKED reason 五值、候选可接纳值）；`process_stage_fields = ("revision_state","revision_provenance_valid")`）：
 
@@ -2425,6 +2427,11 @@ REPORT_FIELD_SCHEMA = {
 4. **本次生成校验**：运行后 `<tmp>/knowledge_base/classic_texts/QUALITY_REPORT.json` 必须存在——旧报告已删、文件缺失即证明本次未产出 → `(rc, {})`，`_qualified_baseline_report` 拒绝（不会被误收）；存在则读取为 report（CLI stdout 只是摘要，不得当 JSON 解析）。
 5. 联合核验退出码与报告：`(rc, report)` 交 `_classify_baseline_rc(rc, report, first_batch=first_batch)`（含 rc 与状态一致性；BLOCKED/INVALID/QUALIFIED 三态由调用方 `_candidate_mode` 映射退出码）。
 6. finally 清理 worktree（`git worktree remove --force <tmp>`）。
+
+执行补记（Self-Review 16）：
+1. 条件② E0/E1/E2 校验落在**逐书** `exemption_stages`（`books.{book}.exemption_stages` 为 A.4 逐书字段；读顶层会因 `all()` 空转恒过，对齐 fixture 实际形态后修正）。
+2. `_report_structure_ok` 逐书键类型校验补 `provenance_state` str（A.4 类型列）。
+3. `compare_gate_fields` B∩N 数值比较范围 = 计划枚举的布尔 / 计数(int) / 列表三类；`G5_traceability.rate`（float 下降）、`dist_pct`（dist_pct_map，越界由验证器折算入 `out_of_band`）与 size 字段不进该层比较（rate 劣化由 G5 门布尔 true→false 兜底）；A.4 逐书 provenance/source 字段不进通用比较，其退化由 rail（候选模式）与合格判据承担。
 
 - [ ] **Step 4：跑测试确认通过 + ruff + 提交**
 
@@ -2836,4 +2843,11 @@ ROOT HEAD）。RED：5 × KeyError('revision_state')；GREEN：5/5 + 全量
 `archive_root_missing`。改为类级哨兵 `_NO_ARCHIVE`：未传 → tmp_path，
 显式 None → 真实传 None；并补断言
 `books.sanmingtonghui.source_blocked_reason == "archive_root_missing"`。
+
+16. **执行细节（Task 6）同步记录**：(a) `_qualified_baseline_report`
+条件② E0/E1/E2 校验落在逐书 `exemption_stages`——初稿读顶层，因 `all()`
+空转恒过；字段实为 A.4 逐书字段，按 fixture 实际形态修正。
+(b) `_report_structure_ok` 补 `provenance_state` str 类型校验（A.4）。
+(c) `compare_gate_fields` B∩N 数值比较仅覆盖布尔/计数(int)/列表三类，
+`rate`/`dist_pct`/size 跳过（理由与兜底路径见 Task 6 Step 3 补记 3）。
 

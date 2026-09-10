@@ -13,8 +13,10 @@ import hashlib
 import importlib
 import json
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from collections import Counter
 from pathlib import Path
@@ -754,6 +756,431 @@ def evaluate_provenance_admissibility(book_dir: Path, git_root: Path | None) -> 
     res["historical_exemption_valid"] = True
     res["provenance_admissible"] = True
     return res
+
+
+# ---------------------------------------------------------------------------
+# §5-R.8 基线重跑引擎：REPORT_FIELD_SCHEMA（附录 A 同构机器可读表）+
+# 退化比较 + 报告结构校验 + 合格基线判定 + rc 联合分类
+# ---------------------------------------------------------------------------
+_REPORT_GATES = (
+    "G1_rule_id_unique", "G2_mcq_id_unique", "G3_schema",
+    "G4_source_rule_id", "G5_traceability", "G6_answer_dist",
+    "G7_chapter_complete", "G8_mcq_well_formed", "G9_content_dedup")
+
+# §4.2 source BLOCKED reason 五值
+_REPORT_BLOCKED_REASONS = {
+    "verifier_identity_mismatch", "archive_root_missing", "archive_missing",
+    "archive_sha_mismatch", "archive_size_mismatch",
+}
+
+REPORT_FIELD_SCHEMA = {
+    "schema_version": "1.0",
+    # 流程阶段字段（v29.2 P0）：退出通用退化比较，按运行模式校验（exit-4 判定承担）
+    "process_stage_fields": ("revision_state", "revision_provenance_valid"),
+    # 附录 A.0：随内容/运行合法变化，不参与劣化比较
+    "non_gate_fields": ("generated_at", "validator_code_sha256",
+                        "remediation_pass", "end_to_end_pass"),
+    "top_level": [
+        {"name": "status", "type": "enum",
+         "values": ["PASS", "FAIL", "BLOCKED"], "candidate_accept": ["FAIL"]},
+        {"name": "overall_pass", "type": "bool",
+         "direction": "true_to_false_bad", "candidate_accept": [False]},
+        {"name": "content_gates_pass", "type": "bool",
+         "direction": "true_to_false_bad", "candidate_accept": [False]},
+        {"name": "provenance_admissible_all", "type": "bool",
+         "direction": "true_to_false_bad", "candidate_accept": [True]},
+        {"name": "approval_b2_constant_valid", "type": "bool",
+         "direction": "true_to_false_bad", "candidate_accept": [True]},
+        {"name": "source_e2e_pass", "type": "bool",
+         "direction": "true_to_false_bad", "candidate_accept": [False]},
+        {"name": "validator_ran_live", "type": "bool",
+         "direction": "true_to_false_bad", "candidate_accept": [True]},
+        {"name": "revision_state", "type": "enum",
+         "values": ["NONE", "ACCEPTED", "PENDING_ACCEPTANCE", "FAILED"],
+         "candidate_accept": ["PENDING_ACCEPTANCE"]},
+        {"name": "revision_provenance_valid", "type": "bool",
+         "candidate_accept": [False]},
+    ],
+    "book_gates": [  # A.2：九门布尔
+        {"name": g, "type": "bool", "direction": "pass_to_fail_bad"}
+        for g in _REPORT_GATES
+    ],
+    "book_gate_details": [  # A.3：计数字段（direction/分母/上限/通过值）
+        {"name": "G1_rule_id_unique.total", "type": "int", "direction": "size"},
+        {"name": "G1_rule_id_unique.duplicates", "type": "int",
+         "direction": "increase_bad", "pass_value": 0},
+        {"name": "G2_mcq_id_unique.total", "type": "int", "direction": "size"},
+        {"name": "G2_mcq_id_unique.duplicates", "type": "int",
+         "direction": "increase_bad", "pass_value": 0},
+        {"name": "G3_schema.bad_rules", "type": "int",
+         "direction": "increase_bad", "pass_value": 0},
+        {"name": "G3_schema.bad_mcq", "type": "int",
+         "direction": "increase_bad", "pass_value": 0},
+        {"name": "G3_schema.parse_errors", "type": "int",
+         "direction": "increase_bad", "pass_value": 0},
+        {"name": "G4_source_rule_id.total_refs", "type": "int",
+         "direction": "size"},
+        {"name": "G4_source_rule_id.bad", "type": "int",
+         "direction": "increase_bad", "pass_value": 0},
+        {"name": "G4_source_rule_id.ambiguous_rule_ids", "type": "int",
+         "direction": "increase_bad", "pass_value": 0},
+        {"name": "G5_traceability.total", "type": "int", "direction": "size"},
+        {"name": "G5_traceability.untraceable", "type": "int",
+         "direction": "increase_bad", "pass_value": 0},
+        {"name": "G5_traceability.rate", "type": "float",
+         "direction": "decrease_bad", "pass_value": 1.0},
+        {"name": "G6_answer_dist.invalid_answers", "type": "int",
+         "direction": "increase_bad", "pass_value": 0},
+        {"name": "G6_answer_dist.out_of_band", "type": "list",
+         "direction": "nonempty_bad", "pass_value": []},
+        {"name": "G6_answer_dist.dist_pct", "type": "dist_pct_map",
+         "band": [0.18, 0.32]},  # 合法域 [0,1]，通过区间冻结常量
+        {"name": "G7_chapter_complete.expected", "type": "int",
+         "direction": "size"},  # 规范化章节集合大小（非原始 len）
+        {"name": "G7_chapter_complete.done", "type": "int",
+         "direction": "decrease_bad"},
+        {"name": "G7_chapter_complete.missing_count", "type": "int",
+         "direction": "increase_bad", "pass_value": 0,
+         "upper_bound": {"sanmingtonghui": 303}},  # §5-R.8 允许红项冻结上限
+        {"name": "G7_chapter_complete.extra_count", "type": "int",
+         "direction": "increase_bad", "pass_value": 0},
+        {"name": "G8_mcq_well_formed.malformed", "type": "int",
+         "direction": "increase_bad", "pass_value": 0},
+        {"name": "G9_content_dedup.rule_text_duplicate_groups", "type": "int",
+         "direction": "increase_bad", "pass_value": 0},
+        {"name": "G9_content_dedup.rule_text_duplicate_count", "type": "int",
+         "direction": "increase_bad", "pass_value": 0},
+        {"name": "G9_content_dedup.mcq_question_duplicates", "type": "int",
+         "direction": "increase_bad", "pass_value": 0},
+    ],
+}
+
+
+def compare_gate_fields(baseline: dict, candidate: dict, *,
+                        mode: str) -> list[str]:
+    """按 REPORT_FIELD_SCHEMA 键集做 B/N 三分类退化比较（设计 5-R.8）。
+
+    B∩N：布尔 true→false 拒、计数按 direction、列表空→非空拒；
+    N−B：按 candidate_accept / upper_bound 校验（允许红项改善向下不设限、
+    超上限拒绝）；B−N：一律拒绝（removed）。
+    process_stage_fields 与 non_gate_fields 跳过（流程阶段字段由运行模式
+    校验承担，不进通用退化比较）。返回违规清单（空 = 零退化）。
+    """
+    bad: list[str] = []
+    skip = set(REPORT_FIELD_SCHEMA["process_stage_fields"]) | set(
+        REPORT_FIELD_SCHEMA["non_gate_fields"])
+    # 顶层 B∩N / B−N / N−B
+    for f in REPORT_FIELD_SCHEMA["top_level"]:
+        name = f["name"]
+        if name in skip:
+            continue
+        in_b, in_n = name in baseline, name in candidate
+        if in_b and not in_n:
+            bad.append(f"{name}: removed")
+        elif in_b and in_n:
+            if (f["type"] == "bool"
+                    and f.get("direction") == "true_to_false_bad"
+                    and baseline[name] is True and candidate[name] is False):
+                bad.append(f"{name}: PASS->FAIL")
+        elif in_n and not in_b:
+            accept = f.get("candidate_accept")
+            if accept is not None and candidate[name] not in accept:
+                bad.append(f"{name}: new-invalid")
+    # 逐书 gates / gate_details
+    b_books = baseline.get("books") or {}
+    n_books = candidate.get("books") or {}
+    gate_names = [g["name"] for g in REPORT_FIELD_SCHEMA["book_gates"]]
+    for book, b_entry in b_books.items():
+        n_entry = n_books.get(book)
+        if n_entry is None:
+            bad.append(f"{book}: removed")
+            continue
+        b_gates = b_entry.get("gates") or {}
+        n_gates = n_entry.get("gates") or {}
+        for g in gate_names:
+            if g in b_gates and g not in n_gates:
+                bad.append(f"{book}.{g}: removed")
+            elif (g in b_gates and g in n_gates
+                    and b_gates[g] is True and n_gates[g] is False):
+                bad.append(f"{book}.{g}: PASS->FAIL")
+        b_det = b_entry.get("gate_details") or {}
+        n_det = n_entry.get("gate_details") or {}
+        for spec in REPORT_FIELD_SCHEMA["book_gate_details"]:
+            fname = spec["name"]
+            gate, key = fname.split(".", 1)
+            if gate not in b_det:
+                continue
+            if gate not in n_det:
+                bad.append(f"{book}.{fname}: removed")
+                continue
+            bv = (b_det.get(gate) or {}).get(key)
+            nv = (n_det.get(gate) or {}).get(key)
+            if bv is None or nv is None or spec["type"] == "size" \
+                    or spec.get("direction") == "size":
+                continue
+            if spec["type"] == "int":
+                cap = (spec.get("upper_bound") or {}).get(book)
+                if cap is not None:
+                    if nv > cap:  # 允许红项：改善不设限，超上限即拒
+                        bad.append(f"{book}.{fname}: {nv}>{cap}")
+                elif spec.get("direction") == "increase_bad" and nv > bv:
+                    bad.append(f"{book}.{fname}: {nv}>{bv}")
+                elif spec.get("direction") == "decrease_bad" and nv < bv:
+                    bad.append(f"{book}.{fname}: {nv}<{bv}")
+            elif spec["type"] == "list":
+                if not bv and nv:
+                    bad.append(f"{book}.{fname}: empty->nonempty")
+    return bad
+
+
+def _gate_consistent(gates: dict, gate_details: dict) -> bool:
+    """P0-4：gates 布尔与 gate_details 推导一致（A.3 判据）；任一门不一致
+    → False（明细失败却声明 PASS 不得通过）。"""
+    d = gate_details
+
+    def z(gate, *keys):
+        return all((d.get(gate) or {}).get(k) == 0 for k in keys)
+
+    checks = {
+        "G1_rule_id_unique": z("G1_rule_id_unique", "duplicates"),
+        "G2_mcq_id_unique": z("G2_mcq_id_unique", "duplicates"),
+        "G3_schema": z("G3_schema", "bad_rules", "bad_mcq", "parse_errors"),
+        "G4_source_rule_id": z("G4_source_rule_id", "bad",
+                               "ambiguous_rule_ids"),
+        "G5_traceability": z("G5_traceability", "untraceable"),
+        "G6_answer_dist": ((d.get("G6_answer_dist") or {}).get("out_of_band") == []
+                           and z("G6_answer_dist", "invalid_answers")),
+        "G7_chapter_complete": z("G7_chapter_complete", "missing_count",
+                                 "extra_count"),
+        "G8_mcq_well_formed": z("G8_mcq_well_formed", "malformed"),
+        "G9_content_dedup": z("G9_content_dedup",
+                              "rule_text_duplicate_groups",
+                              "rule_text_duplicate_count",
+                              "mcq_question_duplicates"),
+    }
+    return all(gates.get(g) == derived for g, derived in checks.items())
+
+
+def _qualified_baseline_report(rc: int, report: dict, *,
+                               first_batch: bool) -> bool:
+    """设计 5-R.8 合格基线判据（只接收 rc∈{0,1}；rc==3 由
+    _classify_baseline_rc 先行联合分类）。
+
+    ① 非首批须 revision_state==ACCEPTED ∧ revision_provenance_valid==true
+      （两者齐备；首批例外：缺失不判不合格）；
+    ② E0/E1/E2 全 true；③ approval_b2_constant_valid；④ validator_ran_live
+      ∧ 四书精确齐备 ∧ 逐书九门 gates/gate_details 键集齐备 ∧ 布尔与明细
+      推导一致（_gate_consistent）；
+    rc==0 须 status==PASS ∧ overall_pass；rc==1 须 status==FAIL ∧ 失败门
+      ⊆ 允许红项（仅 sanmingtonghui.G7_chapter_complete）。rc 与状态不一致
+      → False。
+    """
+    if rc not in (0, 1) or not isinstance(report, dict):
+        return False
+    books = report.get("books")
+    if not isinstance(books, dict) or set(books) != set(FREEZE_BOOKS):
+        return False
+    if not first_batch and (
+            report.get("revision_state") != "ACCEPTED"
+            or report.get("revision_provenance_valid") is not True):
+        return False
+    if report.get("approval_b2_constant_valid") is not True:
+        return False
+    if report.get("validator_ran_live") is not True:
+        return False
+    for entry in books.values():
+        if not isinstance(entry, dict):
+            return False
+        gates = entry.get("gates")
+        details = entry.get("gate_details")
+        if (not isinstance(gates, dict) or set(gates) != set(_REPORT_GATES)
+                or not isinstance(details, dict)
+                or set(details) != set(_REPORT_GATES)):
+            return False
+        stages = entry.get("exemption_stages")
+        if not isinstance(stages, dict) or not all(
+                stages.get(k) is True
+                for k in ("E0_ok", "E1_ok", "E2_ok")):
+            return False
+        if not _gate_consistent(gates, details):
+            return False
+    if rc == 0:
+        return (report.get("status") == "PASS"
+                and report.get("overall_pass") is True)
+    if report.get("status") != "FAIL":
+        return False
+    allowed = {("sanmingtonghui", "G7_chapter_complete")}
+    for book, entry in books.items():
+        for g, ok in (entry.get("gates") or {}).items():
+            if ok is False and (book, g) not in allowed:
+                return False
+    return True
+
+
+def _report_structure_ok(report: dict) -> bool:
+    """round-5 P0 报告结构校验层（run_baseline 读完整质量报告的前置形态
+    判定）。只验形态不验门禁通过——红门/红计数/红 source 不拒。键集判据以
+    03c02bb 自带脚本 generate_report 重跑产出实测为准（与 HEAD 生成器同构；
+    修订字段随模式在顶层出现，按"必需键齐备"而非精确键集判定）。"""
+    if not isinstance(report, dict):
+        return False
+    top_bools = ("validator_ran_live", "remediation_pass", "end_to_end_pass",
+                 "content_gates_pass", "provenance_admissible_all",
+                 "approval_b2_constant_valid", "source_e2e_pass",
+                 "overall_pass")
+    required_top = ("generated_at", "validator", "validator_code_sha256",
+                    "known_limitations", "source_e2e_status", "status",
+                    "books") + top_bools
+    if not set(required_top) <= set(report):
+        return False
+    if not isinstance(report["generated_at"], str) \
+            or not isinstance(report["validator"], str) \
+            or not isinstance(report["validator_code_sha256"], str) \
+            or not re.fullmatch(r"[0-9a-f]{64}", report["validator_code_sha256"]) \
+            or not isinstance(report["known_limitations"], list) \
+            or report["source_e2e_status"] not in ("PASS", "FAIL", "BLOCKED") \
+            or report["status"] not in ("PASS", "FAIL", "BLOCKED") \
+            or not all(report[k] is True or report[k] is False
+                       for k in top_bools):
+        return False
+    books = report["books"]
+    if not isinstance(books, dict) or set(books) != set(FREEZE_BOOKS):
+        return False
+    book_bools = ("all_gates_pass", "provenance_missing", "provenance_ok",
+                  "historical_exemption_valid", "provenance_admissible",
+                  "end_to_end_provenance")
+    for book, entry in books.items():
+        required_book = ("name", "dir", "gates", "gate_details",
+                         "provenance_state", "exemption_stages",
+                         "exemption_error_code", "source_e2e_status",
+                         "source_blocked_reason") + book_bools
+        if not isinstance(entry, dict) \
+                or not set(required_book) <= set(entry) \
+                or not isinstance(entry["name"], str) \
+                or not isinstance(entry["provenance_state"], str) \
+                or entry["dir"] != book \
+                or not all(entry[k] is True or entry[k] is False
+                           for k in book_bools):
+            return False
+        gates = entry["gates"]
+        details = entry["gate_details"]
+        if (not isinstance(gates, dict) or set(gates) != set(_REPORT_GATES)
+                or not all(v is True or v is False for v in gates.values())):
+            return False
+        if (not isinstance(details, dict)
+                or set(details) != set(_REPORT_GATES)
+                or not all(isinstance(v, dict) for v in details.values())):
+            return False
+        stages = entry["exemption_stages"]
+        if (not isinstance(stages, dict)
+                or not all(stages.get(k) is True or stages.get(k) is False
+                           for k in ("E0_ok", "E1_ok", "E2_ok", "E3_ok"))):
+            return False
+        ec = entry["exemption_error_code"]
+        if ec is not None and not isinstance(ec, str):
+            return False
+        if entry["source_e2e_status"] not in ("PASS", "FAIL", "BLOCKED"):
+            return False
+        reason = entry["source_blocked_reason"]
+        if reason is not None and reason not in _REPORT_BLOCKED_REASONS:
+            return False
+        # _run_source_chain_check 实测耦合：BLOCKED ⇒ reason 五值；
+        # PASS/FAIL ⇒ reason is None
+        if entry["source_e2e_status"] == "BLOCKED" \
+                and reason not in _REPORT_BLOCKED_REASONS:
+            return False
+        if entry["source_e2e_status"] in ("PASS", "FAIL") and reason is not None:
+            return False
+    # 聚合一致性（生产 §7 实测）
+    statuses = [e["source_e2e_status"] for e in books.values()]
+    aggregate = ("BLOCKED" if "BLOCKED" in statuses
+                 else ("FAIL" if "FAIL" in statuses else "PASS"))
+    if report["source_e2e_status"] != aggregate:
+        return False
+    if report["source_e2e_pass"] != (aggregate == "PASS"):
+        return False
+    if "BLOCKED" in statuses:
+        if report["status"] != "BLOCKED" or report["overall_pass"] is not False:
+            return False
+    else:
+        expect = "PASS" if report["overall_pass"] else "FAIL"
+        if report["status"] != expect:
+            return False
+    conj = (report["content_gates_pass"] and report["provenance_admissible_all"]
+            and report["source_e2e_pass"] and report["approval_b2_constant_valid"])
+    if report["overall_pass"] != conj:
+        return False
+    return True
+
+
+def _classify_baseline_rc(rc: int, report: dict, *,
+                          first_batch: bool) -> str:
+    """rc × 合法报告状态联合分类（round-4 P0-1/P0-3 + round-5 P0）。
+
+    rc==3：须完整质量报告结构（_report_structure_ok）+ 顶层 BLOCKED +
+    overall False + 存在书 source BLOCKED 且 reason ∈ §4.2 五值 →
+    "BLOCKED"（调用方上抛 exit 3）；其余一律 "INVALID"。rc∈{0,1} 交
+    _qualified_baseline_report。first_batch 由调用方按已验证锚链状态显式
+    传入，不从报告缺字段推断。verifier CLI 三字段对象不得冒充质量报告。
+    """
+    if rc == 3:
+        blocked_book = isinstance(report, dict) and any(
+            (e or {}).get("source_e2e_status") == "BLOCKED"
+            and (e or {}).get("source_blocked_reason") in _REPORT_BLOCKED_REASONS
+            for e in ((report.get("books") or {}).values()
+                      if isinstance(report.get("books"), dict) else ()))
+        if (_report_structure_ok(report)
+                and report.get("status") == "BLOCKED"
+                and report.get("source_e2e_status") == "BLOCKED"
+                and report.get("overall_pass") is False
+                and blocked_book):
+            return "BLOCKED"
+        return "INVALID"
+    if rc in (0, 1):
+        qualified = _qualified_baseline_report(rc, report,
+                                               first_batch=first_batch)
+        return "QUALIFIED" if qualified else "INVALID"
+    return "INVALID"
+
+
+def _run_report_in_worktree(tmp: Path, archive_root: Path) -> tuple[int, bytes]:
+    """在基线 worktree 内运行报告 CLI（基线提交自带脚本；--archive-root
+    必传，缺失 → sanmingtonghui source BLOCKED → exit 3）。真实 subprocess，
+    返回 (rc, stdout)；测试可 monkeypatch 注入。"""
+    r = subprocess.run(
+        [sys.executable, "scripts/generate_quality_report.py",
+         "--archive-root", str(archive_root)],
+        cwd=tmp, capture_output=True)
+    return r.returncode, r.stdout
+
+
+def run_baseline(baseline_commit: str, git_root: Path, archive_root: Path,
+                 *, first_batch: bool) -> tuple[int, dict]:
+    """基线重跑引擎（设计 5-R.8）：在基线提交干净 worktree 以基线自带脚本
+    重跑 QUALITY_REPORT.json，返回 (rc, report)。
+
+    新生成守卫（P0-3）：先删基线跟踪的旧报告（删前断言存在、删后断言不
+    在），运行后报告缺失即证明本次未产出 → (rc, {})（调用方判 INVALID，
+    旧报告不会被误收）。基线重跑在基线提交 worktree、以基线自带脚本运行，
+    不得修改历史脚本来迎合计划。"""
+    tmp = Path(tempfile.mkdtemp(prefix="rail-baseline-"))
+    rep_rel = "knowledge_base/classic_texts/QUALITY_REPORT.json"
+    try:
+        _git(git_root, "worktree", "add", "--detach", str(tmp),
+             baseline_commit)
+        rep_path = tmp / rep_rel
+        assert rep_path.exists(), "baseline lacks tracked QUALITY_REPORT.json"
+        rep_path.unlink()
+        assert not rep_path.exists()
+        rc, _stdout = _run_report_in_worktree(tmp, archive_root)
+        if not rep_path.exists():
+            return rc, {}
+        report = _loads_strict(rep_path.read_text(encoding="utf-8"))
+        return rc, report
+    finally:
+        subprocess.run(["git", "-C", str(git_root), "worktree", "remove",
+                        "--force", str(tmp)], capture_output=True)
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def _run_source_chain_check(git_root: Path | None, archive_root) -> dict:

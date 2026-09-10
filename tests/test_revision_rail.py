@@ -1214,3 +1214,334 @@ class TestRailReportTopLevel:
                 == "archive_root_missing")
         assert report["revision_state"] == "NONE"
         assert report["revision_provenance_valid"] is False
+
+class TestFieldSchema:
+    def test_report_field_schema_matches_appendix(self):
+        """内嵌表与附录 A 逐字段一致（schema_version/字段名/类型/方向/上限）。"""
+        s = gqr.REPORT_FIELD_SCHEMA
+        assert s["schema_version"] == "1.0"
+        top = {f["name"] for f in s["top_level"]}
+        assert {"status", "overall_pass", "revision_state",
+                "revision_provenance_valid", "approval_b2_constant_valid",
+                "validator_ran_live"} <= top
+        g7 = [f for f in s["book_gate_details"]
+              if f["name"] == "G7_chapter_complete.missing_count"][0]
+        assert g7["type"] == "int" and g7["direction"] == "increase_bad"
+        assert g7["upper_bound"]["sanmingtonghui"] == 303
+        g6i = [f for f in s["book_gate_details"]
+               if f["name"] == "G6_answer_dist.invalid_answers"][0]
+        assert g6i["pass_value"] == 0
+
+    def test_process_stage_fields_exempt_from_degradation(self):
+        """流程阶段字段退出通用退化比较（v29.2 P0）：候选模式合法推进
+        ACCEPTED/true → PENDING_ACCEPTANCE/false 不判退化。"""
+        cmp = gqr.compare_gate_fields
+        assert cmp(
+            {"revision_state": "ACCEPTED", "revision_provenance_valid": True},
+            {"revision_state": "PENDING_ACCEPTANCE",
+             "revision_provenance_valid": False}, mode="candidate") == []
+
+    def test_degradation_detected(self):
+        cmp = gqr.compare_gate_fields
+        bad = cmp(
+            {"books": {"x": {"gates": {"G3_schema": True}}}},
+            {"books": {"x": {"gates": {"G3_schema": False}}}}, mode="candidate")
+        assert bad == ["x.G3_schema: PASS->FAIL"]
+
+    def test_allowed_red_improvement_accepted_cap_enforced(self):
+        cmp = gqr.compare_gate_fields
+        base = {"books": {"sanmingtonghui": {"gate_details": {
+            "G7_chapter_complete": {"missing_count": 303}}}}}
+        improved = {"books": {"sanmingtonghui": {"gate_details": {
+            "G7_chapter_complete": {"missing_count": 302}}}}}
+        assert cmp(base, improved, mode="candidate") == []
+        worse = {"books": {"sanmingtonghui": {"gate_details": {
+            "G7_chapter_complete": {"missing_count": 304}}}}}
+        assert cmp(base, worse, mode="candidate") == [
+            "sanmingtonghui.G7_chapter_complete.missing_count: 304>303"]
+
+    def test_b_minus_n_field_removed_rejected(self):
+        cmp = gqr.compare_gate_fields
+        base = {"books": {"x": {"gates": {"G3_schema": True}}}}
+        cand = {"books": {"x": {"gates": {}}}}  # 旧有门禁字段消失
+        assert cmp(base, cand, mode="candidate") == ["x.G3_schema: removed"]
+
+
+_BOOK_META = {
+    "ditiansui": "滴天髓",
+    "zipingzhenquan": "子平真诠",
+    "qiongtongbaojian": "穷通宝鉴",
+    "sanmingtonghui": "三命通会",
+}
+_BOOK_GATE_KEYS = (
+    "G1_rule_id_unique", "G2_mcq_id_unique", "G3_schema",
+    "G4_source_rule_id", "G5_traceability", "G6_answer_dist",
+    "G7_chapter_complete", "G8_mcq_well_formed", "G9_content_dedup")
+
+
+def _passing_book(book: str) -> dict:
+    """单书全绿形态：九门布尔全 True + 九门 gate_details 齐备 + 豁免链全过。"""
+    return {
+        "name": _BOOK_META[book],
+        "dir": book,
+        "all_gates_pass": True,
+        "gates": {g: True for g in _BOOK_GATE_KEYS},
+        "gate_details": {
+            "G1_rule_id_unique": {"total": 1, "unique": 1, "duplicates": 0,
+                                  "pass": True},
+            "G2_mcq_id_unique": {"total": 4, "unique": 4, "duplicates": 0,
+                                 "pass": True},
+            "G3_schema": {"bad_rules": 0, "bad_mcq": 0, "parse_errors": 0,
+                          "pass": True},
+            "G4_source_rule_id": {"total_refs": 4, "bad": 0,
+                                  "ambiguous_rule_ids": 0, "pass": True},
+            "G5_traceability": {"total": 1, "untraceable": 0, "rate": 1.0,
+                                "pass": True},
+            # P0-4：G6 分布须与生产语义一致——A=100% 会被判越界 FAIL；
+            # 用四字母各 25%（∈[0.18,0.32]），与 G2.total/G4.total_refs=4 同步。
+            "G6_answer_dist": {"dist_pct": {"A": 0.25, "B": 0.25,
+                                            "C": 0.25, "D": 0.25},
+                               "invalid_answers": 0, "out_of_band": [],
+                               "pass": True},
+            "G7_chapter_complete": {"expected": 1, "done": 1, "missing": [],
+                                    "missing_count": 0, "extra": [],
+                                    "extra_count": 0, "pass": True},
+            "G8_mcq_well_formed": {"malformed": 0, "pass": True},
+            "G9_content_dedup": {"rule_text_duplicate_groups": 0,
+                                 "rule_text_duplicate_count": 0,
+                                 "rule_text_duplicate_samples": {},
+                                 "mcq_question_duplicates": 0, "pass": True},
+        },
+        "provenance_state": "MISSING",
+        "provenance_missing": True,
+        "provenance_ok": False,
+        "historical_exemption_valid": True,
+        "provenance_admissible": True,
+        "exemption_error_code": None,
+        "exemption_stages": {"E0_ok": True, "E1_ok": True,
+                             "E2_ok": True, "E3_ok": True},
+        "source_e2e_status": "FAIL" if book != "sanmingtonghui" else "PASS",
+        "source_blocked_reason": None,
+        "end_to_end_provenance": False,
+    }
+
+
+def _baseline_report_fixture(first_batch: bool = True) -> dict:
+    """03c02bb 时点真实形态的**四书完整合格**基线报告（键集/字段以
+    03c02bb 自带脚本 `generate_report` 重跑产出实测为准——该时点跟踪的
+    QUALITY_REPORT.json 为旧脚本产物，重跑前被新生成守卫删除，不作
+    判据；值合成）。
+
+    合格形态（设计 5-R.8）：rc==1 时 status=FAIL ∧ 失败项 ⊆ 允许红项
+    （仅 sanmingtonghui.G7 missing_count=303，附录 A.3 上限）；其余全绿；
+    三书 source_e2e=FAIL（S 口径）、sanmingtonghui=PASS；E0-E2 全过；
+    approval_b2_constant_valid=true；validator_ran_live=true。
+    首批例外：无修订字段；first_batch=False 时追加
+    revision_state=ACCEPTED ∧ revision_provenance_valid=true。
+    """
+    books = {b: _passing_book(b) for b in _BOOK_META}
+    books["sanmingtonghui"]["all_gates_pass"] = False
+    books["sanmingtonghui"]["gates"]["G7_chapter_complete"] = False
+    books["sanmingtonghui"]["gate_details"]["G7_chapter_complete"] = {
+        "expected": 383, "done": 80, "missing": [], "missing_count": 303,
+        "extra": [], "extra_count": 0, "pass": False}
+    rep = {
+        "generated_at": "2026-09-07T11:04:08",
+        "known_limitations": [],
+        "validator": "scripts/validate_classic_distillation.py",
+        "validator_code_sha256": "0" * 64,
+        "validator_ran_live": True,
+        "books": books,
+        "remediation_pass": False,
+        "end_to_end_pass": False,
+        "content_gates_pass": False,       # sanmingtonghui G7 红项
+        "provenance_admissible_all": True,
+        "approval_b2_constant_valid": True,
+        "source_e2e_status": "FAIL",       # 三书 S 口径（生成器 §7 聚合必有此键，round-4）
+        "source_e2e_pass": False,
+        "overall_pass": False,
+        "status": "FAIL",
+    }
+    if not first_batch:
+        rep["revision_state"] = "ACCEPTED"
+        rep["revision_provenance_valid"] = True
+    return rep
+
+
+def _blocked_report_fixture(reason: str = "archive_root_missing") -> dict:
+    """round-4 P0-1：生产形态 source-BLOCKED 质量报告。run_baseline 读取
+    的是完整 QUALITY_REPORT.json——生成器 §7 顶层状态机：任一书
+    source_e2e_status=BLOCKED → 顶层 source_e2e_status=BLOCKED ∧
+    source_e2e_pass=False ∧ status=BLOCKED ∧ overall_pass=False（exit 3）；
+    reason 在逐书 source_blocked_reason，不在顶层。"""
+    rep = _baseline_report_fixture()
+    sm = rep["books"]["sanmingtonghui"]
+    sm["source_e2e_status"] = "BLOCKED"
+    sm["source_blocked_reason"] = reason
+    rep["source_e2e_status"] = "BLOCKED"
+    rep["source_e2e_pass"] = False
+    rep["status"] = "BLOCKED"
+    rep["overall_pass"] = False
+    return rep
+
+
+class TestBaselineQualification:
+    def test_first_batch_qualified_fail_report(self):
+        assert gqr._qualified_baseline_report(
+            1, _baseline_report_fixture(), first_batch=True) is True
+
+    def test_first_batch_allowed_red_improved_still_qualified(self):
+        """允许红项改善为 PASS（G7 全过）→ 仍合格（改善向下不设限）。"""
+        rep = _baseline_report_fixture()
+        sm = rep["books"]["sanmingtonghui"]
+        sm["all_gates_pass"] = True
+        sm["gates"]["G7_chapter_complete"] = True
+        sm["gate_details"]["G7_chapter_complete"] = {
+            "expected": 383, "done": 383, "missing": [], "missing_count": 0,
+            "extra": [], "extra_count": 0, "pass": True}
+        rep["content_gates_pass"] = True
+        assert gqr._qualified_baseline_report(
+            1, rep, first_batch=True) is True
+
+    def test_first_batch_rc7_rejected(self):
+        assert gqr._qualified_baseline_report(
+            7, _baseline_report_fixture(), first_batch=True) is False
+
+    def test_baseline_out_of_allowed_fail_rejected(self):
+        rep = _baseline_report_fixture()
+        rep["books"]["sanmingtonghui"]["gates"]["G3_schema"] = False
+        assert gqr._qualified_baseline_report(
+            1, rep, first_batch=True) is False
+
+    def test_missing_book_rejected(self):
+        """缺书 → 不合格（四书齐备为合格条件④）。"""
+        rep = _baseline_report_fixture()
+        del rep["books"]["ditiansui"]
+        assert gqr._qualified_baseline_report(
+            1, rep, first_batch=True) is False
+
+    def test_incomplete_gate_details_rejected(self):
+        """gate_details 缺门 → 不合格（九门齐备为合格条件④）。"""
+        rep = _baseline_report_fixture()
+        rep["books"]["sanmingtonghui"]["gate_details"] = {
+            "G7_chapter_complete": rep["books"]["sanmingtonghui"]
+            ["gate_details"]["G7_chapter_complete"]}
+        assert gqr._qualified_baseline_report(
+            1, rep, first_batch=True) is False
+
+    def test_gate_detail_contradicts_bool_rejected(self):
+        """P0-4：明细失败却声明 PASS（G6 out_of_band 非空但 pass=True）→ 拒绝
+        （合格条件④：布尔与明细推导一致）。"""
+        rep = _baseline_report_fixture()
+        rep["books"]["sanmingtonghui"]["gate_details"]["G6_answer_dist"] = {
+            "dist_pct": {"A": 1.0}, "invalid_answers": 0,
+            "out_of_band": ["A"], "pass": True}   # 明细自相矛盾
+        assert gqr._qualified_baseline_report(
+            1, rep, first_batch=True) is False
+
+    def test_baseline_stale_report_not_accepted(self, rail_wt, monkeypatch):
+        """P0-3：基线预置合格旧报告 + 本次 rc=1 且未写出 → 拒绝
+        （新生成守卫：旧报告先删、运行后缺失即证明未产出）。"""
+        rep_path = (rail_wt.path / "knowledge_base" / "classic_texts"
+                    / "QUALITY_REPORT.json")
+        rep_path.parent.mkdir(parents=True, exist_ok=True)
+        rep_path.write_text(json.dumps(_baseline_report_fixture()),
+                            encoding="utf-8")
+        base = rail_wt.commit("baseline-with-stale-report")
+        monkeypatch.setattr(gqr, "_run_report_in_worktree",
+                            lambda tmp, ar: (1, b""))
+        rc, rep = gqr.run_baseline(base, rail_wt.path, rail_wt.path,
+                                   first_batch=True)
+        assert (rc, rep) == (1, {})
+        assert gqr._qualified_baseline_report(rc, rep, first_batch=True) is False
+
+    def test_non_first_batch_requires_accepted_fields(self):
+        rep = _baseline_report_fixture(first_batch=False)
+        assert gqr._qualified_baseline_report(
+            1, rep, first_batch=False) is True
+        rep2 = _baseline_report_fixture()          # 缺两修订字段 → 不合格
+        assert gqr._qualified_baseline_report(
+            1, rep2, first_batch=False) is False
+        rep3 = _baseline_report_fixture()          # 有 state 缺 valid → 不合格
+        rep3["revision_state"] = "ACCEPTED"
+        assert gqr._qualified_baseline_report(
+            1, rep3, first_batch=False) is False
+
+    def test_rc_status_inconsistency_rejected(self):
+        """完整合格 stdout + 异常退出码 / rc 与状态不一致 → 拒绝。"""
+        rep = _baseline_report_fixture()
+        rep["overall_pass"] = True
+        rep["status"] = "PASS"
+        assert gqr._qualified_baseline_report(
+            7, rep, first_batch=True) is False
+        assert gqr._qualified_baseline_report(
+            1, rep, first_batch=True) is False  # rc=1 与 PASS 状态不一致
+
+    def test_classify_first_batch_context_paired(self):
+        """round-4 P0-3：同一份缺修订字段的报告——first_batch=True 判
+        QUALIFIED、first_batch=False 判 INVALID；首批上下文由调用方按已
+        验证锚链状态显式传入，不从报告缺字段推断。"""
+        rep = _baseline_report_fixture()   # 缺 revision_state/revision_provenance_valid
+        assert gqr._classify_baseline_rc(1, rep, first_batch=True) == "QUALIFIED"
+        assert gqr._classify_baseline_rc(1, rep, first_batch=False) == "INVALID"
+
+    def test_baseline_rc3_with_missing_report_invalid(self):
+        """P0-2：rc=3 但报告缺失（{}）→ 不是 source BLOCKED，判 INVALID。"""
+        assert gqr._classify_baseline_rc(3, {}, first_batch=True) == "INVALID"
+
+    def test_baseline_rc3_plain_fail_report_invalid(self):
+        """P0-2：rc=3 但报告是普通 FAIL 形态 → 判 INVALID（不能当 BLOCKED）。"""
+        assert gqr._classify_baseline_rc(
+            3, _baseline_report_fixture(), first_batch=True) == "INVALID"
+
+    def test_baseline_rc3_verifier_shaped_object_invalid(self):
+        """round-4 P0-1：verifier CLI 三字段对象 {schema_version,status,reason}
+        是 source verifier 输出形态，不是 QUALITY_REPORT.json——run_baseline
+        读的是完整质量报告（reason 在逐书 source_blocked_reason），不得冒充。"""
+        rep = {"schema_version": "1.0", "status": "BLOCKED",
+               "reason": "archive_root_missing"}
+        assert gqr._classify_baseline_rc(3, rep, first_batch=True) == "INVALID"
+
+    def test_baseline_rc3_blocked_report_classified(self):
+        """round-4 P0-1：rc=3 ∧ 生产形态 BLOCKED 质量报告（顶层 BLOCKED +
+        sanmingtonghui source_e2e_status=BLOCKED + 五值 reason）→ "BLOCKED"。"""
+        assert gqr._classify_baseline_rc(
+            3, _blocked_report_fixture(), first_batch=True) == "BLOCKED"
+
+    def test_baseline_rc3_blocked_bad_reason_invalid(self):
+        """round-4 P0-1：BLOCKED 形态但逐书 reason 非五值 → 判 INVALID。"""
+        assert gqr._classify_baseline_rc(
+            3, _blocked_report_fixture("BOGUS"), first_batch=True) == "INVALID"
+
+    def test_baseline_rc3_blocked_no_blocked_book_invalid(self):
+        """round-4 P0-1：顶层标 BLOCKED 但无任何书 source_e2e_status=BLOCKED
+        → 判 INVALID（顶层聚合与逐书状态必须一致）。"""
+        rep = _blocked_report_fixture()
+        sm = rep["books"]["sanmingtonghui"]
+        sm["source_e2e_status"] = "PASS"
+        sm["source_blocked_reason"] = None
+        assert gqr._classify_baseline_rc(3, rep, first_batch=True) == "INVALID"
+
+    def test_baseline_rc3_unknown_book_invalid(self):
+        """round-5 P0：报告含未知书名（ghost）→ 结构层拒绝，判 INVALID。"""
+        rep = _blocked_report_fixture()
+        rep["books"]["ghost"] = rep["books"]["sanmingtonghui"]
+        assert gqr._classify_baseline_rc(3, rep, first_batch=True) == "INVALID"
+
+    def test_baseline_rc3_missing_book_invalid(self):
+        """round-5 P0：缺书（四书键集不齐）→ 结构层拒绝，判 INVALID。"""
+        rep = _blocked_report_fixture()
+        del rep["books"]["ditiansui"]
+        assert gqr._classify_baseline_rc(3, rep, first_batch=True) == "INVALID"
+
+    def test_baseline_rc3_missing_required_field_invalid(self):
+        """round-5 P0：顶层缺必需字段（source_e2e_pass）→ 结构层拒绝。"""
+        rep = _blocked_report_fixture()
+        del rep["source_e2e_pass"]
+        assert gqr._classify_baseline_rc(3, rep, first_batch=True) == "INVALID"
+
+    def test_baseline_rc3_e2e_pass_contradiction_invalid(self):
+        """round-5 P0：source_e2e_pass=true 与顶层 BLOCKED 矛盾 → INVALID。"""
+        rep = _blocked_report_fixture()
+        rep["source_e2e_pass"] = True
+        assert gqr._classify_baseline_rc(3, rep, first_batch=True) == "INVALID"
