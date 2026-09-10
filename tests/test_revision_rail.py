@@ -1330,6 +1330,25 @@ class TestFieldSchema:
         assert cmp(base, cand, mode="candidate") == [
             "x.provenance_state: VALID->INVALID"]
 
+    def test_detail_field_new_with_failure_value_rejected(self):
+        """P0-1：明细 N−B 消费 pass_value——新增 G3_schema.bad_rules=1（非零）
+        → 拒（新增错误计数须满足通过值 0）。"""
+        cmp = gqr.compare_gate_fields
+        base = {"books": {"x": {"gate_details": {"G3_schema": {
+            "bad_mcq": 0, "parse_errors": 0}}}}}
+        cand = {"books": {"x": {"gate_details": {"G3_schema": {
+            "bad_rules": 1, "bad_mcq": 0, "parse_errors": 0}}}}}
+        assert cmp(base, cand, mode="candidate") == [
+            "x.G3_schema.bad_rules: new-invalid"]
+
+    def test_new_gate_bool_must_be_pass(self):
+        """P0-1：九门布尔 N−B——候选新增 G3_schema=false → 拒（新增布尔须 PASS）。"""
+        cmp = gqr.compare_gate_fields
+        base = {"books": {"x": {"gates": {}}}}
+        cand = {"books": {"x": {"gates": {"G3_schema": False}}}}
+        assert cmp(base, cand, mode="candidate") == [
+            "x.G3_schema: new-invalid"]
+
 
 _BOOK_META = {
     "ditiansui": "滴天髓",
@@ -1631,5 +1650,32 @@ class TestBaselineQualification:
         INVALID/不合格（此前仅 rc=3 分支执行结构检查）。"""
         rep = _baseline_report_fixture()
         del rep["generated_at"]
+        assert gqr._classify_baseline_rc(1, rep, first_batch=True) == "INVALID"
+        assert gqr._qualified_baseline_report(1, rep, first_batch=True) is False
+
+    def test_baseline_detail_field_missing_invalid(self):
+        """P0-2：明细必需字段完整性——删 G7.missing_count → 结构层拒 →
+        INVALID/不合格（此前仅验 gate_details 值为 dict，子键缺失漏检）。"""
+        rep = _baseline_report_fixture()
+        del rep["books"]["sanmingtonghui"]["gate_details"][
+            "G7_chapter_complete"]["missing_count"]
+        assert gqr._classify_baseline_rc(1, rep, first_batch=True) == "INVALID"
+        assert gqr._qualified_baseline_report(1, rep, first_batch=True) is False
+
+    def test_baseline_detail_field_type_invalid(self):
+        """P0-2：明细类型/取值域——G7.missing_count 改为字符串 "303" →
+        结构层拒（不得抛 TypeError）。"""
+        rep = _baseline_report_fixture()
+        rep["books"]["sanmingtonghui"]["gate_details"][
+            "G7_chapter_complete"]["missing_count"] = "303"
+        assert gqr._classify_baseline_rc(1, rep, first_batch=True) == "INVALID"
+        assert gqr._qualified_baseline_report(1, rep, first_batch=True) is False
+
+    def test_baseline_provenance_not_admissible_invalid(self):
+        """P0-2：资格状态——逐书及顶层 provenance_admissible 改 false →
+        不合格/INVALID（A.1 候选可接纳值须 true）。"""
+        rep = _baseline_report_fixture()
+        rep["books"]["sanmingtonghui"]["provenance_admissible"] = False
+        rep["provenance_admissible_all"] = False
         assert gqr._classify_baseline_rc(1, rep, first_batch=True) == "INVALID"
         assert gqr._qualified_baseline_report(1, rep, first_batch=True) is False

@@ -2002,8 +2002,9 @@ real-head E3 经 rail NONE、E0 短路 stub 名单。另：VALID 用例首跑暴
 - [ ] **Step 4：跑测试确认通过（含既有文件全量）**
 
 Run: `python -m pytest tests/test_revision_rail.py tests/test_classic_distillation_quality_report.py -q`
-Expected: PASS（全量）——初审 136 passed；复审轮聚焦 36 passed（新增 10 探针
-10 failed → GREEN），全量复跑通过。
+Expected: PASS（全量）——初审 136 passed；复审一轮聚焦 36 passed（新增 10 探针
+10 failed → GREEN）；复审二轮聚焦 41 passed（新增 5 探针 5 failed → GREEN），
+全量复跑通过。
 
 - [ ] **Step 5：ruff + 提交**
 
@@ -2434,6 +2435,7 @@ REPORT_FIELD_SCHEMA = {
 2. `_report_structure_ok` 逐书键类型校验补 `provenance_state` str（A.4 类型列）。
 3. `compare_gate_fields` B∩N 数值比较覆盖布尔 / 计数(int) / 列表 / float（rate 下降）四类；`dist_pct`（dist_pct_map，越界由验证器折算入 `out_of_band`）与 size 字段不做数值劣化比较；A.4 逐书 provenance/source 字段经 `book_fields` 纳入比较（复审 P0-2 修正原"不进通用比较"之记）。
 4. 复审 P0-1/P0-2/P0-3 修复落地：upper_bound 字段上限与"不高于基线"双条件、明细 B−N/N−B + `_spec_type_ok` 类型校验 + `_MISSING` 哨兵、`book_fields`（A.4 十字段）、结构前置 + source 政策 + 计数上限（详见 Self-Review 17）。
+5. 复审 P0-1/P0-2 修复落地：明细 N−B 消费 `pass_value`（新增错误计数须满足通过值，upper_bound 允许红项字段除外）、九门布尔 N−B 须 PASS、结构层验证明细子键完整/类型/取值域 + `provenance_state` 三态、合格判据增 `provenance_admissible` 顶层/逐书必须 true（详见 Self-Review 18）。
 
 - [ ] **Step 4：跑测试确认通过 + ruff + 提交**
 
@@ -2873,4 +2875,19 @@ G7 missing_count=304、删 generated_at 均误判 QUALIFIED）→ 统一先验
 增 ⑤ source 政策（sm PASS、三书 FAIL、source_blocked_reason 须 None）与
 ⑥ upper_bound 计数上限（sm.G7 missing_count ≤303）。10 新探针 10 failed →
 修后聚焦 36 passed；全量复跑 + ruff 通过后提交。
+
+18. **执行复审（Task 6 二轮 NEEDS_REVISION，2 P0）同步记录**：
+(a) P0-1 新增字段仍可携带失败值通过——明细 N−B 分支只查类型与 upper_bound、
+不消费 `pass_value`（新增 `G3_schema.bad_rules=1` 返回 `[]`），九门布尔缺
+N−B 判定（新增 `G3_schema=false` 返回 `[]`）→ 明细 N−B 增
+`pass_value` 校验（`nv != pass_value` → `new-invalid`；upper_bound 允许红项
+字段仍只按 cap 判定）、门布尔 N−B 须 PASS（False → `new-invalid`）。
+(b) P0-2 基线结构与资格校验缺口——删 `G7.missing_count` 判 QUALIFIED、
+改字符串 `"303"` 抛未处理 TypeError、逐书+顶层 `provenance_admissible=false`
+判 QUALIFIED → `_report_structure_ok` 按 schema A.3 逐字段校验明细子键
+完整/类型（`_spec_type_ok`）/取值域（int/float ≥0），补 `provenance_state`
+三态取值域，先结构后资格使非法报告统一 INVALID 不再抛异常；
+`_qualified_baseline_report` 增 `provenance_admissible_all`（顶层）与逐书
+`provenance_admissible` 必须 true（A.1/A.4 候选可接纳值）。5 新探针
+5 failed → 修后聚焦 41 passed；全量复跑 + ruff 通过后提交。
 

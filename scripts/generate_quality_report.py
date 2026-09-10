@@ -967,6 +967,10 @@ def compare_gate_fields(baseline: dict, candidate: dict, *,
         for g in gate_names:
             if g in b_gates and g not in n_gates:
                 bad.append(f"{book}.{g}: removed")
+            elif g not in b_gates and g in n_gates:
+                # P0-1：新增布尔须 PASS（false → 拒）
+                if n_gates[g] is False:
+                    bad.append(f"{book}.{g}: new-invalid")
             elif (g in b_gates and g in n_gates
                     and b_gates[g] is True and n_gates[g] is False):
                 bad.append(f"{book}.{g}: PASS->FAIL")
@@ -989,8 +993,12 @@ def compare_gate_fields(baseline: dict, candidate: dict, *,
                     bad.append(f"{book}.{fname}: type-changed")
                 else:
                     cap = (spec.get("upper_bound") or {}).get(book)
-                    if cap is not None and nv > cap:
-                        bad.append(f"{book}.{fname}: {nv}>{cap}")
+                    if cap is not None:
+                        if nv > cap:
+                            bad.append(f"{book}.{fname}: {nv}>{cap}")
+                    elif "pass_value" in spec and nv != spec["pass_value"]:
+                        # P0-1：新增错误计数须满足通过值（允许红项字段无此约束）
+                        bad.append(f"{book}.{fname}: new-invalid")
                 continue
             if not _spec_type_ok(spec, nv):
                 bad.append(f"{book}.{fname}: type-changed")
@@ -1112,6 +1120,9 @@ def _qualified_baseline_report(rc: int, report: dict, *,
         return False
     if report.get("validator_ran_live") is not True:
         return False
+    # A.1 候选可接纳值：provenance_admissible_all 必须 true
+    if report.get("provenance_admissible_all") is not True:
+        return False
     for book, entry in books.items():
         gates = entry["gates"]
         details = entry["gate_details"]
@@ -1120,6 +1131,9 @@ def _qualified_baseline_report(rc: int, report: dict, *,
                    for k in ("E0_ok", "E1_ok", "E2_ok")):
             return False
         if not _gate_consistent(gates, details):
+            return False
+        # A.4 候选可接纳值：逐书 provenance_admissible 必须 true
+        if entry["provenance_admissible"] is not True:
             return False
         # ⑤ source 政策（A.4）：sm PASS、三书 FAIL；BLOCKED 走 rc==3 路径
         expect_src = "PASS" if book == "sanmingtonghui" else "FAIL"
@@ -1189,6 +1203,7 @@ def _report_structure_ok(report: dict) -> bool:
                 or not set(required_book) <= set(entry) \
                 or not isinstance(entry["name"], str) \
                 or not isinstance(entry["provenance_state"], str) \
+                or entry["provenance_state"] not in ("VALID", "INVALID", "MISSING") \
                 or entry["dir"] != book \
                 or not all(entry[k] is True or entry[k] is False
                            for k in book_bools):
@@ -1202,6 +1217,18 @@ def _report_structure_ok(report: dict) -> bool:
                 or set(details) != set(_REPORT_GATES)
                 or not all(isinstance(v, dict) for v in details.values())):
             return False
+        # P0-2：明细子键完整性/类型/取值域（按 schema A.3 逐字段校验；
+        # 缺键、改类型、计数为负一律结构层拒绝，不得抛异常）
+        for spec in REPORT_FIELD_SCHEMA["book_gate_details"]:
+            gate, key = spec["name"].split(".", 1)
+            g = details.get(gate)
+            if not isinstance(g, dict) or key not in g:
+                return False
+            val = g[key]
+            if not _spec_type_ok(spec, val):
+                return False
+            if spec["type"] in ("int", "float") and val < 0:
+                return False
         stages = entry["exemption_stages"]
         if (not isinstance(stages, dict)
                 or not all(stages.get(k) is True or stages.get(k) is False
