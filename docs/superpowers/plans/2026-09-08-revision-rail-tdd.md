@@ -2003,8 +2003,8 @@ real-head E3 经 rail NONE、E0 短路 stub 名单。另：VALID 用例首跑暴
 
 Run: `python -m pytest tests/test_revision_rail.py tests/test_classic_distillation_quality_report.py -q`
 Expected: PASS（全量）——初审 136 passed；复审一轮聚焦 36 passed（新增 10 探针
-10 failed → GREEN）；复审二轮聚焦 41 passed（新增 5 探针 5 failed → GREEN），
-全量复跑通过。
+10 failed → GREEN）；复审二轮聚焦 41 passed（新增 5 探针 5 failed → GREEN）；
+复审三轮聚焦 47 passed（新增 6 探针 5 failed + 1 区分性预期通过），全量复跑通过。
 
 - [ ] **Step 5：ruff + 提交**
 
@@ -2436,6 +2436,7 @@ REPORT_FIELD_SCHEMA = {
 3. `compare_gate_fields` B∩N 数值比较覆盖布尔 / 计数(int) / 列表 / float（rate 下降）四类；`dist_pct`（dist_pct_map，越界由验证器折算入 `out_of_band`）与 size 字段不做数值劣化比较；A.4 逐书 provenance/source 字段经 `book_fields` 纳入比较（复审 P0-2 修正原"不进通用比较"之记）。
 4. 复审 P0-1/P0-2/P0-3 修复落地：upper_bound 字段上限与"不高于基线"双条件、明细 B−N/N−B + `_spec_type_ok` 类型校验 + `_MISSING` 哨兵、`book_fields`（A.4 十字段）、结构前置 + source 政策 + 计数上限（详见 Self-Review 17）。
 5. 复审 P0-1/P0-2 修复落地：明细 N−B 消费 `pass_value`（新增错误计数须满足通过值，upper_bound 允许红项字段除外）、九门布尔 N−B 须 PASS、结构层验证明细子键完整/类型/取值域 + `provenance_state` 三态、合格判据增 `provenance_admissible` 顶层/逐书必须 true（详见 Self-Review 18）。
+6. 复审 P0-1/P0-2 修复落地：结构层完整合法域（float 有限且 ∈[0,1]、dist_pct 键 ⊆ {A-D} 且值有限 ∈[0,1]；越 [0.18,0.32] 通过区间是质量失败而非 schema 错误）、新增门布尔须严格 True（0/"FAIL" 亦拒）+ 共有门先验类型再比退化（详见 Self-Review 19）。
 
 - [ ] **Step 4：跑测试确认通过 + ruff + 提交**
 
@@ -2890,4 +2891,19 @@ N−B 判定（新增 `G3_schema=false` 返回 `[]`）→ 明细 N−B 增
 `_qualified_baseline_report` 增 `provenance_admissible_all`（顶层）与逐书
 `provenance_admissible` 必须 true（A.1/A.4 候选可接纳值）。5 新探针
 5 failed → 修后聚焦 41 passed；全量复跑 + ruff 通过后提交。
+
+19. **执行复审（Task 6 三轮 NEEDS_REVISION，2 P0）同步记录**：
+(a) P0-1 基线取值域校验不完整——结构检查只验数值非负、dist_pct 只验是字典
+（`G5.rate=2.0`/`=NaN`、`dist_pct={"Z":"bad"}` 均误判 QUALIFIED）→ 结构层
+按附录 A.3 完整合法域：float 须 `math.isfinite` 且 ∈[0,1]；dist_pct 键 ⊆
+{A,B,C,D}、值有限 ∈[0,1]（int/float 且非 bool）。保留区分：`dist_pct`
+∈[0,1] 但越 [0.18,0.32] 通过区间是质量失败（记入 `out_of_band`），非 schema
+错误——结构层不因比例本身拒绝（测试 `test_baseline_dist_pct_out_of_band_
+quality_not_schema` 固化）。补 `import math`。
+(b) P0-2 新增布尔校验只拒绝字面量 False——N−B 用 `is False`，新增
+`G3_schema=0`/`"FAIL"` 仍返回 `[]`；共有九门字段未先验类型（`G3_schema=0`
+B∩N 可绕过退化比较）→ N−B 改 `is not True`（严格 True）；共有门分支先
+`isinstance(n_gates[g], bool)` 类型检查再退化比较（type-changed），且该分支
+限定 `g in both`（部分 gates fixture 不触发 KeyError）。6 新探针 5 failed
+（区分性 1 条预期通过）→ 修后聚焦 47 passed；全量复跑 + ruff 通过后提交。
 

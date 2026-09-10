@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import importlib
 import json
+import math
 import re
 import shutil
 import subprocess
@@ -968,12 +969,15 @@ def compare_gate_fields(baseline: dict, candidate: dict, *,
             if g in b_gates and g not in n_gates:
                 bad.append(f"{book}.{g}: removed")
             elif g not in b_gates and g in n_gates:
-                # P0-1：新增布尔须 PASS（false → 拒）
-                if n_gates[g] is False:
+                # P0-2：新增布尔须严格为 True（0/"FAIL"/None 等非布尔也拒）
+                if n_gates[g] is not True:
                     bad.append(f"{book}.{g}: new-invalid")
-            elif (g in b_gates and g in n_gates
-                    and b_gates[g] is True and n_gates[g] is False):
-                bad.append(f"{book}.{g}: PASS->FAIL")
+            elif g in b_gates and g in n_gates:
+                if not isinstance(n_gates[g], bool):
+                    # P0-2：共有门先验类型，再比较退化（0/"FAIL" 等同态绕过拒）
+                    bad.append(f"{book}.{g}: type-changed")
+                elif b_gates[g] is True and n_gates[g] is False:
+                    bad.append(f"{book}.{g}: PASS->FAIL")
         b_det = b_entry.get("gate_details") or {}
         n_det = n_entry.get("gate_details") or {}
         for spec in REPORT_FIELD_SCHEMA["book_gate_details"]:
@@ -1227,8 +1231,22 @@ def _report_structure_ok(report: dict) -> bool:
             val = g[key]
             if not _spec_type_ok(spec, val):
                 return False
-            if spec["type"] in ("int", "float") and val < 0:
+            if spec["type"] == "int" and val < 0:
                 return False
+            # P0-1：比例/分布合法域（附录 A.3）——有限且 ∈ [0,1]；
+            # 越 [0.18,0.32] 通过区间是质量失败（记入 out_of_band），非 schema 错误
+            if spec["type"] == "float" and (not math.isfinite(val)
+                                            or not (0 <= val <= 1)):
+                return False
+            if spec["type"] == "dist_pct_map":
+                for k, v in val.items():
+                    if k not in ("A", "B", "C", "D"):
+                        return False
+                    if (not isinstance(v, (int, float))
+                            or isinstance(v, bool)
+                            or not math.isfinite(v)
+                            or not (0 <= v <= 1)):
+                        return False
         stages = entry["exemption_stages"]
         if (not isinstance(stages, dict)
                 or not all(stages.get(k) is True or stages.get(k) is False

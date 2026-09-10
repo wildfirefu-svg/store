@@ -1349,6 +1349,22 @@ class TestFieldSchema:
         assert cmp(base, cand, mode="candidate") == [
             "x.G3_schema: new-invalid"]
 
+    def test_new_gate_bool_strictly_true_required(self):
+        """P0-2：新增门布尔须严格为 True——0 / "FAIL" 也拒（非仅字面量 False）。"""
+        cmp = gqr.compare_gate_fields
+        base = {"books": {"x": {"gates": {}}}}
+        for bad_val in (0, "FAIL"):
+            cand = {"books": {"x": {"gates": {"G3_schema": bad_val}}}}
+            assert cmp(base, cand, mode="candidate") == [
+                "x.G3_schema: new-invalid"]
+
+    def test_gate_bool_type_changed_rejected(self):
+        """P0-2：共有九门先验类型再比退化——候选 G3_schema=0（int）→ type-changed。"""
+        cmp = gqr.compare_gate_fields
+        base = {"books": {"x": {"gates": {"G3_schema": True}}}}
+        cand = {"books": {"x": {"gates": {"G3_schema": 0}}}}
+        assert cmp(base, cand, mode="candidate") == ["x.G3_schema: type-changed"]
+
 
 _BOOK_META = {
     "ditiansui": "滴天髓",
@@ -1679,3 +1695,33 @@ class TestBaselineQualification:
         rep["provenance_admissible_all"] = False
         assert gqr._classify_baseline_rc(1, rep, first_batch=True) == "INVALID"
         assert gqr._qualified_baseline_report(1, rep, first_batch=True) is False
+
+    def test_baseline_rate_out_of_domain_invalid(self):
+        """P0-1：G5.rate=2.0 超出合法域 [0,1] → 结构层拒 → INVALID。"""
+        rep = _baseline_report_fixture()
+        rep["books"]["sanmingtonghui"]["gate_details"][
+            "G5_traceability"]["rate"] = 2.0
+        assert gqr._classify_baseline_rc(1, rep, first_batch=True) == "INVALID"
+        assert gqr._qualified_baseline_report(1, rep, first_batch=True) is False
+
+    def test_baseline_rate_nan_invalid(self):
+        """P0-1：G5.rate=NaN（非有限）→ 结构层拒 → INVALID（不得抛异常）。"""
+        rep = _baseline_report_fixture()
+        rep["books"]["sanmingtonghui"]["gate_details"][
+            "G5_traceability"]["rate"] = float("nan")
+        assert gqr._classify_baseline_rc(1, rep, first_batch=True) == "INVALID"
+
+    def test_baseline_dist_pct_illegal_key_value_invalid(self):
+        """P0-1：dist_pct 键/值非法（{"Z":"bad"}）→ 结构层拒 → INVALID。"""
+        rep = _baseline_report_fixture()
+        rep["books"]["sanmingtonghui"]["gate_details"][
+            "G6_answer_dist"]["dist_pct"] = {"Z": "bad"}
+        assert gqr._classify_baseline_rc(1, rep, first_batch=True) == "INVALID"
+
+    def test_baseline_dist_pct_out_of_band_quality_not_schema(self):
+        """P0-1：合法但越界比例（{"A": 0.9}，∈[0,1] 却越 [0.18,0.32]）是质量
+        失败而非 schema 错误 → 结构层不因比例本身拒绝。"""
+        rep = _baseline_report_fixture()
+        rep["books"]["sanmingtonghui"]["gate_details"][
+            "G6_answer_dist"]["dist_pct"] = {"A": 0.9}
+        assert gqr._report_structure_ok(rep) is True
