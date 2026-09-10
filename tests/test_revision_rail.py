@@ -1,6 +1,7 @@
 """§5-R 修订溯源双轨契约 TDD 测试（设计 v29.3 §5-R；权威条款见设计文档）。"""
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -882,3 +883,200 @@ class TestRailSourceAndContent:
             rail_wt.path, "sanmingtonghui", ev,
             [_rec(_hb(sha="0" * 64))])
         assert err == "REVISION_SOURCE_UNVERIFIABLE", err
+
+# ---- Task 5：VALID 书构造 helper（复制自 test_classic_distillation_quality_report
+# ---- .py::_setup_passing_book 的 provenance 写入段；计划 Task 5 注记：勿跨文件
+# ---- import 私有函数，故整段落地本文件）-------------------------------------
+
+def _git_blob_sha(file_path: Path) -> str:
+    r = subprocess.run(["git", "hash-object", str(file_path)],
+                       capture_output=True, text=True, encoding="utf-8")
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def _make_full_rule(id: str, chapter: str, rule_text: str) -> dict:
+    return {"id": id, "category": "test", "subject": "test", "condition": "test",
+            "rule": rule_text, "original_text": rule_text, "source_book": "test",
+            "source_chapter": chapter}
+
+
+def _make_full_mcq(id: str, question: str, answer: str, source_rule_id: str) -> dict:
+    return {"id": id, "question": question,
+            "options": {"A": "甲", "B": "乙", "C": "丙", "D": "丁"},
+            "answer": answer, "explanation": "test",
+            "source_rule_id": source_rule_id, "difficulty": "easy",
+            "category": "test"}
+
+
+def _setup_passing_book_in_wt(wt: RailWorktree, dir_key: str = "zipingzhenquan") -> Path:
+    """在 worktree 真实书目录构造通过全部 validator 门禁的书 + provenance.json。
+    与 _setup_passing_book 的差异：anchor_commit / input_baseline_commit 用
+    真实存在提交（validate_provenance 的 git_root 存在性检查；worktree 与
+    主仓共享对象库）；真实书目录已含 raw_*.txt（validate 按 glob 全覆盖校验
+    raw_text_shas）→ 先全部删除再写合成 raw_001.txt；fill 操作 target 白名单
+    仅 zipingzhenquan/qiongtongbaojian（run_manifest 校验）→ 默认
+    zipingzhenquan。"""
+    from scripts.classic_artifacts import (
+        CODE_FILE_NAMES, mcq_record_sha256, sha256_file)
+    scripts_dir = ROOT / "scripts"
+    p = wt.path / "knowledge_base" / "classic_texts" / dir_key
+    p.mkdir(parents=True, exist_ok=True)
+    for f in p.glob("raw_*.txt"):
+        f.unlink()
+    rules = [_make_full_rule("r1", "ch1", "甲木参天"),
+             _make_full_rule("r2", "ch1", "乙木系甲")]
+    mcqs = [_make_full_mcq("m1", "问题一", "A", "r1"),
+            _make_full_mcq("m2", "问题二", "B", "r2"),
+            _make_full_mcq("m3", "问题三", "C", "r1"),
+            _make_full_mcq("m4", "问题四", "D", "r2")]
+    (p / "all_rules.json").write_text(
+        json.dumps(rules, ensure_ascii=False), encoding="utf-8")
+    (p / "all_mcq.jsonl").write_text(
+        "".join(json.dumps(m, ensure_ascii=False) + "\n" for m in mcqs),
+        encoding="utf-8")
+    (p / "raw_001.txt").write_text("甲木参天乙木系甲", encoding="utf-8")
+    (p / "quarantine_rules.jsonl").write_text("", encoding="utf-8")
+    (p / "quarantine_mcq.jsonl").write_text("", encoding="utf-8")
+    (p / "remediation_meta.json").write_text("{}", encoding="utf-8")
+    names = ("all_rules.json", "all_mcq.jsonl", "quarantine_rules.jsonl",
+             "quarantine_mcq.jsonl", "remediation_meta.json")
+    from scripts.distill_lib import (
+        canonical_prompt_sha256, canonical_config_sha256, FROZEN_MODEL_CONFIG,
+        compute_code_sha, ledger_code_files)
+    rules_payload = json.dumps(rules, sort_keys=True, ensure_ascii=False,
+                               separators=(",", ":")).encode("utf-8")
+    rules_io_sha = hashlib.sha256(rules_payload).hexdigest()
+    rm_manifest = {
+        "immutable": {
+            "targets": [dir_key],
+            "frozen_config_sha256": canonical_config_sha256(),
+            "frozen_prompt_sha256": canonical_prompt_sha256(),
+            "input_files": {
+                dir_key: {"all_rules.json_sha256": sha256_file(p / "all_rules.json"),
+                          "all_rules.json_bytes": len((p / "all_rules.json").read_bytes()),
+                          "pre_run_mcq_ids": [], "operation": "fill",
+                          "preserves_existing_mcqs": True},
+            },
+        },
+        "mutable": {},
+    }
+    rm_sha = hashlib.sha256(
+        json.dumps(rm_manifest, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+    ident_code_sha = compute_code_sha(ledger_code_files(scripts_dir, scripts_dir.parent))
+    ident_rules_sha = rm_sha
+    ident_run_id = hashlib.sha256(
+        (ident_code_sha + ":" + ident_rules_sha).encode("utf-8")).hexdigest()[:16]
+    run_manifest = {
+        "manifest": rm_manifest,
+        "manifest_sha256": rm_sha,
+        "run_id": ident_run_id,
+        "code_sha": ident_code_sha,
+        "rules_sha": ident_rules_sha,
+    }
+    real_head = wt.rev("HEAD")
+    provenance = {
+        "generated_at": "2025-01-01",
+        "anchor_commit": real_head,
+        "anchor_commit_verified": True,
+        "no_api": True,
+        "input_baseline_commit": real_head,
+        "worktree_dirty": False,
+        "code_fingerprint": "a" * 64,
+        "upstream_provenance_status": "unavailable",
+        "file_shas": {n: sha256_file(p / n) for n in names},
+        "code_shas": {n: sha256_file(scripts_dir / n) for n in CODE_FILE_NAMES
+                      if (scripts_dir / n).exists()},
+        "raw_text_shas": {"raw_001.txt": sha256_file(p / "raw_001.txt")},
+        "input_baseline_blob_shas": {"raw_001.txt": _git_blob_sha(p / "raw_001.txt")},
+        "api_generation": {
+            "run_id": ident_run_id,
+            "code_sha": ident_code_sha,
+            "rules_sha": ident_rules_sha,
+            "rules_input_sha": rules_io_sha,
+            "rules_output_sha": rules_io_sha,
+            "rules_added": 0,
+            "mcq_output_sha": sha256_file(p / "all_mcq.jsonl"),
+            "generated_mcq_sha256_by_id": {
+                m["id"]: mcq_record_sha256(m) for m in mcqs
+            },
+            "prompt_sha256": canonical_prompt_sha256(),
+            "config_sha256": canonical_config_sha256(),
+            "script_sha256": sha256_file(scripts_dir / "distill_lib.py"),
+            "provider": FROZEN_MODEL_CONFIG["provider"],
+            "model": FROZEN_MODEL_CONFIG["model"],
+            "thinking_mode": FROZEN_MODEL_CONFIG["thinking_mode"],
+            "temperature": FROZEN_MODEL_CONFIG["temperature"],
+            "calls_made": 4,
+            "accepted": 4,
+            "skipped": 0,
+            "verification_level": "full",
+            "operation": "fill",
+            "preserves_existing_mcqs": True,
+            "pre_run_mcq_ids": [],
+            "completed": True,
+        },
+        "run_manifest": run_manifest,
+        "run_manifest_sha256": rm_sha,
+    }
+    (p / "provenance.json").write_text(
+        json.dumps(provenance, ensure_ascii=False), encoding="utf-8")
+    return p
+
+
+class TestRailIntegration:
+    """Task 5：E3 并入 rail + 5-R.10 状态矩阵 + 报告字段 + 默认模式闭环。"""
+
+    def test_admissibility_consumes_rail_single_call(self, rail_wt, monkeypatch):
+        """evaluate_provenance_admissibility 只调 rail 一次、消费其结果；
+        E3_ok = rail ⑤ 结果；新增 revision_state / revision_provenance_valid。"""
+        calls = []
+        real = gqr.evaluate_revision_rail
+
+        def spy(git_root, book, freeze, evidence):
+            calls.append(book)
+            return real(git_root, book, freeze, evidence)
+
+        monkeypatch.setattr(gqr, "evaluate_revision_rail", spy)
+        adm = gqr.evaluate_provenance_admissibility(
+            rail_wt.path / "knowledge_base" / "classic_texts" / "sanmingtonghui",
+            rail_wt.path)
+        assert calls == ["sanmingtonghui"]
+        assert adm["revision_state"] == "NONE"
+        assert adm["revision_provenance_valid"] is False  # NONE != ACCEPTED
+        assert adm["E3_ok"] is True
+
+    def test_matrix_valid_book_with_manifest_unsupported(self, rail_wt):
+        """5-R.10 VALID×manifest 存在 → UNSUPPORTED_STATE（唯一行为修改）。
+        构造 VALID：为 zipingzhenquan（fill target 白名单内）写与其磁盘工件
+        一致的 provenance.json。"""
+        from scripts.classic_artifacts import EMPTY_BASELINE_MANIFEST
+        book_dir = _setup_passing_book_in_wt(rail_wt, "zipingzhenquan")
+        rail_wt.write(
+            "knowledge_base/classic_texts/zipingzhenquan/revision_manifest.json",
+            _canonical_bytes(EMPTY_BASELINE_MANIFEST) + b"\n")
+        rail_wt.commit("VALID ditiansui + revision manifest")
+        adm = gqr.evaluate_provenance_admissibility(book_dir, rail_wt.path)
+        assert adm["provenance_state"] == "VALID"
+        assert adm["exemption_error_code"] == "REVISION_UNSUPPORTED_STATE"
+        assert adm["provenance_admissible"] is False
+
+    def test_matrix_missing_with_anchors_manifest_wiped(self, rail_wt, monkeypatch):
+        """5-R.10 MISSING × manifest 不存在 × 有已验收锚 → CHAIN_STALE。"""
+        TestRailSourceAndContent()._v1(rail_wt, monkeypatch)
+        _git(rail_wt.path, "rm", MANIFEST_REL)
+        rail_wt.commit("wipe manifest")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_CHAIN_STALE"
+
+    def test_default_mode_accepted_flow(self, rail_wt, monkeypatch):
+        """完整默认模式正循环：C₁+V₁ 后 ACCEPTED、E0-E2 过、admissible。"""
+        TestRailSourceAndContent()._v1(rail_wt, monkeypatch)
+        adm = gqr.evaluate_provenance_admissibility(
+            rail_wt.path / "knowledge_base" / "classic_texts" / "sanmingtonghui",
+            rail_wt.path)
+        assert adm["revision_state"] == "ACCEPTED"
+        assert adm["revision_provenance_valid"] is True
+        assert adm["provenance_admissible"] is True
+        assert adm["E0_ok"] and adm["E1_ok"] and adm["E2_ok"] and adm["E3_ok"]

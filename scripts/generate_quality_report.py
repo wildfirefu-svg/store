@@ -324,28 +324,6 @@ def _e2_recompute(git_root: Path, book: str, e_obj: dict, r_obj: dict) -> dict:
     return {"ok": True, "error_code": None}
 
 
-def _e3_multiset_check(git_root: Path, freeze: dict) -> dict:
-    """§5-E3：唯一读取当前 HEAD 聚合 blob 的阶段（E1/E2 之后执行）；
-    与 BASE freeze 按 (id, sha256) 多重集合严格相等（保留重复次数）。"""
-    fail = {"ok": False, "error_code": "EVIDENCE_STATIC_MISMATCH"}
-    for book in FREEZE_BOOKS:
-        for kind in KINDS:
-            fz = freeze["books"][book][kind]
-            if not fz["present"]:
-                continue
-            rel = _book_rel(book, kind)
-            try:
-                blob = _git_head_blob(git_root, rel)
-                records = [_record_entry(r) for r in _parse_records(blob, kind)]
-            except (RuntimeError, CheckError, json.JSONDecodeError, UnicodeDecodeError):
-                return fail
-            head_ms = sorted((e["id"], e["sha256"]) for e in records)
-            fz_ms = sorted((e["id"], e["sha256"]) for e in fz["records"])
-            if head_ms != fz_ms:
-                return fail
-    return {"ok": True, "error_code": None}
-
-
 def _git_show_optional(git_root: Path, rel: str) -> bytes | None:
     r = subprocess.run(["git", "-C", str(git_root), "show", f"HEAD:{rel}"],
                        capture_output=True)
@@ -718,6 +696,8 @@ def evaluate_provenance_admissibility(book_dir: Path, git_root: Path | None) -> 
         "historical_exemption_valid": False,
         "provenance_admissible": False,
         "exemption_error_code": None,
+        "revision_state": None,
+        "revision_provenance_valid": False,
     }
     # E0 无论 provenance_state 为何都执行（git_root 不可用 → fail-closed）
     if git_root is None:
@@ -728,6 +708,15 @@ def evaluate_provenance_admissibility(book_dir: Path, git_root: Path | None) -> 
         if not e0["ok"]:
             res["exemption_error_code"] = e0["error_code"]
     if state == "VALID":
+        # 5-R.10：VALID × manifest 存在（任一形态）→ UNSUPPORTED_STATE——
+        # VALID 书的 provenance.json 证明的是未修订内容，聚合被修订即与其
+        # 断言矛盾（对现行唯一的行为修改）；不进 E1。
+        if git_root is not None and _git_show_optional(
+                git_root,
+                f"knowledge_base/classic_texts/{book}/revision_manifest.json"
+                ) is not None:
+            res["exemption_error_code"] = "REVISION_UNSUPPORTED_STATE"
+            return res
         # E0 失败不得改写 VALID 的 admissible=true（三态公式闭合）
         res["provenance_admissible"] = True
         return res
@@ -753,10 +742,14 @@ def evaluate_provenance_admissibility(book_dir: Path, git_root: Path | None) -> 
     if not e2["ok"]:
         res["exemption_error_code"] = e2["error_code"]
         return res
-    e3 = _e3_multiset_check(git_root, freeze)
-    res["E3_ok"] = e3["ok"]
-    if not e3["ok"]:
-        res["exemption_error_code"] = e3["error_code"]
+    # §5-R.5：E3 已并入 rail——evaluate_provenance_admissibility 调用一次、
+    # 只消费结果（rail 输出即 E3 结果）；错误码沿 exemption_error_code 透出。
+    rail = evaluate_revision_rail(git_root, book, freeze, evidence)
+    res["E3_ok"] = rail["e3_ok"]
+    res["revision_state"] = rail["revision_state"]
+    res["revision_provenance_valid"] = rail["revision_state"] == "ACCEPTED"
+    if not rail["ok"]:
+        res["exemption_error_code"] = rail["error_code"]
         return res
     res["historical_exemption_valid"] = True
     res["provenance_admissible"] = True
@@ -957,6 +950,8 @@ def generate_report(
         entry["historical_exemption_valid"] = adm["historical_exemption_valid"]
         entry["provenance_admissible"] = adm["provenance_admissible"]
         entry["exemption_error_code"] = adm["exemption_error_code"]
+        entry["revision_state"] = adm["revision_state"]
+        entry["revision_provenance_valid"] = adm["revision_provenance_valid"]
         entry["exemption_stages"] = {
             "E0_ok": adm["E0_ok"], "E1_ok": adm["E1_ok"],
             "E2_ok": adm["E2_ok"], "E3_ok": adm["E3_ok"],

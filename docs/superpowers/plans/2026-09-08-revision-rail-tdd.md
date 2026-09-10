@@ -1619,13 +1619,157 @@ git commit -m "feat(revision-rail): evidence-anchored source identity and conten
 - Modify: `tests/test_classic_distillation_quality_report.py`（最小 diff：错误码断言迁移）
 - Test: `tests/test_revision_rail.py`
 
-- [ ] **Step 1：写失败测试**
+- [ ] **Step 1：写失败测试**（执行修正：详见 Self-Review 13——VALID 构造
+改为 worktree 真实书目录 helper `_setup_passing_book_in_wt`，书名用
+zipingzhenquan（fill target 白名单）；⑦ E3 负向 patch 目标迁至
+`_git_show_optional`；锚常量用例复用 `_v1`（进程内常量对齐））
 
 ```python
+# ---- Task 5：VALID 书构造 helper（复制自 test_classic_distillation_quality_report
+# ---- .py::_setup_passing_book 的 provenance 写入段；计划 Task 5 注记：勿跨文件
+# ---- import 私有函数，故整段落地本文件）-------------------------------------
+
+def _git_blob_sha(file_path: Path) -> str:
+    r = subprocess.run(["git", "hash-object", str(file_path)],
+                       capture_output=True, text=True, encoding="utf-8")
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
+def _make_full_rule(id: str, chapter: str, rule_text: str) -> dict:
+    return {"id": id, "category": "test", "subject": "test", "condition": "test",
+            "rule": rule_text, "original_text": rule_text, "source_book": "test",
+            "source_chapter": chapter}
+
+
+def _make_full_mcq(id: str, question: str, answer: str, source_rule_id: str) -> dict:
+    return {"id": id, "question": question,
+            "options": {"A": "甲", "B": "乙", "C": "丙", "D": "丁"},
+            "answer": answer, "explanation": "test",
+            "source_rule_id": source_rule_id, "difficulty": "easy",
+            "category": "test"}
+
+
+def _setup_passing_book_in_wt(wt: RailWorktree, dir_key: str = "zipingzhenquan") -> Path:
+    """在 worktree 真实书目录构造通过全部 validator 门禁的书 + provenance.json。
+    与 _setup_passing_book 的差异：anchor_commit / input_baseline_commit 用
+    真实存在提交（validate_provenance 的 git_root 存在性检查；worktree 与
+    主仓共享对象库）；真实书目录已含 raw_*.txt（validate 按 glob 全覆盖校验
+    raw_text_shas）→ 先全部删除再写合成 raw_001.txt；fill 操作 target 白名单
+    仅 zipingzhenquan/qiongtongbaojian（run_manifest 校验）→ 默认
+    zipingzhenquan。"""
+    from scripts.classic_artifacts import (
+        CODE_FILE_NAMES, mcq_record_sha256, sha256_file)
+    scripts_dir = ROOT / "scripts"
+    p = wt.path / "knowledge_base" / "classic_texts" / dir_key
+    p.mkdir(parents=True, exist_ok=True)
+    for f in p.glob("raw_*.txt"):
+        f.unlink()
+    rules = [_make_full_rule("r1", "ch1", "甲木参天"),
+             _make_full_rule("r2", "ch1", "乙木系甲")]
+    mcqs = [_make_full_mcq("m1", "问题一", "A", "r1"),
+            _make_full_mcq("m2", "问题二", "B", "r2"),
+            _make_full_mcq("m3", "问题三", "C", "r1"),
+            _make_full_mcq("m4", "问题四", "D", "r2")]
+    (p / "all_rules.json").write_text(
+        json.dumps(rules, ensure_ascii=False), encoding="utf-8")
+    (p / "all_mcq.jsonl").write_text(
+        "".join(json.dumps(m, ensure_ascii=False) + "\n" for m in mcqs),
+        encoding="utf-8")
+    (p / "raw_001.txt").write_text("甲木参天乙木系甲", encoding="utf-8")
+    (p / "quarantine_rules.jsonl").write_text("", encoding="utf-8")
+    (p / "quarantine_mcq.jsonl").write_text("", encoding="utf-8")
+    (p / "remediation_meta.json").write_text("{}", encoding="utf-8")
+    names = ("all_rules.json", "all_mcq.jsonl", "quarantine_rules.jsonl",
+             "quarantine_mcq.jsonl", "remediation_meta.json")
+    from scripts.distill_lib import (
+        canonical_prompt_sha256, canonical_config_sha256, FROZEN_MODEL_CONFIG,
+        compute_code_sha, ledger_code_files)
+    rules_payload = json.dumps(rules, sort_keys=True, ensure_ascii=False,
+                               separators=(",", ":")).encode("utf-8")
+    rules_io_sha = hashlib.sha256(rules_payload).hexdigest()
+    rm_manifest = {
+        "immutable": {
+            "targets": [dir_key],
+            "frozen_config_sha256": canonical_config_sha256(),
+            "frozen_prompt_sha256": canonical_prompt_sha256(),
+            "input_files": {
+                dir_key: {"all_rules.json_sha256": sha256_file(p / "all_rules.json"),
+                          "all_rules.json_bytes": len((p / "all_rules.json").read_bytes()),
+                          "pre_run_mcq_ids": [], "operation": "fill",
+                          "preserves_existing_mcqs": True},
+            },
+        },
+        "mutable": {},
+    }
+    rm_sha = hashlib.sha256(
+        json.dumps(rm_manifest, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+    ident_code_sha = compute_code_sha(ledger_code_files(scripts_dir, scripts_dir.parent))
+    ident_rules_sha = rm_sha
+    ident_run_id = hashlib.sha256(
+        (ident_code_sha + ":" + ident_rules_sha).encode("utf-8")).hexdigest()[:16]
+    run_manifest = {
+        "manifest": rm_manifest,
+        "manifest_sha256": rm_sha,
+        "run_id": ident_run_id,
+        "code_sha": ident_code_sha,
+        "rules_sha": ident_rules_sha,
+    }
+    real_head = wt.rev("HEAD")
+    provenance = {
+        "generated_at": "2025-01-01",
+        "anchor_commit": real_head,
+        "anchor_commit_verified": True,
+        "no_api": True,
+        "input_baseline_commit": real_head,
+        "worktree_dirty": False,
+        "code_fingerprint": "a" * 64,
+        "upstream_provenance_status": "unavailable",
+        "file_shas": {n: sha256_file(p / n) for n in names},
+        "code_shas": {n: sha256_file(scripts_dir / n) for n in CODE_FILE_NAMES
+                      if (scripts_dir / n).exists()},
+        "raw_text_shas": {"raw_001.txt": sha256_file(p / "raw_001.txt")},
+        "input_baseline_blob_shas": {"raw_001.txt": _git_blob_sha(p / "raw_001.txt")},
+        "api_generation": {
+            "run_id": ident_run_id,
+            "code_sha": ident_code_sha,
+            "rules_sha": ident_rules_sha,
+            "rules_input_sha": rules_io_sha,
+            "rules_output_sha": rules_io_sha,
+            "rules_added": 0,
+            "mcq_output_sha": sha256_file(p / "all_mcq.jsonl"),
+            "generated_mcq_sha256_by_id": {
+                m["id"]: mcq_record_sha256(m) for m in mcqs
+            },
+            "prompt_sha256": canonical_prompt_sha256(),
+            "config_sha256": canonical_config_sha256(),
+            "script_sha256": sha256_file(scripts_dir / "distill_lib.py"),
+            "provider": FROZEN_MODEL_CONFIG["provider"],
+            "model": FROZEN_MODEL_CONFIG["model"],
+            "thinking_mode": FROZEN_MODEL_CONFIG["thinking_mode"],
+            "temperature": FROZEN_MODEL_CONFIG["temperature"],
+            "calls_made": 4,
+            "accepted": 4,
+            "skipped": 0,
+            "verification_level": "full",
+            "operation": "fill",
+            "preserves_existing_mcqs": True,
+            "pre_run_mcq_ids": [],
+            "completed": True,
+        },
+        "run_manifest": run_manifest,
+        "run_manifest_sha256": rm_sha,
+    }
+    (p / "provenance.json").write_text(
+        json.dumps(provenance, ensure_ascii=False), encoding="utf-8")
+    return p
+
+
 class TestRailIntegration:
+    """Task 5：E3 并入 rail + 5-R.10 状态矩阵 + 报告字段 + 默认模式闭环。"""
+
     def test_admissibility_consumes_rail_single_call(self, rail_wt, monkeypatch):
         """evaluate_provenance_admissibility 只调 rail 一次、消费其结果；
-        E3_ok = rail ⑤ 结果。"""
+        E3_ok = rail ⑤ 结果；新增 revision_state / revision_provenance_valid。"""
         calls = []
         real = gqr.evaluate_revision_rail
 
@@ -1644,31 +1788,22 @@ class TestRailIntegration:
 
     def test_matrix_valid_book_with_manifest_unsupported(self, rail_wt):
         """5-R.10 VALID×manifest 存在 → UNSUPPORTED_STATE（唯一行为修改）。
-        构造 VALID：为 ditiansui 写与其磁盘工件一致的 provenance.json。"""
-        book_dir = rail_wt.path / "knowledge_base" / "classic_texts" / "ditiansui"
-        # 复用 _setup_passing_book 的 provenance 构造逻辑（复制其写入
-        # provenance.json 的代码段，file_shas 与磁盘工件真实一致），
-        # 落在 worktree 后 git add 使 E1 读到（或 monkeypatch 状态判定输入）
-        ...  # 按 _setup_passing_book 源码 53-128 行的 provenance 写入段复制
-        rail_wt.write("knowledge_base/classic_texts/ditiansui/revision_manifest.json",
-                      _canonical_bytes(EMPTY_BASELINE_MANIFEST) + b"\n")
+        构造 VALID：为 zipingzhenquan（fill target 白名单内）写与其磁盘工件
+        一致的 provenance.json。"""
+        from scripts.classic_artifacts import EMPTY_BASELINE_MANIFEST
+        book_dir = _setup_passing_book_in_wt(rail_wt, "zipingzhenquan")
+        rail_wt.write(
+            "knowledge_base/classic_texts/zipingzhenquan/revision_manifest.json",
+            _canonical_bytes(EMPTY_BASELINE_MANIFEST) + b"\n")
+        rail_wt.commit("VALID ditiansui + revision manifest")
         adm = gqr.evaluate_provenance_admissibility(book_dir, rail_wt.path)
         assert adm["provenance_state"] == "VALID"
         assert adm["exemption_error_code"] == "REVISION_UNSUPPORTED_STATE"
         assert adm["provenance_admissible"] is False
 
-    def test_matrix_missing_with_anchors_manifest_wiped(self, rail_wt):
-        """MISSING × manifest 不存在 × 有已验收锚 → CHAIN_STALE。"""
-        core = TestRailCore()
-        manifest = core._make_c1(rail_wt)
-        c1 = rail_wt.commit("C1: synthetic batch B01")
-        anchor = _anchor_line("B01", c1,
-                              _sha256(_canonical_bytes(manifest)), GENESIS_SHA,
-                              rail_wt.head0)
-        rail_wt.append_line(ANCHOR_REL, anchor)
-        new_head = chain_head([json.loads(anchor.decode())], GENESIS_SHA)
-        rail_wt.replace_constant("REVISION_ANCHOR_HEAD", new_head)
-        rail_wt.commit("V1")
+    def test_matrix_missing_with_anchors_manifest_wiped(self, rail_wt, monkeypatch):
+        """5-R.10 MISSING × manifest 不存在 × 有已验收锚 → CHAIN_STALE。"""
+        TestRailSourceAndContent()._v1(rail_wt, monkeypatch)
         _git(rail_wt.path, "rm", MANIFEST_REL)
         rail_wt.commit("wipe manifest")
         res = gqr.evaluate_revision_rail(
@@ -1676,18 +1811,9 @@ class TestRailIntegration:
             _evidence_of(rail_wt))
         assert res["error_code"] == "REVISION_CHAIN_STALE"
 
-    def test_default_mode_accepted_flow(self, rail_wt):
+    def test_default_mode_accepted_flow(self, rail_wt, monkeypatch):
         """完整默认模式正循环：C₁+V₁ 后 ACCEPTED、E0-E2 过、admissible。"""
-        core = TestRailCore()
-        manifest = core._make_c1(rail_wt)
-        c1 = rail_wt.commit("C1")
-        anchor = _anchor_line("B01", c1,
-                              _sha256(_canonical_bytes(manifest)), GENESIS_SHA,
-                              rail_wt.head0)
-        rail_wt.append_line(ANCHOR_REL, anchor)
-        new_head = chain_head([json.loads(anchor.decode())], GENESIS_SHA)
-        rail_wt.replace_constant("REVISION_ANCHOR_HEAD", new_head)
-        rail_wt.commit("V1")
+        TestRailSourceAndContent()._v1(rail_wt, monkeypatch)
         adm = gqr.evaluate_provenance_admissibility(
             rail_wt.path / "knowledge_base" / "classic_texts" / "sanmingtonghui",
             rail_wt.path)
@@ -1697,28 +1823,47 @@ class TestRailIntegration:
         assert adm["E0_ok"] and adm["E1_ok"] and adm["E2_ok"] and adm["E3_ok"]
 ```
 
-> 实现注记（VALID 用例）：`tests/test_classic_distillation_quality_report.py::_setup_passing_book`（53-128 行）已含"写 provenance.json 且 file_shas 与磁盘一致"的完整构造；将其 provenance 写入段提取为测试内 helper（复制粘贴进 `test_revision_rail.py`，勿跨文件 import 私有函数），目标目录改为 worktree 内 ditiansui。
-
-既有测试更新（`tests/test_classic_distillation_quality_report.py`，`test_e3_multiset_negative_only_e3_fails`）：
+既有测试更新（`tests/test_classic_distillation_quality_report.py`，四处）：
 
 ```diff
--    assert adm["exemption_error_code"] == "EVIDENCE_STATIC_MISMATCH"
-+    assert adm["exemption_error_code"] == "REVISION_PARTITION_MISMATCH"
+-    _e3_multiset_check,
++    _git_show_optional,
++    evaluate_revision_rail,
 ```
 
 - [ ] **Step 2：跑测试确认失败**
 
-Run: `python -m pytest tests/test_revision_rail.py tests/test_classic_distillation_quality_report.py -q`
-Expected: FAIL（integration 用例 RED；E3 断言迁移用例在接线前仍返回旧码，同为 RED）
+Run: `python -m pytest tests/test_revision_rail.py::TestRailIntegration tests/test_classic_distillation_quality_report.py -q`
+Expected: RED——实测 6 failed / 3 passed：
+`test_admissibility_consumes_rail_single_call` spy 未被调用（仍走
+`_e3_multiset_check`）、`test_default_mode_accepted_flow` KeyError
+`revision_state`、`test_e3_multiset_negative_only_e3_fails`×3 E3_ok 误
+True（patch 目标已迁 `_git_show_optional`，旧 E3 读路径未被拦截）；
+3 passed 为接线前已真的矩阵锁：wiped-manifest CHAIN_STALE（rail 已实现）、
+real-head E3 经 rail NONE、E0 短路 stub 名单。另：VALID 用例首跑暴露测试
+缺陷（缺 `import hashlib`）与 fixture 两处真实约束（见 Self-Review 13），
+修 helper 后 RED 才可归因于实现缺口。
 
-- [ ] **Step 3：实现**
+- [ ] **Step 3：实现**（实际落地与原计划一致，另含三处执行细节）
 
-1. `evaluate_provenance_admissibility`：
-   - VALID 分支前置：manifest 存在（任一形态，`_git_show_optional`）→ `REVISION_UNSUPPORTED_STATE`、`provenance_admissible=false`（不进 E1）。
-   - MISSING 分支：原 `_e3_multiset_check(git_root, freeze)` 调用替换为 `rail = evaluate_revision_rail(git_root, book, freeze, evidence)`（evidence 已在该函数内取得；book 名取自 book_dir）；`E3_ok = rail["e3_ok"]`；错误码取 `rail["error_code"]`（沿既有 `exemption_error_code` 写出路径）；返回结构新增 `"revision_state": rail["revision_state"]`、`"revision_provenance_valid": rail["revision_state"] == "ACCEPTED"`。
-2. 删除 `_e3_multiset_check`（其逻辑已被 `_partition_equation` 取代；既有直接引用该函数的测试一并迁移到 rail 入口——rg 确认仅一处引用链）。
-3. `generate_report` 逐书 entry 增加 `revision_state`/`revision_provenance_valid` 两键。
-4. 顶层退出码：`REVISION_*` 失败已由 `provenance_admissible=false` → `overall_pass=false` → exit 1 覆盖（无需独立分支）；fail-closed 错误码经 `exemption_error_code` 透出。
+1. `evaluate_provenance_admissibility`：res 初始结构新增
+   `"revision_state": None, "revision_provenance_valid": False`（VALID/INVALID/
+   E0-fail 等提前返回路径键齐备，报告层直取）；VALID 分支前置 manifest 存在
+   检查（`_git_show_optional`，`git_root is not None` 守卫——无 git 时维持现行
+   fail-closed 语义）→ `REVISION_UNSUPPORTED_STATE`、不进 E1；MISSING 分支
+   `_e3_multiset_check` 替换为 `rail = evaluate_revision_rail(git_root, book,
+   freeze, evidence)`，`E3_ok = rail["e3_ok"]`、错误码沿
+   `exemption_error_code` 写出、新增 `revision_state` /
+   `revision_provenance_valid = (state == "ACCEPTED")`。
+2. 删除 `_e3_multiset_check`（rg 确认脚本内仅 1 处调用；测试引用 3 处一并
+   迁移：导入、E3 正向改 rail 入口断言 NONE 全结构、E3 负向 patch 目标
+   `_git_head_blob` → `_git_show_optional`（rail ⑤ 读 HEAD 聚合的实际路径）、
+   错误码 `EVIDENCE_STATIC_MISMATCH` → `REVISION_PARTITION_MISMATCH`、E0
+   短路 stub 名单 `_e3_multiset_check` → `evaluate_revision_rail`）。
+3. `generate_report` 逐书 entry 新增 `revision_state` /
+   `revision_provenance_valid` 两键（直取 adm，未评书籍为 null）。
+4. 顶层退出码：`REVISION_*` 失败经 `provenance_admissible=false` →
+   `overall_pass=false` → exit 1 覆盖，无独立分支（维持计划原判）。
 
 - [ ] **Step 4：跑测试确认通过（含既有文件全量）**
 
@@ -2513,4 +2658,24 @@ None，⑥ 各读取点缺失/畸形均映射 SOURCE_UNVERIFIABLE，`_find_head_
 （改字节之外覆盖删除）。非阻断：source_manifest 篡改测试先在 OID 比较失败、
 未单独证 SHA 分支——新增 `test_source_manifest_sha_branch`（OID 匹配真实、
 仅钉住 sha256 伪造 → ⑥-2 独立触发，good 对照先 None）。
+
+13. **执行修正（Task 5）同步记录**：(a) VALID 构造两处真实约束——
+真实书目录已含 raw_*.txt 而 `validate_provenance` 按 `p.glob("raw_*.txt")`
+全覆盖校验 `raw_text_shas`，helper 须先删除既有 raw 再写合成 raw_001.txt；
+run_manifest 的 fill 操作 target 白名单仅 zipingzhenquan/qiongtongbaojian，
+计划原 ditiansui 用例改用 zipingzhenquan（聚合覆盖写、manifest 写同书路径）。
+anchor_commit/input_baseline_commit 改用真实存在提交
+（validate_provenance 的 git_root 存在性检查；worktree 与主仓共享对象库）。
+(b) E3 负向测试的篡改注入点由 `_git_head_blob` 迁至 `_git_show_optional`——
+rail ⑤ `_partition_equation` 经后者读 HEAD 聚合（Task 3 执行修正遗留），
+旧 patch 目标在接线后无法命中；错误码断言同步迁
+`REVISION_PARTITION_MISMATCH`。(c) VALID 分支 manifest 检查加
+`git_root is not None` 守卫：无 git 时维持现行行为（E0 已 fail-closed），
+避免破坏 `git_root=None` 既有语义。(d) 锚常量相关集成用例复用 Task 4
+`_v1` helper（含 ACCEPTED 前置断言与进程内常量 monkeypatch 对齐）。
+(e) 报告级两测试（`test_report_exit_zero_when_all_pass` /
+`test_report_b2_constant_invalid_fails_closed`）的
+`evaluate_provenance_admissibility` stub 迁移到新接口形状（补
+`revision_state="NONE"` / `revision_provenance_valid=False`，与模拟的
+MISSING+豁免通过语义一致）——entry 直取新键，旧形状 stub 会 KeyError。
 
