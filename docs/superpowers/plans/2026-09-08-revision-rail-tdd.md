@@ -2742,10 +2742,11 @@ _must_be_pass` / `test_detail_field_new_with_failure_value_rejected` / A.4 系�
 首批传非 03c02bb 与非首批传 03c02bb → exit 2（`TestCandidateCli` 两方向）；锚缺
 失 + 常量为后续值 → CHAIN_STALE（`test_rail_missing_anchor_nongenesis_constant
 _stale`）；rc=3 BLOCKED 分类矩阵（`TestBaselineQualification` rc3 系列）。
-2. **新增 15 用例（`TestRevisionMatrix`，矩阵未暴露实现缺口——脚本零改动）**：
+2. **新增 15 用例（`TestRevisionMatrix`）**：
 两批连续验收（`test_two_consecutive_batches`：V₁ 基线重跑 ACCEPTED → C₂ 候选
-PENDING/false 不判退化 → V₂ 默认复验 ACCEPTED ∧ 两锚 ∧ 常量==链头 ∧ V₂ 可作下
-批基线）；工具链升级链（`test_toolchain_upgrade_old_v_still_valid`：T₁ 真实脚本
+PENDING/false 不判退化 → V₂ 复验 ACCEPTED ∧ 两锚 ∧ 常量==链头 ∧ V₂ 可作下
+批基线；基线重跑经 fake `run_baseline` 返回合格 fixture，故此用例为候选接线 +
+两批 rail 结构测试，非完整默认报告复验链——完整链补测见 Self-Review 24）；工具链升级链（`test_toolchain_upgrade_old_v_still_valid`：T₁ 真实脚本
 改动 + R₁ 登记后旧 V₁ 仍按锚内 T₀ 通过）；候选改善 e2e（`test_candidate
 _improvement_exit4`：真实候选 302 vs 基线 303 → exit 4）；空锚文件零行（`test
 _empty_anchor_file_zero_lines_valid`）；同 batch_id 改记录同步 SHA → HISTORY_DRIFT；
@@ -2788,8 +2789,10 @@ git commit -m "feat(revision-rail): complete 5-R.12 test matrix (T0 toolchain)"
 T₀ = 本提交（Part A 中间提交为其祖先；T₀ OID 在 Part B R₀ 登记时冻结）。**门禁**：聚焦全绿 + ruff + 四文件回归全绿。T₀ 提交后暂停，等用户复审放行 Part B。
 
 执行补记：四文件回归实测 341 passed（326 既有 + 15 新增）in 1932s；ruff
-`--no-cache` 通过；Task 8 脚本零改动（矩阵未暴露缺口），提交仅含测试与计划
-（T₀ OID 以实际提交为准）。
+`--no-cache` 通过。T₀ 候选 `7ecef3e` 经用户复审驳回（NEEDS_REVISION）——两批
+测试以 fake `run_baseline` 伪造“合格基线”结论、允许集合外 G3 失败用例被前置校
+验收窄，且复审暴露 `_report_structure_ok` G7 形态判定实现缺口（非零改动）；修复
+与补测见 Self-Review 24，T₀ OID 以复审通过后的提交为准。
 
 ---
 
@@ -3033,9 +3036,31 @@ RED → 修后聚焦 5 passed；全量回归 171 passed（166+5）+ ruff 通过�
 23. **执行细节（Task 8 全矩阵收口）同步记录**：新增 `TestRevisionMatrix`
 15 用例 + 模块级 helper（`_batch_pair`/`_append_batch`/`_accept_batch`/
 `_register_toolchain`/`_first_missing_chapter`/`_fake_source_ok`）；勾稽表
-与执行发现见 Task 8 Step 1 执行补记。矩阵未暴露实现缺口（`generate_quality
+与执行发现见 Task 8 Step 1 执行补记。首轮矩阵未暴露实现缺口（`generate_quality
 _report.py`/`classic_artifacts.py` 零改动）；三轮 fixture 修正（G7 载体为
 progress.json、G9 去重要求独立文本/题干、fake 候选须书级 revision 字段）均
 为测试侧问题。单文件全矩阵 136 passed（28 分钟）；四文件回归 341 passed
-（326+15）+ ruff 通过后提交 T₀。
+（326+15）+ ruff 通过后提交 T₀ 候选。`7ecef3e` 复审暴露实现缺口（G7 形态判定硬
+编码 `book != "sanmingtonghui"` 误漏 zipingzhenquan/qiongtongbaojian 完整形态）
+与两测试侧问题，修复见 Self-Review 24。
 
+
+24. **执行复审（Task 8 T₀ 候选 `7ecef3e` NEEDS_REVISION，2 P0）同步记录**：
+(a) P0-1：`test_two_consecutive_batches` 以 fake `run_baseline` 直接返回合格
+fixture，未证明 V₁ 自带脚本能生成合格默认报告、V₂ 完整默认报告满足验收、该报
+告可作后续批次合格基线。补 `test_default_report_qualified_baseline_chain`（真
+实 `generate_report` 仅 `verify_source_chain` 替身）：V₁ 默认报告 `revision_state
+== ACCEPTED` ∧ `_qualified_baseline_report(..., first_batch=False) is True`；
+追加 B02→V₂ 后两锚 ∧ `chain_head==h2` ∧ V₂ 报告合格 ∧ `validate_v_structure`
+通过。`test_two_consecutive_batches` 已标为候选接线 + 两批 rail 结构（非完整默
+认报告）。修实现缺口：`_report_structure_ok` G7 分支原硬编码 `book !=
+"sanmingtonghui"`，zipingzhenquan(chapter_list)/qiongtongbaojian(section_list)
+同为完整形态、仅 ditiansui 简化 → 改 `_G7_FULL_SHAPE_BOOKS == {"zipingzhen
+quan","qiongtongbaojian","sanmingtonghui"}` 判定；同步 `_passing_book` fixture。
+(b) P0-2：`test_baseline_out_of_allowed_fail_exit1` 原仅 G3 布尔置 false、明细
+仍全零，被 `_report_structure_ok`/`_gate_consistent` 前置校验截获（证明的是
+"布尔与明细矛盾被拒"而非"自洽但不在允许集合的失败被拒"）→ 重写为同步设置
+`bad_rules=1` 合法明细，先断言结构 & 门一致性通过，再断言
+`_qualified_baseline_report(...) is False` 且候选 CLI exit 1 +（基线替身经
+`_candidate_with_fake_baseline(run_baseline_calls=...)` 记录确被调用）。聚焦
+探针先 RED → 修后 P0-1 真实链 1 passed（126s）/P0-2 端到端 1 passed；全量 test_revision_rail.py 137 passed（136+1）+ ruff 通过后提交。

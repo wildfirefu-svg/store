@@ -32,6 +32,14 @@ BOOKS = {
     "sanmingtonghui": "三命通会",
 }
 
+# G7 完整计数形态适用书（冻结事实：该书有 chapter_list.txt 或
+# section_list.txt，与 validate_classic_distillation._load_chapter_list
+# 判定一致）；其余书（无章节列表）为简化形态 {pass: True, reason:
+# "no chapter_list"}。zipingzhenquan(chapter_list)/qiongtongbaojian
+# (section_list)/sanmingtonghui(chapter_list) 完整；ditiansui 简化。
+_G7_FULL_SHAPE_BOOKS = {"zipingzhenquan", "qiongtongbaojian",
+                        "sanmingtonghui"}
+
 sys.path.insert(0, str(ROOT))
 val_mod = importlib.import_module("scripts.validate_classic_distillation")
 from scripts.classic_artifacts import (  # noqa: E402
@@ -1239,11 +1247,11 @@ def _report_structure_ok(report: dict) -> bool:
             g = details.get(gate)
             if not isinstance(g, dict):
                 return False
-            # G7 形态按冻结适用条件（仅 sanmingtonghui 有 chapter_list）：
-            # 非 sm 书严格简化形态 {pass is True, reason=no chapter_list}
-            # 且无任何计数/诊断键；sm 书必须完整计数字段（缺 expected 即拒绝，
-            # 不得跳过）。
-            if gate == "G7_chapter_complete" and book != "sanmingtonghui":
+            # G7 形态按冻结适用条件（有 chapter_list/section_list 的书 =
+            # _G7_FULL_SHAPE_BOOKS，完整计数字段；其余书无章节列表，严格
+            # 简化形态 {pass is True, reason=no chapter_list} 且无任何计数/
+            # 诊断键；完整形态书缺 expected 即拒绝，不得借缺键跳过）。
+            if gate == "G7_chapter_complete" and book not in _G7_FULL_SHAPE_BOOKS:
                 if (g.get("reason") != "no chapter_list"
                         or g.get("pass") is not True
                         or any(k in g for k in ("expected", "done", "missing",

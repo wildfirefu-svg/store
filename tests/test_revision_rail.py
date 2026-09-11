@@ -1407,10 +1407,12 @@ def _passing_book(book: str) -> dict:
                                             "C": 0.25, "D": 0.25},
                                "invalid_answers": 0, "out_of_band": [],
                                "pass": True},
+            # G7 形态随冻结事实：有章节列表的书（ziping/qiong/sm）为完整
+            # 计数形态；无章节列表（ditiansui）为简化形态。
             "G7_chapter_complete": (
                 {"expected": 1, "done": 1, "missing": [], "missing_count": 0,
                  "extra": [], "extra_count": 0, "pass": True}
-                if book == "sanmingtonghui"
+                if book != "ditiansui"
                 else {"pass": True, "reason": "no chapter_list"}),
             "G8_mcq_well_formed": {"malformed": 0, "pass": True},
             "G9_content_dedup": {"rule_text_duplicate_groups": 0,
@@ -2112,9 +2114,10 @@ class TestRevisionMatrix:
         return wt.commit("V1"), h1
 
     def test_two_consecutive_batches(self, rail_wt, monkeypatch, capsys):
-        """两批连续验收：V₁ 基线重跑 ACCEPTED → C₂ 候选 PENDING_ACCEPTANCE/
-        false 不判退化（其余字段照常比较）→ V₂ 默认复验 ACCEPTED ∧ 锚链
-        两锚 ∧ 常量==链头 ∧ V₂ 可作下批基线（设计显式要求，不止首批特例）。"""
+        """候选接线 + 两批 rail 结构（P0 边界标注）：候选模式以 fake 基线
+        重跑证明 C₂ 候选 PENDING/false 不判退化；V₂ 收尾为 rail 层 + 结构层
+        （两锚、常量==链头、validate_v_structure），非完整默认报告。完整默认
+        复验 + 合格基线判定见 test_default_report_qualified_baseline_chain。"""
         v1, h1 = self._v1(rail_wt)
         # 规则文本须与 B01 不同——G9 内容去重会拦截同文规则（真实
         # 门禁行为，非退化误报）。
@@ -2148,6 +2151,40 @@ class TestRevisionMatrix:
         anchors = gqr._anchor_entries(rail_wt.path)
         assert len(anchors) == 2
         assert chain_head(anchors, GENESIS_SHA) == h2
+        assert gqr.validate_v_structure(rail_wt.path, v2) is None
+
+    def test_default_report_qualified_baseline_chain(self, rail_wt, monkeypatch):
+        """P0：实际报告调用链——默认模式真实 generate_report（G1-G9/rail
+        真实执行，仅 source 重放边界以 _fake_source_ok 替身化，不伪造合格
+        基线结论）。证明：① V₁ 默认报告满足验收条件（revision_state==
+        ACCEPTED）且被 _qualified_baseline_report 判为合格基线（非首批）；
+        ② V₂ 完整默认报告同样满足验收条件，且 V₂ 可作后续批次基线。"""
+        v1, h1 = self._v1(rail_wt)
+        mod1 = _load_report_module(rail_wt)
+        monkeypatch.setattr(mod1, "verify_source_chain", _fake_source_ok())
+        rep1, rc1 = mod1.generate_report(archive_root=str(rail_wt.path))
+        assert rep1["revision_state"] == "ACCEPTED"
+        assert rep1["books"]["sanmingtonghui"]["revision_state"] == "ACCEPTED"
+        # V₁ 默认报告满足非首批验收条件 → 合格基线（内部再验结构/门一致性/
+        # source 政策/允许红项上界）。
+        assert gqr._qualified_baseline_report(rc1, rep1, first_batch=False) is True
+
+        rule, mcq, recs = _batch_pair(rail_wt, "smth_t_002",
+                                      rule_text="测试修订规则二")
+        m2 = _append_batch(rail_wt, "B02", rule, mcq, recs)
+        c2 = rail_wt.commit("C2")
+        h2 = _accept_batch(rail_wt, m2, "B02", c2, h1, rail_wt.head0)
+        v2 = rail_wt.commit("V2")
+
+        mod2 = _load_report_module(rail_wt)
+        monkeypatch.setattr(mod2, "verify_source_chain", _fake_source_ok())
+        rep2, rc2 = mod2.generate_report(archive_root=str(rail_wt.path))
+        assert rep2["revision_state"] == "ACCEPTED"
+        assert rep2["books"]["sanmingtonghui"]["revision_state"] == "ACCEPTED"
+        anchors = gqr._anchor_entries(rail_wt.path)
+        assert len(anchors) == 2
+        assert chain_head(anchors, GENESIS_SHA) == h2
+        assert gqr._qualified_baseline_report(rc2, rep2, first_batch=False) is True
         assert gqr.validate_v_structure(rail_wt.path, v2) is None
 
     def test_toolchain_upgrade_old_v_still_valid(self, rail_wt):
@@ -2316,9 +2353,11 @@ class TestRevisionMatrix:
         assert res["partition_detail"]["manifest_orphan"] >= 1
 
     def _candidate_with_fake_baseline(self, rail_wt, monkeypatch, capsys,
-                                      baseline_rc, baseline_rep):
+                                      baseline_rc, baseline_rep,
+                                      run_baseline_calls=None):
         """R₀→C₁→候选 CLI（generate_report/基线重跑均 fake）；返回
-        (rc, stderr)。"""
+        (rc, stderr)。run_baseline_calls 若传 list，则逐次记录基线替身
+        调用参数 (baseline_commit, first_batch)，供断言"替身确实被调用"。"""
         TestCandidateCli()._r0(rail_wt)
         TestRailCore()._make_c1(rail_wt)
         rail_wt.commit("C1")
@@ -2333,9 +2372,13 @@ class TestRevisionMatrix:
         csm["revision_provenance_valid"] = False
         monkeypatch.setattr(mod, "generate_report",
                             lambda *a, **k: (cand, 1))
-        monkeypatch.setattr(mod, "run_baseline",
-                            lambda bc, gr, ar, first_batch=True: (
-                                baseline_rc, baseline_rep))
+        calls = run_baseline_calls if run_baseline_calls is not None else []
+
+        def _fake_run_baseline(bc, gr, ar, first_batch=True):
+            calls.append((bc, first_batch))
+            return baseline_rc, baseline_rep
+
+        monkeypatch.setattr(mod, "run_baseline", _fake_run_baseline)
         rc = mod.main(["--pending-batch", "B01", "--baseline-commit",
                        TestCandidateCli.FIRST, "--toolchain-commit",
                        rail_wt.head0, "--archive-root", str(rail_wt.path)])
@@ -2349,11 +2392,26 @@ class TestRevisionMatrix:
 
     def test_baseline_out_of_allowed_fail_exit1(self, rail_wt, monkeypatch,
                                                 capsys):
-        """基线含允许集合外 FAIL（G3）端到端 → exit 1。"""
+        """基线含**自洽**允许集合外 FAIL（G3）端到端 → exit 1。
+
+        P0：明细与门布尔须自洽（bad_rules=1 ∧ gates[G3]=False），先断言
+        结构层与门一致性通过，再断言目标资格检查拒绝——证明"自洽但不在
+        允许集合的失败被拒"，而非"布尔与明细矛盾被拒"。同时记录基线替身
+        确实被调用。"""
         rep = _baseline_report_fixture()
-        rep["books"]["sanmingtonghui"]["gates"]["G3_schema"] = False
+        sm = rep["books"]["sanmingtonghui"]
+        sm["gates"]["G3_schema"] = False
+        sm["gate_details"]["G3_schema"] = {
+            "bad_rules": 1, "bad_mcq": 0, "parse_errors": 0, "pass": False}
+        # 前置：结构层过 + 门布尔与明细推导自洽（gate_consistent True）。
+        assert gqr._report_structure_ok(rep) is True
+        assert gqr._gate_consistent(sm["gates"], sm["gate_details"]) is True
+        # 自洽但 G3 ∉ 允许红项集合 → 资格检查拒绝。
+        assert gqr._qualified_baseline_report(1, rep, first_batch=True) is False
+        calls = []
         rc, err = self._candidate_with_fake_baseline(
-            rail_wt, monkeypatch, capsys, 1, rep)
+            rail_wt, monkeypatch, capsys, 1, rep, run_baseline_calls=calls)
+        assert calls, "基线替身应被调用"
         assert rc == 1 and "REVISION_BASELINE_INVALID" in err
 
     def test_baseline_blocked_exit3(self, rail_wt, monkeypatch, capsys):
