@@ -1743,6 +1743,27 @@ class TestBaselineQualification:
         assert gqr._report_structure_ok(rep) is False
         assert gqr._classify_baseline_rc(1, rep, first_batch=True) == "INVALID"
 
+    def test_non_sm_g7_simplified_missing_pass_rejected(self):
+        """P1：非 sm 书 G7 简化形态必须含 pass 键——仅 {reason} 缺 pass 不得
+        通过结构检查（严格简化形态 = pass is True ∧ reason=="no chapter_list"）。"""
+        rep = _baseline_report_fixture()
+        rep["books"]["ditiansui"]["gate_details"][
+            "G7_chapter_complete"] = {"reason": "no chapter_list"}
+        assert gqr._report_structure_ok(rep) is False
+
+    def test_non_sm_g7_simplified_pass_false_rejected(self):
+        """P1：非 sm 书 G7 简化形态 pass 必须严格 True（False 拒）。"""
+        rep = _baseline_report_fixture()
+        rep["books"]["ditiansui"]["gate_details"][
+            "G7_chapter_complete"] = {"pass": False, "reason": "no chapter_list"}
+        assert gqr._report_structure_ok(rep) is False
+
+    def test_non_sm_g7_gate_bool_contradicts_rejected(self):
+        """P1：非 sm 书 G7 门布尔与简化形态一致——gates 声明 False 而明细无
+        chapter_list（推导必 True）→ _gate_consistent 拒（合理层）。"""
+        rep = _baseline_report_fixture()
+        rep["books"]["ditiansui"]["gates"]["G7_chapter_complete"] = False
+        assert gqr._qualified_baseline_report(1, rep, first_batch=True) is False
 
 
 def _load_report_module(wt: RailWorktree):

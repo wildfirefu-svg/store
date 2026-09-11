@@ -1240,10 +1240,12 @@ def _report_structure_ok(report: dict) -> bool:
             if not isinstance(g, dict):
                 return False
             # G7 形态按冻结适用条件（仅 sanmingtonghui 有 chapter_list）：
-            # 非 sm 书严格简化形态 {pass, reason=no chapter_list} 且无任何计数/
-            # 诊断键；sm 书必须完整计数字段（缺 expected 即拒绝，不得跳过）。
+            # 非 sm 书严格简化形态 {pass is True, reason=no chapter_list}
+            # 且无任何计数/诊断键；sm 书必须完整计数字段（缺 expected 即拒绝，
+            # 不得跳过）。
             if gate == "G7_chapter_complete" and book != "sanmingtonghui":
                 if (g.get("reason") != "no chapter_list"
+                        or g.get("pass") is not True
                         or any(k in g for k in ("expected", "done", "missing",
                                                 "missing_count", "extra",
                                                 "extra_count"))):

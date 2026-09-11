@@ -2679,10 +2679,16 @@ SystemExit 2、TestVStructure 3 用例 AttributeError: `validate_v_structure`
 2. 第 7 项（V↔HEAD）改为只比较锚文件 + `REVISION_ANCHOR_HEAD` 常量（不比整个
    `scripts/generate_quality_report.py`、不比 `TOOLCHAIN_REGISTRY_HEAD`）——
    追加合法 R₂ 只改登记头常量，不得误拒历史 V。
-3. `_report_structure_ok` G7 按书分流：非 sm 书严格简化形态（`reason=="no
-   chapter_list"` ∧ 无 expected/done/missing/missing_count/extra/extra_count
-   任一键）才跳过；sm 书缺 `expected` 走结构层 `return False`，不得借缺键跳过
-   计数检查。
+3. `_report_structure_ok` G7 按书分流：非 sm 书严格简化形态（`pass is True`
+   ∧ `reason=="no chapter_list"` ∧ 无 expected/done/missing/missing_count/
+   extra/extra_count 任一键）才跳过；sm 书缺 `expected` 走结构层 `return False`，
+   不得借缺键跳过计数检查。
+
+执行补记（Self-Review 22）：
+非 sm 书 G7 简化形态补 `pass is True` 严格校验（原仅查 `reason` 与无计数/诊断
+键，`{reason:"no chapter_list"}` 缺 pass 仍过）；门布尔一致性已由
+`_gate_consistent` 覆盖（无 chapter_list 的 G7 推导必 True，gates=False 即拒），
+本轮以探针固化。
 
 - [ ] **Step 4：跑测试确认通过 + ruff + 提交**
 
@@ -2691,7 +2697,8 @@ python -m pytest tests/test_revision_rail.py -q && python -m ruff check scripts/
 git add scripts/generate_quality_report.py tests/test_revision_rail.py
 Expected: PASS——初版聚焦 TestCandidateCli+TestVStructure 9 passed；全量
 166 passed（157 + 9）；三轮复审（3 P0，见 Self-Review 21）追加 5 探针后全量
-171 passed（166 + 5）；ruff `--no-cache` All checks passed。
+171 passed（166 + 5）；P1 复审（Self-Review 22）追加 3 探针后全量 174 passed
+（171 + 3）；ruff `--no-cache` All checks passed。
 
 ```powershell
 git commit -m "feat(revision-rail): candidate CLI, entry prechecks, V-structure validation"
@@ -2969,9 +2976,20 @@ rail/admissibility/report，连带适配 6 处既有测试 spy/fake/lambda 签�
 _valid_after_r2`。
 (c) `_report_structure_ok` G7 只要缺 `expected` 即跳过计数、不区分书籍，sm
 可借 `{pass:true,reason:"no chapter_list"}` 缺键跳过计数、同步布尔后仍
-QUALIFIED → 改为非 sm 书严格简化形态（`reason=="no chapter_list"` ∧ 无
-expected/done/missing/missing_count/extra/extra_count 任一键）才跳过；sm 书
-缺 `expected` 走结构层 `return False`。补 `TestBaselineQualification.
-test_sm_g7_simplified_shape_rejected`。5 探针先 RED → 修后聚焦 5 passed；
-全量回归 171 passed（166+5）+ ruff 通过后提交。
+QUALIFIED → 改为非 sm 书严格简化形态（`pass is True` ∧ `reason=="no
+chapter_list"` ∧ 无 expected/done/missing/missing_count/extra/extra_count
+任一键）才跳过；sm 书缺 `expected` 走结构层 `return False`。补
+`TestBaselineQualification.test_sm_g7_simplified_shape_rejected`。5 探针先
+RED → 修后聚焦 5 passed；全量回归 171 passed（166+5）+ ruff 通过后提交。
+
+22. **执行复审（Task 7 P1，非阻断）同步记录**：非 sm 书 G7 简化形态未严格校验
+`pass`——仅 `{reason:"no chapter_list"}`（缺 pass）结构层仍 True →
+`_report_structure_ok` 非 sm G7 分支补 `g.get("pass") is not True` 拒绝；
+"严格简化形态"表述同步为 `{pass is True, reason=="no chapter_list"}`。补 3
+探针：`test_non_sm_g7_simplified_missing_pass_rejected`、
+`test_non_sm_g7_simplified_pass_false_rejected`（结构层）与
+`test_non_sm_g7_gate_bool_contradicts_rejected`（门布尔一致性，已由
+`_gate_consistent` 覆盖）。3 探针 2 RED（缺 pass/pass False）+ 1 既有覆盖 →
+修后聚焦 4 passed（含 sm G7 探针）；全量回归 174 passed（171+3）+ ruff
+`--no-cache` 通过后提交。
 
