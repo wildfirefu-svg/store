@@ -101473,5 +101473,28 @@
     "canonical_key": "4e958b2bcf8d8ea67a501cd2647e979c238986cba3d81c1430d9507b9eee1aee",
     "dedup_origin_segment": 0,
     "id": "smth_370_178"
+  },
+  {
+    "id": "smth_077_000",
+    "category": "其他",
+    "subject": "命宫",
+    "condition": "以生月、生时定命宫",
+    "rule": "推命宫之法：以生月从子上起正月逆行十二位定位，次以生时加于所生之月顺行十二位，逢卯即安命宫。",
+    "original_text": "先将所生之月从子上起正月，亥上二月，戌三，酉四，申五，未六、午七，已八，辰九，卯十，寅十一，丑十二，逆行十二位，次将所生之时加于所生之月，顺行十二位，逢卯即安命宫",
+    "source_book": "三命通会",
+    "source_chapter": "卷二·论坐命宫",
+    "canonical_key": "052d1ef1fdbcc934ba3bf07e83f625417c71c7a0159ede81766e6ba0ea2bdaca"
+  },
+  {
+    "id": "smth_077_001",
+    "category": "其他",
+    "subject": "命宫",
+    "condition": "命宫地支既定后",
+    "rule": "命宫地支既定，仍随甲子年起，亦如起月之法，以年干起月法定命宫天干（如甲已之年丙作首），再以三方及本命流干所犯星曜推吉凶。",
+    "original_text": "仍随甲子年起，亦如起月之法。甲已之年丙作首，乃丁卯宫也。次看三方并本命流干犯何星凶吉推之",
+    "source_book": "三命通会",
+    "source_chapter": "卷二·论坐命宫",
+    "textual_note": "原文作「甲已之年丙作首」，保留原文未断言笔误。",
+    "canonical_key": "57d68a27eaa68430e62f9c4591b9ad30494760b9b4f2c6f2f197951cb0406ac6"
   }
 ]

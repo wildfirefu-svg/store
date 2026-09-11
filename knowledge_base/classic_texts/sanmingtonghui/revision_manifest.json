@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0",
+  "book": "sanmingtonghui",
+  "freeze_base_commit": "c5cff699fdb547bd9270acbebe1f485380848751",
+  "batches": [
+    {
+      "batch_id": "R25",
+      "date": "2026-09-11",
+      "author": "xuanjizi",
+      "records": [
+        {
+          "kind": "rule",
+          "id": "smth_077_000",
+          "sha256": "d2b7f874a437ec1c14e6a654d62720a51d174110183484380e2f960659780efe",
+          "source_chapter": "卷二·论坐命宫",
+          "snapshot_path": "knowledge_base/classic_texts/sanmingtonghui/formal/source_snapshots/b4e9be580dbecd3e233d3adbe163299f06c6ca5174309dc83e8f14433796aaa2/extracted/raw_025.txt",
+          "snapshot_sha256": "2a78d4cbfb1b4f522e95675441f7917924b558871ecdc223bae2253699178294",
+          "historical_basis": {
+            "commit": "2ec871d9e61046c98eb38a1a5ca755975ceaf495",
+            "path": "knowledge_base/classic_texts/sanmingtonghui/all_rules.json",
+            "source_chapter": "卷二·论坐命宫",
+            "record_content_sha256": "83dffe5d6e9b988e00f1b3fac8c4262b6a576bdf50fca097fdd33a8be47bbfe0",
+            "match_count": 1
+          }
+        },
+        {
+          "kind": "rule",
+          "id": "smth_077_001",
+          "sha256": "8cbcf4c51747c1b79a641b489a80928eafd3b20d920df8a0b5ba693e69378ba3",
+          "source_chapter": "卷二·论坐命宫",
+          "snapshot_path": "knowledge_base/classic_texts/sanmingtonghui/formal/source_snapshots/b4e9be580dbecd3e233d3adbe163299f06c6ca5174309dc83e8f14433796aaa2/extracted/raw_025.txt",
+          "snapshot_sha256": "2a78d4cbfb1b4f522e95675441f7917924b558871ecdc223bae2253699178294",
+          "historical_basis": {
+            "commit": "2ec871d9e61046c98eb38a1a5ca755975ceaf495",
+            "path": "knowledge_base/classic_texts/sanmingtonghui/all_rules.json",
+            "source_chapter": "卷二·论坐命宫",
+            "record_content_sha256": "0ff741c68a539fb529a41dfb3dc0ee18a7f9c789452db5fe69d451fe043a9bf1",
+            "match_count": 1
+          }
+        },
+        {
+          "kind": "mcq",
+          "id": "smth_077_mcq_0777",
+          "sha256": "0df3c739aa2ebb70493474933997c97619780ffaeab6c95bb044148b50eb088d",
+          "source_chapter": "卷二·论坐命宫",
+          "snapshot_path": "knowledge_base/classic_texts/sanmingtonghui/formal/source_snapshots/b4e9be580dbecd3e233d3adbe163299f06c6ca5174309dc83e8f14433796aaa2/extracted/raw_025.txt",
+          "snapshot_sha256": "2a78d4cbfb1b4f522e95675441f7917924b558871ecdc223bae2253699178294",
+          "historical_basis": null
+        },
+        {
+          "kind": "mcq",
+          "id": "smth_077_mcq_0778",
+          "sha256": "9e2843bc6845296310d4f0bccb52cfec681ed76b815fd002a34b9a3f0049f9ac",
+          "source_chapter": "卷二·论坐命宫",
+          "snapshot_path": "knowledge_base/classic_texts/sanmingtonghui/formal/source_snapshots/b4e9be580dbecd3e233d3adbe163299f06c6ca5174309dc83e8f14433796aaa2/extracted/raw_025.txt",
+          "snapshot_sha256": "2a78d4cbfb1b4f522e95675441f7917924b558871ecdc223bae2253699178294",
+          "historical_basis": null
+        }
+      ]
+    }
+  ]
+}
