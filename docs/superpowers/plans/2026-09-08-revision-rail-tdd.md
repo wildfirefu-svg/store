@@ -2733,10 +2733,43 @@ git commit -m "feat(revision-rail): candidate CLI, entry prechecks, V-structure 
 - 首批传非 03c02bb / 非首批传 03c02bb → exit 2（Task 7 已建一方向，补另一方向）
 - rc=3 基线 BLOCKED 上抛 → exit 3
 
+执行补记（Self-Review 23）：
+1. **勾稽表（既有覆盖，不重复建）**：VALID 书 manifest → UNSUPPORTED_STATE
+（`test_matrix_valid_book_with_manifest_unsupported`）；门禁字段删除/改类型 → 拒
+（`test_b_minus_n_field_removed_rejected` / `test_detail_field_type_changed
+_rejected`）；新增布尔 FAIL/计数超上限/枚举不可接纳 → 拒（`test_new_gate_bool
+_must_be_pass` / `test_detail_field_new_with_failure_value_rejected` / A.4 系列）；
+首批传非 03c02bb 与非首批传 03c02bb → exit 2（`TestCandidateCli` 两方向）；锚缺
+失 + 常量为后续值 → CHAIN_STALE（`test_rail_missing_anchor_nongenesis_constant
+_stale`）；rc=3 BLOCKED 分类矩阵（`TestBaselineQualification` rc3 系列）。
+2. **新增 15 用例（`TestRevisionMatrix`，矩阵未暴露实现缺口——脚本零改动）**：
+两批连续验收（`test_two_consecutive_batches`：V₁ 基线重跑 ACCEPTED → C₂ 候选
+PENDING/false 不判退化 → V₂ 默认复验 ACCEPTED ∧ 两锚 ∧ 常量==链头 ∧ V₂ 可作下
+批基线）；工具链升级链（`test_toolchain_upgrade_old_v_still_valid`：T₁ 真实脚本
+改动 + R₁ 登记后旧 V₁ 仍按锚内 T₀ 通过）；候选改善 e2e（`test_candidate
+_improvement_exit4`：真实候选 302 vs 基线 303 → exit 4）；空锚文件零行（`test
+_empty_anchor_file_zero_lines_valid`）；同 batch_id 改记录同步 SHA → HISTORY_DRIFT；
+锚篡改（改 manifest_sha256_after、常量不动）→ CHAIN_STALE；删批 → CHAIN_STALE；
++2 批 → UNACCEPTED（候选 ④ len>n+1）；freeze 交集双列 → MALFORMED；
+manifest_orphan → MISMATCH（明细 ≥1）；基线 rc=7 / 允许集合外 FAIL 端到端 →
+exit 1；rc=3 基线 BLOCKED 上抛 → exit 3；已提交篡改未登记 → TOOLCHAIN_INVALID；
+穷通宝鉴 310 条 quarantine 存量 → NONE（分区不回归）。
+3. **执行发现（fixture 层，非实现缺口）**：(a) G7 done/missing 口径在
+progress.json 的 done 列表而非规则聚合（validator `_progress_done_list`）——
+候选改善 e2e 的 C₁ 须同步把一个缺失章节写入 progress.json（计划原文"302 vs
+303"的载体澄清；`_first_missing_chapter` 按 validator 同构归一化取缺失集）。
+(b) G9 内容去重拦同文规则/同文 MCQ——多批连续验收 fixture 须独立 rule 文本与
+题干（`_batch_pair` 对 question 加唯一后缀；首轮 C₂ 同文被真实门禁拦下，属正确
+行为）。(c) fake 候选报告须书级 revision 字段（`_candidate_mode` 读
+sm["revision_state"]，只补顶层会误走第 6 步使 rc7/超限用例经错误分支假绿）。
+(d) Step 2 原文"单文件 < 120s"与实测不符：真实门禁用例各需 60-70s，全文件
+实测 28 分钟。
+
 - [ ] **Step 2：跑全矩阵**
 
 Run: `python -m pytest tests/test_revision_rail.py -q`
-Expected: PASS（全量；单文件 < 120s——worktree 建链用例合并共享 fixture，避免每用例重复 `worktree add`）
+Expected: PASS——实测 136 passed（121 既有 + 15 新增）in 1682s（28 分钟；
+真实门禁用例各 60-70s，原文"< 120s"预估不实，见 Self-Review 23.3(d)）。
 
 - [ ] **Step 3：全量回归 + ruff**
 
@@ -2753,6 +2786,10 @@ git commit -m "feat(revision-rail): complete 5-R.12 test matrix (T0 toolchain)"
 ```
 
 T₀ = 本提交（Part A 中间提交为其祖先；T₀ OID 在 Part B R₀ 登记时冻结）。**门禁**：聚焦全绿 + ruff + 四文件回归全绿。T₀ 提交后暂停，等用户复审放行 Part B。
+
+执行补记：四文件回归实测 341 passed（326 既有 + 15 新增）in 1932s；ruff
+`--no-cache` 通过；Task 8 脚本零改动（矩阵未暴露缺口），提交仅含测试与计划
+（T₀ OID 以实际提交为准）。
 
 ---
 
@@ -2992,4 +3029,13 @@ RED → 修后聚焦 5 passed；全量回归 171 passed（166+5）+ ruff 通过�
 `_gate_consistent` 覆盖）。3 探针 2 RED（缺 pass/pass False）+ 1 既有覆盖 →
 修后聚焦 4 passed（含 sm G7 探针）；全量回归 174 passed（171+3）+ ruff
 `--no-cache` 通过后提交。
+
+23. **执行细节（Task 8 全矩阵收口）同步记录**：新增 `TestRevisionMatrix`
+15 用例 + 模块级 helper（`_batch_pair`/`_append_batch`/`_accept_batch`/
+`_register_toolchain`/`_first_missing_chapter`/`_fake_source_ok`）；勾稽表
+与执行发现见 Task 8 Step 1 执行补记。矩阵未暴露实现缺口（`generate_quality
+_report.py`/`classic_artifacts.py` 零改动）；三轮 fixture 修正（G7 载体为
+progress.json、G9 去重要求独立文本/题干、fake 候选须书级 revision 字段）均
+为测试侧问题。单文件全矩阵 136 passed（28 分钟）；四文件回归 341 passed
+（326+15）+ ruff 通过后提交 T₀。
 

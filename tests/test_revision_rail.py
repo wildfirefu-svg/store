@@ -1982,3 +1982,410 @@ class TestNormalizedScriptDiff:
         a = self._blob(b"a" * 64, b"b" * 64, line_end=b"\n")
         b = self._blob(b"a" * 64, b"b" * 64, line_end=b"\n", trailing=False)
         assert gqr._normalized_script_diff(a, b)[0] is False
+
+
+def _fake_source_ok():
+    """verify_source_chain 真实接口 fake：(output_dict, exit_code) → OK。"""
+    return lambda *a, **k: ({"schema_version": "1.0", "status": "OK",
+                             "chapters_expected": 303, "c1_pass": 303,
+                             "c2_pass": 303, "c3_pass": 303,
+                             "failures": []}, 0)
+
+
+def _batch_pair(wt: RailWorktree, rule_id: str,
+                rule_text: str = "测试修订规则"):
+    """构造一对 rule/mcq（original_text 取 raw_025 去空白前 30 字）及其
+    manifest 记录；不写盘。"""
+    snap_sha = _sha256(wt.blob("HEAD", RAW025_REL))
+    src_text = wt.blob("HEAD", RAW025_REL).decode("utf-8", "replace")
+    probe = re.sub(r"\s+", "", src_text)[:30]
+    rule = _mk_rule(rule_id, "卷二·论坐命宫", rule_text)
+    rule["original_text"] = probe
+    mcq = _mk_mcq(rule_id + "_m1", rule_id)
+    # 题干须与其它批次不同——G9 内容去重拦同文 MCQ（多批连续验收时
+    # _make_c1 的固定题干会构成重复组）。
+    mcq["question"] = f"测试题干（{rule_id}）？"
+    from scripts.generate_classic_historical_freeze import _record_entry
+    recs = []
+    for kind, obj in (("rule", rule), ("mcq", mcq)):
+        recs.append({"kind": kind, "id": obj["id"],
+                     "sha256": _record_entry(obj)["sha256"],
+                     "source_chapter": "卷二·论坐命宫",
+                     "snapshot_path": RAW025_REL,
+                     "snapshot_sha256": snap_sha,
+                     "historical_basis": None})
+    return rule, mcq, recs
+
+
+def _append_batch(wt: RailWorktree, batch_id: str, rule: dict, mcq: dict,
+                  recs: list, write_aggregate: bool = True) -> dict:
+    """聚合 + manifest 追加一批（manifest 读盘优先——连续追加时未提交的
+    前批不可经 HEAD 读）；返回追加后的 manifest。"""
+    rules_rel = "knowledge_base/classic_texts/sanmingtonghui/all_rules.json"
+    mcq_rel = "knowledge_base/classic_texts/sanmingtonghui/all_mcq.jsonl"
+    if write_aggregate:
+        arr = json.loads(wt.blob("HEAD", rules_rel).decode("utf-8"))
+        arr.append(rule)
+        wt.write(rules_rel,
+                 json.dumps(arr, ensure_ascii=False).encode("utf-8"))
+        wt.write(mcq_rel, wt.blob("HEAD", mcq_rel)
+                 + (_canonical(mcq) + "\n").encode("utf-8"))
+    mp = wt.path / MANIFEST_REL
+    manifest = json.loads(
+        mp.read_bytes().decode("utf-8") if mp.exists()
+        else wt.blob("HEAD", MANIFEST_REL).decode("utf-8"))
+    manifest["batches"].append({"batch_id": batch_id, "date": "2026-09-08",
+                                "author": "test", "records": recs})
+    wt.write(MANIFEST_REL, _canonical_bytes(manifest) + b"\n")
+    return manifest
+
+
+def _accept_batch(wt: RailWorktree, manifest: dict, batch_id: str, c_oid: str,
+                  prev_head: str, toolchain: str) -> str:
+    """追加验收锚行 + 唯一替换验收头常量（不提交）；返回新锚链头。"""
+    anchor = _anchor_line(batch_id, c_oid, _sha256(_canonical_bytes(manifest)),
+                           prev_head, toolchain)
+    wt.append_line(gqr.REVISION_ANCHOR_REL, anchor)
+    entries = [json.loads(ln) for ln
+               in (wt.path / gqr.REVISION_ANCHOR_REL).read_bytes()
+               .decode("utf-8").splitlines() if ln.strip()]
+    head = chain_head(entries, GENESIS_SHA)
+    wt.replace_constant("REVISION_ANCHOR_HEAD", head)
+    return head
+
+
+def _register_toolchain(wt: RailWorktree, toolchain: str) -> str:
+    """追加登记行（prev=当前链头）+ 唯一替换登记头常量（不提交）；
+    返回新登记链头。"""
+    from scripts.classic_artifacts import (
+        REVISION_REGISTRY_FIELDS, chain_head as _ch)
+    entries = [json.loads(ln) for ln
+               in (wt.path / gqr.REVISION_REGISTRY_REL).read_bytes()
+               .decode("utf-8").splitlines() if ln.strip()]
+    prev = _ch(entries, GENESIS_SHA, prev_field="prev_registry_sha256",
+               fields=REVISION_REGISTRY_FIELDS)
+    line = _registry_line(toolchain, prev)
+    wt.append_line(gqr.REVISION_REGISTRY_REL, line)
+    entries.append(json.loads(line.decode()))
+    return _ch(entries, GENESIS_SHA, prev_field="prev_registry_sha256",
+               fields=REVISION_REGISTRY_FIELDS)
+
+
+def _first_missing_chapter(wt: RailWorktree) -> str:
+    """G7 口径下第一个缺失章节（chapter_list 归一化 − progress.done；
+    归一化与 validate_classic_distillation._load_chapter_list 同构）。"""
+    p = "knowledge_base/classic_texts/sanmingtonghui"
+    cl = (wt.path / p / "chapter_list.txt").read_text(
+        encoding="utf-8").splitlines()
+    prog = json.loads(wt.blob("HEAD", f"{p}/progress.json"))
+
+    def n(v: str) -> str:
+        return re.sub(r"\s+", "", v.strip())
+    es = {n(re.sub(r"^\d+[\.\s]*", "", ln.split("\t")[0]).strip())
+          for ln in cl if ln.strip()}
+    ds = {n(c) for c in prog.get("done", [])}
+    missing = sorted(es - ds)
+    assert missing, "precondition: at least one missing chapter"
+    return missing[0]
+
+
+class TestRevisionMatrix:
+    """Task 8：5-R.12 全矩阵收口。勾稽（既有覆盖，不重复建）：
+    VALID 书出现 manifest → UNSUPPORTED_STATE
+    （test_matrix_valid_book_with_manifest_unsupported）；门禁字段删除/
+    改类型 → 拒绝（test_b_minus_n_field_removed_rejected /
+    test_detail_field_type_changed_rejected）；新增布尔 FAIL/计数超上限/
+    枚举不可接纳 → 拒绝（test_new_gate_bool_must_be_pass /
+    test_detail_field_new_with_failure_value_rejected / A.4 系列）；
+    首批传非 03c02bb 与非首批传 03c02bb → exit 2（TestCandidateCli 两
+    方向）；锚缺失 + 常量为后续值 → CHAIN_STALE
+    （test_rail_missing_anchor_nongenesis_constant_stale）；rc=3 BLOCKED
+    分类矩阵（TestBaselineQualification rc3 系列）。"""
+
+    def _v1(self, wt: RailWorktree):
+        """R₀→C₁→V₁ 标准链；返回 (v1, h1)。"""
+        TestCandidateCli()._r0(wt)
+        core = TestRailCore()
+        m1 = core._make_c1(wt)
+        c1 = wt.commit("C1")
+        h1 = _accept_batch(wt, m1, "B01", c1, GENESIS_SHA, wt.head0)
+        return wt.commit("V1"), h1
+
+    def test_two_consecutive_batches(self, rail_wt, monkeypatch, capsys):
+        """两批连续验收：V₁ 基线重跑 ACCEPTED → C₂ 候选 PENDING_ACCEPTANCE/
+        false 不判退化（其余字段照常比较）→ V₂ 默认复验 ACCEPTED ∧ 锚链
+        两锚 ∧ 常量==链头 ∧ V₂ 可作下批基线（设计显式要求，不止首批特例）。"""
+        v1, h1 = self._v1(rail_wt)
+        # 规则文本须与 B01 不同——G9 内容去重会拦截同文规则（真实
+        # 门禁行为，非退化误报）。
+        rule, mcq, recs = _batch_pair(rail_wt, "smth_t_002",
+                                      rule_text="测试修订规则二")
+        m2 = _append_batch(rail_wt, "B02", rule, mcq, recs)
+        c2 = rail_wt.commit("C2")
+        # 候选（非首批：基线 V₁）——基线重跑 fake 为 ACCEPTED 合格报告
+        mod = _load_report_module(rail_wt)
+        monkeypatch.setattr(mod, "run_baseline",
+                            lambda bc, gr, ar, first_batch=True: (
+                                1, _baseline_report_fixture(first_batch=False)))
+        monkeypatch.setattr(mod, "verify_source_chain", _fake_source_ok())
+        rc = mod.main(["--pending-batch", "B02", "--baseline-commit", v1,
+                       "--toolchain-commit", rail_wt.head0,
+                       "--archive-root", str(rail_wt.path)])
+        assert rc == 4
+        rep = json.loads(capsys.readouterr().out)
+        sm = rep["books"]["sanmingtonghui"]
+        assert sm["revision_state"] == "PENDING_ACCEPTANCE"
+        assert rep["revision_provenance_valid"] is False  # 修订字段不入退化比较
+        # V₂ 验收 + 默认复验
+        h2 = _accept_batch(rail_wt, m2, "B02", c2, h1, rail_wt.head0)
+        v2 = rail_wt.commit("V2")
+        monkeypatch.setattr(gqr, "REVISION_ANCHOR_HEAD", h2)
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["revision_state"] == "ACCEPTED"
+        assert res["error_code"] is None
+        anchors = gqr._anchor_entries(rail_wt.path)
+        assert len(anchors) == 2
+        assert chain_head(anchors, GENESIS_SHA) == h2
+        assert gqr.validate_v_structure(rail_wt.path, v2) is None
+
+    def test_toolchain_upgrade_old_v_still_valid(self, rail_wt):
+        """工具链升级链：R₀(T₀)→C₁→V₁（锚绑 T₀）→ T₁ 真实脚本改动 + R₁
+        登记 → 旧 V₁ 仍按其锚内 T₀ 通过（历史兼容，不拿 HEAD 新登记头/
+        新代码要求旧提交）。"""
+        v1, _ = self._v1(rail_wt)
+        assert gqr.validate_v_structure(rail_wt.path, v1) is None
+        rel = "scripts/generate_quality_report.py"
+        rail_wt.write(rel, (rail_wt.path / rel).read_bytes()
+                      + b"# toolchain upgrade T1\n")
+        t1 = rail_wt.commit("T1: legal script change")
+        _register_toolchain(rail_wt, t1)
+        rail_wt.commit("R1: register T1")
+        assert gqr.validate_v_structure(rail_wt.path, v1) is None
+
+    def test_candidate_improvement_exit4(self, rail_wt, monkeypatch, capsys):
+        """候选改善端到端：C₁ 把一个缺失章节写入 progress.json（G7 的
+        done/missing 口径在 progress.done，非规则聚合）→ 真实候选 G7
+        missing_count 302 vs 基线 303 → 允许项向下改善被接受（exit 4）。"""
+        TestCandidateCli()._r0(rail_wt)
+        TestRailCore()._make_c1(rail_wt)
+        prog_rel = "knowledge_base/classic_texts/sanmingtonghui/progress.json"
+        prog = json.loads(rail_wt.blob("HEAD", prog_rel).decode("utf-8"))
+        prog["done"].append(_first_missing_chapter(rail_wt))
+        rail_wt.write(prog_rel,
+                      json.dumps(prog, ensure_ascii=False).encode("utf-8"))
+        rail_wt.commit("C1")
+        mod = _load_report_module(rail_wt)
+        monkeypatch.setattr(mod, "run_baseline",
+                            lambda bc, gr, ar, first_batch=True: (
+                                1, _baseline_report_fixture()))
+        monkeypatch.setattr(mod, "verify_source_chain", _fake_source_ok())
+        rc = mod.main(["--pending-batch", "B01", "--baseline-commit",
+                       TestCandidateCli.FIRST, "--toolchain-commit",
+                       rail_wt.head0, "--archive-root", str(rail_wt.path)])
+        assert rc == 4
+        rep = json.loads(capsys.readouterr().out)
+        g7 = rep["books"]["sanmingtonghui"]["gate_details"][
+            "G7_chapter_complete"]
+        assert g7["missing_count"] == 302
+
+    def test_empty_anchor_file_zero_lines_valid(self, rail_wt):
+        """空锚文件（零行）+ 常量==genesis → 合法 NONE。"""
+        rail_wt.write(gqr.REVISION_ANCHOR_REL, b"")
+        rail_wt.commit("empty anchor file")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["revision_state"] == "NONE"
+        assert res["ok"] is True and res["e3_ok"] is True
+
+    def test_same_batch_mutated_history_drift(self, rail_wt, monkeypatch):
+        """同 batch_id 改记录内容并同步 manifest 候选 SHA（C/A/常量不动，
+        仅改 HEAD）→ REVISION_HISTORY_DRIFT（④ 先于 ⑤ 拦截）。"""
+        _, h1 = self._v1(rail_wt)
+        monkeypatch.setattr(gqr, "REVISION_ANCHOR_HEAD", h1)
+        res0 = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res0["revision_state"] == "ACCEPTED"
+        rules_rel = "knowledge_base/classic_texts/sanmingtonghui/all_rules.json"
+        arr = json.loads(rail_wt.blob("HEAD", rules_rel).decode("utf-8"))
+        target = next(r for r in arr if r["id"] == "smth_t_001")
+        target["rule"] = "被篡改的规则文本"
+        rail_wt.write(rules_rel,
+                      json.dumps(arr, ensure_ascii=False).encode("utf-8"))
+        from scripts.generate_classic_historical_freeze import _record_entry
+        manifest = json.loads(rail_wt.blob("HEAD", MANIFEST_REL)
+                              .decode("utf-8"))
+        for rec in manifest["batches"][0]["records"]:
+            if rec["id"] == "smth_t_001":
+                rec["sha256"] = _record_entry(target)["sha256"]
+        rail_wt.write(MANIFEST_REL, _canonical_bytes(manifest) + b"\n")
+        rail_wt.commit("mutate accepted batch records (sha synced)")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_HISTORY_DRIFT"
+
+    def test_anchor_tamper_chain_stale(self, rail_wt, monkeypatch):
+        """锚文件篡改（改 manifest_sha256_after、常量不动）→ ③ 链头重算
+        不符 → REVISION_CHAIN_STALE。"""
+        _, h1 = self._v1(rail_wt)
+        monkeypatch.setattr(gqr, "REVISION_ANCHOR_HEAD", h1)
+        relp = rail_wt.path / gqr.REVISION_ANCHOR_REL
+        line = json.loads(relp.read_bytes().decode("utf-8"))
+        line["manifest_sha256_after"] = "f" * 64
+        relp.write_bytes((_canonical(line) + "\n").encode("utf-8"))
+        rail_wt.commit("tamper anchor manifest_sha256_after")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_CHAIN_STALE"
+
+    def test_delete_batch_chain_stale(self, rail_wt, monkeypatch):
+        """删批（manifest 抹除已验收批次）→ REVISION_CHAIN_STALE。"""
+        _, h1 = self._v1(rail_wt)
+        monkeypatch.setattr(gqr, "REVISION_ANCHOR_HEAD", h1)
+        manifest = json.loads(rail_wt.blob("HEAD", MANIFEST_REL)
+                              .decode("utf-8"))
+        manifest["batches"] = []
+        rail_wt.write(MANIFEST_REL, _canonical_bytes(manifest) + b"\n")
+        rail_wt.commit("delete accepted batch from manifest")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_CHAIN_STALE"
+
+    def test_two_extra_batches_unaccepted(self, rail_wt, monkeypatch):
+        """多批追加（+2）→ REVISION_UNACCEPTED（候选 ④：len(hb)>n+1）。"""
+        _, h1 = self._v1(rail_wt)
+        monkeypatch.setattr(gqr, "REVISION_ANCHOR_HEAD", h1)
+        rule, mcq, recs = _batch_pair(rail_wt, "smth_t_003")
+        rule2, mcq2, recs2 = _batch_pair(rail_wt, "smth_t_004")
+        _append_batch(rail_wt, "B02", rule, mcq, recs, write_aggregate=False)
+        _append_batch(rail_wt, "B03", rule2, mcq2, recs2,
+                      write_aggregate=False)
+        rail_wt.commit("two extra batches")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt), candidate_batch_id="B02")
+        assert res["error_code"] == "REVISION_UNACCEPTED"
+
+    def test_manifest_freeze_intersection_malformed(self, rail_wt):
+        """manifest 与 freeze 交集（同一记录双列）→ ②
+        REVISION_MANIFEST_MALFORMED。"""
+        freeze = _freeze_of(rail_wt)
+        fr = freeze["books"]["sanmingtonghui"]["all_rules"]["records"][0]
+        snap_sha = _sha256(rail_wt.blob("HEAD", RAW025_REL))
+        rec = {"kind": "rule", "id": fr["id"], "sha256": fr["sha256"],
+               "source_chapter": "卷二·论坐命宫", "snapshot_path": RAW025_REL,
+               "snapshot_sha256": snap_sha, "historical_basis": None}
+        manifest = {"schema_version": "1.0", "book": "sanmingtonghui",
+                    "freeze_base_commit":
+                        "c5cff699fdb547bd9270acbebe1f485380848751",
+                    "batches": [{"batch_id": "B01", "date": "2026-09-08",
+                                 "author": "test", "records": [rec]}]}
+        rail_wt.write(MANIFEST_REL, _canonical_bytes(manifest) + b"\n")
+        rail_wt.commit("manifest lists freeze record")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", freeze, _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_MANIFEST_MALFORMED"
+
+    def test_manifest_orphan_mismatch(self, rail_wt, monkeypatch):
+        """manifest_orphan（manifest 列了记录、HEAD 聚合缺）→ ⑤ MISMATCH
+        （partition_detail.manifest_orphan ≥ 1）。"""
+        _, h1 = self._v1(rail_wt)
+        monkeypatch.setattr(gqr, "REVISION_ANCHOR_HEAD", h1)
+        rules_rel = "knowledge_base/classic_texts/sanmingtonghui/all_rules.json"
+        mcq_rel = "knowledge_base/classic_texts/sanmingtonghui/all_mcq.jsonl"
+        arr = [r for r in json.loads(rail_wt.blob("HEAD", rules_rel)
+                                     .decode("utf-8"))
+               if r["id"] != "smth_t_001"]
+        rail_wt.write(rules_rel,
+                      json.dumps(arr, ensure_ascii=False).encode("utf-8"))
+        kept = [ln for ln in rail_wt.blob("HEAD", mcq_rel)
+                .decode("utf-8").splitlines() if ln.strip()
+                and json.loads(ln)["id"] != "smth_t_001_m1"]
+        rail_wt.write(mcq_rel, ("\n".join(kept) + "\n").encode("utf-8"))
+        rail_wt.commit("drop batch records from aggregates")
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "sanmingtonghui", _freeze_of(rail_wt),
+            _evidence_of(rail_wt))
+        assert res["error_code"] == "REVISION_PARTITION_MISMATCH"
+        assert res["partition_detail"]["manifest_orphan"] >= 1
+
+    def _candidate_with_fake_baseline(self, rail_wt, monkeypatch, capsys,
+                                      baseline_rc, baseline_rep):
+        """R₀→C₁→候选 CLI（generate_report/基线重跑均 fake）；返回
+        (rc, stderr)。"""
+        TestCandidateCli()._r0(rail_wt)
+        TestRailCore()._make_c1(rail_wt)
+        rail_wt.commit("C1")
+        mod = _load_report_module(rail_wt)
+        cand = _baseline_report_fixture()
+        cand["revision_state"] = "PENDING_ACCEPTANCE"
+        cand["revision_provenance_valid"] = False
+        # _candidate_mode 读书级 revision 字段（generate_report 真实
+        # 输出在 book entry 上），fake 须同构补齐，否则误走第 6 步。
+        csm = cand["books"]["sanmingtonghui"]
+        csm["revision_state"] = "PENDING_ACCEPTANCE"
+        csm["revision_provenance_valid"] = False
+        monkeypatch.setattr(mod, "generate_report",
+                            lambda *a, **k: (cand, 1))
+        monkeypatch.setattr(mod, "run_baseline",
+                            lambda bc, gr, ar, first_batch=True: (
+                                baseline_rc, baseline_rep))
+        rc = mod.main(["--pending-batch", "B01", "--baseline-commit",
+                       TestCandidateCli.FIRST, "--toolchain-commit",
+                       rail_wt.head0, "--archive-root", str(rail_wt.path)])
+        return rc, capsys.readouterr().err
+
+    def test_baseline_rc7_exit1(self, rail_wt, monkeypatch, capsys):
+        """基线重跑 rc=7 端到端 → exit 1（REVISION_BASELINE_INVALID）。"""
+        rc, err = self._candidate_with_fake_baseline(
+            rail_wt, monkeypatch, capsys, 7, {})
+        assert rc == 1 and "REVISION_BASELINE_INVALID" in err
+
+    def test_baseline_out_of_allowed_fail_exit1(self, rail_wt, monkeypatch,
+                                                capsys):
+        """基线含允许集合外 FAIL（G3）端到端 → exit 1。"""
+        rep = _baseline_report_fixture()
+        rep["books"]["sanmingtonghui"]["gates"]["G3_schema"] = False
+        rc, err = self._candidate_with_fake_baseline(
+            rail_wt, monkeypatch, capsys, 1, rep)
+        assert rc == 1 and "REVISION_BASELINE_INVALID" in err
+
+    def test_baseline_blocked_exit3(self, rail_wt, monkeypatch, capsys):
+        """rc=3 基线 BLOCKED 上抛 → exit 3（SOURCE_CHAIN_BLOCKED:<reason>）。"""
+        rc, err = self._candidate_with_fake_baseline(
+            rail_wt, monkeypatch, capsys, 3,
+            _blocked_report_fixture("archive_missing"))
+        assert rc == 3 and "SOURCE_CHAIN_BLOCKED:archive_missing" in err
+
+    def test_committed_tamper_unregistered_exit1(self, rail_wt):
+        """已提交篡改未登记（worktree 内提交改脚本字节但未走 R）→ 候选
+        CLI 执行来源核验拒 → exit 1（REVISION_TOOLCHAIN_INVALID）。"""
+        TestCandidateCli()._r0(rail_wt)
+        rel = "scripts/generate_quality_report.py"
+        rail_wt.write(rel, (rail_wt.path / rel).read_bytes() + b"# tamper\n")
+        rail_wt.commit("tamper script without registration")
+        cli = TestCandidateCli()
+        rc, _, err = cli._cli(rail_wt, "--pending-batch", "B01",
+                              "--baseline-commit", TestCandidateCli.FIRST,
+                              "--toolchain-commit", rail_wt.head0,
+                              "--archive-root", str(rail_wt.path))
+        assert rc == 1 and "REVISION_TOOLCHAIN_INVALID" in err
+
+    def test_qiongtongbaojian_quarantine_stock_none(self, rail_wt):
+        """非空隔离存量书（穷通宝鉴 310 条 quarantine 记录）在等式中保留
+        多重性——HEAD==freeze 分区对该书不回归，rail NONE。"""
+        freeze = _freeze_of(rail_wt)
+        q = freeze["books"]["qiongtongbaojian"]
+        n_q = (len(q["quarantine_mcq"]["records"])
+               + len(q["quarantine_rules"]["records"]))
+        assert n_q >= 1  # 前置：确有非空隔离存量
+        res = gqr.evaluate_revision_rail(
+            rail_wt.path, "qiongtongbaojian", freeze, _evidence_of(rail_wt))
+        assert res["revision_state"] == "NONE"
+        assert res["ok"] is True and res["e3_ok"] is True
