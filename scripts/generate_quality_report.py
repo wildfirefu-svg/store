@@ -1239,9 +1239,15 @@ def _report_structure_ok(report: dict) -> bool:
             g = details.get(gate)
             if not isinstance(g, dict):
                 return False
-            # 无 chapter_list 的书（非 sanmingtonghui）G7 为 {pass, reason}
-            # 形态、无计数字段——跳过其 G7 计数子键校验（有 chapter_list 才算）
-            if gate == "G7_chapter_complete" and "expected" not in g:
+            # G7 形态按冻结适用条件（仅 sanmingtonghui 有 chapter_list）：
+            # 非 sm 书严格简化形态 {pass, reason=no chapter_list} 且无任何计数/
+            # 诊断键；sm 书必须完整计数字段（缺 expected 即拒绝，不得跳过）。
+            if gate == "G7_chapter_complete" and book != "sanmingtonghui":
+                if (g.get("reason") != "no chapter_list"
+                        or any(k in g for k in ("expected", "done", "missing",
+                                                "missing_count", "extra",
+                                                "extra_count"))):
+                    return False
                 continue
             if key not in g:
                 return False
@@ -1738,23 +1744,29 @@ def _extract_constant(script_bytes: bytes, name: str) -> str | None:
 
 
 def _normalized_script_diff(a: bytes, b: bytes) -> tuple[bool, set[str]]:
-    """5-R.11：按行比较，仅 REVISION_ANCHOR_HEAD / TOOLCHAIN_REGISTRY_HEAD
-    两行的值允许不同（其余字节全等）。返回 (是否仅允许差异, 差异常量名集)。"""
-    la, lb = a.splitlines(), b.splitlines()
-    if len(la) != len(lb):
-        return False, set()
-    diff_names: set[str] = set()
+    """5-R.11：仅 REVISION_ANCHOR_HEAD / TOOLCHAIN_REGISTRY_HEAD 两常量的
+    值部分可变，其余完整原始字节（含行尾/末尾换行）必须全等。先把两侧常量
+    值替换为占位符，再比较替换后的完整字节串。返回 (是否仅允许差异, 差异集)。"""
     const_re = re.compile(
-        rb'^(REVISION_ANCHOR_HEAD|TOOLCHAIN_REGISTRY_HEAD) = "[0-9a-f]{64}"$')
-    for x, y in zip(la, lb):
-        if x == y:
-            continue
-        mx = const_re.match(x)
-        my = const_re.match(y)
-        if mx and my and mx.group(1) == my.group(1):
-            diff_names.add(mx.group(1).decode())
-        else:
-            return False, set()
+        rb'^(REVISION_ANCHOR_HEAD|TOOLCHAIN_REGISTRY_HEAD) = "([0-9a-f]{64})"(?=\r?$)',
+        re.M)
+
+    def norm(blob: bytes) -> tuple[bytes, dict]:
+        vals: dict[str, bytes] = {}
+
+        def repl(m):
+            vals[m.group(1).decode()] = m.group(2)
+            return m.group(1) + b' = "<NORM>"'
+
+        return const_re.sub(repl, blob), vals
+
+    na, va = norm(a)
+    nb, vb = norm(b)
+    if na != nb:
+        return False, set()
+    diff_names = {name for name in ("REVISION_ANCHOR_HEAD",
+                                    "TOOLCHAIN_REGISTRY_HEAD")
+                  if va.get(name) != vb.get(name)}
     return True, diff_names
 
 
@@ -1836,12 +1848,17 @@ def validate_v_structure(git_root, v, *,
     if _extract_constant(script_p, "TOOLCHAIN_REGISTRY_HEAD") != \
             _registry_head_at(git_root, parent):
         return "REVISION_CHAIN_STALE"
-    # 7) V 与 HEAD 状态一致
+    # 7) V 与 HEAD 状态一致：锚文件一致 + 验收头常量一致；不比整个脚本
+    #（后续合法 R 只改 TOOLCHAIN_REGISTRY_HEAD，不得误拒历史 V）
     if require_head_consistency:
         if _git_show_optional_at(git_root, "HEAD", REVISION_ANCHOR_REL) != anchor_v:
             return "REVISION_CHAIN_STALE"
-        if (_git_show_optional_at(git_root, "HEAD", "scripts/generate_quality_report.py")
-                != script_v):
+        script_head = _git_show_optional_at(
+            git_root, "HEAD", "scripts/generate_quality_report.py")
+        if script_head is None:
+            return "REVISION_CHAIN_STALE"
+        if (_extract_constant(script_head, "REVISION_ANCHOR_HEAD")
+                != _extract_constant(script_v, "REVISION_ANCHOR_HEAD")):
             return "REVISION_CHAIN_STALE"
     return None
 

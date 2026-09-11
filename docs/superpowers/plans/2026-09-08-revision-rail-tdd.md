@@ -2672,13 +2672,26 @@ SystemExit 2、TestVStructure 3 用例 AttributeError: `validate_v_structure`
 4. `test_v_merge_commit_rejected` 固定分支名 `side` → 唯一（worktree 共享主
    仓库 refs，残留分支致跨次运行冲突）。
 
+执行补记（Self-Review 21）：
+1. `_normalized_script_diff` 弃 `splitlines()`（丢失行尾原始字节）→ 两侧常量值
+   替换为 `<NORM>` 后比较完整原始字节；正则 `\r?$` 初版消费 CRLF 的 `\r`（LF→CRLF
+   仍误判等同）→ 改零宽前瞻 `(?=\r?$)`。
+2. 第 7 项（V↔HEAD）改为只比较锚文件 + `REVISION_ANCHOR_HEAD` 常量（不比整个
+   `scripts/generate_quality_report.py`、不比 `TOOLCHAIN_REGISTRY_HEAD`）——
+   追加合法 R₂ 只改登记头常量，不得误拒历史 V。
+3. `_report_structure_ok` G7 按书分流：非 sm 书严格简化形态（`reason=="no
+   chapter_list"` ∧ 无 expected/done/missing/missing_count/extra/extra_count
+   任一键）才跳过；sm 书缺 `expected` 走结构层 `return False`，不得借缺键跳过
+   计数检查。
+
 - [ ] **Step 4：跑测试确认通过 + ruff + 提交**
 
 ```powershell
 python -m pytest tests/test_revision_rail.py -q && python -m ruff check scripts/generate_quality_report.py tests/test_revision_rail.py
 git add scripts/generate_quality_report.py tests/test_revision_rail.py
-Expected: PASS——聚焦 TestCandidateCli+TestVStructure 9 passed；全量
-166 passed（157 + 9）；ruff All checks passed。
+Expected: PASS——初版聚焦 TestCandidateCli+TestVStructure 9 passed；全量
+166 passed（157 + 9）；三轮复审（3 P0，见 Self-Review 21）追加 5 探针后全量
+171 passed（166 + 5）；ruff `--no-cache` All checks passed。
 
 ```powershell
 git commit -m "feat(revision-rail): candidate CLI, entry prechecks, V-structure validation"
@@ -2943,4 +2956,22 @@ gate_details 真实为 `{pass, reason}`（无计数键），synthetic fixture �
 rail/admissibility/report，连带适配 6 处既有测试 spy/fake/lambda 签名。
 (d) `test_v_merge_commit_rejected` 固定 `side` 分支名 → 唯一（worktree 共享
 主仓库 refs）。6 探针 6 failed → 修后聚焦 9 passed；全量 166 passed + ruff。
+
+21. **执行复审（Task 7 三轮 NEEDS_REVISION，3 P0）同步记录**：
+(a) `_normalized_script_diff` 原 `splitlines()` 丢失原始字节差异（LF→CRLF、
+删末尾换行均误判 `(True, set())`）→ 改为两侧常量值替换为 `<NORM>` 占位后比较
+完整原始字节；正则 `\r?$` 初版仍消费 CRLF 的 `\r`（LF→CRLF 误判等同）→ 改
+零宽前瞻 `(?=\r?$)`。补 `TestNormalizedScriptDiff` 3 用例。
+(b) 第 7 项（V↔HEAD 一致性）原比较整个 `scripts/generate_quality_report.py`
+@HEAD，追加合法 R₂ 后 `TOOLCHAIN_REGISTRY_HEAD` 变化误拒旧 V₁ → 缩小为
+锚文件 `@V == @HEAD` ∧ `REVISION_ANCHOR_HEAD` 常量 `@V == @HEAD`（不比脚本
+其余、不比 `TOOLCHAIN_REGISTRY_HEAD`）。补 `TestVStructure.test_v1_still
+_valid_after_r2`。
+(c) `_report_structure_ok` G7 只要缺 `expected` 即跳过计数、不区分书籍，sm
+可借 `{pass:true,reason:"no chapter_list"}` 缺键跳过计数、同步布尔后仍
+QUALIFIED → 改为非 sm 书严格简化形态（`reason=="no chapter_list"` ∧ 无
+expected/done/missing/missing_count/extra/extra_count 任一键）才跳过；sm 书
+缺 `expected` 走结构层 `return False`。补 `TestBaselineQualification.
+test_sm_g7_simplified_shape_rejected`。5 探针先 RED → 修后聚焦 5 passed；
+全量回归 171 passed（166+5）+ ruff 通过后提交。
 

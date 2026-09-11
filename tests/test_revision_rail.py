@@ -1733,6 +1733,16 @@ class TestBaselineQualification:
             "G6_answer_dist"]["dist_pct"] = {"A": 0.9}
         assert gqr._report_structure_ok(rep) is True
 
+    def test_sm_g7_simplified_shape_rejected(self):
+        """P0-3：三命通会不得借缺 expected 跳过计数检查——sm G7 改 {pass,
+        reason}（缺 expected/done/missing_count/extra_count）必须结构层拒绝
+        （sm 有 chapter_list，G7 计数字段适用，简化形态非法）。"""
+        rep = _baseline_report_fixture()
+        rep["books"]["sanmingtonghui"]["gate_details"][
+            "G7_chapter_complete"] = {"pass": True, "reason": "no chapter_list"}
+        assert gqr._report_structure_ok(rep) is False
+        assert gqr._classify_baseline_rc(1, rep, first_batch=True) == "INVALID"
+
 
 
 def _load_report_module(wt: RailWorktree):
@@ -1909,3 +1919,45 @@ class TestVStructure:
         v2 = rail_wt.commit("V-with-extra")
         assert gqr.validate_v_structure(
             rail_wt.path, v2) == "REVISION_CHAIN_STALE"
+
+    def test_v1_still_valid_after_r2(self, rail_wt):
+        """P0-2：追加合法 R₂（登记头常量变化，验收头常量不变）后重验旧 V₁
+        仍通过——第 7 项只比较锚文件 + 验收头常量，不比整个脚本（TOOLCHAIN_
+        REGISTRY_HEAD 随 R₂ 变不应误拒历史 V）。"""
+        v1 = self._v1(rail_wt)
+        reg_line = _registry_line(rail_wt.head0, GENESIS_SHA)
+        rail_wt.append_line(REGISTRY_REL, reg_line)
+        from scripts.classic_artifacts import (
+            REVISION_REGISTRY_FIELDS, chain_head as _ch)
+        h = _ch([json.loads(reg_line.decode())], GENESIS_SHA,
+                prev_field="prev_registry_sha256",
+                fields=REVISION_REGISTRY_FIELDS)
+        rail_wt.replace_constant("TOOLCHAIN_REGISTRY_HEAD", h)
+        rail_wt.commit("R2")
+        assert gqr.validate_v_structure(rail_wt.path, v1) is None
+
+
+class TestNormalizedScriptDiff:
+    def _blob(self, anchor, registry, line_end=b"\n", trailing=True):
+        tail = line_end if trailing else b""
+        return (b'REVISION_ANCHOR_HEAD = "' + anchor + b'"' + line_end
+                + b'TOOLCHAIN_REGISTRY_HEAD = "' + registry + b'"' + tail)
+
+    def test_only_constant_value_change_ok(self):
+        a = self._blob(b"a" * 64, b"b" * 64)
+        b = self._blob(b"c" * 64, b"b" * 64)
+        ok, names = gqr._normalized_script_diff(a, b)
+        assert ok is True and names == {"REVISION_ANCHOR_HEAD"}
+
+    def test_lf_to_crlf_rejected(self):
+        """P0-1：仅行尾 LF→CRLF（常量值不变）也须拒绝——不得用 splitlines
+        抹掉原始字节差异。"""
+        a = self._blob(b"a" * 64, b"b" * 64, line_end=b"\n")
+        b = self._blob(b"a" * 64, b"b" * 64, line_end=b"\r\n")
+        assert gqr._normalized_script_diff(a, b)[0] is False
+
+    def test_missing_trailing_newline_rejected(self):
+        """P0-1：删除末尾换行（常量值不变）也须拒绝。"""
+        a = self._blob(b"a" * 64, b"b" * 64, line_end=b"\n")
+        b = self._blob(b"a" * 64, b"b" * 64, line_end=b"\n", trailing=False)
+        assert gqr._normalized_script_diff(a, b)[0] is False
