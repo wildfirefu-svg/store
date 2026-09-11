@@ -2804,11 +2804,38 @@ T₀ = 本提交（Part A 中间提交为其祖先；T₀ OID 在 Part B R₀ �
 - Create: `docs/superpowers/plans/notes/approvals/revisions/sanmingtonghui/toolchain_registry.jsonl`（一行）
 - Modify: `scripts/generate_quality_report.py`（唯一替换 `TOOLCHAIN_REGISTRY_HEAD` 值）
 
-- [ ] **Step 1：前置确认**：T₀ OID（`git rev-parse HEAD`）已获用户复审放行；工作区干净（`QUALITY_REPORT.json` 处置方案已明确）。
-- [ ] **Step 2：写登记行**：`{"toolchain_commit":"<T₀>","date":"<当日 ISO-8601>","review_ref":"T0-review","prev_registry_sha256":"<GENESIS_SHA>"}`，canonical 单行 LF。
-- [ ] **Step 3：唯一替换常量**：`TOOLCHAIN_REGISTRY_HEAD` = 登记链头（`chain_head` 公式重算；脚本仅此一处字节差异）。
-- [ ] **Step 4：提交 R₀**：`chore(revision-rail): register T0 toolchain (R0)`。
-- [ ] **Step 5：验证**：候选 CLI 干跑（缺参 → exit 2 证明 CLI 活）+ 默认模式报告无回归（sanmingtonghui G7/source 红项保留，退出码与 Part A 前一致）。
+- [x] **Step 1：前置确认**：T₀ OID（`git rev-parse HEAD`）已获用户复审放行；工作区干净（`QUALITY_REPORT.json` 处置方案已明确）。
+- [x] **Step 2：写登记行**：`{"toolchain_commit":"<T₀>","date":"<当日 ISO-8601>","review_ref":"T0-review","prev_registry_sha256":"<GENESIS_SHA>"}`，canonical 单行 LF。
+- [x] **Step 3：唯一替换常量**：`TOOLCHAIN_REGISTRY_HEAD` = 登记链头（`chain_head` 公式重算；脚本仅此一处字节差异）。
+- [x] **Step 4：提交 R₀**：`chore(revision-rail): register T0 toolchain (R0)`。
+- [x] **Step 5：验证**：候选 CLI 干跑（缺参 → exit 2 证明 CLI 活）+ 默认模式报告无回归（sanmingtonghui G7/source 红项保留，退出码与 Part A 前一致）。
+
+执行补记（Task 9，R₀ = `9c151b0`，已通过全量 rail 回归）：
+- **提交结构（复审修正）**：R₀ 提交仅登记文件 + 脚本常量两文件
+  （§5-R.4）；既有测试修补为独立 test 提交 `e35fb8a` 先行落地；本计划
+  记录为独立 docs 提交，最终 R₀ 身份在此落盘（不再 amend）。
+- **登记**：`toolchain_registry.jsonl` 一行
+  `{"date":"2026-09-11","prev_registry_sha256":<GENESIS_SHA>,"review_ref":
+  "T0-review","toolchain_commit":"fd000ad9e14acd59964f68e005123ecf60722135"}`
+  （canonical 单行 LF，严格解析通过）；`TOOLCHAIN_REGISTRY_HEAD` 由 genesis
+  字面量唯一替换为登记链头 `a53edc5ed678c221f93780cca051cac8b48d3387418a84d60116282926e27b24`
+  （`chain_head` 重算，脚本仅此一处字节差异）；`REVISION_ANCHOR_HEAD` 保持
+  genesis（尚无 V）。
+- **前置**：用户复审放行 T₀=`fd000ad`；`QUALITY_REPORT.json` 既有改动继续
+  隔离（默认报告验证前后以 Python 备份/恢复并 SHA 核对，字节一致）。
+- **验证**：候选 CLI 干跑（`--pending-batch R25` 缺参）→ exit 2
+  `REVISION_CLI_USAGE`；默认模式报告（真实归档根
+  `<本地 .snapshot_archive 目录>`）→ exit 1（与 Part A 前一致）：三命通会
+  gates=FAIL（G7 `missing_count` 303 红项保留）、`source_e2e_status`=PASS
+  （归档链通过）、其余三书 S 口径 FAIL、顶层 `revision_state`=NONE。
+- **测试同步（独立 test 提交 `e35fb8a`）**：`test_trust_roots_start_at_genesis`
+  的 registry 断言由 `== GENESIS_SHA` 改为 `== _registry_head(ROOT)`（R₀ 后
+  信任根绑定登记链头；genesis 空链时二者相等，两态都成立）。
+- **fixture 隔离（独立 test 提交 `e35fb8a`；R₀ 引入的既有真实登记文件会
+  泄漏进 worktree）**：`RailWorktree.__init__` 归零登记/锚/manifest 三文件，
+  `sync_synthetic_t` 将两信任根常量重置 genesis——否则 `_r0`/
+  `_register_toolchain`/V 结构测试因叠加真实登记行或常量与空链错配而
+  CHAIN_STALE/TOOLCHAIN_INVALID。
 
 ## Task 10：C₁ 内容提交（R25 批次；真实内容）
 
@@ -3064,3 +3091,18 @@ quan","qiongtongbaojian","sanmingtonghui"}` 判定；同步 `_passing_book` fixt
 `_qualified_baseline_report(...) is False` 且候选 CLI exit 1 +（基线替身经
 `_candidate_with_fake_baseline(run_baseline_calls=...)` 记录确被调用）。聚焦
 探针先 RED → 修后 P0-1 真实链 1 passed（126s）/P0-2 端到端 1 passed；全量 test_revision_rail.py 137 passed（136+1）+ ruff 通过后提交。
+
+25. **执行细节（Task 9 R₀ 登记）同步记录**：R₀ = `9c151b0`（T₀=
+`fd000ad`，登记链头 `a53edc5e…`；脚本仅 `TOOLCHAIN_REGISTRY_HEAD` 一处
+字节差异）。验证三连：trust-root 测试更新为 `== _registry_head(ROOT)`；
+候选 CLI 缺参 exit 2；默认报告 exit 1、G7 303 红项保留、sm source PASS、
+其余 S 口径 FAIL、revision_state NONE。**执行发现（fixture 层）**：R₀ 使
+真实仓库登记文件非空，fixture worktree 从 HEAD 继承后 `append_line` 叠加
+真实行 → 链头/常量错配；且合成 T 复制的脚本带真实登记常量，与归零后的
+空链错配 → `TestCandidateCli._r0`/`TestVStructure.test_v1_still_valid
+_after_r2` 等红。修：`RailWorktree.__init__` 删除登记/锚/manifest 三文件，
+`sync_synthetic_t` 把 `REVISION_ANCHOR_HEAD`/`TOOLCHAIN_REGISTRY_HEAD`
+重置为 genesis（对未来 R₁/C₁/V₁ 泄漏同样免疫）。聚焦 9 passed → 全量
+137 passed + ruff 通过后提交。复审将混入 R₀ 的测试/计划拆出：R₀ 仅两文件
+（`9c151b0`），测试修补独立提交，本计划记录独立提交并落盘最终 R₀ 身份。
+137 passed + ruff 通过后随 R₀ 一并提交。
