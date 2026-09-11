@@ -2635,7 +2635,12 @@ class TestVStructure:
 - [ ] **Step 2：跑测试确认失败**
 
 Run: `python -m pytest tests/test_revision_rail.py -q`
-Expected: FAIL（CLI 候选参数与 `validate_v_structure` 均不存在）
+Expected: FAIL——实测 6 failed（`test_toolchain_not_registered_exit1`/
+`test_disk_tamper_exit1` 得 exit 2 而非 1、`test_candidate_exit4_boundary`
+SystemExit 2、TestVStructure 3 用例 AttributeError: `validate_v_structure`
+不存在）；3 passed（`test_missing_args_exit2`/`test_first_batch_wrong_baseline_exit2`/
+`test_non_first_batch_first_baseline_exit2` 被 argparse 未知参数默认 exit 2
+恰好命中，语义待 Step 3 修正后收紧）。
 
 - [ ] **Step 3：实现**
 
@@ -2650,11 +2655,32 @@ Expected: FAIL（CLI 候选参数与 `validate_v_structure` 均不存在）
 3. `validate_v_structure(git_root, v: str) -> str | None`（5-R.7 七项，任一失败返回 `REVISION_CHAIN_STALE`）：唯一父（`rev-list --parents -n 1 v` 恰 2 OID）；diff 路径恰 `{REVISION_ANCHOR_REL, "scripts/generate_quality_report.py"}`；锚增量（@P 行集为 @V 真前缀 ∧ 新行为 @V 末行）；常量增量（`_normalized_script_diff(blob@P, blob@V)` 且差异唯一为 `REVISION_ANCHOR_HEAD` 值；@V 常量 == @V 锚链头 ∧ @P 常量 == @P 锚链头——链头从各自 blob 重算，不用 HEAD）；C 绑定（新锚 `content_commit` 存在 ∧ V 祖先 ∧ `sha256(_canonical(manifest@C).encode("utf-8")) == manifest_sha256_after`）；P 工具链身份（`script@P` vs `script@T_v` 双常量规范化比较 ∧ `classic_artifacts@P` 逐字节 == `@T_v`；两常量实际值 == @P 重算链头）；V 与 HEAD 锚状态一致（锚 blob @V == @HEAD ∧ 常量 @V == @HEAD——仅最新 V 满足，历史 V 调用时跳过第 7 项：接口加 `require_head_consistency: bool = True`）。
 4. `_normalized_script_diff(a: bytes, b: bytes) -> tuple[bool, set[str]]`：按行比较，仅 `REVISION_ANCHOR_HEAD = "…"`/`TOOLCHAIN_REGISTRY_HEAD = "…"` 两行的值允许不同，其余字节全等（5-R.11）。
 
+执行补记（Self-Review 20）：
+1. `_mk_mcq` 补 `difficulty`/`category`——`MCQ_REQUIRED`（validate_classic_distillation.py
+   39-40）含此二键，C₁ 追加 mcq 缺键致 G3 bad_mcq、候选报告 sm G3 PASS→FAIL
+   误退化；候选 exit-4 边界首次跑真实 G1-G9 才暴露。
+2. G7 双形态对齐——非 sanmingtonghui 书（无 chapter_list）真实 G7 gate_details
+   为 `{pass, reason}`（validate_classic_distillation.py 217），无计数键；
+   synthetic fixture `_passing_book` 原本四书统一完整 G7 键，与真实候选退化
+   比较误报 `expected: removed`。修正 `_passing_book`（非 sm 书 G7 →
+   `{pass,reason}`）、`_gate_consistent`（G7 无 missing_count → 推导 True）、
+   `_report_structure_ok`（明细校验对 G7 无 expected 即 no chapter_list 跳过
+   计数子键）。
+3. `candidate_batch_id` 新 keyword 经 `evaluate_revision_rail` /
+   `evaluate_provenance_admissibility` / `generate_report` 贯通（默认 None），
+   连带适配 6 处既有测试 spy/fake/lambda 签名（+ `candidate_batch_id=None`）。
+4. `test_v_merge_commit_rejected` 固定分支名 `side` → 唯一（worktree 共享主
+   仓库 refs，残留分支致跨次运行冲突）。
+
 - [ ] **Step 4：跑测试确认通过 + ruff + 提交**
 
 ```powershell
 python -m pytest tests/test_revision_rail.py -q && python -m ruff check scripts/generate_quality_report.py tests/test_revision_rail.py
 git add scripts/generate_quality_report.py tests/test_revision_rail.py
+Expected: PASS——聚焦 TestCandidateCli+TestVStructure 9 passed；全量
+166 passed（157 + 9）；ruff All checks passed。
+
+```powershell
 git commit -m "feat(revision-rail): candidate CLI, entry prechecks, V-structure validation"
 ```
 
@@ -2906,4 +2932,15 @@ B∩N 可绕过退化比较）→ N−B 改 `is not True`（严格 True）；共
 `isinstance(n_gates[g], bool)` 类型检查再退化比较（type-changed），且该分支
 限定 `g in both`（部分 gates fixture 不触发 KeyError）。6 新探针 5 failed
 （区分性 1 条预期通过）→ 修后聚焦 47 passed；全量复跑 + ruff 通过后提交。
+
+20. **执行细节（Task 7）同步记录**：(a) `_mk_mcq` 补 `difficulty`/`category`
+（`MCQ_REQUIRED` 含此二键，缺致 G3 bad_mcq→sm G3 PASS→FAIL 误退化，候选
+exit-4 首次跑真实门禁才暴露）。(b) G7 双形态——非 sm 书（无 chapter_list）G7
+gate_details 真实为 `{pass, reason}`（无计数键），synthetic fixture 统一完整
+键与真实候选退化比较误报 `removed`：改 `_passing_book`/`_gate_consistent`/
+`_report_structure_ok` 三处对齐（G7 无 missing_count → 推导 True、无 expected
+即 no chapter_list 跳过计数子键）。(c) `candidate_batch_id` keyword 贯通
+rail/admissibility/report，连带适配 6 处既有测试 spy/fake/lambda 签名。
+(d) `test_v_merge_commit_rejected` 固定 `side` 分支名 → 唯一（worktree 共享
+主仓库 refs）。6 探针 6 failed → 修后聚焦 9 passed；全量 166 passed + ruff。
 

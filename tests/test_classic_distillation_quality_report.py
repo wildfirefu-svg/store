@@ -834,7 +834,7 @@ def test_report_exit_zero_when_all_pass(tmp_path, monkeypatch):
     (tmp_path / "sanmingtonghui" / "provenance.json").unlink()
     monkeypatch.setattr(
         "scripts.generate_quality_report.evaluate_provenance_admissibility",
-        lambda bd, gr: {
+        lambda bd, gr, candidate_batch_id=None: {
             "provenance_state": "MISSING", "E0_ok": True, "E1_ok": True,
             "E2_ok": True, "E3_ok": True, "historical_exemption_valid": True,
             "provenance_admissible": True, "exemption_error_code": None,
@@ -859,7 +859,7 @@ def test_report_b2_constant_invalid_fails_closed(tmp_path, monkeypatch):
     (tmp_path / "sanmingtonghui" / "provenance.json").unlink()
     monkeypatch.setattr(
         "scripts.generate_quality_report.evaluate_provenance_admissibility",
-        lambda bd, gr: {
+        lambda bd, gr, candidate_batch_id=None: {
             "provenance_state": "MISSING", "E0_ok": True, "E1_ok": True,
             "E2_ok": True, "E3_ok": True, "historical_exemption_valid": True,
             "provenance_admissible": True, "exemption_error_code": None,

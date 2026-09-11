@@ -91,6 +91,7 @@ REVISION_ANCHOR_REL = ("docs/superpowers/plans/notes/approvals/revisions/"
                        "sanmingtonghui/accepted_anchors.jsonl")
 REVISION_REGISTRY_REL = ("docs/superpowers/plans/notes/approvals/revisions/"
                          "sanmingtonghui/toolchain_registry.jsonl")
+FIRST_BATCH_BASELINE = "03c02bb571dec9e2da1f7d503a292da229415d8f"
 REVISION_MANIFEST_REL = ("knowledge_base/classic_texts/sanmingtonghui/"
                          "revision_manifest.json")
 REVISION_ALLOWED_RED_ITEMS = {  # 允许红项上界（附录 A.3；仅 sanmingtonghui.G7）
@@ -364,7 +365,8 @@ def _rail_anchor_entries(git_root: Path) -> list[dict] | None:
 
 
 def evaluate_revision_rail(git_root: Path, book: str,
-                           freeze: dict, evidence: dict) -> dict:
+                           freeze: dict, evidence: dict, *,
+                           candidate_batch_id: str | None = None) -> dict:
     """§5-R.5 唯一执行入口：①-⑦ 管线，顺序即错误优先级，单次读取 HEAD。
 
     返回 {ok, revision_state, error_code, e3_ok, partition_detail?}。
@@ -438,8 +440,12 @@ def evaluate_revision_rail(git_root: Path, book: str,
         return _fail("REVISION_CHAIN_STALE")
     if head != REVISION_ANCHOR_HEAD:
         return _fail("REVISION_CHAIN_STALE")
-    # ④ HEAD manifest vs 已验收基线（默认模式）
-    drift = _baseline_compare(git_root, obj, anchors or [])
+    # ④ HEAD manifest vs 已验收基线（默认/候选模式）
+    if candidate_batch_id is not None:
+        drift = _candidate_compare(git_root, obj, anchors or [],
+                                   candidate_batch_id)
+    else:
+        drift = _baseline_compare(git_root, obj, anchors or [])
     if drift is not None:
         return _fail(drift)
     # ⑤ 分区等式（全 KINDS；Counter 计数，禁 set）
@@ -451,7 +457,8 @@ def evaluate_revision_rail(git_root: Path, book: str,
     src = _source_identity_and_content(git_root, book, evidence, manifest_recs)
     if src is not None:
         return _fail(src)
-    return {"ok": True, "revision_state": "ACCEPTED", "error_code": None,
+    state = "PENDING_ACCEPTANCE" if candidate_batch_id is not None else "ACCEPTED"
+    return {"ok": True, "revision_state": state, "error_code": None,
             "e3_ok": True}
 
 
@@ -682,7 +689,9 @@ def _historical_basis_ok(git_root: Path, hb: dict) -> bool:
     return n == 1
 
 
-def evaluate_provenance_admissibility(book_dir: Path, git_root: Path | None) -> dict:
+def evaluate_provenance_admissibility(book_dir: Path, git_root: Path | None,
+                                      *, candidate_batch_id: str | None = None
+                                      ) -> dict:
     """§5 三态判定 + E0 静态校验 + MISSING 下的 E1/E2/E3 豁免链（阶段顺序短路）。
 
     不接 archive_root、不调用 source checker（§7 参数链：两条同级链）。"""
@@ -747,7 +756,8 @@ def evaluate_provenance_admissibility(book_dir: Path, git_root: Path | None) -> 
         return res
     # §5-R.5：E3 已并入 rail——evaluate_provenance_admissibility 调用一次、
     # 只消费结果（rail 输出即 E3 结果）；错误码沿 exemption_error_code 透出。
-    rail = evaluate_revision_rail(git_root, book, freeze, evidence)
+    rail = evaluate_revision_rail(git_root, book, freeze, evidence,
+                                  candidate_batch_id=candidate_batch_id)
     res["E3_ok"] = rail["e3_ok"]
     res["revision_state"] = rail["revision_state"]
     res["revision_provenance_valid"] = rail["revision_state"] == "ACCEPTED"
@@ -1081,8 +1091,9 @@ def _gate_consistent(gates: dict, gate_details: dict) -> bool:
         "G5_traceability": z("G5_traceability", "untraceable"),
         "G6_answer_dist": ((d.get("G6_answer_dist") or {}).get("out_of_band") == []
                            and z("G6_answer_dist", "invalid_answers")),
-        "G7_chapter_complete": z("G7_chapter_complete", "missing_count",
-                                 "extra_count"),
+        "G7_chapter_complete": (
+            "missing_count" not in (d.get("G7_chapter_complete") or {})
+            or z("G7_chapter_complete", "missing_count", "extra_count")),
         "G8_mcq_well_formed": z("G8_mcq_well_formed", "malformed"),
         "G9_content_dedup": z("G9_content_dedup",
                               "rule_text_duplicate_groups",
@@ -1226,7 +1237,13 @@ def _report_structure_ok(report: dict) -> bool:
         for spec in REPORT_FIELD_SCHEMA["book_gate_details"]:
             gate, key = spec["name"].split(".", 1)
             g = details.get(gate)
-            if not isinstance(g, dict) or key not in g:
+            if not isinstance(g, dict):
+                return False
+            # 无 chapter_list 的书（非 sanmingtonghui）G7 为 {pass, reason}
+            # 形态、无计数字段——跳过其 G7 计数子键校验（有 chapter_list 才算）
+            if gate == "G7_chapter_complete" and "expected" not in g:
+                continue
+            if key not in g:
                 return False
             val = g[key]
             if not _spec_type_ok(spec, val):
@@ -1408,6 +1425,8 @@ def generate_report(
     base_path: Path | None = None,
     books: dict[str, str] | None = None,
     archive_root=None,
+    *,
+    candidate_batch_id: str | None = None,
 ) -> tuple[dict, int]:
     """Generate quality report. Returns (report_dict, exit_code).
 
@@ -1551,7 +1570,8 @@ def generate_report(
         entry["end_to_end_provenance"] = end_to_end_provenance
 
         # §5/§7：三态判定 + E0/E1/E2/E3 豁免链（不接 archive_root）
-        adm = evaluate_provenance_admissibility(p, git_root)
+        adm = evaluate_provenance_admissibility(p, git_root,
+                                                candidate_batch_id=candidate_batch_id)
         entry["provenance_state"] = adm["provenance_state"]
         entry["historical_exemption_valid"] = adm["historical_exemption_valid"]
         entry["provenance_admissible"] = adm["provenance_admissible"]
@@ -1625,11 +1645,324 @@ def generate_report(
     return report, exit_code
 
 
+def _registry_entries(git_root: Path) -> list[dict] | None:
+    """@HEAD 登记文件逐行严格解析；文件不存在 → None。"""
+    from scripts.classic_artifacts import parse_jsonl_line
+    raw = _git_show_optional(git_root, REVISION_REGISTRY_REL)
+    if raw is None:
+        return None
+    entries = []
+    for line in raw.splitlines():
+        if not line.strip():
+            continue
+        entries.append(parse_jsonl_line(line))
+    return entries
+
+
+def _registry_head(git_root: Path) -> str:
+    """@HEAD 登记链头（空/缺失 → chain_head([], genesis)）。"""
+    from scripts.classic_artifacts import (
+        GENESIS_SHA, REVISION_REGISTRY_FIELDS, chain_head)
+    return chain_head(_registry_entries(git_root) or [], GENESIS_SHA,
+                      prev_field="prev_registry_sha256",
+                      fields=REVISION_REGISTRY_FIELDS)
+
+
+def _registry_head_at(git_root: Path, rev: str) -> str:
+    from scripts.classic_artifacts import (
+        GENESIS_SHA, REVISION_REGISTRY_FIELDS, chain_head, parse_jsonl_line)
+    raw = _git_show_optional_at(git_root, rev, REVISION_REGISTRY_REL)
+    entries = []
+    if raw is not None:
+        for line in raw.splitlines():
+            if line.strip():
+                entries.append(parse_jsonl_line(line))
+    return chain_head(entries, GENESIS_SHA, prev_field="prev_registry_sha256",
+                      fields=REVISION_REGISTRY_FIELDS)
+
+
+def _anchor_entries(git_root: Path) -> list[dict]:
+    """@HEAD 锚文件条目；文件不存在/零行 → []. 畸形行上抛 RevisionArtifactError。"""
+    from scripts.classic_artifacts import RevisionArtifactError, parse_jsonl_line
+    raw = _git_show_optional(git_root, REVISION_ANCHOR_REL)
+    entries = []
+    if raw is not None:
+        for line in raw.splitlines():
+            if not line.strip():
+                raise RevisionArtifactError("blank anchor line")
+            entries.append(parse_jsonl_line(line))
+    return entries
+
+
+def _accepted_manifest(git_root: Path, anchors: list[dict]) -> dict:
+    """已验收基线 manifest：锚空 → 空基线字面量；否则锚末 content_commit 的 manifest。"""
+    from scripts.classic_artifacts import EMPTY_BASELINE_MANIFEST
+    if anchors:
+        c_oid = anchors[-1]["content_commit"]
+        r = subprocess.run(["git", "-C", str(git_root), "show",
+                            f"{c_oid}:{REVISION_MANIFEST_REL}"],
+                           capture_output=True)
+        if r.returncode != 0:
+            raise ValueError("accepted content_commit missing")
+        return _loads_strict(r.stdout.decode("utf-8"))
+    return EMPTY_BASELINE_MANIFEST
+
+
+def _candidate_compare(git_root: Path, head_manifest: dict,
+                       anchors: list[dict], candidate_batch_id: str) -> str | None:
+    """④ 候选分支（设计 5-R.6/5-R.8）：n=len(accepted.batches)，要求
+    len(candidate.batches)==n+1 ∧ 前缀逐对象 canonical 相等 ∧ 新 batch_id==参数
+    ∧ 全新；违者删批→CHAIN_STALE、多批→UNACCEPTED、其余→HISTORY_DRIFT。"""
+    try:
+        base = _accepted_manifest(git_root, anchors)
+    except Exception:
+        return "REVISION_CHAIN_STALE"
+    hb, bb = head_manifest["batches"], base["batches"]
+    n = len(bb)
+    if (len(hb) == n + 1
+            and _canonical(hb[:n]) == _canonical(bb)
+            and hb[n]["batch_id"] == candidate_batch_id
+            and hb[n]["batch_id"] not in {b["batch_id"] for b in bb}):
+        return None
+    if {b["batch_id"] for b in hb} < {b["batch_id"] for b in bb}:
+        return "REVISION_CHAIN_STALE"
+    if len(hb) > n + 1:
+        return "REVISION_UNACCEPTED"
+    return "REVISION_HISTORY_DRIFT"
+
+
+def _extract_constant(script_bytes: bytes, name: str) -> str | None:
+    m = re.search(rf'^{name} = "([0-9a-f]{{64}})"$',
+                  script_bytes.decode("utf-8", "replace"), re.M)
+    return m.group(1) if m else None
+
+
+def _normalized_script_diff(a: bytes, b: bytes) -> tuple[bool, set[str]]:
+    """5-R.11：按行比较，仅 REVISION_ANCHOR_HEAD / TOOLCHAIN_REGISTRY_HEAD
+    两行的值允许不同（其余字节全等）。返回 (是否仅允许差异, 差异常量名集)。"""
+    la, lb = a.splitlines(), b.splitlines()
+    if len(la) != len(lb):
+        return False, set()
+    diff_names: set[str] = set()
+    const_re = re.compile(
+        rb'^(REVISION_ANCHOR_HEAD|TOOLCHAIN_REGISTRY_HEAD) = "[0-9a-f]{64}"$')
+    for x, y in zip(la, lb):
+        if x == y:
+            continue
+        mx = const_re.match(x)
+        my = const_re.match(y)
+        if mx and my and mx.group(1) == my.group(1):
+            diff_names.add(mx.group(1).decode())
+        else:
+            return False, set()
+    return True, diff_names
+
+
+def validate_v_structure(git_root, v, *,
+                         require_head_consistency: bool = True) -> str | None:
+    """5-R.7 七项定点验证；任一失败返回 "REVISION_CHAIN_STALE"，全过 None。"""
+    from scripts.classic_artifacts import (
+        GENESIS_SHA, RevisionArtifactError, chain_head, parse_jsonl_line)
+    # 1) 唯一父
+    rev = _git(git_root, "rev-list", "--parents", "-n", "1", v).decode().strip().split()
+    if len(rev) != 2:
+        return "REVISION_CHAIN_STALE"
+    parent = rev[1]
+    # 2) diff 路径 == {锚文件, 脚本}
+    diff = _git(git_root, "diff", "--name-only", parent, v).decode().strip()
+    paths = set(diff.splitlines()) if diff else set()
+    if paths != {REVISION_ANCHOR_REL, "scripts/generate_quality_report.py"}:
+        return "REVISION_CHAIN_STALE"
+    # 3) 锚增量：@P 行集为 @V 真前缀，新行 @V 末条
+    anchor_p = _git_show_optional_at(git_root, parent, REVISION_ANCHOR_REL)
+    anchor_v = _git_show_optional_at(git_root, v, REVISION_ANCHOR_REL)
+    if anchor_v is None:
+        return "REVISION_CHAIN_STALE"
+    try:
+        entries_v = [parse_jsonl_line(l) for l in anchor_v.splitlines() if l.strip()]
+        entries_p = ([] if anchor_p is None else
+                     [parse_jsonl_line(l) for l in anchor_p.splitlines() if l.strip()])
+    except RevisionArtifactError:
+        return "REVISION_CHAIN_STALE"
+    p_canon = [_canonical(e).encode("utf-8") for e in entries_p]
+    v_canon = [_canonical(e).encode("utf-8") for e in entries_v]
+    if len(v_canon) != len(p_canon) + 1 or v_canon[:len(p_canon)] != p_canon:
+        return "REVISION_CHAIN_STALE"
+    new_anchor = entries_v[-1]
+    # 4) 常量增量 + 链头核验
+    script_p = _git_show_optional_at(git_root, parent, "scripts/generate_quality_report.py")
+    script_v = _git_show_optional_at(git_root, v, "scripts/generate_quality_report.py")
+    if script_p is None or script_v is None:
+        return "REVISION_CHAIN_STALE"
+    ok, diff_names = _normalized_script_diff(script_p, script_v)
+    if not ok or diff_names != {"REVISION_ANCHOR_HEAD"}:
+        return "REVISION_CHAIN_STALE"
+    anchor_head_v = chain_head(entries_v, GENESIS_SHA)
+    anchor_head_p = chain_head(entries_p, GENESIS_SHA)
+    if _extract_constant(script_v, "REVISION_ANCHOR_HEAD") != anchor_head_v:
+        return "REVISION_CHAIN_STALE"
+    if _extract_constant(script_p, "REVISION_ANCHOR_HEAD") != anchor_head_p:
+        return "REVISION_CHAIN_STALE"
+    # 5) C 绑定
+    c_oid = new_anchor["content_commit"]
+    if _git_rev_parse_optional(git_root, c_oid) is None:
+        return "REVISION_CHAIN_STALE"
+    if not _is_ancestor(git_root, c_oid, v):
+        return "REVISION_CHAIN_STALE"
+    manifest_c = _git_show_optional_at(git_root, c_oid, REVISION_MANIFEST_REL)
+    if manifest_c is None:
+        return "REVISION_CHAIN_STALE"
+    try:
+        mobj = _loads_strict(manifest_c.decode("utf-8"))
+    except Exception:
+        return "REVISION_CHAIN_STALE"
+    if hashlib.sha256(_canonical(mobj).encode("utf-8")).hexdigest() != \
+            new_anchor["manifest_sha256_after"]:
+        return "REVISION_CHAIN_STALE"
+    # 6) P 的工具链身份
+    t_v = new_anchor.get("toolchain_commit")
+    if not isinstance(t_v, str):
+        return "REVISION_CHAIN_STALE"
+    script_t = _git_show_optional_at(git_root, t_v, "scripts/generate_quality_report.py")
+    ca_p = _git_show_optional_at(git_root, parent, "scripts/classic_artifacts.py")
+    ca_t = _git_show_optional_at(git_root, t_v, "scripts/classic_artifacts.py")
+    if script_t is None or ca_p is None or ca_t is None:
+        return "REVISION_CHAIN_STALE"
+    ok2, _ = _normalized_script_diff(script_t, script_p)
+    if not ok2:
+        return "REVISION_CHAIN_STALE"
+    if ca_t != ca_p:
+        return "REVISION_CHAIN_STALE"
+    if _extract_constant(script_p, "TOOLCHAIN_REGISTRY_HEAD") != \
+            _registry_head_at(git_root, parent):
+        return "REVISION_CHAIN_STALE"
+    # 7) V 与 HEAD 状态一致
+    if require_head_consistency:
+        if _git_show_optional_at(git_root, "HEAD", REVISION_ANCHOR_REL) != anchor_v:
+            return "REVISION_CHAIN_STALE"
+        if (_git_show_optional_at(git_root, "HEAD", "scripts/generate_quality_report.py")
+                != script_v):
+            return "REVISION_CHAIN_STALE"
+    return None
+
+
+def _candidate_mode(git_root, batch_id, baseline_commit, toolchain_commit,
+                    archive_root) -> int:
+    """候选模式（5-R.6）：T 准入 → 执行来源核验 → 首批/非首批路径 → 候选门禁
+    → 基线重跑/分类/退化比较 → 输出候选报告 exit 4。"""
+    from scripts.classic_artifacts import (
+        GENESIS_SHA, RevisionArtifactError, REVISION_REGISTRY_FIELDS,
+        chain_head, parse_jsonl_line)
+
+    def _fail1(code: str) -> int:
+        print(code, file=sys.stderr)
+        return 1
+
+    # 1) T 准入
+    try:
+        reg_entries = _registry_entries(git_root)
+        if reg_entries is None:
+            return _fail1("REVISION_TOOLCHAIN_INVALID")
+        reg_head = chain_head(reg_entries, GENESIS_SHA,
+                              prev_field="prev_registry_sha256",
+                              fields=REVISION_REGISTRY_FIELDS)
+    except RevisionArtifactError:
+        return _fail1("REVISION_TOOLCHAIN_INVALID")
+    if reg_head != TOOLCHAIN_REGISTRY_HEAD:
+        return _fail1("REVISION_TOOLCHAIN_INVALID")
+    if toolchain_commit not in {e["toolchain_commit"] for e in reg_entries}:
+        return _fail1("REVISION_TOOLCHAIN_INVALID")
+    # 2) 执行来源核验（磁盘 == HEAD 逐字节；磁盘 vs @T 双常量规范化）
+    disk = (git_root / "scripts" / "generate_quality_report.py").read_bytes()
+    disk_ca = (git_root / "scripts" / "classic_artifacts.py").read_bytes()
+    head_script = _git_show_optional(git_root, "scripts/generate_quality_report.py")
+    head_ca = _git_show_optional(git_root, "scripts/classic_artifacts.py")
+    t_script = _git_show_optional_at(git_root, toolchain_commit,
+                                     "scripts/generate_quality_report.py")
+    t_ca = _git_show_optional_at(git_root, toolchain_commit,
+                                 "scripts/classic_artifacts.py")
+    if (head_script is None or head_ca is None or t_script is None or t_ca is None):
+        return _fail1("REVISION_TOOLCHAIN_INVALID")
+    if disk != head_script or disk_ca != head_ca:
+        return _fail1("REVISION_TOOLCHAIN_INVALID")
+    ok, _ = _normalized_script_diff(t_script, disk)
+    if not ok or t_ca != disk_ca:
+        return _fail1("REVISION_TOOLCHAIN_INVALID")
+    # 3) 首批/非首批路径判定
+    try:
+        anchor_entries = _anchor_entries(git_root)
+    except RevisionArtifactError:
+        return _fail1("REVISION_CHAIN_STALE")
+    first_batch = (not anchor_entries) and (REVISION_ANCHOR_HEAD == GENESIS_SHA)
+    if first_batch:
+        if (baseline_commit != FIRST_BATCH_BASELINE
+                or toolchain_commit != reg_entries[0]["toolchain_commit"]):
+            print("REVISION_CLI_USAGE", file=sys.stderr)
+            return 2
+    else:
+        if baseline_commit == FIRST_BATCH_BASELINE:
+            print("REVISION_CLI_USAGE", file=sys.stderr)
+            return 2
+        if _git_rev_parse_optional(git_root, baseline_commit) is None:
+            return _fail1("REVISION_BASELINE_INVALID")
+        if not _is_ancestor(git_root, baseline_commit, "HEAD"):
+            return _fail1("REVISION_BASELINE_INVALID")
+        if validate_v_structure(git_root, baseline_commit) is not None:
+            return _fail1("REVISION_BASELINE_INVALID")
+    # 4) 候选门禁：rail 候选 + E0-E2 + B2 + G1-G9 实际执行
+    report, report_rc = generate_report(archive_root=archive_root,
+                                        candidate_batch_id=batch_id)
+    sm = report.get("books", {}).get("sanmingtonghui", {})
+    # 5) source BLOCKED → exit 3
+    if report_rc == 3 or report.get("status") == "BLOCKED":
+        reason = sm.get("source_blocked_reason") or "unknown"
+        print(f"SOURCE_CHAIN_BLOCKED:{reason}", file=sys.stderr)
+        return 3
+    # 6) 修订链/E0-E2/B2 失败 → exit 1
+    if sm.get("revision_state") != "PENDING_ACCEPTANCE":
+        return _fail1(sm.get("exemption_error_code") or "REVISION_BASELINE_INVALID")
+    stages = sm.get("exemption_stages") or {}
+    if not all(stages.get(k) is True for k in ("E0_ok", "E1_ok", "E2_ok")):
+        return _fail1(sm.get("exemption_error_code") or "REVISION_BASELINE_INVALID")
+    if report.get("approval_b2_constant_valid") is not True:
+        return _fail1("REVISION_BASELINE_INVALID")
+    # 7) 基线重跑 + 分类 + 退化比较
+    rc, base_report = run_baseline(baseline_commit, git_root, archive_root,
+                                   first_batch=first_batch)
+    cls = _classify_baseline_rc(rc, base_report, first_batch=first_batch)
+    if cls == "BLOCKED":
+        reason = None
+        for e in (base_report.get("books") or {}).values():
+            if e.get("source_e2e_status") == "BLOCKED":
+                reason = e.get("source_blocked_reason")
+        print(f"SOURCE_CHAIN_BLOCKED:{reason}", file=sys.stderr)
+        return 3
+    if cls == "INVALID":
+        return _fail1("REVISION_BASELINE_INVALID")
+    bad = compare_gate_fields(base_report, report, mode="candidate")
+    if bad:
+        return _fail1(bad[0])
+    # 8) 输出候选报告 + exit 4
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 4
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="generate_quality_report")
     ap.add_argument("--archive-root", default=None,
                     help="archive root for the sanmingtonghui source_chain_check")
+    ap.add_argument("--pending-batch", default=None)
+    ap.add_argument("--baseline-commit", default=None)
+    ap.add_argument("--toolchain-commit", default=None)
     a = ap.parse_args(argv)
+    candidate_args = (a.pending_batch, a.baseline_commit, a.toolchain_commit)
+    if any(x is not None for x in candidate_args):
+        if (not all(x is not None for x in candidate_args)
+                or a.archive_root is None):
+            print("REVISION_CLI_USAGE", file=sys.stderr)
+            return 2
+        return _candidate_mode(ROOT, a.pending_batch, a.baseline_commit,
+                               a.toolchain_commit, a.archive_root)
     print("Re-running validator for fresh gate results...")
     report, exit_code = generate_report(archive_root=a.archive_root)
 

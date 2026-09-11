@@ -215,6 +215,7 @@ class TestManifestSchema:
 
 # --- linked worktree fixture（5-R.12 端到端基底）-------------------------------
 import re
+import sys
 
 import scripts.generate_quality_report as gqr
 
@@ -342,7 +343,8 @@ def _mk_mcq(id_: str, rule_id: str) -> dict:
     return {"id": id_, "question": "测试题干？", "options": {"A": "甲", "B": "乙",
             "C": "丙", "D": "丁"}, "answer": "A", "explanation": "测试",
             "source_rule_id": rule_id, "source_book": "三命通会",
-            "source_chapter": "卷二·论坐命宫"}
+            "source_chapter": "卷二·论坐命宫",
+            "difficulty": "medium", "category": "格局"}
 
 
 SNAP_REL = ("knowledge_base/classic_texts/sanmingtonghui/formal/"
@@ -1038,9 +1040,10 @@ class TestRailIntegration:
         calls = []
         real = gqr.evaluate_revision_rail
 
-        def spy(git_root, book, freeze, evidence):
+        def spy(git_root, book, freeze, evidence, candidate_batch_id=None):
             calls.append(book)
-            return real(git_root, book, freeze, evidence)
+            return real(git_root, book, freeze, evidence,
+                        candidate_batch_id=candidate_batch_id)
 
         monkeypatch.setattr(gqr, "evaluate_revision_rail", spy)
         adm = gqr.evaluate_provenance_admissibility(
@@ -1125,9 +1128,10 @@ class TestRailReportTopLevel:
         calls = []
         real = gqr.evaluate_revision_rail
 
-        def spy(git_root, book, freeze, evidence):
+        def spy(git_root, book, freeze, evidence, candidate_batch_id=None):
             calls.append(book)
-            return real(git_root, book, freeze, evidence)
+            return real(git_root, book, freeze, evidence,
+                        candidate_batch_id=candidate_batch_id)
 
         monkeypatch.setattr(gqr, "evaluate_revision_rail", spy)
         self._stub_source(monkeypatch)
@@ -1145,7 +1149,7 @@ class TestRailReportTopLevel:
         self._four_missing_books(tmp_path)
         calls = []
 
-        def fake_rail(git_root, book, freeze, evidence):
+        def fake_rail(git_root, book, freeze, evidence, candidate_batch_id=None):
             calls.append(book)
             return {"ok": True, "revision_state": "ACCEPTED",
                     "error_code": None, "e3_ok": True}
@@ -1165,9 +1169,9 @@ class TestRailReportTopLevel:
         self._four_missing_books(tmp_path)
         monkeypatch.setattr(
             gqr, "evaluate_revision_rail",
-            lambda gr, book, fr, ev: {"ok": False, "revision_state": "FAILED",
-                                      "error_code": "REVISION_SOURCE_UNVERIFIABLE",
-                                      "e3_ok": False})
+            lambda gr, book, fr, ev, candidate_batch_id=None: {
+                "ok": False, "revision_state": "FAILED",
+                "error_code": "REVISION_SOURCE_UNVERIFIABLE", "e3_ok": False})
         self._stub_source(monkeypatch)
         report, exit_code = self._run_report(tmp_path, monkeypatch)
         assert report["revision_state"] == "FAILED"
@@ -1186,7 +1190,8 @@ class TestRailReportTopLevel:
         rail_calls = []
         monkeypatch.setattr(
             gqr, "evaluate_revision_rail",
-            lambda gr, book, fr, ev: rail_calls.append(book) or {})
+            lambda gr, book, fr, ev, candidate_batch_id=None:
+                rail_calls.append(book) or {})
         monkeypatch.setattr(
             "scripts.generate_quality_report._e0_static_check",
             lambda gr: {"ok": False, "error_code": "FREEZE_STATIC_MISMATCH"})
@@ -1402,9 +1407,11 @@ def _passing_book(book: str) -> dict:
                                             "C": 0.25, "D": 0.25},
                                "invalid_answers": 0, "out_of_band": [],
                                "pass": True},
-            "G7_chapter_complete": {"expected": 1, "done": 1, "missing": [],
-                                    "missing_count": 0, "extra": [],
-                                    "extra_count": 0, "pass": True},
+            "G7_chapter_complete": (
+                {"expected": 1, "done": 1, "missing": [], "missing_count": 0,
+                 "extra": [], "extra_count": 0, "pass": True}
+                if book == "sanmingtonghui"
+                else {"pass": True, "reason": "no chapter_list"}),
             "G8_mcq_well_formed": {"malformed": 0, "pass": True},
             "G9_content_dedup": {"rule_text_duplicate_groups": 0,
                                  "rule_text_duplicate_count": 0,
@@ -1725,3 +1732,180 @@ class TestBaselineQualification:
         rep["books"]["sanmingtonghui"]["gate_details"][
             "G6_answer_dist"]["dist_pct"] = {"A": 0.9}
         assert gqr._report_structure_ok(rep) is True
+
+
+
+def _load_report_module(wt: RailWorktree):
+    """P0-1：从 fixture 磁盘脚本经 importlib **隔离加载**报告模块。
+    patch 已导入模块的 ROOT 不会同步 `TOOLCHAIN_REGISTRY_HEAD`/`BASE`/
+    `SCRIPTS_DIR`（导入时定值）——R₀ 替换后的登记链头与旧模块常量不符会被
+    入口前置核验提前拒绝；隔离加载使 ROOT、BASE 与两信任根常量全部取
+    fixture 态。"""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        f"gqr_rail_test_{uuid4().hex[:8]}",
+        wt.path / "scripts" / "generate_quality_report.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class TestCandidateCli:
+    FIRST = "03c02bb571dec9e2da1f7d503a292da229415d8f"
+
+    def _cli(self, wt, *args):
+        r = subprocess.run(
+            [sys.executable,
+             str(wt.path / "scripts" / "generate_quality_report.py"), *args],
+            capture_output=True, cwd=str(wt.path), timeout=100)
+        return (r.returncode, r.stdout.decode("utf-8", "replace"),
+                r.stderr.decode("utf-8", "replace"))
+
+    def _r0(self, wt) -> str:
+        line = _registry_line(wt.head0, GENESIS_SHA)
+        wt.append_line(REGISTRY_REL, line)
+        from scripts.classic_artifacts import (
+            REVISION_REGISTRY_FIELDS, chain_head as _ch)
+        h = _ch([json.loads(line.decode())], GENESIS_SHA,
+                prev_field="prev_registry_sha256",
+                fields=REVISION_REGISTRY_FIELDS)
+        wt.replace_constant("TOOLCHAIN_REGISTRY_HEAD", h)
+        return wt.commit("R0: register T0")
+
+    def test_missing_args_exit2(self, rail_wt):
+        rc, _, _ = self._cli(rail_wt, "--pending-batch", "B01")
+        assert rc == 2
+
+    def test_first_batch_wrong_baseline_exit2(self, rail_wt):
+        self._r0(rail_wt)
+        rc, _, _ = self._cli(rail_wt, "--pending-batch", "B01",
+                             "--baseline-commit", "0" * 40,
+                             "--toolchain-commit", rail_wt.head0,
+                             "--archive-root", str(rail_wt.path))
+        assert rc == 2
+
+    def test_non_first_batch_first_baseline_exit2(self, rail_wt):
+        """非首批（有已验收锚）传 03c02bb → exit 2（错配反向）。
+        P0-5：先建登记 R₀——否则 T 准入先失败（TOOLCHAIN_INVALID），
+        到不了基线错配的 exit 2 分支。"""
+        self._r0(rail_wt)
+        core = TestRailCore()
+        manifest = core._make_c1(rail_wt)
+        c1 = rail_wt.commit("C1")
+        rail_wt.append_line(ANCHOR_REL, _anchor_line(
+            "B01", c1, _sha256(_canonical_bytes(manifest)), GENESIS_SHA,
+            rail_wt.head0))
+        from scripts.classic_artifacts import chain_head as _ch
+        rail_wt.replace_constant(
+            "REVISION_ANCHOR_HEAD",
+            _ch([json.loads(_anchor_line(
+                "B01", c1, _sha256(_canonical_bytes(manifest)), GENESIS_SHA,
+                rail_wt.head0).decode())], GENESIS_SHA))
+        rail_wt.commit("V1")
+        rc, _, _ = self._cli(rail_wt, "--pending-batch", "B02",
+                             "--baseline-commit", self.FIRST,
+                             "--toolchain-commit", rail_wt.head0,
+                             "--archive-root", str(rail_wt.path))
+        assert rc == 2
+
+    def test_toolchain_not_registered_exit1(self, rail_wt):
+        rc, _, err = self._cli(rail_wt, "--pending-batch", "B01",
+                               "--baseline-commit", self.FIRST,
+                               "--toolchain-commit", rail_wt.head0,
+                               "--archive-root", str(rail_wt.path))
+        assert rc == 1 and "REVISION_TOOLCHAIN_INVALID" in err
+
+    def test_disk_tamper_exit1(self, rail_wt):
+        """磁盘工具链脚本未提交篡改（仅换行差异）→ TOOLCHAIN_INVALID。"""
+        self._r0(rail_wt)
+        rel = "scripts/generate_quality_report.py"
+        src = (rail_wt.path / rel).read_bytes()
+        (rail_wt.path / rel).write_bytes(src.replace(b"\n", b"\r\n", 1))
+        rc, _, err = self._cli(rail_wt, "--pending-batch", "B01",
+                               "--baseline-commit", self.FIRST,
+                               "--toolchain-commit", rail_wt.head0,
+                               "--archive-root", str(rail_wt.path))
+        assert rc == 1 and "REVISION_TOOLCHAIN_INVALID" in err
+        # 注：toolchain 传已登记的 T（head0）——若传未登记 R0 会先在 T 准入
+        # 失败，无法单独命中磁盘篡改分支；P0-4 后 head0 == 合成 T。
+
+    def test_candidate_exit4_boundary(self, rail_wt, monkeypatch, capsys):
+        """候选 exit 4 边界测试（P0-5/P0-1 round-3）：R₀ → C₁ → exit 4。
+
+        边界声明：**隔离模块加载**（`_load_report_module` 从 fixture 磁盘
+        脚本 importlib 加载——patch `gqr.ROOT` 不更新已导入的
+        `TOOLCHAIN_REGISTRY_HEAD`/`BASE`/`SCRIPTS_DIR`，隔离加载后 ROOT
+        与两信任根常量全为 fixture 态，R₀ 替换的登记链头才与新模块常量
+        一致，入口前置核验不提前拒绝）。fakes：`run_baseline`（基线 rc=1
+        合格 FAIL，签名含 first_batch）与 `verify_source_chain`（真实接口
+        `(output_dict, exit_code)`——status=="OK"、code=0；`--archive-root`
+        不提供真实归档，必须 fake；经 `_run_source_chain_check` 转换为
+        `{"status":"PASS","reason":None}` 供 §7 聚合消费）。**真实归档重放 + 完整链集成（真实 source/G1-G9/退出码
+        联合）在 Part B Task 11 执行**——本测试只证明候选边界（T 准入/执行
+        来源/首批基线/rail 候选分支/基线联合分类/退化比较/exit 4）在隔离
+        模块下闭合，不替代集成。"""
+        self._r0(rail_wt)
+        TestRailCore()._make_c1(rail_wt)
+        rail_wt.commit("C1")
+        mod = _load_report_module(rail_wt)         # P0-1：隔离加载
+        monkeypatch.setattr(mod, "run_baseline",
+                            lambda bc, gr, ar, first_batch=True: (
+                                1, _baseline_report_fixture()))
+        monkeypatch.setattr(
+            mod, "verify_source_chain",
+            # round-4 P0-2：真实接口 (output_dict, exit_code)——
+            # verify_sanming_source_chain.verify_source_chain 的 OK 输出
+            # （status=="OK"、code=0；生成器 _run_source_chain_check 解包后
+            # code==0 ∧ status!=BLOCKED → {"status":"PASS","reason":None}）。
+            # 单键 dict 会被 out, code = ... 解包成两个键名字符串致崩溃。
+            lambda *a, **k: ({"schema_version": "1.0", "status": "OK",
+                              "chapters_expected": 303, "c1_pass": 303,
+                              "c2_pass": 303, "c3_pass": 303,
+                              "failures": []}, 0))
+        rc = mod.main(["--pending-batch", "B01", "--baseline-commit",
+                       self.FIRST, "--toolchain-commit", rail_wt.head0,
+                       "--archive-root", str(rail_wt.path)])
+        out = capsys.readouterr().out
+        assert rc == 4
+        rep = json.loads(out)
+        assert rep["books"]["sanmingtonghui"]["revision_state"] == \
+            "PENDING_ACCEPTANCE"
+
+
+class TestVStructure:
+    def _v1(self, wt) -> str:
+        core = TestRailCore()
+        manifest = core._make_c1(wt)
+        c1 = wt.commit("C1")
+        anchor = _anchor_line("B01", c1, _sha256(_canonical_bytes(manifest)),
+                              GENESIS_SHA, wt.head0)
+        wt.append_line(ANCHOR_REL, anchor)
+        wt.replace_constant("REVISION_ANCHOR_HEAD", chain_head(
+            [json.loads(anchor.decode())], GENESIS_SHA))
+        return wt.commit("V1")
+
+    def test_v1_structure_valid(self, rail_wt):
+        v1 = self._v1(rail_wt)
+        assert gqr.validate_v_structure(rail_wt.path, v1) is None
+
+    def test_v_merge_commit_rejected(self, rail_wt):
+        # side 分支须唯一：worktree 共享主仓库 refs，固定名残留跨次运行冲突
+        self._v1(rail_wt)
+        side = f"side-{uuid4().hex[:8]}"
+        _git(rail_wt.path, "checkout", "-b", side, "HEAD~1")
+        rail_wt.write("README.side", b"x")
+        rail_wt.commit("side")
+        _git(rail_wt.path, "checkout", "-")
+        _git(rail_wt.path, "merge", "-m", "merge", side)
+        v2 = rail_wt.rev("HEAD")
+        assert gqr.validate_v_structure(
+            rail_wt.path, v2) == "REVISION_CHAIN_STALE"
+
+    def test_v_extra_diff_path_rejected(self, rail_wt):
+        """diff 含第三路径 → 拒绝。"""
+        self._v1(rail_wt)
+        rail_wt.write("docs/superpowers/plans/notes/approvals/revisions/"
+                      "sanmingtonghui/extra.txt", b"x")
+        v2 = rail_wt.commit("V-with-extra")
+        assert gqr.validate_v_structure(
+            rail_wt.path, v2) == "REVISION_CHAIN_STALE"
