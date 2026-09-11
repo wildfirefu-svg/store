@@ -241,6 +241,13 @@ class RailWorktree:
         self.path = tmp_path / "wt"
         self.branch = f"rail-test-{uuid4().hex[:8]}"
         _git(ROOT, "worktree", "add", "-b", self.branch, str(self.path), "HEAD")
+        # R₀ 后真实仓库登记/锚/manifest 可能非空，fixture 必须从 genesis
+        # 空状态开始——否则 append_line 叠加真实行 → 链头/常量错配（R₀
+        # 复审暴露）。三文件删除留作未提交改动，随测试首个 commit 纳入。
+        for rel in (REGISTRY_REL, ANCHOR_REL, MANIFEST_REL):
+            p = self.path / rel
+            if p.exists():
+                p.unlink()
         self.sync_synthetic_t()
 
     def sync_synthetic_t(self) -> None:
@@ -250,6 +257,11 @@ class RailWorktree:
         for rel in ("scripts/generate_quality_report.py",
                     "scripts/classic_artifacts.py"):
             self.write(rel, (ROOT / rel).read_bytes())
+        # R₀ 后真实脚本信任根常量绑定真实登记/锚链，fixture 须回 genesis
+        # 空状态（与 __init__ 的登记/锚/manifest 归零一致）——否则脚本
+        # 常量与 worktree 空链错配 → CHAIN_STALE/TOOLCHAIN_INVALID。
+        self.replace_constant("REVISION_ANCHOR_HEAD", GENESIS_SHA)
+        self.replace_constant("TOOLCHAIN_REGISTRY_HEAD", GENESIS_SHA)
         dirty = _git(self.path, "status", "--porcelain", "--",
                      "scripts/generate_quality_report.py",
                      "scripts/classic_artifacts.py").strip()
@@ -461,10 +473,11 @@ class TestRailCore:
         assert res["error_code"] == "REVISION_SOURCE_UNVERIFIABLE"
 
     def test_trust_roots_start_at_genesis(self):
-        """P0-2：两信任根以确定 64-hex 字面量初始化且 == genesis_sha
-        （测试重算验证；满足设计 5-R.6 首批路径的空链规范值）。"""
+        """信任根不变量：REVISION_ANCHOR_HEAD == genesis（尚无 V 登记）；
+        TOOLCHAIN_REGISTRY_HEAD == @HEAD 登记文件重算链头（R₀ 前空登记链
+        == genesis；R₀ 登记后绑定登记链头——与 _registry_head 一致）。"""
         assert gqr.REVISION_ANCHOR_HEAD == GENESIS_SHA
-        assert gqr.TOOLCHAIN_REGISTRY_HEAD == GENESIS_SHA
+        assert gqr.TOOLCHAIN_REGISTRY_HEAD == gqr._registry_head(ROOT)
 
     def test_fixture_no_diff_synthetic_t(self, rail_wt):
         """P0-2：T 已提交后再同步（字节无差异）→ 不产生新提交、T 不变
