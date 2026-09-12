@@ -2877,10 +2877,17 @@ T₀ = 本提交（Part A 中间提交为其祖先；T₀ OID 在 Part B R₀ �
 
 ## Task 11：候选验证 → 用户批准 → V₁
 
-- [ ] **Step 1：候选验证（真实）**：`python scripts/generate_quality_report.py --pending-batch R25 --baseline-commit 03c02bb571dec9e2da1f7d503a292da229415d8f --toolchain-commit <T₀> --archive-root <真实归档根>`（主 worktree；`--archive-root` 传生产链所用归档根——当前门禁与基线重跑都依赖它重放 sanmingtonghui source，缺失即 BLOCKED；基线重跑真实执行：03c02bb 干净 worktree + 自带脚本，报告读取其新生成的 QUALITY_REPORT.json，非 stdout）。预期 exit 4 + `revision_state=PENDING_ACCEPTANCE`。失败按错误码修根因（不改测试不改门禁）。
-- [ ] **Step 2：用户门禁**：候选报告（完整 QUALITY_REPORT.json + stdout 摘要）呈报用户；等待聊天正文第一人称批准（模板：`我批准 R25 修订批次，执行 V₁ 验收提交。`）。**顺序固定：真实候选 CLI exit 4 → 呈报完整报告 → 用户批准 → V₁**——不得在候选验证前请求批准，也不得以 Step 1 的 exit 4 取代呈报。
-- [ ] **Step 3：构造 V₁**（获批后）：锚行 `{batch_id:"R25", content_commit:<C₁>, manifest_sha256_after:<sha256(_canonical(manifest@C₁).encode("utf-8"))>, prev_anchor_sha256:<GENESIS_SHA>, toolchain_commit:<T₀>, date:<ISO-8601>}`；唯一替换 `REVISION_ANCHOR_HEAD` = 新锚链头；提交 `chore(revision-rail): accept R25 batch (V1)`。
-- [ ] **Step 4：V₁ 结构自检**：`validate_v_structure` 七项全过（进程内）。
+- [x] **Step 1：候选验证（真实）**：`python scripts/generate_quality_report.py --pending-batch R25 --baseline-commit 03c02bb571dec9e2da1f7d503a292da229415d8f --toolchain-commit <T₀> --archive-root <真实归档根>`（主 worktree；`--archive-root` 传生产链所用归档根——当前门禁与基线重跑都依赖它重放 sanmingtonghui source，缺失即 BLOCKED；基线重跑真实执行：03c02bb 干净 worktree + 自带脚本，报告读取其新生成的 QUALITY_REPORT.json，非 stdout）。预期 exit 4 + `revision_state=PENDING_ACCEPTANCE`。失败按错误码修根因（不改测试不改门禁）。
+- [x] **Step 2：用户门禁**：候选报告（完整 QUALITY_REPORT.json + stdout 摘要）呈报用户；等待聊天正文第一人称批准（模板：`我批准 R25 修订批次，执行 V₁ 验收提交。`）。**顺序固定：真实候选 CLI exit 4 → 呈报完整报告 → 用户批准 → V₁**——不得在候选验证前请求批准，也不得以 Step 1 的 exit 4 取代呈报。
+- [x] **Step 3：构造 V₁**（获批后）：锚行 `{batch_id:"R25", content_commit:<C₁>, manifest_sha256_after:<sha256(_canonical(manifest@C₁).encode("utf-8"))>, prev_anchor_sha256:<GENESIS_SHA>, toolchain_commit:<T₀>, date:<ISO-8601>}`；唯一替换 `REVISION_ANCHOR_HEAD` = 新锚链头；提交 `chore(revision-rail): accept R25 batch (V1)`。
+- [x] **Step 4：V₁ 结构自检**：`validate_v_structure` 七项全过（进程内）。
+
+**执行补记（Task 11）**：
+
+1. **Step 1（真实候选 CLI）**：`R25 --baseline-commit 03c02bb… --toolchain-commit fd000ad… --archive-root <sanmingtonghui/.snapshot_archive/>` 真实执行；returncode=4、stderr 空；顶层 `revision_state=PENDING_ACCEPTANCE`；四书 E0–E3 全过；数据门通过（G7 保留 `missing_count=303`）；三书 source 既有 FAIL 按 S 口径不变；基线重跑真实执行（03c02bb 干净 worktree + 自带脚本）QUALIFIED 无退化。用户独立复审 PASS。
+2. **Step 2（用户门禁）**：用户聊天正文第一人称批准：`我批准 R25 修订批次，执行 V₁ 验收提交。`
+3. **Step 3（V₁ = `da7eb59`）**：锚行 canonical 单行 LF（340 字节），`{batch_id:"R25", content_commit:2b1f0c5…, manifest_sha256_after:4e596453…, prev_anchor_sha256:GENESIS_SHA, toolchain_commit:fd000ad…, date:"2026-09-12"}`；链头 `7b265f8aa12df7679107f56f6c3dfd9c360f33508e5b58479297340cc7d7dd1c`；`scripts/generate_quality_report.py` 仅 `REVISION_ANCHOR_HEAD` 一处字节替换（diff 核验）；提交 `chore(revision-rail): accept R25 batch (V1)`（恰两文件，§5-R.4；pre-commit ruff + smoke 过；QUALITY_REPORT.json 继续隔离）。
+4. **Step 4（V₁ 结构自检）**：`validate_v_structure(git_root, da7eb59)` 返回 None，七项（唯一父 / diff 路径 / 锚增量 / 常量+链头 / C 绑定 / P 工具链身份 / HEAD 状态一致）全过。
 
 ## Task 12：默认复验 + 收尾
 
