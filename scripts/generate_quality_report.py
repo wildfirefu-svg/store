@@ -93,7 +93,7 @@ from scripts.verify_sanming_source_chain import SNAP  # noqa: E402
 # 首次 R/V 常量替换才能命中；两行不得带行尾注释（保持替换器正则
 # `^NAME = "[0-9a-f]{64}"$` 精确匹配）；字面量由 Task 3 Step 1 的
 # test_trust_roots_start_at_genesis 重算验证。
-REVISION_ANCHOR_HEAD = "da56658f061d2487877ef7819a18ef548fdb4eff5aa546609abe3a64141c48c0"
+REVISION_ANCHOR_HEAD = "7b265f8aa12df7679107f56f6c3dfd9c360f33508e5b58479297340cc7d7dd1c"
 TOOLCHAIN_REGISTRY_HEAD = "a53edc5ed678c221f93780cca051cac8b48d3387418a84d60116282926e27b24"
 REVISION_ANCHOR_REL = ("docs/superpowers/plans/notes/approvals/revisions/"
                        "sanmingtonghui/accepted_anchors.jsonl")
