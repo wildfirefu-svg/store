@@ -2846,7 +2846,7 @@ T₀ = 本提交（Part A 中间提交为其祖先；T₀ OID 在 Part B R₀ �
 
 - [x] **Step 1：内容取证（离线，零 API）**：读 `HEAD:<SNAP>/extracted/raw_025.txt` 全文与历史聚合中 #25 章既有记录（`all_rules.json` 数组内 `source_chapter=="卷二·论坐命宫"` 记录），确定两条规则各自的精确连续引文区间（原省略号引文的展开；「甲已」保留原文不断言笔误；校读如需置于 `textual_note` 附加字段——G3 允许附加字段）。
 - [x] **Step 2：构造规则/MCQ**：`smth_077_000/001` 字段齐备（G3 必需键 + `original_text` 为 raw_025 精确连续子串，满足 G5 整串命中）；2 条 MCQ 引用新规则 id（单批不管控答案分布——G6 全书口径）。
-- [x] **Step 3：构造 manifest 批次 R25**：两条 rule + 两条 mcq 记录；`sha256` 按 `_record_entry` 重算；`snapshot_sha256` = HEAD raw_025 blob sha；`historical_basis` 绑历史记录（`{commit:"c5cff699fdb547bd9270acbebe1f485380848751", path:"knowledge_base/classic_texts/sanmingtonghui/all_rules.json", source_chapter:"卷二·论坐命宫", record_content_sha256:<该历史记录 canonical sha>, match_count:1}`——从冻结基点 `git show` 重算恰好 1 条匹配）。
+- [x] **Step 3：构造 manifest 批次 R25**：两条 rule + 两条 mcq 记录；`sha256` 按 `_record_entry` 重算；`snapshot_sha256` = HEAD raw_025 blob sha；`historical_basis` 绑历史记录（`{commit:"2ec871d9e61046c98eb38a1a5ca755975ceaf495", path:"knowledge_base/classic_texts/sanmingtonghui/all_rules.json", source_chapter:"卷二·论坐命宫", record_content_sha256:<该历史记录 canonical sha>, match_count:1}`——从该提交 `git show` 重算恰好 1 条匹配；执行修正：冻结基点 c5cff699 无 ch25 记录（0 匹配必拒），ch25 历史记录仅存在于最早提交 2ec871d9）。
 - [x] **Step 4：验证（不提交）**：G5 对新记录整串命中（跑 `scripts/validate_classic_distillation.py` 聚焦）；rail ②⑤⑥⑦ 对新增四记录全过（进程内调用 `evaluate_revision_rail`）；MCQ 外键存在。
 - [x] **Step 5：提交 C₁**：`data(sanmingtonghui): R25 revision batch (chapter 25 recovery)`；提交后默认模式报告允许 FAIL（预期状态，修订未接纳）。
 
@@ -2878,7 +2878,7 @@ T₀ = 本提交（Part A 中间提交为其祖先；T₀ OID 在 Part B R₀ �
 ## Task 11：候选验证 → 用户批准 → V₁
 
 - [ ] **Step 1：候选验证（真实）**：`python scripts/generate_quality_report.py --pending-batch R25 --baseline-commit 03c02bb571dec9e2da1f7d503a292da229415d8f --toolchain-commit <T₀> --archive-root <真实归档根>`（主 worktree；`--archive-root` 传生产链所用归档根——当前门禁与基线重跑都依赖它重放 sanmingtonghui source，缺失即 BLOCKED；基线重跑真实执行：03c02bb 干净 worktree + 自带脚本，报告读取其新生成的 QUALITY_REPORT.json，非 stdout）。预期 exit 4 + `revision_state=PENDING_ACCEPTANCE`。失败按错误码修根因（不改测试不改门禁）。
-- [ ] **Step 2：用户门禁**：候选报告呈报用户；等待聊天正文第一人称批准（模板：`我批准 R25 修订批次，执行 V₁ 验收提交。`）。
+- [ ] **Step 2：用户门禁**：候选报告（完整 QUALITY_REPORT.json + stdout 摘要）呈报用户；等待聊天正文第一人称批准（模板：`我批准 R25 修订批次，执行 V₁ 验收提交。`）。**顺序固定：真实候选 CLI exit 4 → 呈报完整报告 → 用户批准 → V₁**——不得在候选验证前请求批准，也不得以 Step 1 的 exit 4 取代呈报。
 - [ ] **Step 3：构造 V₁**（获批后）：锚行 `{batch_id:"R25", content_commit:<C₁>, manifest_sha256_after:<sha256(_canonical(manifest@C₁).encode("utf-8"))>, prev_anchor_sha256:<GENESIS_SHA>, toolchain_commit:<T₀>, date:<ISO-8601>}`；唯一替换 `REVISION_ANCHOR_HEAD` = 新锚链头；提交 `chore(revision-rail): accept R25 batch (V1)`。
 - [ ] **Step 4：V₁ 结构自检**：`validate_v_structure` 七项全过（进程内）。
 
