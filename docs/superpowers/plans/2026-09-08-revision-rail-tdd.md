@@ -2844,11 +2844,36 @@ T₀ = 本提交（Part A 中间提交为其祖先；T₀ OID 在 Part B R₀ �
 - Modify: `knowledge_base/classic_texts/sanmingtonghui/all_mcq.jsonl`（JSONL，+2 行，id 自 `smth_0777` 顺序后缀）
 - Create: `knowledge_base/classic_texts/sanmingtonghui/revision_manifest.json`（批次 `R25`）
 
-- [ ] **Step 1：内容取证（离线，零 API）**：读 `HEAD:<SNAP>/extracted/raw_025.txt` 全文与历史聚合中 #25 章既有记录（`all_rules.json` 数组内 `source_chapter=="卷二·论坐命宫"` 记录），确定两条规则各自的精确连续引文区间（原省略号引文的展开；「甲已」保留原文不断言笔误；校读如需置于 `textual_note` 附加字段——G3 允许附加字段）。
-- [ ] **Step 2：构造规则/MCQ**：`smth_077_000/001` 字段齐备（G3 必需键 + `original_text` 为 raw_025 精确连续子串，满足 G5 整串命中）；2 条 MCQ 引用新规则 id（单批不管控答案分布——G6 全书口径）。
-- [ ] **Step 3：构造 manifest 批次 R25**：两条 rule + 两条 mcq 记录；`sha256` 按 `_record_entry` 重算；`snapshot_sha256` = HEAD raw_025 blob sha；`historical_basis` 绑历史记录（`{commit:"c5cff699fdb547bd9270acbebe1f485380848751", path:"knowledge_base/classic_texts/sanmingtonghui/all_rules.json", source_chapter:"卷二·论坐命宫", record_content_sha256:<该历史记录 canonical sha>, match_count:1}`——从冻结基点 `git show` 重算恰好 1 条匹配）。
-- [ ] **Step 4：验证（不提交）**：G5 对新记录整串命中（跑 `scripts/validate_classic_distillation.py` 聚焦）；rail ②⑤⑥⑦ 对新增四记录全过（进程内调用 `evaluate_revision_rail`）；MCQ 外键存在。
-- [ ] **Step 5：提交 C₁**：`data(sanmingtonghui): R25 revision batch (chapter 25 recovery)`；提交后默认模式报告允许 FAIL（预期状态，修订未接纳）。
+- [x] **Step 1：内容取证（离线，零 API）**：读 `HEAD:<SNAP>/extracted/raw_025.txt` 全文与历史聚合中 #25 章既有记录（`all_rules.json` 数组内 `source_chapter=="卷二·论坐命宫"` 记录），确定两条规则各自的精确连续引文区间（原省略号引文的展开；「甲已」保留原文不断言笔误；校读如需置于 `textual_note` 附加字段——G3 允许附加字段）。
+- [x] **Step 2：构造规则/MCQ**：`smth_077_000/001` 字段齐备（G3 必需键 + `original_text` 为 raw_025 精确连续子串，满足 G5 整串命中）；2 条 MCQ 引用新规则 id（单批不管控答案分布——G6 全书口径）。
+- [x] **Step 3：构造 manifest 批次 R25**：两条 rule + 两条 mcq 记录；`sha256` 按 `_record_entry` 重算；`snapshot_sha256` = HEAD raw_025 blob sha；`historical_basis` 绑历史记录（`{commit:"c5cff699fdb547bd9270acbebe1f485380848751", path:"knowledge_base/classic_texts/sanmingtonghui/all_rules.json", source_chapter:"卷二·论坐命宫", record_content_sha256:<该历史记录 canonical sha>, match_count:1}`——从冻结基点 `git show` 重算恰好 1 条匹配）。
+- [x] **Step 4：验证（不提交）**：G5 对新记录整串命中（跑 `scripts/validate_classic_distillation.py` 聚焦）；rail ②⑤⑥⑦ 对新增四记录全过（进程内调用 `evaluate_revision_rail`）；MCQ 外键存在。
+- [x] **Step 5：提交 C₁**：`data(sanmingtonghui): R25 revision batch (chapter 25 recovery)`；提交后默认模式报告允许 FAIL（预期状态，修订未接纳）。
+
+执行补记（Task 10，C₁ = `2b1f0c5`；测试同步 `a77e5cc`）：
+- **内容取证**：raw_025（快照 extracted/raw_025.txt 与书目录
+  raw_025_卷二_论坐命宫.txt 两处语料均命中）81 字 / 44 字两条精确连续引文；
+  「甲已」保留原文，校读入 `textual_note` 未断言笔误（设计 5-R.13）。
+- **historical_basis 修正（偏离计划字面）**：计划 Step 3 写冻结基点
+  `c5cff699…`，但该提交 `all_rules.json` 8043 条、`source_chapter=="卷二·论坐命宫"`
+  0 条 → `_historical_basis_ok` 0 匹配 → rail ⑥ 恒返
+  `REVISION_SOURCE_UNVERIFIABLE`，批次永不能验收。实测 ch25 记录仅存在于
+  最早提交 `2ec871d9`（2 条 `smth_0001/0002`，canonical sha 实测匹配），故
+  绑定点改为 `2ec871d9`（满足设计"新修订产物绑 historical_basis"意图）。
+- **MCQ id 澄清**：设计 §5-R.13 权威"全局顺序后缀，现最大 0776，自 0777 起"
+  → `smth_077_mcq_0777/0778`（非计划字面 `smth_0777`；现库 6103 条、最大后缀
+  0776 已核实）。
+- **C₁**：`data(sanmingtonghui): R25 revision batch (chapter 25 recovery)`
+  （3 文件：all_rules +2、all_mcq +2、新建 revision_manifest.json 批次 R25）；
+  记录 sha256/canonical_key 按 `_record_entry`/`_canonical_key` 重算一致；
+  候选模式 rail ②③④⑤⑥⑦ 全过 → `PENDING_ACCEPTANCE`（E1/E2/E3 ok）；
+  默认模式 `REVISION_UNACCEPTED`（预期，修订未接纳，Task 11 验收）。
+- **C₁ 引入的 fixture 回归（独立 test 提交 `a77e5cc`）**：真实聚合含 R25
+  记录后，worktree 从 HEAD 继承 8045/6105 与 freeze 8043/6103 失衡 →
+  18 项 `REVISION_PARTITION_MISMATCH`。修复：`RailWorktree.__init__` 数据文件
+  归零至冻结基点 c5cff699（== freeze），`TestRailReportTopLevel` 两个真实 rail
+  测试 git_root 改用隔离 worktree。全文件 137 passed（修复前 18 failed）。
+- **QUALITY_REPORT.json**：既有改动继续隔离，未纳入任何提交。
 
 ## Task 11：候选验证 → 用户批准 → V₁
 
