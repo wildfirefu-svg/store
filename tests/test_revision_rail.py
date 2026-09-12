@@ -248,6 +248,15 @@ class RailWorktree:
             p = self.path / rel
             if p.exists():
                 p.unlink()
+        # C₁ 后真实聚合含修订记录（R25 2 rule + 2 mcq），worktree 继承会
+        # 与 freeze 基线失衡 → 分区等式 REVISION_PARTITION_MISMATCH（C₁
+        # 复审暴露）。与登记/锚/manifest 同理归零：数据文件重置为冻结基点
+        # 内容（== freeze 记录），随 T 提交（git add -A）纳入。
+        for rel in ("knowledge_base/classic_texts/sanmingtonghui/all_rules.json",
+                    "knowledge_base/classic_texts/sanmingtonghui/all_mcq.jsonl"):
+            self.write(rel, _git(
+                ROOT, "show",
+                f"{REVISION_GENESIS['freeze_base_commit']}:{rel}").encode("utf-8"))
         self.sync_synthetic_t()
 
     def sync_synthetic_t(self) -> None:
@@ -1125,9 +1134,9 @@ class TestRailReportTopLevel:
             lambda gr, ar: {"status": status, "reason": reason})
 
     def _run_report(self, tmp_path, monkeypatch, books=None,
-                    archive_root=_NO_ARCHIVE):
+                    archive_root=_NO_ARCHIVE, git_root=ROOT):
         monkeypatch.setattr("scripts.generate_quality_report._find_git_root",
-                            lambda: ROOT)
+                            lambda: git_root)
         return gqr.generate_report(
             base_path=tmp_path,
             books=books if books is not None else {k: "书" for k in self.FOUR},
@@ -1135,8 +1144,10 @@ class TestRailReportTopLevel:
                           else archive_root))
 
     def test_report_top_level_none_and_single_rail_call_per_book(
-            self, tmp_path, monkeypatch):
-        """四书 MISSING + 真实 rail → 顶层 NONE；每书 rail 恰一次（不重复）。"""
+            self, tmp_path, monkeypatch, rail_wt):
+        """四书 MISSING + 真实 rail → 顶层 NONE；每书 rail 恰一次（不重复）。
+        git_root 用隔离基线 worktree（rail_wt）而非真实 ROOT——C₁
+        后真实仓库含未接纳修订，rail 将返 UNACCEPTED 而非 NONE。"""
         self._four_missing_books(tmp_path)
         calls = []
         real = gqr.evaluate_revision_rail
@@ -1148,7 +1159,8 @@ class TestRailReportTopLevel:
 
         monkeypatch.setattr(gqr, "evaluate_revision_rail", spy)
         self._stub_source(monkeypatch)
-        report, exit_code = self._run_report(tmp_path, monkeypatch)
+        report, exit_code = self._run_report(tmp_path, monkeypatch,
+                                          git_root=rail_wt.path)
         assert len(calls) == 4 and set(calls) == set(self.FOUR)
         assert report["revision_state"] == "NONE"
         assert report["revision_provenance_valid"] is False
@@ -1216,15 +1228,17 @@ class TestRailReportTopLevel:
         assert report["revision_provenance_valid"] is False
         assert exit_code == 1
 
-    def test_report_source_blocked_takes_precedence(self, tmp_path, monkeypatch):
+    def test_report_source_blocked_takes_precedence(self, tmp_path, monkeypatch,
+                                                        rail_wt):
         """source BLOCKED → status=BLOCKED/exit 3 优先；顶层 revision_state
-        仍照实输出真实 rail 结果（NONE），不被 BLOCKED 改写。"""
+        仍照实输出真实 rail 结果（NONE），不被 BLOCKED 改写。
+        git_root 用隔离 worktree（见同类上一测试）。"""
         head = _git(ROOT, "rev-parse", "HEAD").strip()
         p = _make_passing_book(tmp_path, "sanmingtonghui", head)
         (p / "provenance.json").unlink()
         report, exit_code = self._run_report(
             tmp_path, monkeypatch, books={"sanmingtonghui": "三命通会"},
-            archive_root=None)  # 显式 None → BLOCKED(archive_root_missing)
+            archive_root=None, git_root=rail_wt.path)  # 显式 None → BLOCKED(archive_root_missing)
         assert report["status"] == "BLOCKED"
         assert report["overall_pass"] is False
         assert exit_code == 3
