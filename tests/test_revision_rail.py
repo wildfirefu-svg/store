@@ -311,7 +311,11 @@ class RailWorktree:
 
     def commit(self, msg: str) -> str:
         _git(self.path, "add", "-A")
-        _git(self.path, "commit", "-m", msg, "--no-verify")
+        # CI runner 无 git identity（本地有全局配置故本地通过、CI `empty ident
+        # name` 失败）；commit 注入 -c 身份，最小侵入不改 rail 契约。
+        _git(self.path, "-c", "user.name=rail-test",
+             "-c", "user.email=rail-test@example.com",
+             "commit", "-m", msg, "--no-verify")
         return self.rev("HEAD")
 
     def cleanup(self) -> None:
