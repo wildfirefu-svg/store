@@ -78,7 +78,7 @@
    },
    {
     "path": "docs/phase8/marriage-capability/classic_texts_freeze.json",
-    "sha256": "73b297b1ace81adbc4d6f60a464c6d4056112edc1fe4c21f947231f51b40c599",
+    "sha256": "bf9d2e64ed00990b6a44d6f84fe01b04134c7ea9b5399b9b71c6a06e5d61af16",
     "strategy": "json_canonical"
    },
    {
