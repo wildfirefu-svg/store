@@ -91,7 +91,7 @@ jobs:
     # (see scripts/affected_tests.py). This job is a blocking early
     # signal; the full `test` job above remains the authoritative gate.
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
