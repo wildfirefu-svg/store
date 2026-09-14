@@ -465,13 +465,27 @@ class TestClassicTextsFreeze:
         ]
         assert files == expected
 
-    def test_blob_sha_matches_head(self):
+    def test_blob_sha_matches_frozen_commit(self):
+        """冻结 blob 必须与条目绑定的 commit 一致（审计读取冻结 Git 对象），
+        而非与工作区 HEAD 比较：HEAD 的后续修订不得改写历史冻结身份。"""
         freeze = _load_json(_P8_DIR / "classic_texts_freeze.json")
         for f in freeze["files"]:
-            blob = _git(["rev-parse", f"HEAD:{f['path']}"])
+            blob = _git(["rev-parse", f"{f['commit']}:{f['path']}"])
             assert f["blob_sha"] == blob, f["path"]
             assert f["commit"]
             _git(["cat-file", "-e", f["commit"] + "^{commit}"])
+
+    def test_frozen_identity_survives_head_change(self):
+        """P0 回归：HEAD 已因 R25 修订 sanmingtonghui/all_rules.json 而漂移，
+        历史冻结身份必须保持有效——冻结 blob 仍绑定条目 commit，与 HEAD 解耦、
+        不随 HEAD 同步。被推进到 HEAD 的冻结（冻结 blob == HEAD blob）即失败。"""
+        freeze = _load_json(_P8_DIR / "classic_texts_freeze.json")
+        sm = next(f for f in freeze["files"]
+                  if f["path"].endswith("sanmingtonghui/all_rules.json"))
+        frozen_blob = _git(["rev-parse", f"{sm['commit']}:{sm['path']}"])
+        head_blob = _git(["rev-parse", f"HEAD:{sm['path']}"])
+        assert sm["blob_sha"] == frozen_blob
+        assert head_blob != sm["blob_sha"]
 
 
 class TestKbSnapshot:
