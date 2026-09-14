@@ -1989,7 +1989,9 @@ class TestVStructure:
         rail_wt.write("README.side", b"x")
         rail_wt.commit("side")
         _git(rail_wt.path, "checkout", "-")
-        _git(rail_wt.path, "merge", "-m", "merge", side)
+        _git(rail_wt.path, "-c", "user.name=rail-test",
+             "-c", "user.email=rail-test@example.com",
+             "merge", "-m", "merge", side)
         v2 = rail_wt.rev("HEAD")
         assert gqr.validate_v_structure(
             rail_wt.path, v2) == "REVISION_CHAIN_STALE"
