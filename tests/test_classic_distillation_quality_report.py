@@ -602,10 +602,11 @@ def test_e2_recompute_tampered_manifest_rejected():
 # --- E3 多重集合严格相等-------------------------------------------------------
 
 def test_e3_multiset_real_head_passes():
-    """E3 并入 rail（5-R.5）：真实 HEAD 经 rail ⑤ 分区等式通过（NONE 态）。"""
+    """E3 并入 rail（5-R.5）：真实 HEAD 经 rail ⑤ 分区等式通过。V₁ 验收后
+    真实仓库有已验收锚（R25）→ revision_state=ACCEPTED（V₁ 前为 NONE）。"""
     rail = evaluate_revision_rail(
         ROOT, "sanmingtonghui", _head_json(FREEZE_REL), _head_json(EVIDENCE_REL))
-    assert rail == {"ok": True, "revision_state": "NONE",
+    assert rail == {"ok": True, "revision_state": "ACCEPTED",
                     "error_code": None, "e3_ok": True}
 
 
