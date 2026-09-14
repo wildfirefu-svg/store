@@ -481,12 +481,34 @@ class TestRailCore:
             rail_wt.path, "ditiansui", _freeze_of(rail_wt), _evidence_of(rail_wt))
         assert res["error_code"] == "REVISION_SOURCE_UNVERIFIABLE"
 
-    def test_trust_roots_start_at_genesis(self):
-        """信任根不变量：REVISION_ANCHOR_HEAD == genesis（尚无 V 登记）；
-        TOOLCHAIN_REGISTRY_HEAD == @HEAD 登记文件重算链头（R₀ 前空登记链
-        == genesis；R₀ 登记后绑定登记链头——与 _registry_head 一致）。"""
-        assert gqr.REVISION_ANCHOR_HEAD == GENESIS_SHA
+    def test_trust_roots_match_head_recomputed(self):
+        """信任根不变量：REVISION_ANCHOR_HEAD == @HEAD 锚文件重算链头
+        （V₁ 后为验收链头，非 genesis）；TOOLCHAIN_REGISTRY_HEAD == @HEAD
+        登记文件重算链头——与 _registry_head 一致。空链退化 genesis 由
+        test_trust_roots_empty_chain_at_genesis 隔离覆盖。"""
+        assert gqr.REVISION_ANCHOR_HEAD == chain_head(
+            gqr._anchor_entries(ROOT), GENESIS_SHA)
         assert gqr.TOOLCHAIN_REGISTRY_HEAD == gqr._registry_head(ROOT)
+
+    def test_trust_roots_empty_chain_at_genesis(self, rail_wt):
+        """隔离场景：空锚/空登记链（fixture 已归零文件、脚本常量回
+        genesis）时，信任根常量与 HEAD 锚/登记链重算值一致且均等于
+        genesis——空链退化不变量（V₁ 前状态）。"""
+        # fixture worktree：锚/登记文件已删除（__init__），脚本常量已重置
+        src_bytes = (rail_wt.path /
+                     "scripts/generate_quality_report.py").read_bytes()
+        m = re.search(rb'^REVISION_ANCHOR_HEAD = "([0-9a-f]{64})"$',
+                      src_bytes, re.M)
+        assert m is not None
+        assert m.group(1).decode() == GENESIS_SHA
+        m2 = re.search(rb'^TOOLCHAIN_REGISTRY_HEAD = "([0-9a-f]{64})"$',
+                       src_bytes, re.M)
+        assert m2 is not None
+        assert m2.group(1).decode() == GENESIS_SHA
+        # 空链重算 == genesis（fixture 锚/登记文件均不存在）
+        assert gqr._anchor_entries(rail_wt.path) == []
+        assert chain_head([], GENESIS_SHA) == GENESIS_SHA
+        assert gqr._registry_head(rail_wt.path) == GENESIS_SHA
 
     def test_fixture_no_diff_synthetic_t(self, rail_wt):
         """P0-2：T 已提交后再同步（字节无差异）→ 不产生新提交、T 不变
