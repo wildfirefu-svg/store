@@ -2900,9 +2900,9 @@ T₀ = 本提交（Part A 中间提交为其祖先；T₀ OID 在 Part B R₀ �
 
 **执行补记（Task 12）**：
 
-1. **Step 1（真实默认复验）**：`python scripts/generate_quality_report.py` 真实执行；`revision_state=ACCEPTED`、`revision_provenance_valid=true`、`approval_b2_constant_valid=true`、四书 E0–E3 全过、`provenance_admissible_all=true`；G7 `missing_count=303`（与候选一致，无退化）；source e2e 三书按 S 口径保留既有 FAIL → 整体 exit 3 BLOCKED 属预期；`QUALITY_REPORT.json` 为运行产物继续隔离。
+1. **Step 1（真实默认复验）**：`python scripts/generate_quality_report.py --archive-root <sanmingtonghui/.snapshot_archive>` 真实执行；sanmingtonghui `source_e2e_status=PASS`、`revision_state=ACCEPTED`、`revision_provenance_valid=true`、`approval_b2_constant_valid=true`、四书 E0–E3 全过、`provenance_admissible_all=true`；G7 `missing_count=303`（与候选一致，无退化）；三书 source 按 S 口径保留既有 FAIL → 整体 exit 1 属预期（允许红项存在）；`QUALITY_REPORT.json` 为运行产物继续隔离。**此前一次缺参运行（漏 `--archive-root`）sanmingtonghui 坠 `BLOCKED:archive_root_missing`、exit 3——保留为失败记录，不修改门禁迁就。**
 2. **Step 2（既有回归）**：`tests/test_revision_rail.py` 138 passed；`test_classic_distillation_quality_report.py`/`test_classic_historical_freeze.py`/`test_classic_exemption_tooling.py`/`test_classic_distillation_validator.py`/`test_verify_sanming_source_chain.py` 全绿；`ruff check .` 全过。**V₁ 泄漏修复（3 个独立测试提交）**：V₁ 验收后进程内信任根常量非 genesis，暴露 8 处既有测试过时假设——① `ba3fe86`：trust roots 断言改 HEAD 锚链重算值 + 空链 genesis 隔离 fixture 测试（用户 P1）；② `1937e57`：`rail_wt` fixture monkeypatch 进程内 `REVISION_ANCHOR_HEAD`/`TOOLCHAIN_REGISTRY_HEAD` 回 genesis（6 个空链 fixture 测试 CHAIN_STALE 根因）；③ `a47f16e`：`test_e3_multiset_real_head_passes` 真实 HEAD rail 断言 NONE→ACCEPTED。
-3. **Step 3（§13 执行记录）**：设计文档 §13 追加第 20 条（T₀/R₀/C₁/V₁ OID、候选与复验结果、门禁边界：数据验收状态不因复验转 PASS、三书 source S 口径不变、QUALITY_REPORT.json 隔离、推送未授权）——`0084a45` 单独 docs 提交。
+3. **Step 3（§13 执行记录）**：设计文档 §13 追加第 20 条（T₀/R₀/C₁/V₁ OID、候选与复验结果、门禁边界：数据验收状态不因复验转 PASS、三书 source S 口径不变、QUALITY_REPORT.json 隔离、推送未授权）——`0084a45` 单独 docs 提交；随后更正 §13 误记的 exit 3 → 带归档根复验 exit 1 （缺参失败保留，见 Step 1）。
 4. **Step 4（推送 + 正式 CI）**：未执行，待用户批准后按 §5-R.4/§10-⑧ 收尾。
 
 ## Self-Review（已执行）
