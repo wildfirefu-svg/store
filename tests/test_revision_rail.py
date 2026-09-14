@@ -322,8 +322,15 @@ class RailWorktree:
 
 
 @pytest.fixture()
-def rail_wt(tmp_path):
+def rail_wt(tmp_path, monkeypatch):
     wt = RailWorktree(tmp_path)
+    # V₁ 后真实仓库进程内信任根常量已绑定验收链（REVISION_ANCHOR_HEAD 非
+    # genesis）；fixture worktree 归零为空锚/空登记链、脚本字节常量已回
+    # genesis。rail 管线直接读模块属性常量（generate_quality_report.py
+    # ③ 锚链头!=常量 → CHAIN_STALE），须 monkeypatch 进程内常量回 genesis
+    # 与 worktree 字节一致，否则一切空链 fixture 测试 FAILED。
+    monkeypatch.setattr(gqr, "REVISION_ANCHOR_HEAD", GENESIS_SHA)
+    monkeypatch.setattr(gqr, "TOOLCHAIN_REGISTRY_HEAD", GENESIS_SHA)
     yield wt
     wt.cleanup()
 
