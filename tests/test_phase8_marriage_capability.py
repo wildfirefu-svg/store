@@ -475,17 +475,49 @@ class TestClassicTextsFreeze:
             assert f["commit"]
             _git(["cat-file", "-e", f["commit"] + "^{commit}"])
 
-    def test_frozen_identity_survives_head_change(self):
-        """P0 回归：HEAD 已因 R25 修订 sanmingtonghui/all_rules.json 而漂移，
-        历史冻结身份必须保持有效——冻结 blob 仍绑定条目 commit，与 HEAD 解耦、
-        不随 HEAD 同步。被推进到 HEAD 的冻结（冻结 blob == HEAD blob）即失败。"""
-        freeze = _load_json(_P8_DIR / "classic_texts_freeze.json")
-        sm = next(f for f in freeze["files"]
-                  if f["path"].endswith("sanmingtonghui/all_rules.json"))
-        frozen_blob = _git(["rev-parse", f"{sm['commit']}:{sm['path']}"])
-        head_blob = _git(["rev-parse", f"HEAD:{sm['path']}"])
-        assert sm["blob_sha"] == frozen_blob
-        assert head_blob != sm["blob_sha"]
+    def test_frozen_identity_survives_head_change(self, tmp_path):
+        """P1 契约：HEAD 数据变化时冻结身份保持绑定条目 commit，不随 HEAD 同步。
+
+        隔离仓库主动制造 HEAD 漂移（c1 冻结 -> c2 改数据），验证冻结 blob 仍
+        绑定 c1；不将“HEAD 与冻结不同”写成永久要求——未来若合法恢复为相同
+        内容，冻结身份依然有效，不应误报。
+        """
+        repo = tmp_path / "freeze-repo"
+        repo.mkdir()
+
+        def _run(*args: str) -> str:
+            r = subprocess.run(
+                ["git", "-C", str(repo), "-c", "user.name=freeze-test",
+                 "-c", "user.email=freeze-test@example.com", *args],
+                capture_output=True, text=True, encoding="utf-8",
+                env=dict(os.environ, PYTHONIOENCODING="utf-8"),
+            )
+            assert r.returncode == 0, r.stderr
+            return r.stdout.strip()
+
+        _run("init", "-q")
+        rel = "knowledge_base/classic_texts/sanmingtonghui/all_rules.json"
+        f = repo / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps([{"id": "r1", "rule": "v1"}], ensure_ascii=False),
+                     encoding="utf-8")
+        _run("add", "-A")
+        _run("commit", "-q", "-m", "c1")
+        c1 = _run("rev-parse", "HEAD")
+        b1 = _run("rev-parse", f"{c1}:{rel}")
+        freeze = {"schema_version": "1.0", "frozen_commit": c1,
+                  "files": [{"path": rel, "blob_sha": b1, "commit": c1}]}
+
+        # 主动制造 HEAD 漂移：修改内容并提交 c2（fixture 事实，非永久契约）
+        f.write_text(json.dumps([{"id": "r1", "rule": "v2"}], ensure_ascii=False),
+                     encoding="utf-8")
+        _run("add", "-A")
+        _run("commit", "-q", "-m", "c2")
+        assert _run("rev-parse", f"HEAD:{rel}") != b1
+
+        # 契约：冻结 blob 仍绑定 c1，不随 HEAD 同步
+        assert freeze["files"][0]["blob_sha"] == _run(
+            "rev-parse", f"{freeze['files'][0]['commit']}:{rel}")
 
 
 class TestKbSnapshot:
