@@ -9,6 +9,7 @@ full production frozen-input lock. Not collected by pytest (no test_ prefix).
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -61,12 +62,27 @@ def tmp_dir(prefix):
 CLI_TIMEOUT_SECONDS = 100
 CLEANUP_TIMEOUT_SECONDS = 5
 
+# Poll interval for the post-kill confirmation loop; every wait is clamped
+# to the remaining shared cleanup budget, so the loop never sleeps past it.
+_CONFIRM_QUANTUM_SECONDS = 0.02
+
+# POSIX-only kill signal (9 on every POSIX). The getattr fallback keeps
+# this module importable on Windows hosts, whose unit tests drive the
+# POSIX branch through fakes.
+_SIGKILL = getattr(signal, "SIGKILL", 9)
+
+# Cleanup-path clock indirections: production uses time.monotonic/sleep;
+# the unit tests swap in a virtual, event-driven clock (honest
+# consumption).
+_monotonic = time.monotonic
+_sleep = time.sleep
+
 
 def _remaining(deadline):
     # Time left on a shared cleanup deadline; 0 once exhausted, so each
     # subsequent cleanup step gets at most the leftover -- never a fresh
     # CLEANUP_TIMEOUT_SECONDS budget that would stack serially.
-    return max(0.0, deadline - time.monotonic())
+    return max(0.0, deadline - _monotonic())
 
 
 def _script_path(script):
@@ -88,23 +104,24 @@ def _bounded_subprocess(argv, timeout):
         return None
 
 
-def _kill_process_tree(proc, deadline):
-    # Terminate the spawned CLI AND every descendant (a CLI may itself spawn
-    # the frozen-chain checker). taskkill /T walks the tree on Windows; on
-    # POSIX we send SIGKILL to the process group we put the child in. Every
-    # external call draws from the SHARED deadline, and the verdict is
-    # fail-closed: True only when the whole tree is PROVABLY dead (taskkill
-    # exits 0 / SIGKILL delivered); a tool timeout (None), a nonzero exit, or
-    # a spawn failure is UNCERTAIN and returns False -- the caller must not
-    # report a reaped tree. proc.kill() on the direct child is always
-    # attempted as a last resort but never upgrades the verdict by itself.
+def _deliver_kill(proc, deadline, windows):
+    # Deliver the kill to the spawned CLI AND every descendant (a CLI may
+    # itself spawn the frozen-chain checker). taskkill /T walks the tree on
+    # Windows; on POSIX we send SIGKILL to the process group we put the child
+    # in. Every external call draws from the SHARED deadline, and the verdict
+    # is fail-closed: True only when the kill is PROVABLY delivered (taskkill
+    # exits 0 / SIGKILL sent); a tool timeout (None), a nonzero exit, or a
+    # spawn failure is UNCERTAIN and returns False -- the caller must not
+    # report a reaped tree. Delivery is NOT reaping: the proof that every
+    # group member is fully reaped comes from _confirm_tree_gone.
+    # proc.kill() on the direct child is always attempted as a last resort
+    # but never upgrades the verdict by itself.
     try:
-        if os.name == "nt":
+        if windows:
             r = _bounded_subprocess(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
                                     _remaining(deadline))
             tree_ok = bool(r) and r.returncode == 0
         else:
-            import signal
             # The child was started with start_new_session=True, so its PGID
             # IS proc.pid. Kill by that KNOWN pgid directly -- NOT getpgid:
             # once the group leader (the direct child) has exited but a
@@ -113,7 +130,7 @@ def _kill_process_tree(proc, deadline):
             # tree as reaped (a false-green). killpg(proc.pid) reaches the
             # whole group even without the leader, and only raises ESRCH when
             # the group has no member left -- which genuinely proves death.
-            os.killpg(proc.pid, signal.SIGKILL)
+            os.killpg(proc.pid, _SIGKILL)
             tree_ok = True
     except ProcessLookupError:
         tree_ok = True  # the pid/group is already gone: provably dead
@@ -131,14 +148,20 @@ def _drain_output(proc, deadline):
     # grandchild that holds the pipe open cannot block us indefinitely, and
     # so the drain never spends a second full cleanup budget; fall back to
     # whatever was captured so far. proc is already being torn down.
+    # Returns (stdout, stderr, child_reaped): child_reaped is True only when
+    # a communicate() call COMPLETED (the waitpid proof). A TimeoutExpired is
+    # not evidence either way -- the direct child may have been reaped while
+    # a descendant still holds the pipe -- so it must never count as a reap.
     try:
-        return proc.communicate(timeout=_remaining(deadline))
+        out = proc.communicate(timeout=_remaining(deadline))
+        return out[0], out[1], True
     except subprocess.TimeoutExpired:
         proc.kill()
         try:
-            return proc.communicate(timeout=_remaining(deadline))
+            out = proc.communicate(timeout=_remaining(deadline))
+            return out[0], out[1], True
         except subprocess.TimeoutExpired:
-            return "", ""
+            return "", "", False
 
 
 def _pid_alive(pid):
@@ -164,6 +187,77 @@ def _pid_alive(pid):
         return True
 
 
+def _confirm_tree_gone(proc, deadline, child_initial, windows):
+    # Post-kill confirmation, bounded by the SAME shared deadline. Reaping is
+    # asynchronous: delivery is not reaping. The direct child leaves the
+    # process group only once reaped (poll/communicate); an orphaned
+    # grandchild only once PID 1 reaps it after the parent dies -- and a
+    # zombie still counts as a group member. On POSIX, ESRCH from
+    # killpg(pgid, 0) therefore proves the WHOLE group (including the direct
+    # child) fully reaped; on Windows there are no group semantics, so the
+    # direct child's exit (poll) is the proof. Every wait is clamped to the
+    # remaining budget; the loop never runs past the deadline.
+    child_final = bool(child_initial)
+    group_gone = bool(windows)  # Windows: no group semantics to prove
+    probe_broken = False
+    while _remaining(deadline) > 0:
+        try:
+            if proc.poll() is not None:
+                child_final = True
+        except OSError:
+            # the reap probe cannot decide: the whole confirmation phase is
+            # compromised -- fail closed. A drain-side child_reaped=True does
+            # NOT immunize a broken probe: after a failed probe no proof from
+            # this phase may be claimed.
+            probe_broken = True
+            break
+        if windows:
+            if child_final:
+                break
+        else:
+            try:
+                os.killpg(proc.pid, 0)
+            except ProcessLookupError:
+                group_gone = True
+                break
+            except OSError:
+                # probe cannot decide (e.g. PermissionError): fail closed
+                probe_broken = True
+                break
+        _sleep(min(_CONFIRM_QUANTUM_SECONDS, _remaining(deadline)))
+    if probe_broken:
+        # withdraw every proof this phase might otherwise claim
+        return False, False
+    return child_final, group_gone
+
+
+def _tree_reaped(delivery_ok, child_final, group_gone, deadline, windows):
+    # Final fail-closed verdict, with the COMPLETION-time budget gate: a
+    # proof obtained after the shared deadline does not count, even if the
+    # probe itself succeeded (the entry gate alone cannot see a probe that
+    # crosses the deadline mid-call).
+    if _monotonic() >= deadline:
+        return False
+    if windows:
+        return bool(delivery_ok and child_final)
+    return bool(delivery_ok and child_final and group_gone)
+
+
+def _cleanup_after_timeout(proc, deadline, windows):
+    # Bounded teardown after the timeout fired: deliver the tree kill, drain
+    # the pipes, then confirm every group member is fully reaped -- all three
+    # drawing from ONE shared deadline. Returns (stdout, stderr, cleanup_ok);
+    # cleanup_ok is True only when delivery, the direct child's reap, and
+    # (POSIX) the empty-group proof are ALL established inside the budget.
+    delivery_ok = _deliver_kill(proc, deadline, windows)
+    stdout, stderr, child_reaped = _drain_output(proc, deadline)
+    child_final, group_gone = _confirm_tree_gone(proc, deadline, child_reaped,
+                                                 windows)
+    cleanup_ok = _tree_reaped(delivery_ok, child_final, group_gone, deadline,
+                              windows)
+    return stdout, stderr, cleanup_ok
+
+
 def run_argv_result(argv, timeout=CLI_TIMEOUT_SECONDS):
     """Bounded runner for a FULLY-ASSEMBLED argv (must already include the
     python interpreter as argv[0]). Same timeout/process-tree contract as
@@ -172,8 +266,9 @@ def run_argv_result(argv, timeout=CLI_TIMEOUT_SECONDS):
     CLEANUP_TIMEOUT_SECONDS budget), so this returns in at most timeout +
     CLEANUP_TIMEOUT_SECONDS wall time and never hands an unbounded wait back
     to the pytest 120s gate. .cleanup_ok is fail-closed: True only when the
-    tree-kill provably succeeded; a timeout/nonzero tool result reports
-    False instead of claiming a reaped tree."""
+    kill was delivered AND every group member is proven fully reaped inside
+    the shared budget; any uncertain step reports False instead of claiming
+    a reaped tree."""
     popen_kwargs = dict(stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                         text=True, encoding="utf-8", errors="replace")
     if os.name != "nt":
@@ -185,12 +280,14 @@ def run_argv_result(argv, timeout=CLI_TIMEOUT_SECONDS):
                                      stderr=stderr, pid=proc.pid, timed_out=False,
                                      cleanup_ok=True)
     except subprocess.TimeoutExpired:
-        # ONE shared cleanup budget: the tree-kill and the output drain both
-        # draw from the same deadline, so the post-timeout path costs at most
-        # CLEANUP_TIMEOUT_SECONDS once (not once per step).
-        deadline = time.monotonic() + CLEANUP_TIMEOUT_SECONDS
-        cleanup_ok = _kill_process_tree(proc, deadline)
-        stdout, stderr = _drain_output(proc, deadline)
+        # ONE shared cleanup budget: delivery, the drain and the reaping
+        # confirmation all draw from the same deadline, so the post-timeout
+        # path costs at most CLEANUP_TIMEOUT_SECONDS once (not once per step)
+        # and returns only after the tree is PROVABLY reaped -- or reports
+        # cleanup_ok=False (fail-closed) when the budget ran out first.
+        deadline = _monotonic() + CLEANUP_TIMEOUT_SECONDS
+        stdout, stderr, cleanup_ok = _cleanup_after_timeout(
+            proc, deadline, windows=(os.name == "nt"))
         return types.SimpleNamespace(returncode=proc.returncode, stdout=stdout,
                                      stderr=stderr, pid=proc.pid, timed_out=True,
                                      cleanup_ok=cleanup_ok)

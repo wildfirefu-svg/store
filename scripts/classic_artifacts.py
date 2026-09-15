@@ -1701,3 +1701,176 @@ def verify_batch_anchors(anchors, git_root, genesis_commit, final_commit=None):
             if man.get("snapshot_sha256") != a["source_snapshot_sha256"]: return False
         parent = c
     return _is_ancestor(git_root, parent, final_commit)
+
+# ---------------------------------------------------------------------------
+# §5-R 修订溯源双轨契约：纯函数原语（设计 v29.3 §5-R.2/5-R.3；无 git 依赖）
+# ---------------------------------------------------------------------------
+# 注意：_canonical 使用本模块第 67 行既有实现（与 generate_classic_historical_
+# freeze._canonical 逐字节等价），不从 freeze 重复导入以免遮蔽；仅导入缺失的
+# _loads_strict（计划 Step 3 的对应调整）。
+from scripts.generate_classic_historical_freeze import _loads_strict  # noqa: E402
+
+REVISION_GENESIS = {
+    "schema": "sanmingtonghui-revision-genesis-v1",
+    "book": "sanmingtonghui",
+    "freeze_base_commit": "c5cff699fdb547bd9270acbebe1f485380848751",
+    "b2_commit": "ccb833a46977c8274c0fb8c8c79c1b2f5d494c5e",
+}
+GENESIS_SHA = hashlib.sha256(
+    _canonical(REVISION_GENESIS).encode("utf-8")).hexdigest()
+EMPTY_BASELINE_MANIFEST = {
+    "schema_version": "1.0", "book": "sanmingtonghui",
+    "freeze_base_commit": REVISION_GENESIS["freeze_base_commit"],
+    "batches": []}
+
+REVISION_MANIFEST_TOP_FIELDS = frozenset(
+    {"schema_version", "book", "freeze_base_commit", "batches"})
+REVISION_BATCH_FIELDS = frozenset({"batch_id", "date", "author", "records"})
+REVISION_RECORD_FIELDS = frozenset(
+    {"kind", "id", "sha256", "source_chapter", "snapshot_path",
+     "snapshot_sha256", "historical_basis"})
+REVISION_ANCHOR_FIELDS = frozenset(
+    {"batch_id", "content_commit", "manifest_sha256_after",
+     "prev_anchor_sha256", "toolchain_commit", "date"})
+REVISION_REGISTRY_FIELDS = frozenset(
+    {"toolchain_commit", "date", "review_ref", "prev_registry_sha256"})
+
+
+class RevisionArtifactError(ValueError):
+    """修订工件解析/校验失败（fail-closed，由调用方映射稳定错误码）。"""
+
+
+def parse_jsonl_line(raw: bytes) -> dict:
+    """严格解析一行 JSONL 并做 canonical 行字节自检（设计 5-R.3）。
+
+    行字节（去换行）必须 == _canonical(解析对象).encode("utf-8")；
+    拒绝重复 JSON 键、CRLF、尾随内容、非对象。
+    """
+    if raw.endswith(b"\n"):
+        raw = raw[:-1]
+    if raw.endswith(b"\r"):
+        raise RevisionArtifactError("CRLF line ending rejected")
+    try:
+        obj = _loads_strict(raw.decode("utf-8"))
+    except Exception as e:  # noqa: BLE001 - 统一转为稳定错误
+        raise RevisionArtifactError(f"jsonl line malformed: {e}") from e
+    if not isinstance(obj, dict):
+        raise RevisionArtifactError("jsonl line not an object")
+    if raw != _canonical(obj).encode("utf-8"):
+        raise RevisionArtifactError("jsonl line not canonical bytes")
+    return obj
+
+
+def chain_head(entries: list[dict], genesis_sha: str, *,
+               prev_field: str = "prev_anchor_sha256",
+               fields: frozenset = REVISION_ANCHOR_FIELDS) -> str:
+    """重算哈希链头：h_0 = genesis_sha；
+    h_i = sha256(h_prev.encode("ascii") + _canonical(entry_i).encode("utf-8"))。
+
+    逐条校验字段集（拒绝未知/缺字段）与 prev 链接（首条 prev == genesis_sha，
+    其余 == 前条链头）；违者抛 RevisionArtifactError（设计 5-R.3）。
+    """
+    h = genesis_sha
+    for i, e in enumerate(entries):
+        if set(e) != set(fields):
+            raise RevisionArtifactError(f"entry {i} fields != {sorted(fields)}")
+        if e[prev_field] != h:
+            raise RevisionArtifactError(f"entry {i} {prev_field} link mismatch")
+        h = hashlib.sha256(
+            h.encode("ascii") + _canonical(e).encode("utf-8")).hexdigest()
+    return h
+
+_SNAP_PREFIX = ("knowledge_base/classic_texts/sanmingtonghui/"
+                "formal/source_snapshots/")
+
+
+def _is_hex(s: str, n: int) -> bool:
+    return (isinstance(s, str) and len(s) == n
+            and all(c in "0123456789abcdef" for c in s))
+
+
+def _valid_snapshot_path(p: str) -> bool:
+    """白名单：仅 <SNAP>/extracted/raw_{NNN:03d}.txt（设计 5-R.2）。
+
+    SNAP 含快照哈希目录层：source_snapshots/<64hex>/extracted/raw_NNN.txt
+    （SNAP 字面量见计划前置事实；哈希段必须 64-hex，防目录逃逸）。
+    """
+    if not isinstance(p, str) or not p.startswith(_SNAP_PREFIX):
+        return False
+    parts = p[len(_SNAP_PREFIX):].split("/")
+    if len(parts) != 3 or not _is_hex(parts[0], 64) or parts[1] != "extracted":
+        return False
+    name = parts[2]
+    return (len(name) == 11 and name.startswith("raw_")
+            and name[4:7].isdigit() and name[7:] == ".txt")
+
+
+def validate_revision_manifest(obj: object) -> None:
+    """修订清单 schema 校验（rail ② 的纯函数部分；设计 5-R.2）。
+
+    strict：顶层/批次/记录字段集缺一多一均拒绝；kind ∈ {rule,mcq}；
+    sha256/snapshot_sha256 64-hex；snapshot_path 白名单；
+    historical_basis 形态与 match_count==1；批内 (id,sha256) 重复拒绝；
+    batch_id 全局不重复。不做 git 依赖校验（记录哈希重算、freeze 交集、
+    源身份在 rail 内做）。
+    """
+    err = RevisionArtifactError
+    if not isinstance(obj, dict):
+        raise err("manifest not an object")
+    if set(obj) != set(REVISION_MANIFEST_TOP_FIELDS):
+        raise err(f"manifest top fields != {sorted(REVISION_MANIFEST_TOP_FIELDS)}")
+    if obj["schema_version"] != "1.0":
+        raise err("manifest schema_version != 1.0")
+    if obj["book"] != "sanmingtonghui":
+        raise err("manifest book != sanmingtonghui")
+    if obj["freeze_base_commit"] != REVISION_GENESIS["freeze_base_commit"]:
+        raise err("manifest freeze_base_commit mismatch")
+    batches = obj["batches"]
+    if not isinstance(batches, list):
+        raise err("batches not a list")
+    seen_batches, seen_ids = set(), set()
+    for b in batches:
+        if not isinstance(b, dict) or set(b) != set(REVISION_BATCH_FIELDS):
+            raise err(f"batch fields != {sorted(REVISION_BATCH_FIELDS)}")
+        # 执行复审 P0-3：先验批次标量字段类型（unhashable 值不得进集合操作）
+        if not isinstance(b["batch_id"], str) or not b["batch_id"]:
+            raise err("batch_id empty/non-string")
+        if not isinstance(b["date"], str) or not b["date"]:
+            raise err("batch date empty/non-string")
+        if not isinstance(b["author"], str) or not b["author"]:
+            raise err("batch author empty/non-string")
+        if b["batch_id"] in seen_batches:
+            raise err(f"duplicate batch_id {b['batch_id']!r}")
+        seen_batches.add(b["batch_id"])
+        if not isinstance(b["records"], list):
+            raise err("batch records not a list")
+        for r in b["records"]:
+            if not isinstance(r, dict) or set(r) != set(REVISION_RECORD_FIELDS):
+                raise err(f"record fields != {sorted(REVISION_RECORD_FIELDS)}")
+            if r["kind"] not in ("rule", "mcq"):
+                raise err(f"record kind {r['kind']!r} not in (rule, mcq)")
+            if not isinstance(r["id"], str) or not r["id"]:
+                raise err("record id empty/non-string")
+            if not _is_hex(r["sha256"], 64):
+                raise err("record sha256 not 64-hex")
+            if not _valid_snapshot_path(r["snapshot_path"]):
+                raise err(f"snapshot_path not whitelisted: {r['snapshot_path']!r}")
+            if not _is_hex(r["snapshot_sha256"], 64):
+                raise err("snapshot_sha256 not 64-hex")
+            if not isinstance(r["source_chapter"], str) or not r["source_chapter"]:
+                raise err("source_chapter empty")
+            key = (r["id"], r["sha256"])
+            if key in seen_ids:
+                raise err(f"duplicate (id, sha256) in manifest: {key}")
+            seen_ids.add(key)
+            hb = r["historical_basis"]
+            if hb is not None:
+                if (not isinstance(hb, dict)
+                        or set(hb) != {"commit", "path", "source_chapter",
+                                       "record_content_sha256", "match_count"}
+                        or not _is_hex(hb["commit"], 40)
+                        or not isinstance(hb["path"], str) or not hb["path"]
+                        or not isinstance(hb["source_chapter"], str)
+                        or not _is_hex(hb["record_content_sha256"], 64)
+                        or hb["match_count"] != 1):
+                    raise err("historical_basis malformed / match_count != 1")

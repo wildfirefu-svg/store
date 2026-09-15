@@ -435,12 +435,13 @@ from scripts.generate_quality_report import (
     _e0_static_check,
     _e1_artifact_chain,
     _e2_recompute,
-    _e3_multiset_check,
     _git_head_blob,
     _git_rev_parse,
     _git_show_blob,
+    _git_show_optional,
     _run_source_chain_check,
     evaluate_provenance_admissibility,
+    evaluate_revision_rail,
     main,
     validate_approval_b2_constant,
 )
@@ -601,7 +602,12 @@ def test_e2_recompute_tampered_manifest_rejected():
 # --- E3 多重集合严格相等-------------------------------------------------------
 
 def test_e3_multiset_real_head_passes():
-    assert _e3_multiset_check(ROOT, _head_json(FREEZE_REL)) == {"ok": True, "error_code": None}
+    """E3 并入 rail（5-R.5）：真实 HEAD 经 rail ⑤ 分区等式通过。V₁ 验收后
+    真实仓库有已验收锚（R25）→ revision_state=ACCEPTED（V₁ 前为 NONE）。"""
+    rail = evaluate_revision_rail(
+        ROOT, "sanmingtonghui", _head_json(FREEZE_REL), _head_json(EVIDENCE_REL))
+    assert rail == {"ok": True, "revision_state": "ACCEPTED",
+                    "error_code": None, "e3_ok": True}
 
 
 @pytest.mark.parametrize("mode", ["mutate", "duplicate", "delete"])
@@ -612,7 +618,7 @@ def test_e3_multiset_negative_only_e3_fails(monkeypatch, mode):
     freeze = _head_json(FREEZE_REL)
     kinds = [k for k in KINDS if freeze["books"]["sanmingtonghui"][k]["present"]]
     rel = _book_rel("sanmingtonghui", kinds[0])
-    real = _git_head_blob
+    real = _git_show_optional
 
     def fake(git_root, rel_path):
         data = real(git_root, rel_path)
@@ -627,7 +633,7 @@ def test_e3_multiset_negative_only_e3_fails(monkeypatch, mode):
             obj = obj[1:]
         return (json.dumps(obj, ensure_ascii=False) + "\n").encode("utf-8")
 
-    monkeypatch.setattr("scripts.generate_quality_report._git_head_blob", fake)
+    monkeypatch.setattr("scripts.generate_quality_report._git_show_optional", fake)
     # 不 stub E0/E1/E2：freeze/evidence/E/R/pointer 均未改动，真实链必须通过，
     # 最终仅 E3 对当前 HEAD 多重集合重算并拒绝（v27.3 P0 契约）
     adm = evaluate_provenance_admissibility(
@@ -639,7 +645,7 @@ def test_e3_multiset_negative_only_e3_fails(monkeypatch, mode):
     assert adm["E3_ok"] is False
     assert adm["historical_exemption_valid"] is False
     assert adm["provenance_admissible"] is False
-    assert adm["exemption_error_code"] == "EVIDENCE_STATIC_MISMATCH"
+    assert adm["exemption_error_code"] == "REVISION_PARTITION_MISMATCH"
 
 
 # --- 三态闭合（VALID / INVALID / MISSING）-------------------------------------
@@ -712,7 +718,7 @@ def test_admissible_missing_e0_fail_short_circuits(tmp_path, monkeypatch):
         lambda gr: {"ok": False, "error_code": "FREEZE_STATIC_MISMATCH"},
     )
     stage_calls = []
-    for name in ("_e1_artifact_chain", "_e2_recompute", "_e3_multiset_check"):
+    for name in ("_e1_artifact_chain", "_e2_recompute", "evaluate_revision_rail"):
         monkeypatch.setattr(
             f"scripts.generate_quality_report.{name}",
             lambda *a, **k: stage_calls.append(name) or {"ok": True, "error_code": None},
@@ -829,10 +835,11 @@ def test_report_exit_zero_when_all_pass(tmp_path, monkeypatch):
     (tmp_path / "sanmingtonghui" / "provenance.json").unlink()
     monkeypatch.setattr(
         "scripts.generate_quality_report.evaluate_provenance_admissibility",
-        lambda bd, gr: {
+        lambda bd, gr, candidate_batch_id=None: {
             "provenance_state": "MISSING", "E0_ok": True, "E1_ok": True,
             "E2_ok": True, "E3_ok": True, "historical_exemption_valid": True,
-            "provenance_admissible": True, "exemption_error_code": None})
+            "provenance_admissible": True, "exemption_error_code": None,
+            "revision_state": "NONE", "revision_provenance_valid": False})
     _spy_source(monkeypatch, {"status": "PASS", "reason": None})
     monkeypatch.setattr("scripts.generate_quality_report._find_git_root", lambda: ROOT)
     report, exit_code = generate_report(
@@ -853,10 +860,11 @@ def test_report_b2_constant_invalid_fails_closed(tmp_path, monkeypatch):
     (tmp_path / "sanmingtonghui" / "provenance.json").unlink()
     monkeypatch.setattr(
         "scripts.generate_quality_report.evaluate_provenance_admissibility",
-        lambda bd, gr: {
+        lambda bd, gr, candidate_batch_id=None: {
             "provenance_state": "MISSING", "E0_ok": True, "E1_ok": True,
             "E2_ok": True, "E3_ok": True, "historical_exemption_valid": True,
-            "provenance_admissible": True, "exemption_error_code": None})
+            "provenance_admissible": True, "exemption_error_code": None,
+            "revision_state": "NONE", "revision_provenance_valid": False})
     _spy_source(monkeypatch, {"status": "PASS", "reason": None})
     monkeypatch.setattr("scripts.generate_quality_report._find_git_root", lambda: ROOT)
 

@@ -5,7 +5,7 @@
   "chain_mode": "new_chain",
   "source": {
     "branch": "clean integration branch",
-    "tooling_blob_pin_commit": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+    "tooling_blob_pin_commit": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
     "tooling_blob_pin_subject": "tooling blobs pinned at the explicit phase-A tooling pin commit (frozen OID table)",
     "tooling_blob_pin_note": "the 17 tooling blobs are pinned at the EXPLICIT --tooling-pin-commit (external frozen input, full 40-hex, rev-parse round-tripped); a phase-B artifact-only commit never changes it",
     "candidate_data_ref": "80bc630396f31c6b6c122e49ef97f6d912e6f636",
@@ -20,7 +20,7 @@
       "tooling_blob_oid": "2761e8589bb44b471d493323edb09a5fe26d449d",
       "size": 17628,
       "group": "code",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
@@ -28,7 +28,7 @@
       "tooling_blob_oid": "703b44cf5d47354d3dbf9f670d46c5fa0d6be20f",
       "size": 24116,
       "group": "code",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
@@ -36,7 +36,7 @@
       "tooling_blob_oid": "9e91a8e4a856e92f86311db4f5b9b486fadf7546",
       "size": 58538,
       "group": "code",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
@@ -44,23 +44,23 @@
       "tooling_blob_oid": "9fa0fdc6b190316a9804e6cdd2be6a87bae92ff4",
       "size": 21876,
       "group": "generator",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
       "path": "tests/classic_acceptance_fixtures.py",
-      "tooling_blob_oid": "e393cdd67b830d3c0d8cc29b3311c9312776abc3",
-      "size": 24517,
+      "tooling_blob_oid": "884143d8dae49f90ecb91828ae62eccc9628237c",
+      "size": 29116,
       "group": "test",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
       "path": "tests/test_classic_acceptance_review.py",
-      "tooling_blob_oid": "09760df093604a67adc7023f26edceffb272c0bd",
-      "size": 122679,
+      "tooling_blob_oid": "83ce0eeafc4bb6e751c67f93739a282fc8673e1c",
+      "size": 138415,
       "group": "test",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
@@ -68,7 +68,7 @@
       "tooling_blob_oid": "cc4eee61a2fdafea07f910c77a07e7339f9ff3c1",
       "size": 31938,
       "group": "test",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
@@ -76,7 +76,7 @@
       "tooling_blob_oid": "abdd29eaef83d89321ca1a78fb14b811df16f57a",
       "size": 24111,
       "group": "test",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
@@ -84,7 +84,7 @@
       "tooling_blob_oid": "d861d6a4bd32ff3efa58ce27293873a0cd3abddb",
       "size": 25124,
       "group": "test",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
@@ -92,7 +92,7 @@
       "tooling_blob_oid": "cdf19ea6ecf01ded78e86baae7a0287b824bbd6d",
       "size": 554847,
       "group": "freeze_payload",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
@@ -100,7 +100,7 @@
       "tooling_blob_oid": "100d08b1bce4d6e05cb33fdd5b0882e2812bd566",
       "size": 275858,
       "group": "freeze_payload",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
@@ -108,7 +108,7 @@
       "tooling_blob_oid": "ea4006542848fc937993bfbd4438c497dfd37b08",
       "size": 2118,
       "group": "freeze_payload",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
@@ -116,7 +116,7 @@
       "tooling_blob_oid": "ce95b7e893c071992710f01fe1a3983969b4c681",
       "size": 4561,
       "group": "freeze_payload",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
@@ -124,7 +124,7 @@
       "tooling_blob_oid": "533333a1d98a0373e50c89c8e439811bae68a445",
       "size": 45063,
       "group": "freeze_payload",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
@@ -132,7 +132,7 @@
       "tooling_blob_oid": "fe5a2033b98b52373180c2e7db79e56376a22e47",
       "size": 347640,
       "group": "doc",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
@@ -140,7 +140,7 @@
       "tooling_blob_oid": "db54345ab0848a2dd6054fd70bf37b0cbd1cfed3",
       "size": 11525,
       "group": "doc",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": false
     },
     {
@@ -148,7 +148,7 @@
       "tooling_blob_oid": "f0b89044bfb688f4d87dab655aae313fbb4df4f6",
       "size": 2030,
       "group": "config",
-      "tooling_ref": "ed5493a94d0268b88f2dca448f963880e7cc1ad5",
+      "tooling_ref": "e8492056df2c3c9cd5e07c7f23619251e6c989f8",
       "present_on_flags_base": true
     }
   ],
@@ -7139,7 +7139,7 @@
     "source_files": [
       {
         "path": "scripts/generate_acceptance_integration_closure.py",
-        "blob_oid_at_infrastructure_commit": "0aa6db22f194616275a886e89283e52f5813d3e0",
+        "blob_oid_at_infrastructure_commit": "f908460108098a533538662b20669b637b2a62d5",
         "size": 57757,
         "group": "infrastructure_source",
         "migrated": true
@@ -7213,8 +7213,10 @@
       "docs/phase8/marriage-capability/non_e2e_gate_receipt.json"
     ],
     "knowledge_base_remainder": {
-      "count": 0,
-      "paths": [],
+      "count": 1,
+      "paths": [
+        "knowledge_base/classic_texts/sanmingtonghui/revision_manifest.json"
+      ],
       "note": "changed knowledge_base paths outside the manifest read closure and the oversized list (ledger archives, progress/distill logs, validation reports)"
     }
   },

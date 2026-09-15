@@ -1893,6 +1893,407 @@ def test_run_cli_result_cleanup_returns_well_before_pytest_gate(tmp_path):
     assert not fixtures._pid_alive(pids["child"]), "grandchild not reaped on return"
 
 
+class _VirtualClock:
+    """Deterministic virtual clock for the cleanup-path unit tests. Fakes
+    advance it exactly by the wall time they model, so a TimeoutExpired
+    consumes its full timeout (honest consumption) and the shared cleanup
+    deadline behaves like real time."""
+
+    def __init__(self, start=1000.0):
+        self.now = start
+
+    def __call__(self):
+        return self.now
+
+    def advance(self, dt):
+        self.now += dt
+
+
+def _scripted_proc(events, communicate_fns, poll_fn=None):
+    """Fake Popen-like proc: no real process is spawned. communicate_fns is a
+    list of callables(timeout) -> (out, err) (or raising); poll_fn returns the
+    simulated returncode (or None). Every call is logged to events."""
+
+    class _Proc:
+        pid = 424242
+        returncode = None
+
+        def __init__(self):
+            self._comm = iter(communicate_fns)
+
+        def communicate(self, timeout=None):
+            events.append(("communicate", timeout))
+            return next(self._comm)(timeout)
+
+        def kill(self):
+            events.append(("proc-kill",))
+
+        def poll(self):
+            events.append(("poll",))
+            return poll_fn() if poll_fn else None
+
+    return _Proc()
+
+
+def _patch_cleanup_clock(monkeypatch, clock, events):
+    def fake_monotonic():
+        return clock.now
+
+    def fake_sleep(dt):
+        events.append(("sleep", dt))
+        clock.advance(dt)
+
+    monkeypatch.setattr(fixtures, "_monotonic", fake_monotonic)
+    monkeypatch.setattr(fixtures, "_sleep", fake_sleep)
+
+
+def test_cleanup_delivers_before_drain_and_probes_group(monkeypatch):
+    # T1: the post-timeout path must (a) deliver the group kill BEFORE the
+    # final drain communicate, (b) actually probe the process group (>=1
+    # killpg(pgid, 0) call) with the ESRCH proof only after the direct
+    # child's communicate completed, and (c) stay bounded: total virtual wall
+    # time within timeout + ONE shared CLEANUP_TIMEOUT_SECONDS. A mutant that
+    # claims the tree reaped without probing, or probes before the direct
+    # child was reaped, fails here. No real process is spawned.
+    events = []
+    clock = _VirtualClock(1005.0)
+    deadline = 1005.0 + fixtures.CLEANUP_TIMEOUT_SECONDS
+    state = {"reaped": False}
+
+    def fake_killpg(pgid, sig):
+        events.append(("killpg", int(sig)))
+        if int(sig) != 0:
+            return
+        if state["reaped"]:
+            events.append(("killpg-esrch",))
+            raise ProcessLookupError("group empty")
+        return
+
+    def comm_drain(timeout):
+        clock.advance(0.05)
+        state["reaped"] = True
+        events.append(("communicate-done",))
+        return ("", "")
+
+    proc = _scripted_proc(events, [comm_drain], poll_fn=lambda: -9)
+    _patch_cleanup_clock(monkeypatch, clock, events)
+    monkeypatch.setattr(os, "killpg", fake_killpg, raising=False)
+
+    out, err, cleanup_ok = fixtures._cleanup_after_timeout(
+        proc, deadline, windows=False)
+
+    assert cleanup_ok is True
+    names = [e[0] for e in events]
+    assert sum(1 for e in events if e == ("killpg", 0)) >= 1, (
+        "the group must actually be probed, not assumed empty")
+    deliver_i = names.index("killpg")
+    drain_i = min(i for i, e in enumerate(events) if e == ("communicate-done",))
+    esrch_i = names.index("killpg-esrch")
+    assert deliver_i < drain_i, "group kill must be delivered before the drain"
+    assert esrch_i > drain_i, "ESRCH proof must follow the direct child's reap"
+    assert clock.now <= deadline, "cleanup must stay inside the shared budget"
+
+
+def test_cleanup_waits_for_group_then_esrch(monkeypatch):
+    # T2: after the direct child is reaped, the group may still hold an
+    # orphaned grandchild (a zombie stays a group member until PID 1 reaps
+    # it). The confirmation loop must keep polling through >=K non-empty
+    # probes and only succeed on ESRCH -- a naive immediate verdict cannot
+    # be trusted. This encodes the waiting-order hazard from the design
+    # review; it is a hypothesis scenario, NOT a claim about the three CI
+    # failures (their root cause remains undetermined).
+    events = []
+    clock = _VirtualClock(1005.0)
+    deadline = 1005.0 + fixtures.CLEANUP_TIMEOUT_SECONDS
+    probes = {"n": 0}
+
+    def fake_killpg(pgid, sig):
+        events.append(("killpg", int(sig)))
+        if int(sig) != 0:
+            return
+        probes["n"] += 1
+        if probes["n"] <= 3:
+            events.append(("killpg-nonempty",))
+            return
+        events.append(("killpg-esrch",))
+        raise ProcessLookupError("group empty")
+
+    def comm_drain(timeout):
+        clock.advance(0.05)
+        events.append(("communicate-done",))
+        return ("", "")
+
+    proc = _scripted_proc(events, [comm_drain], poll_fn=lambda: -9)
+    _patch_cleanup_clock(monkeypatch, clock, events)
+    monkeypatch.setattr(os, "killpg", fake_killpg, raising=False)
+
+    out, err, cleanup_ok = fixtures._cleanup_after_timeout(
+        proc, deadline, windows=False)
+
+    assert cleanup_ok is True
+    assert probes["n"] == 4, "3 non-empty waits, then exactly one ESRCH"
+    assert sum(1 for e in events if e[0] == "sleep") == 3
+    assert clock.now <= deadline, "shared budget, never stacked"
+
+
+def test_cleanup_budget_exhausted_probe_never_runs(monkeypatch):
+    # T3a (entry budget gate): when the drain consumed the WHOLE shared
+    # budget (double TimeoutExpired -- e.g. a descendant holding the output
+    # pipes), the confirmation loop must not run at all: even a killpg fake
+    # that would report ESRCH instantly must never be called, and the
+    # verdict stays False (fail-closed). After the budget is gone, a later
+    # probe result cannot rescue this invocation.
+    events = []
+    clock = _VirtualClock(1000.0)
+    deadline = 1000.0 + fixtures.CLEANUP_TIMEOUT_SECONDS
+
+    def fake_killpg(pgid, sig):
+        events.append(("killpg", int(sig)))
+        if int(sig) != 0:
+            return
+        events.append(("killpg-esrch",))
+        raise ProcessLookupError("group empty")
+
+    def comm_timeout(timeout):
+        clock.advance(timeout or 0.0)
+        events.append(("communicate-timeout",))
+        raise subprocess.TimeoutExpired(cmd="cli", timeout=timeout)
+
+    proc = _scripted_proc(events, [comm_timeout, comm_timeout, comm_timeout],
+                          poll_fn=lambda: None)
+    _patch_cleanup_clock(monkeypatch, clock, events)
+    monkeypatch.setattr(os, "killpg", fake_killpg, raising=False)
+
+    out, err, cleanup_ok = fixtures._cleanup_after_timeout(
+        proc, deadline, windows=False)
+
+    assert cleanup_ok is False
+    assert not [e for e in events if e == ("killpg", 0)], (
+        "confirmation probe must not run once the shared budget is exhausted")
+    # the second communicate must draw only the REMAINING budget (0 after
+    # the first consumed it all) -- a fresh full budget there is a reset bug
+    comm_timeouts = [e[1] for e in events if e[0] == "communicate"]
+    assert comm_timeouts == [fixtures.CLEANUP_TIMEOUT_SECONDS, 0.0], (
+        f"second communicate must reuse the leftover, got {comm_timeouts}")
+    assert clock.now <= deadline, "cleanup must stay inside the shared budget"
+
+
+def test_cleanup_probe_error_fail_closed(monkeypatch):
+    # T3b: a confirmation probe that cannot decide (PermissionError) must
+    # fail the verdict closed, even though delivery and the direct child's
+    # reap both succeeded.
+    events = []
+    clock = _VirtualClock(1005.0)
+    deadline = 1005.0 + fixtures.CLEANUP_TIMEOUT_SECONDS
+
+    def fake_killpg(pgid, sig):
+        events.append(("killpg", int(sig)))
+        if int(sig) != 0:
+            return
+        raise PermissionError("probe cannot decide")
+
+    def comm_drain(timeout):
+        clock.advance(0.05)
+        events.append(("communicate-done",))
+        return ("", "")
+
+    proc = _scripted_proc(events, [comm_drain], poll_fn=lambda: -9)
+    _patch_cleanup_clock(monkeypatch, clock, events)
+    monkeypatch.setattr(os, "killpg", fake_killpg, raising=False)
+
+    out, err, cleanup_ok = fixtures._cleanup_after_timeout(
+        proc, deadline, windows=False)
+
+    assert cleanup_ok is False
+    assert sum(1 for e in events if e == ("killpg", 0)) == 1, (
+        "the verdict must fail closed on the first inconclusive probe")
+
+
+def test_cleanup_esrch_after_deadline_fail_closed(monkeypatch):
+    # T5 (completion-time budget gate): the entry gate passes with budget to
+    # spare, but the probe itself completes only AFTER the shared deadline
+    # (modeled as in-call clock latency). The observed ESRCH must be
+    # discarded: cleanup_ok stays False. Deleting the judgment-time gate
+    # turns this test red. (A working sleep clamp keeps now <= deadline
+    # between iterations, so a crossing can only happen inside a probe call
+    # -- exactly the window this gate exists for; T6 covers the clamp.)
+    events = []
+    clock = _VirtualClock(1005.0)
+    deadline = 1005.0 + fixtures.CLEANUP_TIMEOUT_SECONDS
+    probes = {"n": 0}
+
+    def fake_killpg(pgid, sig):
+        events.append(("killpg", int(sig)))
+        if int(sig) != 0:
+            return
+        probes["n"] += 1
+        if probes["n"] <= 2:
+            return
+        clock.now = deadline + 0.1      # in-call latency crosses the deadline
+        events.append(("killpg-esrch",))
+        raise ProcessLookupError("group empty")
+
+    def comm_drain(timeout):
+        clock.advance(0.05)
+        events.append(("communicate-done",))
+        return ("", "")
+
+    proc = _scripted_proc(events, [comm_drain], poll_fn=lambda: -9)
+    _patch_cleanup_clock(monkeypatch, clock, events)
+    monkeypatch.setattr(os, "killpg", fake_killpg, raising=False)
+
+    out, err, cleanup_ok = fixtures._cleanup_after_timeout(
+        proc, deadline, windows=False)
+
+    assert probes["n"] == 3, "the crossing probe did execute"
+    assert ("killpg-esrch",) in events, "ESRCH was observed"
+    assert cleanup_ok is False, "...but after the deadline: fail-closed"
+
+
+def test_confirm_windows_poll_after_deadline_fail_closed(monkeypatch):
+    # T5b (Windows mirror of T5): the poll-only confirmation must obey the
+    # same success deadline -- a poll() success observed after the shared
+    # deadline must not release the tree. Drives the windows=True parameter
+    # directly, so it runs on every platform.
+    events = []
+    clock = _VirtualClock(1005.0)
+    deadline = 1005.0 + fixtures.CLEANUP_TIMEOUT_SECONDS
+
+    def fake_poll():
+        events.append(("poll",))
+        clock.now = deadline + 0.1      # in-call latency crosses the deadline
+        return -9
+
+    proc = _scripted_proc(events, [], poll_fn=fake_poll)
+    _patch_cleanup_clock(monkeypatch, clock, events)
+
+    child_final, group_gone = fixtures._confirm_tree_gone(
+        proc, deadline, False, windows=True)
+    verdict = fixtures._tree_reaped(True, child_final, group_gone,
+                                    deadline, windows=True)
+    assert child_final is True, "the exit WAS observed"
+    assert verdict is False, "...but after the deadline: fail-closed"
+
+    # contrast: the same proof inside the budget releases the tree
+    clock.now = deadline - 1.0
+    child_final2, _ = fixtures._confirm_tree_gone(
+        _scripted_proc(events, [], poll_fn=lambda: -9), deadline, False,
+        windows=True)
+    assert fixtures._tree_reaped(True, child_final2, group_gone,
+                                 deadline, windows=True) is True
+
+
+def test_confirm_sleep_clamped_to_remaining(monkeypatch):
+    # T6: every wait must be min(QUANTUM, remaining-at-call). Scenario (a):
+    # remaining >= QUANTUM -> exactly QUANTUM. Scenario (b), arranged via
+    # in-probe latency: 0 < remaining < QUANTUM -> exactly the remaining
+    # slice. A mutant sleeping a fixed QUANTUM overshoots the deadline in
+    # scenario (b) and fails here.
+    events = []
+    clock = _VirtualClock(1005.0)
+    deadline = 1005.0 + fixtures.CLEANUP_TIMEOUT_SECONDS
+    probes = {"n": 0}
+
+    def fake_killpg(pgid, sig):
+        events.append(("killpg", int(sig)))
+        if int(sig) != 0:
+            return
+        probes["n"] += 1
+        if probes["n"] == 1:
+            return                      # -> sleep(QUANTUM)
+        clock.now = deadline - 0.005    # latency: 5ms of budget left
+        return                          # -> sleep(min(QUANTUM, 0.005))
+
+    def comm_drain(timeout):
+        clock.advance(0.05)
+        events.append(("communicate-done",))
+        return ("", "")
+
+    proc = _scripted_proc(events, [comm_drain], poll_fn=lambda: -9)
+    _patch_cleanup_clock(monkeypatch, clock, events)
+    monkeypatch.setattr(os, "killpg", fake_killpg, raising=False)
+
+    fixtures._confirm_tree_gone(proc, deadline, True, windows=False)
+
+    sleeps = [e[1] for e in events if e[0] == "sleep"]
+    assert len(sleeps) == 2
+    assert sleeps[0] == fixtures._CONFIRM_QUANTUM_SECONDS, "scenario (a)"
+    assert 0 < sleeps[1] < fixtures._CONFIRM_QUANTUM_SECONDS, (
+        "scenario (b): the clamp must bite below QUANTUM")
+    assert sleeps[1] == pytest.approx(0.005)
+    assert clock.now <= deadline, "never slept past the deadline"
+
+def test_cleanup_poll_probe_broken_fail_closed_posix(monkeypatch):
+    # T7 (POSIX): poll() raising inside the confirmation loop must fail the
+    # verdict closed THROUGH the full _cleanup_after_timeout path -- the
+    # drain-side child_reaped=True must NOT mask a broken reap probe, and a
+    # group that would look empty (ESRCH configured) must never be consulted
+    # once the probe phase is compromised.
+    events = []
+    clock = _VirtualClock(1005.0)
+    deadline = 1005.0 + fixtures.CLEANUP_TIMEOUT_SECONDS
+
+    def fake_poll():
+        events.append(("poll",))
+        raise PermissionError("reap probe cannot decide")
+
+    def fake_killpg(pgid, sig):
+        events.append(("killpg", int(sig)))
+        if int(sig) != 0:
+            return
+        events.append(("killpg-esrch",))
+        raise ProcessLookupError("group empty")
+
+    def comm_drain(timeout):
+        clock.advance(0.05)
+        events.append(("communicate-done",))
+        return ("", "")
+
+    proc = _scripted_proc(events, [comm_drain], poll_fn=fake_poll)
+    _patch_cleanup_clock(monkeypatch, clock, events)
+    monkeypatch.setattr(os, "killpg", fake_killpg, raising=False)
+
+    out, err, cleanup_ok = fixtures._cleanup_after_timeout(
+        proc, deadline, windows=False)
+
+    assert cleanup_ok is False
+    assert ("killpg", 0) not in events, (
+        "a broken reap probe must end the confirmation before group probing")
+
+
+def test_cleanup_poll_probe_broken_fail_closed_windows(monkeypatch):
+    # T7 (Windows mirror, through the full _cleanup_after_timeout path):
+    # taskkill delivery faked as successful, the drain reports the child
+    # reaped, then poll() raises -- the verdict must fail closed anyway.
+    import types
+    events = []
+    clock = _VirtualClock(1005.0)
+    deadline = 1005.0 + fixtures.CLEANUP_TIMEOUT_SECONDS
+
+    def fake_bounded(argv, timeout):
+        events.append(("taskkill",))
+        return types.SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    def fake_poll():
+        events.append(("poll",))
+        raise PermissionError("reap probe cannot decide")
+
+    def comm_drain(timeout):
+        clock.advance(0.05)
+        events.append(("communicate-done",))
+        return ("", "")
+
+    proc = _scripted_proc(events, [comm_drain], poll_fn=fake_poll)
+    _patch_cleanup_clock(monkeypatch, clock, events)
+    monkeypatch.setattr(fixtures, "_bounded_subprocess", fake_bounded)
+
+    out, err, cleanup_ok = fixtures._cleanup_after_timeout(
+        proc, deadline, windows=True)
+
+    assert ("taskkill",) in events, "delivery ran"
+    assert cleanup_ok is False, (
+        "a broken reap probe must fail closed on the Windows path too")
+
 def test_pid_alive_fails_closed_when_probe_cannot_decide(monkeypatch):
     # P0: _pid_alive must NEVER report "dead" from an inconclusive probe. A
     # tasklist timeout (None), a nonzero exit, or a spawn failure is

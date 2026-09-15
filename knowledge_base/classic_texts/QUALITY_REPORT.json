@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-02T12:45:10",
+  "generated_at": "2026-09-14T14:59:21",
   "validator": "scripts/validate_classic_distillation.py",
   "validator_code_sha256": "5dd6f52b87858424095e2c323dff63d46f81d93ceaf83fd00a8fc479ec904632",
   "validator_ran_live": true,
@@ -123,7 +123,21 @@
         }
       },
       "provenance_ok": false,
-      "end_to_end_provenance": false
+      "end_to_end_provenance": false,
+      "provenance_state": "MISSING",
+      "historical_exemption_valid": true,
+      "provenance_admissible": true,
+      "exemption_error_code": null,
+      "revision_state": "NONE",
+      "revision_provenance_valid": false,
+      "exemption_stages": {
+        "E0_ok": true,
+        "E1_ok": true,
+        "E2_ok": true,
+        "E3_ok": true
+      },
+      "source_e2e_status": "FAIL",
+      "source_blocked_reason": null
     },
     "zipingzhenquan": {
       "name": "子平真诠",
@@ -243,7 +257,21 @@
         }
       },
       "provenance_ok": false,
-      "end_to_end_provenance": false
+      "end_to_end_provenance": false,
+      "provenance_state": "MISSING",
+      "historical_exemption_valid": true,
+      "provenance_admissible": true,
+      "exemption_error_code": null,
+      "revision_state": "NONE",
+      "revision_provenance_valid": false,
+      "exemption_stages": {
+        "E0_ok": true,
+        "E1_ok": true,
+        "E2_ok": true,
+        "E3_ok": true
+      },
+      "source_e2e_status": "FAIL",
+      "source_blocked_reason": null
     },
     "qiongtongbaojian": {
       "name": "穷通宝鉴",
@@ -373,20 +401,34 @@
         }
       },
       "provenance_ok": false,
-      "end_to_end_provenance": false
+      "end_to_end_provenance": false,
+      "provenance_state": "MISSING",
+      "historical_exemption_valid": true,
+      "provenance_admissible": true,
+      "exemption_error_code": null,
+      "revision_state": "NONE",
+      "revision_provenance_valid": false,
+      "exemption_stages": {
+        "E0_ok": true,
+        "E1_ok": true,
+        "E2_ok": true,
+        "E3_ok": true
+      },
+      "source_e2e_status": "FAIL",
+      "source_blocked_reason": null
     },
     "sanmingtonghui": {
       "name": "三命通会",
       "dir": "sanmingtonghui",
       "rules": {
-        "count": 8043,
-        "sha256": "6217f4c685006d6663379a0102d8b1a602fd59dec47068f56a6f1a478ad765d0",
+        "count": 8045,
+        "sha256": "a41f29a87ef2e5ffdfe52504081c7d9d5258d153987cf9b76edfc27f4d6ee459",
         "categories": {
           "格局": 2187,
           "十神": 1197,
           "五行": 1169,
           "大运": 922,
-          "其他": 640,
+          "其他": 642,
           "六亲": 624,
           "神煞": 310,
           "性情": 259,
@@ -424,19 +466,19 @@
         }
       },
       "mcq": {
-        "count": 6103,
-        "sha256": "63d436f609333deaa45ab2af117b9ea0458733b8c15773cc52d85664129d6215",
+        "count": 6105,
+        "sha256": "632e3b2bde5c43205c6f076fb3c9fc66e64d8ceeda4810c7578e42fe95ea0921",
         "answer_dist": {
           "C": 1549,
-          "A": 1536,
+          "A": 1538,
           "D": 1508,
           "B": 1510
         },
         "answer_pct": {
-          "C": 0.2538,
-          "A": 0.2517,
-          "D": 0.2471,
-          "B": 0.2474
+          "C": 0.2537,
+          "A": 0.2519,
+          "D": 0.247,
+          "B": 0.2473
         }
       },
       "quarantine_rules": {
@@ -462,14 +504,14 @@
       "all_gates_pass": false,
       "gate_details": {
         "G1_rule_id_unique": {
-          "total": 8043,
-          "unique": 8043,
+          "total": 8045,
+          "unique": 8045,
           "duplicates": 0,
           "pass": true
         },
         "G2_mcq_id_unique": {
-          "total": 6103,
-          "unique": 6103,
+          "total": 6105,
+          "unique": 6105,
           "duplicates": 0,
           "pass": true
         },
@@ -480,23 +522,23 @@
           "pass": true
         },
         "G4_source_rule_id": {
-          "total_refs": 6103,
+          "total_refs": 6105,
           "bad": 0,
           "ambiguous_rule_ids": 0,
           "pass": true
         },
         "G5_traceability": {
-          "total": 8043,
+          "total": 8045,
           "untraceable": 0,
           "rate": 1.0,
           "pass": true
         },
         "G6_answer_dist": {
           "dist_pct": {
-            "C": 0.2538,
-            "A": 0.2517,
-            "D": 0.2471,
-            "B": 0.2474
+            "C": 0.2537,
+            "A": 0.2519,
+            "D": 0.247,
+            "B": 0.2473
           },
           "invalid_answers": 0,
           "out_of_band": [],
@@ -545,11 +587,41 @@
         }
       },
       "provenance_ok": false,
-      "end_to_end_provenance": false
+      "end_to_end_provenance": false,
+      "provenance_state": "MISSING",
+      "historical_exemption_valid": true,
+      "provenance_admissible": true,
+      "exemption_error_code": null,
+      "revision_state": "ACCEPTED",
+      "revision_provenance_valid": true,
+      "exemption_stages": {
+        "E0_ok": true,
+        "E1_ok": true,
+        "E2_ok": true,
+        "E3_ok": true
+      },
+      "source_e2e_status": "PASS",
+      "source_blocked_reason": null
     }
   },
-  "known_limitations": [],
+  "known_limitations": [
+    "historical exemption applied for 滴天髓 (ditiansui): missing formal model run manifest (design §4.1)",
+    "source e2e not proven for 滴天髓 (ditiansui) (S scope, design §8)",
+    "historical exemption applied for 子平真诠 (zipingzhenquan): missing formal model run manifest (design §4.1)",
+    "source e2e not proven for 子平真诠 (zipingzhenquan) (S scope, design §8)",
+    "historical exemption applied for 穷通宝鉴 (qiongtongbaojian): missing formal model run manifest (design §4.1)",
+    "source e2e not proven for 穷通宝鉴 (qiongtongbaojian) (S scope, design §8)",
+    "historical exemption applied for 三命通会 (sanmingtonghui): missing formal model run manifest (design §4.1)"
+  ],
   "remediation_pass": false,
   "end_to_end_pass": false,
-  "overall_pass": false
+  "source_e2e_status": "FAIL",
+  "source_e2e_pass": false,
+  "content_gates_pass": false,
+  "provenance_admissible_all": true,
+  "revision_state": "ACCEPTED",
+  "revision_provenance_valid": true,
+  "approval_b2_constant_valid": true,
+  "overall_pass": false,
+  "status": "FAIL"
 }
