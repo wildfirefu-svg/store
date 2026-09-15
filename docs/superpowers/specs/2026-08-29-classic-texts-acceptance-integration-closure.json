@@ -7139,7 +7139,7 @@
     "source_files": [
       {
         "path": "scripts/generate_acceptance_integration_closure.py",
-        "blob_oid_at_infrastructure_commit": "0aa6db22f194616275a886e89283e52f5813d3e0",
+        "blob_oid_at_infrastructure_commit": "f908460108098a533538662b20669b637b2a62d5",
         "size": 57757,
         "group": "infrastructure_source",
         "migrated": true
