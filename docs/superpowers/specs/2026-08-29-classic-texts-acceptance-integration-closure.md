@@ -9,7 +9,7 @@
 
 - **P0-2（基础设施随链迁移）**：生成器、测试与两个产物组成 integration-infrastructure 层（4 路径），计入 `migration_total`，与 17 工具、698 数据同属迁移链；生成器不退役——`--candidate-commit/--base-commit/--no-legacy` 使其在干净分支与 CI 上无需旧候选对象即可复跑全部门禁。
 
-- **P1（完整钉值）**：工具钉值提交为完整 40 位 `ed5493a94d0268b88f2dca448f963880e7cc1ad5`，`verify()` 以 `rev-parse <full>^{commit}` 往返校验；base/candidate 参数同样要求完整 40 位。
+- **P1（完整钉值）**：工具钉值提交为完整 40 位 `e8492056df2c3c9cd5e07c7f23619251e6c989f8`，`verify()` 以 `rev-parse <full>^{commit}` 往返校验；base/candidate 参数同样要求完整 40 位。
 
 - **P0（pin 外部信任根）**：no-legacy 模式下 `--tooling-pin-commit` 为强制参数——`generate` 与 `--check` 缺失即用法错误（退出码 2）；验证器绝不从磁盘 JSON 或运行时 HEAD 自举 pin，`build_closure` 如实记录其实际使用的 pin，`verify()` 交叉核对记录 pin 与请求 pin——把记录 pin 换成内容相同的其他提交无法自证；重冻结步骤 7、CI 命令与 superseding receipt 显式携带完整 phase-A SHA。
 
@@ -17,10 +17,10 @@
 
 | 层 | 路径数 | 字节 |
 |---|---:|---:|
-| 工具/测试/冻结文档（钉值 blob） | 17 | 1594169 |
+| 工具/测试/冻结文档（钉值 blob） | 17 | 1614504 |
 | 候选数据（覆盖进 C2） | 698 | 14997976 |
 | 闭包基础设施（生成器/测试/产物，随链迁移） | 4 | — |
-| **迁移总计** | **719** | **16592145** |
+| **迁移总计** | **719** | **16612480** |
 
 - 分组：derived_root_raw=303, extracted_raw=383, quarantine=1, rules_mcq_output=8, snapshot_identity=3。
 - 与 `3d3b41cf65af487b03ca5233a109fee14191b88c`：数据 overlap=9（同 blob 3）、变更 695；工具 overlap=1。
