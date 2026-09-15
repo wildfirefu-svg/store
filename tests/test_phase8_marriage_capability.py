@@ -475,13 +475,18 @@ class TestClassicTextsFreeze:
             assert f["commit"]
             _git(["cat-file", "-e", f["commit"] + "^{commit}"])
 
-    def test_frozen_identity_survives_head_change(self, tmp_path):
-        """P1 契约：HEAD 数据变化时冻结身份保持绑定条目 commit，不随 HEAD 同步。
+    def test_frozen_identity_survives_head_change(self, tmp_path, monkeypatch):
+        """幂等契约回归：HEAD 数据变化后无显式 head 重跑，生成器必须复用原
+        frozen_commit，冻结身份与输出字节均不变；若生成器退化为“每次冻结
+        HEAD”（重跑改绑 c2），本测试即失败。
 
-        隔离仓库主动制造 HEAD 漂移（c1 冻结 -> c2 改数据），验证冻结 blob 仍
-        绑定 c1；不将“HEAD 与冻结不同”写成永久要求——未来若合法恢复为相同
-        内容，冻结身份依然有效，不应误报。
+        fixture 为隔离 git 仓库：c1 首次生成 -> c2 改数据 -> 重跑比对，
+        调用实际 build_classic_texts_freeze 而非手工构造冻结字典。
         """
+        snap = _load_module(
+            "p8_kb_snapshot_freeze_regen",
+            "docs/phase8/marriage-capability/p8_kb_snapshot.py",
+        )
         repo = tmp_path / "freeze-repo"
         repo.mkdir()
 
@@ -496,28 +501,40 @@ class TestClassicTextsFreeze:
             return r.stdout.strip()
 
         _run("init", "-q")
+        # allowlist 全部 8 文件（生成器按四书 x 2 遍历），否则 rev-parse 报错
         rel = "knowledge_base/classic_texts/sanmingtonghui/all_rules.json"
-        f = repo / rel
-        f.parent.mkdir(parents=True, exist_ok=True)
-        f.write_text(json.dumps([{"id": "r1", "rule": "v1"}], ensure_ascii=False),
-                     encoding="utf-8")
+        for book in snap.CLASSIC_TEXT_BOOKS:
+            for name in ("all_rules.json", "quarantine_rules.jsonl"):
+                fp = repo / "knowledge_base" / "classic_texts" / book / name
+                fp.parent.mkdir(parents=True, exist_ok=True)
+                fp.write_text("[]" if name.endswith(".json") else "",
+                              encoding="utf-8")
         _run("add", "-A")
         _run("commit", "-q", "-m", "c1")
-        c1 = _run("rev-parse", "HEAD")
-        b1 = _run("rev-parse", f"{c1}:{rel}")
-        freeze = {"schema_version": "1.0", "frozen_commit": c1,
-                  "files": [{"path": rel, "blob_sha": b1, "commit": c1}]}
+        monkeypatch.setattr(snap, "REPO", repo)
+        out = tmp_path / "classic_texts_freeze.json"
 
-        # 主动制造 HEAD 漂移：修改内容并提交 c2（fixture 事实，非永久契约）
-        f.write_text(json.dumps([{"id": "r1", "rule": "v2"}], ensure_ascii=False),
-                     encoding="utf-8")
+        # c1：首次生成，冻结当时 HEAD
+        payload1 = snap.build_classic_texts_freeze(out)
+        c1 = payload1["frozen_commit"]
+        b1 = next(e["blob_sha"] for e in payload1["files"] if e["path"] == rel)
+        assert c1 == _run("rev-parse", "HEAD")
+        bytes1 = out.read_bytes()
+
+        # c2：修改数据，HEAD 漂移（fixture 事实，非永久契约）
+        (repo / rel).write_text(
+            json.dumps([{"id": "r1", "rule": "v2"}], ensure_ascii=False),
+            encoding="utf-8")
         _run("add", "-A")
         _run("commit", "-q", "-m", "c2")
         assert _run("rev-parse", f"HEAD:{rel}") != b1
 
-        # 契约：冻结 blob 仍绑定 c1，不随 HEAD 同步
-        assert freeze["files"][0]["blob_sha"] == _run(
-            "rev-parse", f"{freeze['files'][0]['commit']}:{rel}")
+        # 无显式 head 重跑：复用原 frozen_commit，输出字节不变
+        payload2 = snap.build_classic_texts_freeze(out)
+        assert payload2["frozen_commit"] == c1
+        assert next(e["blob_sha"] for e in payload2["files"]
+                    if e["path"] == rel) == b1
+        assert out.read_bytes() == bytes1
 
 
 class TestKbSnapshot:
